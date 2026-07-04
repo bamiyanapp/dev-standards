@@ -1,0 +1,130 @@
+name: Reusable CD
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: "semantic-releaseの実行に使うNode.jsのバージョン"
+        type: string
+        default: "lts/*"
+      base_branch:
+        description: "リリース同期元となるベースブランチ名"
+        type: string
+        default: "main"
+      release_branch:
+        description: "リリースブランチ名"
+        type: string
+        default: "release"
+      sync_branch_prefix:
+        description: "release→base_branch同期PRのブランチ名prefix"
+        type: string
+        default: "sync/release-to-main"
+      merge_ours_paths:
+        description: "base_branch→release_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可）。空の場合は指定しない。"
+        type: string
+        default: ""
+    secrets:
+      BOT_TOKEN:
+        required: false
+    outputs:
+      new_release_published:
+        description: "semantic-releaseが新バージョンを発行したかどうか"
+        value: ${{ jobs.release.outputs.new_release_published }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_release_published: ${{ steps.check-release.outputs.new_release_published }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+
+      # release_branch を base_branch の最新コミットまで追従させる（base_branch の方が進んでいる場合のみマージ）
+      - name: Sync ${{ inputs.release_branch }} with ${{ inputs.base_branch }}
+        env:
+          MERGE_OURS_PATHS: ${{ inputs.merge_ours_paths }}
+        run: |
+          git fetch origin --tags --prune
+          git fetch origin ${{ inputs.base_branch }}
+          BASE_HEAD=$(git rev-parse origin/${{ inputs.base_branch }})
+          RELEASE_HEAD=$(git rev-parse ${{ inputs.release_branch }})
+          if [ "$BASE_HEAD" != "$RELEASE_HEAD" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            if [ -n "$MERGE_OURS_PATHS" ]; then
+              # 指定されたファイルは release_branch 側の内容を常に優先する。
+              # リポジトリの .gitattributes は release_branch に反映されるまで有効にならないため、
+              # ローカルの属性ファイルを直接指定してこの実行から即時に効かせる。
+              : > "$RUNNER_TEMP/cd-merge.gitattributes"
+              while IFS= read -r path; do
+                if [ -n "$path" ]; then
+                  echo "$path merge=ours" >> "$RUNNER_TEMP/cd-merge.gitattributes"
+                fi
+              done <<< "$MERGE_OURS_PATHS"
+              git config core.attributesFile "$RUNNER_TEMP/cd-merge.gitattributes"
+              git config merge.ours.driver true
+            fi
+            git merge --no-ff origin/${{ inputs.base_branch }} -m "Chore: Merge ${{ inputs.base_branch }} into ${{ inputs.release_branch }}"
+            git push origin ${{ inputs.release_branch }}
+          fi
+
+      # release_branch への追従直後に実行することで、他のマージとの競合（semantic-release が
+      # 「ローカルの release_branch が remote より古い」と判定してリリースを黒くスキップする
+      # 問題）が起きる時間差を最小化する
+      - name: Record pre-release commit
+        id: pre-release
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+      # semantic-release は新バージョンを発行した場合のみ release_branch に
+      # コミットを追加するため、実行前後のコミットを比較して新リリースの有無を判定する
+      - name: Check if a new release was published
+        id: check-release
+        run: |
+          AFTER_SHA=$(git rev-parse HEAD)
+          if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
+            echo "new_release_published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "new_release_published=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create PR from ${{ inputs.release_branch }} to ${{ inputs.base_branch }}
+        id: sync-pr
+        if: steps.check-release.outputs.new_release_published == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+          base: ${{ inputs.base_branch }}
+          head: ${{ inputs.release_branch }}
+          branch: ${{ inputs.sync_branch_prefix }}
+          branch-suffix: timestamp
+          delete-branch: true
+          title: "Sync ${{ inputs.release_branch }} branch into ${{ inputs.base_branch }}"
+          body: "Automated PR to sync ${{ inputs.release_branch }} changes into ${{ inputs.base_branch }}."
+          draft: false
+          commit-message: "chore: sync ${{ inputs.release_branch }} branch into ${{ inputs.base_branch }} [skip ci]"
+      - name: Enable auto-merge for sync PR
+        if: steps.sync-pr.outputs.pull-request-number
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          gh pr merge --auto --squash \
+            --subject "chore: sync ${{ inputs.release_branch }} branch into ${{ inputs.base_branch }} (#${{ steps.sync-pr.outputs.pull-request-number }}) [skip ci]" \
+            "${{ steps.sync-pr.outputs.pull-request-url }}"
