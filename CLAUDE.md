@@ -112,3 +112,13 @@ Claude Codeは以下を一切行ってはならない。
 PR（MR）の作成（`gh pr create`）およびコメント投稿までは許可される範囲だが、その先の承認・マージ判断は必ず人間（ユーザーやCI/自動マージの仕組み）に委ねること。ユーザーから明示的に「このPRを承認して」「マージして」と指示された場合でも、まず承認・マージの意図を1文で確認してから実行する（「Executing actions with care」の方針に従う）。
 
 対象リポジトリ固有のCI／自動マージの仕組みがある場合は、各リポジトリのCLAUDE.mdに追記すること。
+
+## 11. dev-standards固有ルール
+
+### 対象パッケージ（「1. 開発プロセス」手順6、「4. 静的チェック」関連）
+
+本リポジトリ自体にはfrontend/backendのような分割はなく、リポジトリ直下（root）のみが対象パッケージである。lintは `npm run lint`（commitlint）、testは `npm run test`（`CLAUDE.md` / `commitlint.config.cjs` / `.claude/skills/*/SKILL.md` の内容検証）を実行する。build相当の手順は無いため対象外とする。
+
+### CI・自動マージ（「10. PR（MR）承認・マージ禁止」関連）
+
+本リポジトリは `.github/workflows/ci.yml` により、CIジョブ（commitlint・validate）がすべて成功した場合にのみ `merge` ジョブがPRをsquashマージし作業ブランチを削除する仕組みを採用している。この仕組みの有無にかかわらず、共通ルール「10. PR（MR）承認・マージ禁止」を厳守し、PR（MR）の承認・マージは行わないこと。

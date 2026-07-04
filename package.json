@@ -1,0 +1,17 @@
+{
+  "name": "dev-standards",
+  "private": true,
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bamiyanapp/dev-standards.git"
+  },
+  "scripts": {
+    "lint": "commitlint --last --verbose",
+    "test": "node scripts/validate.js"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.3.0",
+    "@commitlint/config-conventional": "^20.3.0"
+  }
+}
