@@ -15,6 +15,10 @@ on:
         description: "frontend/backendのビルド・テストに使うNode.jsのバージョン"
         type: string
         default: "20"
+      workspaces:
+        description: "frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う。"
+        type: boolean
+        default: false
       enable_release_sync:
         description: "release_branchへの同期ジョブ(sync-release)を実行するかどうか。release運用をしないリポジトリはfalseを指定する。"
         type: boolean
@@ -72,9 +76,9 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
-          cache-dependency-path: ${{ inputs.frontend_dir }}/package-lock.json
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
       - name: Install dependencies
-        working-directory: ${{ inputs.frontend_dir }}
+        working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
         run: npm ci
       - name: Lint
         working-directory: ${{ inputs.frontend_dir }}
@@ -97,9 +101,9 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
-          cache-dependency-path: ${{ inputs.backend_dir }}/package-lock.json
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.backend_dir) }}
       - name: Install dependencies
-        working-directory: ${{ inputs.backend_dir }}
+        working-directory: ${{ inputs.workspaces && '.' || inputs.backend_dir }}
         run: npm ci
       - name: Lint
         working-directory: ${{ inputs.backend_dir }}
