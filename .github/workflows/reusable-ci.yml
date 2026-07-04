@@ -11,6 +11,14 @@ on:
         description: "backendパッケージのディレクトリ名"
         type: string
         default: "backend"
+      node_version:
+        description: "frontend/backendのビルド・テストに使うNode.jsのバージョン"
+        type: string
+        default: "20"
+      enable_release_sync:
+        description: "release_branchへの同期ジョブ(sync-release)を実行するかどうか。release運用をしないリポジトリはfalseを指定する。"
+        type: boolean
+        default: true
       base_branch:
         description: "リリース同期元となるベースブランチ名"
         type: string
@@ -62,7 +70,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.frontend_dir }}/package-lock.json
       - name: Install dependencies
@@ -87,12 +95,15 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.backend_dir }}/package-lock.json
       - name: Install dependencies
         working-directory: ${{ inputs.backend_dir }}
         run: npm ci
+      - name: Lint
+        working-directory: ${{ inputs.backend_dir }}
+        run: npm run lint
       - name: Test
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage
@@ -104,7 +115,7 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.payload.pull_request.number;
             const branchName = context.payload.pull_request.head.ref;
@@ -149,7 +160,7 @@ jobs:
 
   sync-release:
     needs: [merge]
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && inputs.enable_release_sync
     runs-on: ubuntu-latest
     concurrency:
       group: sync-release-branch
