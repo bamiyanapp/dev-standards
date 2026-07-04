@@ -11,6 +11,7 @@
 - `commitlint.config.cjs`: commitlint共通設定
 - `.clineignore`: Cline向け共通ignore設定
 - `.github/workflows/reusable-ci.yml`: commitlint / frontend・backendのlint・test・build / CIジョブ成功時の自動マージ（squash＋作業ブランチ削除） / release→baseブランチの同期を行う reusable workflow（`workflow_call`）
+- `.github/workflows/reusable-cd.yml`: base_branch→release_branchの同期 / semantic-releaseの実行 / release_branch→base_branchの同期PR作成・自動マージを行う reusable workflow（`workflow_call`）。frontend/backendのビルド・デプロイ手順（GitHub Pages・Serverless Frameworkなど）はプロダクトごとに異なるため対象外であり、参照側リポジトリの `.github/workflows/cd.yml` に残す。
 
 ## 利用方法（参照側リポジトリ）
 
@@ -34,4 +35,15 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   | `merge_ours_paths` | release→base_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可） | `""` |
 
   `secrets.BOT_TOKEN`（任意）を渡すと、commitlintジョブのsubmodule取得やsync-releaseジョブのpushで利用される。
+- `.github/workflows/reusable-cd.yml`: 参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@main` ＋ `with:` で値を指定して呼び出す。指定できる入力は以下の通り。
+
+  | 入力 | 説明 | デフォルト |
+  |---|---|---|
+  | `node_version` | semantic-releaseの実行に使うNode.jsのバージョン | `lts/*` |
+  | `base_branch` | リリース同期元となるベースブランチ名 | `main` |
+  | `release_branch` | リリースブランチ名 | `release` |
+  | `sync_branch_prefix` | release_branch→base_branch同期PRのブランチ名prefix | `sync/release-to-main` |
+  | `merge_ours_paths` | base_branch→release_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可） | `""` |
+
+  `secrets.BOT_TOKEN`（任意）を渡すと、release_branchへのpushやsync PRの作成・自動マージで利用される。出力 `new_release_published`（semantic-releaseが新バージョンを発行したかどうか）を呼び出し側のデプロイジョブの実行条件に利用できる。
 
