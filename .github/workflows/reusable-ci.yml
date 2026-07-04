@@ -1,0 +1,188 @@
+name: Reusable CI
+
+on:
+  workflow_call:
+    inputs:
+      frontend_dir:
+        description: "frontendパッケージのディレクトリ名"
+        type: string
+        default: "frontend"
+      backend_dir:
+        description: "backendパッケージのディレクトリ名"
+        type: string
+        default: "backend"
+      base_branch:
+        description: "リリース同期元となるベースブランチ名"
+        type: string
+        default: "main"
+      release_branch:
+        description: "リリースブランチ名"
+        type: string
+        default: "release"
+      sync_branch_prefix:
+        description: "release→base_branch同期PRのブランチ名prefix（この prefix で始まるPRのマージ時は [skip ci] を付与する）"
+        type: string
+        default: "sync/release-to-main"
+      merge_ours_paths:
+        description: "release→base_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可）。空の場合は指定しない。"
+        type: string
+        default: ""
+    secrets:
+      BOT_TOKEN:
+        required: false
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate current commit (last commit)
+        if: github.event_name == 'push'
+        run: npm run lint
+      - name: Validate PR commits
+        if: github.event_name == 'pull_request'
+        run: npm run lint
+
+  frontend-test:
+    needs: commitlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.frontend_dir }}/package-lock.json
+      - name: Install dependencies
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npm ci
+      - name: Lint
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npm run lint
+      - name: Test
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npx vitest run --coverage
+      - name: Build
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npm run build
+
+  backend-test:
+    needs: commitlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.backend_dir }}/package-lock.json
+      - name: Install dependencies
+        working-directory: ${{ inputs.backend_dir }}
+        run: npm ci
+      - name: Test
+        working-directory: ${{ inputs.backend_dir }}
+        run: npx vitest run --coverage
+
+  merge:
+    needs: [frontend-test, backend-test]
+    if: github.event_name == 'pull_request' && success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const branchName = context.payload.pull_request.head.ref;
+            const syncBranchPrefix = ${{ toJSON(inputs.sync_branch_prefix) }};
+            const baseBranch = ${{ toJSON(inputs.base_branch) }};
+            const isSyncPR = branchName.startsWith(syncBranchPrefix);
+            console.log(`Attempting to merge PR #${prNumber}`);
+            try {
+              const mergeParams = {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: "squash"
+              };
+              // release→base_branch同期PRのsquashコミットには [skip ci] を明示し、
+              // base_branch への push で再度CIが走ることを防ぐ
+              if (isSyncPR) {
+                mergeParams.commit_title = `chore: sync release branch into ${baseBranch} (#${prNumber}) [skip ci]`;
+              }
+              await github.rest.pulls.merge(mergeParams);
+              console.log(`Successfully merged PR #${prNumber}`);
+            } catch (error) {
+              console.error(`Failed to merge PR #${prNumber}:`, error.message);
+              throw error;
+            }
+
+            try {
+              console.log(`Attempting to delete branch: ${branchName}`);
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${branchName}`
+              });
+              console.log(`Successfully deleted branch: ${branchName}`);
+            } catch (error) {
+              if (error.status === 422 || error.message.includes("Reference does not exist")) {
+                console.log(`Branch ${branchName} already deleted or not found.`);
+              } else {
+                console.error(`Failed to delete branch ${branchName}:`, error.message);
+              }
+            }
+
+  sync-release:
+    needs: [merge]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: sync-release-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # GITHUB_TOKEN を使うと push / commit が他の workflow をトリガーしない
+          token: ${{ secrets.BOT_TOKEN }}
+      - name: Sync ${{ inputs.base_branch }} to ${{ inputs.release_branch }} branch
+        env:
+          MERGE_OURS_PATHS: ${{ inputs.merge_ours_paths }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$MERGE_OURS_PATHS" ]; then
+            # 指定されたファイルは release ブランチ側の内容を常に優先する。
+            # リポジトリの .gitattributes は release ブランチに反映されるまで有効にならないため、
+            # ローカルの属性ファイルを直接指定してこの実行から即時に効かせる。
+            : > "$RUNNER_TEMP/karuta-merge.gitattributes"
+            while IFS= read -r path; do
+              if [ -n "$path" ]; then
+                echo "$path merge=ours" >> "$RUNNER_TEMP/karuta-merge.gitattributes"
+              fi
+            done <<< "$MERGE_OURS_PATHS"
+            git config --global core.attributesFile "$RUNNER_TEMP/karuta-merge.gitattributes"
+            git config --global merge.ours.driver true
+          fi
+          git fetch --tags origin
+          # ローカル release にチェックアウト
+          git checkout ${{ inputs.release_branch }}
+          # base_branch の新規コミットを release に取り込む（release 側の未マージなリリースコミットは保持する）
+          git merge origin/${{ inputs.base_branch }} --no-edit
+          git tag --contains HEAD
+          git push origin ${{ inputs.release_branch }} --tags
