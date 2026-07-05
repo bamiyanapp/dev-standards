@@ -55,7 +55,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
-          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
