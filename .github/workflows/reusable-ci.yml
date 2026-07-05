@@ -316,12 +316,21 @@ jobs:
       # 通常運用時のCLI直接実行等を想定してそのまま残す）。
       # ブランチ名はPR作成者が自由に決められる値のため、run:のシェルスクリプトへ
       # 式展開で直接埋め込まずenv経由で渡す（シェルインジェクション対策）。
+      #
+      # pull_requestイベントではActionsが自動設定するGITHUB_REF/GITHUB_REF_NAMEが
+      # refs/pull/<PR番号>/merge・<PR番号>/mergeになる。semantic-releaseは--no-ci指定時も
+      # ブランチ判定にこの値をそのまま使うため、--branchesで指定した作業ブランチ名と
+      # 一致せず「このブランチからは公開しない」と判定されバージョンが発行されない
+      # （job自体は成功扱いになるため見逃しやすい）。ここで実際の作業ブランチを指す
+      # 値に上書きする。
       - name: Semantic Release (on working branch)
         if: inputs.enable_release
         id: semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          GITHUB_REF: refs/heads/${{ github.event.pull_request.head.ref }}
+          GITHUB_REF_NAME: ${{ github.event.pull_request.head.ref }}
         run: npx semantic-release --no-ci --branches "$HEAD_REF"
 
       # semantic-releaseは新バージョンを発行した場合のみコミット・タグ push を
