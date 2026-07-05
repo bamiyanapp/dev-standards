@@ -11,7 +11,7 @@
     "test": "node scripts/validate.js"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.3.0",
+    "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^20.3.0"
   }
 }
