@@ -2,242 +2,37 @@ name: Reusable CD
 
 on:
   workflow_call:
-    inputs:
-      node_version:
-        description: "semantic-releaseの実行に使うNode.jsのバージョン"
-        type: string
-        default: "lts/*"
-      base_branch:
-        description: "リリース同期元となるベースブランチ名"
-        type: string
-        default: "main"
-      release_branch:
-        description: "リリースブランチ名"
-        type: string
-        default: "release"
-      sync_branch_prefix:
-        description: "release→base_branch同期PRのブランチ名prefix"
-        type: string
-        default: "sync/release-to-main"
-      merge_ours_paths:
-        description: "base_branch→release_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可）。空の場合は指定しない。"
-        type: string
-        default: ""
-      enable_changelog_json:
-        description: "CHANGELOG.mdをJSON化するスクリプトを実行前に生成し、semantic-releaseのprepareCmd（scripts/convert-changelog-to-json.js）から利用可能にするかどうか。参照側リポジトリでこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる。"
-        type: boolean
-        default: false
-      changelog_source_path:
-        description: "変換元のCHANGELOG.mdパス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
-        type: string
-        default: "CHANGELOG.md"
-      changelog_json_output_path:
-        description: "変換後のJSON出力先パス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
-        type: string
-        default: "frontend/src/changelog.json"
-    secrets:
-      BOT_TOKEN:
-        required: false
     outputs:
       new_release_published:
-        description: "semantic-releaseが新バージョンを発行したかどうか"
+        description: "このpush（base_branchへのsquash merge）がsemantic-releaseによる新バージョンのリリースだったかどうか"
         value: ${{ jobs.release.outputs.new_release_published }}
+      version:
+        description: "リリースされたバージョン番号（リリースでない場合は空文字列）"
+        value: ${{ jobs.release.outputs.version }}
 
 jobs:
+  # バージョンの計算・タグ付け・CHANGELOG更新は reusable-ci.yml の merge job で
+  # base_branchへのマージ前（PRの作業ブランチ上）に完了している。このジョブは
+  # base_branchへのpushが新規リリースかどうかをHEADのタグの有無から判定するのみ。
   release:
-    name: Release
+    name: Detect Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
-      new_release_published: ${{ steps.check-release.outputs.new_release_published }}
+      new_release_published: ${{ steps.detect.outputs.new_release_published }}
+      version: ${{ steps.detect.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_branch }}
           fetch-depth: 0
-          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: "npm"
-      - name: Install dependencies
-        run: npm ci
-
-      # release_branch を base_branch の最新コミットまで追従させる（base_branch の方が進んでいる場合のみマージ）
-      - name: Sync ${{ inputs.release_branch }} with ${{ inputs.base_branch }}
-        env:
-          MERGE_OURS_PATHS: ${{ inputs.merge_ours_paths }}
+      - name: Detect release tag at HEAD
+        id: detect
         run: |
-          git fetch origin --tags --prune
-          git fetch origin ${{ inputs.base_branch }}
-          BASE_HEAD=$(git rev-parse origin/${{ inputs.base_branch }})
-          RELEASE_HEAD=$(git rev-parse ${{ inputs.release_branch }})
-          if [ "$BASE_HEAD" != "$RELEASE_HEAD" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            if [ -n "$MERGE_OURS_PATHS" ]; then
-              # 指定されたファイルは release_branch 側の内容を常に優先する。
-              # リポジトリの .gitattributes は release_branch に反映されるまで有効にならないため、
-              # ローカルの属性ファイルを直接指定してこの実行から即時に効かせる。
-              : > "$RUNNER_TEMP/cd-merge.gitattributes"
-              while IFS= read -r path; do
-                if [ -n "$path" ]; then
-                  echo "$path merge=ours" >> "$RUNNER_TEMP/cd-merge.gitattributes"
-                fi
-              done <<< "$MERGE_OURS_PATHS"
-              git config core.attributesFile "$RUNNER_TEMP/cd-merge.gitattributes"
-              git config merge.ours.driver true
-            fi
-            git merge --no-ff origin/${{ inputs.base_branch }} -m "Chore: Merge ${{ inputs.base_branch }} into ${{ inputs.release_branch }}"
-            git push origin ${{ inputs.release_branch }}
-          fi
-
-      # release_branch への追従直後に実行することで、他のマージとの競合（semantic-release が
-      # 「ローカルの release_branch が remote より古い」と判定してリリースを黒くスキップする
-      # 問題）が起きる時間差を最小化する
-      - name: Record pre-release commit
-        id: pre-release
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      # 参照側リポジトリがsubmodule経由のシンボリックリンクとしてこのスクリプトを
-      # 持つ場合、submoduleを取得しないcheckoutではリンク先が存在せず
-      # semantic-releaseのprepareCmdが失敗する。そのためこのジョブ内で
-      # 直接生成し、参照側にファイルの実体を持たせない。
-      - name: Generate changelog-to-JSON conversion script
-        if: inputs.enable_changelog_json
-        run: |
-          mkdir -p scripts "$(dirname '${{ inputs.changelog_json_output_path }}')"
-          cat > scripts/convert-changelog-to-json.js <<'SCRIPT_EOF'
-          const fs = require('fs');
-          const path = require('path');
-          const { execSync } = require('child_process');
-
-          const changelogPath = path.resolve(process.cwd(), '${{ inputs.changelog_source_path }}');
-          const outputPath = path.resolve(process.cwd(), '${{ inputs.changelog_json_output_path }}');
-
-          try {
-            if (!fs.existsSync(changelogPath)) {
-              console.log('CHANGELOG.md not found, skipping JSON generation.');
-              fs.writeFileSync(outputPath, '[]');
-              process.exit(0);
-            }
-
-            const content = fs.readFileSync(changelogPath, 'utf8');
-
-            // バージョンヘッダーのマッチング (例: ## [1.1.0](...) (2025-01-04) または # 1.1.0 (2025-01-04))
-            const versionRegex = /^#+ \[?([0-9.]+)\]?(?:\(.*\))? \(([0-9-]+)\)/gm;
-
-            const entries = [];
-            let match;
-
-            const matches = [];
-            while ((match = versionRegex.exec(content)) !== null) {
-              matches.push({
-                version: match[1],
-                date: match[2],
-                index: match.index,
-                endIndex: match.index + match[0].length
-              });
-            }
-
-            // タグのコミット日時（実際のリリース時刻）を取得する。バージョンのタグがまだ
-            // 存在しない/取得できない場合（リリース対象バージョン自身の実行時等）はnullを返す。
-            // 呼び出し側でCHANGELOG.mdの日付（日付のみ、時刻情報を持たない）にフォールバックする。
-            function getReleaseDate(version) {
-              let dateStr;
-              try {
-                dateStr = execSync(`git log -1 --format=%ai v${version}`, { stdio: 'pipe' }).toString().trim();
-              } catch (e) {
-                // ignore
-              }
-
-              if (!dateStr) {
-                try {
-                  dateStr = execSync(`git log -1 --format=%ai ${version}`, { stdio: 'pipe' }).toString().trim();
-                } catch (e) {
-                  // ignore
-                }
-              }
-
-              if (!dateStr) return null;
-
-              const date = new Date(dateStr);
-              if (isNaN(date.getTime())) return null;
-
-              const y = date.getFullYear();
-              const m = String(date.getMonth() + 1).padStart(2, '0');
-              const d = String(date.getDate()).padStart(2, '0');
-              const H = String(date.getHours()).padStart(2, '0');
-              const M = String(date.getMinutes()).padStart(2, '0');
-              return `${y}/${m}/${d} ${H}:${M}`;
-            }
-
-            for (let i = 0; i < matches.length; i++) {
-              const current = matches[i];
-              const next = matches[i + 1];
-
-              const start = current.endIndex;
-              const end = next ? next.index : content.length;
-
-              let body = content.substring(start, end).trim();
-
-              const gitDate = getReleaseDate(current.version);
-
-              // タグのコミット時刻が取得できない場合、実際には無い時刻情報を「00:00」として
-              // 補ってしまうと実時刻と見分けがつかなくなるため、日付のみを表示する
-              entries.push({
-                version: current.version,
-                date: gitDate || current.date.replace(/-/g, '/'),
-                body: body
-              });
-            }
-
-            fs.writeFileSync(outputPath, JSON.stringify(entries, null, 2));
-            console.log(`Changelog converted to JSON: ${entries.length} entries`);
-
-          } catch (error) {
-            console.error('Error converting changelog:', error);
-            process.exit(1);
-          }
-          SCRIPT_EOF
-      - name: Semantic Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
-      # semantic-release は新バージョンを発行した場合のみ release_branch に
-      # コミットを追加するため、実行前後のコミットを比較して新リリースの有無を判定する
-      - name: Check if a new release was published
-        id: check-release
-        run: |
-          AFTER_SHA=$(git rev-parse HEAD)
-          if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
+          TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          if [ -n "$TAG" ]; then
             echo "new_release_published=true" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           else
             echo "new_release_published=false" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
           fi
-      - name: Create PR from ${{ inputs.release_branch }} to ${{ inputs.base_branch }}
-        id: sync-pr
-        if: steps.check-release.outputs.new_release_published == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.BOT_TOKEN }}
-          base: ${{ inputs.base_branch }}
-          head: ${{ inputs.release_branch }}
-          branch: ${{ inputs.sync_branch_prefix }}
-          branch-suffix: timestamp
-          delete-branch: true
-          title: "Sync ${{ inputs.release_branch }} branch into ${{ inputs.base_branch }}"
-          body: "Automated PR to sync ${{ inputs.release_branch }} changes into ${{ inputs.base_branch }}."
-          draft: false
-          commit-message: "chore: sync ${{ inputs.release_branch }} branch into ${{ inputs.base_branch }} [skip ci]"
-      - name: Enable auto-merge for sync PR
-        if: steps.sync-pr.outputs.pull-request-number
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: |
-          gh pr merge --auto --squash \
-            --subject "chore: sync ${{ inputs.release_branch }} branch into ${{ inputs.base_branch }} (#${{ steps.sync-pr.outputs.pull-request-number }}) [skip ci]" \
-            "${{ steps.sync-pr.outputs.pull-request-url }}"
