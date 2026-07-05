@@ -1,24 +1,24 @@
 ---
 name: loop-budget
-description: Check token budget and run-log spend before and after a loop run. Enforces early exit when over budget or when there is no actionable work.
+description: ループ実行の前後でトークン予算と実行ログの消費状況を確認するスキル。予算超過時や実行可能なタスクがない場合は早期終了を強制する。
 ---
 
 # Loop Budget Guard
 
-Run at the **start** and **end** of every loop iteration.
+各ループ実行の**開始時**と**終了時**に実行する。
 
-## Start of run
+## 実行開始時
 
-1. Read `loop-budget.md` for daily caps and kill-switch flags.
-2. Read recent entries in `loop-run-log.md` (last 24h).
-3. Sum `tokens_estimate` for the active pattern today.
-4. If spend ≥ 80% of the pattern's daily cap → **report-only mode** (no sub-agents, no auto-fix).
-5. If spend ≥ 100% or `loop-pause-all` is set → **exit immediately** with a one-line note in STATE.md.
-6. If watchlist/state has no actionable items → **exit in <5k tokens** (do not spawn sub-agents).
+1. 日次上限とキルスイッチフラグについて `loop-budget.md` を読み取る。
+2. `loop-run-log.md` の直近の記録（過去24時間）を読み取る。
+3. 今日のアクティブなパターンの `tokens_estimate` を合計する。
+4. 消費量がそのパターンの日次上限の80%以上の場合 → **レポート専用モード**（サブエージェントや自動修正なし）に移行する。
+5. 消費量が100%以上、または `loop-pause-all` が設定されている場合 → STATE.mdに1行のメモを残して**直ちに終了**する。
+6. ウォッチリスト/状態に実行可能な項目がない場合 → **5kトークン未満で終了**する（サブエージェントを生成しない）。
 
-## End of run
+## 実行終了時
 
-Append one JSON object to `loop-run-log.md`:
+`loop-run-log.md` に以下のJSONオブジェクトを1つ追記する：
 
 ```json
 {
@@ -33,8 +33,8 @@ Append one JSON object to `loop-run-log.md`:
 }
 ```
 
-## Rules
+## ルール
 
-- Never exceed `max sub-agent spawns/run` from `loop-budget.md`.
-- High-cadence patterns (CI Sweeper, PR Babysitter) **must** early-exit when nothing is actionable.
-- On self-throttle, append a line to `loop-budget.md` under **Alerts This Period**.
+- `loop-budget.md` の `max sub-agent spawns/run`（1実行あたりの最大サブエージェント生成数）を決して超過しないこと。
+- 高頻度パターン（CI Sweeper、PR Babysitter）は、実行可能なアクションがない場合は**必ず**早期終了すること。
+- 自己スロットル制限がかかった場合は、`loop-budget.md` の **Alerts This Period** の下に1行追記すること。

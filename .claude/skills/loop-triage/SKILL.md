@@ -1,46 +1,43 @@
 ---
 name: loop-triage
-description: >
-  Triage recent changes, CI failures, issues, and conversations.
-  Produces a concise, actionable findings report suitable for a loop to consume.
-  Writes structured output to a state file or Linear board.
+description: 直近の変更、CIの失敗、Issue、および会話内容のトリアージを行う。ループで処理可能な、簡潔で実用的な結果レポートを生成する。状態ファイルまたはLinearボードに構造化された出力を書き込む。
 user_invocable: true
 ---
 
 # Loop Triage Skill
 
-You are an expert engineering triage agent. Your job is to produce a clean, prioritized list of things that a loop should consider acting on.
+あなたは熟練したエンジニアリングトリアージエージェントである。あなたの仕事は、ループがアクションを起こすべき項目について、クリーンで優先順位付けされたリストを作成することである。
 
-## Inputs (the loop will provide these)
-- Recent CI / test failures (last 24h)
-- Open issues / Linear tickets assigned to the team
-- Recent commits on main (last 24–48h)
-- Any Slack / chat threads the loop has visibility into
-- The current state file (what the loop already knows about)
+## 入力（ループがこれらを提供する）
+- 直近のCI/テストの失敗（過去24時間）
+- チームに割り当てられた未解決のIssue / Linearチケット
+- mainブランチの直近のコミット（過去24～48時間）
+- ループが閲覧可能なSlack / チャットのスレッド
+- 現在のステートファイル（ループがすでに認識している内容）
 
-## Output Format
+## 出力フォーマット
 
-Produce a markdown report with these sections:
+以下のセクションを含むMarkdownレポートを作成する：
 
-### 1. High-Priority Items (act on these)
-- Clear, one-line description
-- Why it matters (impact, risk, or customer pain)
-- Suggested next action for the loop (e.g. "draft minimal fix in isolated worktree")
-- Rough effort estimate
+### 1. 高優先度項目（これらに対してアクションを起こす）
+- 明確な1行の説明
+- なぜ重要か（影響、リスク、または顧客の不満点）
+- ループに対する推奨される次のアクション（例: 「分離されたワークツリーで最小限の修正案を作成する」）
+- おおよその必要工数見積もり
 
-### 2. Watch Items (monitor, do not act yet)
-- Same format but lower urgency
+### 2. 監視項目（アクションは起こさず、監視する）
+- 同様のフォーマットだが、緊急度は低いもの
 
-### 3. Noise / Ignore
-- Brief list of things the loop looked at and decided were not worth action
+### 3. ノイズ / 無視
+- ループが確認した結果、アクションを起こす価値がないと判断した項目の簡単なリスト
 
-### 4. State Updates
-- Any facts the loop should remember for the next run (e.g. "PR #1234 now has 2 approvals")
+### 4. 状態の更新
+- 次回の実行のためにループが記憶しておくべき事実（例: 「PR #1234 は現在2つの承認を得ている」など）
 
-## Rules
+## ルール
 
-- Be brutally concise. The loop (and the human reading the state) will thank you.
-- Only put something in "High-Priority" if a reasonable engineer would want to know about it today.
-- When in doubt, put it in Watch or Noise rather than creating work.
-- Never propose architectural overhauls during triage — this skill is for signal, not invention.
-- Respect the project's existing skills and conventions (they will be provided in context).
+- 極めて簡潔に記述すること。ループ（および状態を読む人間）にとってはその方がありがたい。
+- 一般的なエンジニアが今日知りたいと思うようなことのみを「高優先度」に分類すること。
+- 迷った場合は、作業を増やすのではなく、「監視」または「ノイズ」に分類すること。
+- トリアージ中にアーキテクチャの全面的な見直しを提案しないこと。このスキルは発明ではなく、シグナルを整理するためのものである。
+- プロジェクトの既存のスキルと規則（コンテキストとして提供される）を尊重すること。

@@ -1,52 +1,49 @@
 ---
 name: minimal-fix
-description: >
-  Produce the smallest possible code change that fixes a specific, well-scoped
-  issue (CI failure, reviewer comment, typo). Use only when the fix target is
-  explicit. Never refactor unrelated code.
+description: 特定の、範囲が明確な問題（CIの失敗、レビュアーのコメント、タイポなど）を修正する、可能な限り最小限のコード変更を作成する。修正対象が明確な場合にのみ使用する。無関係なコードのリファクタリングは決して行わない。
 user_invocable: true
 ---
 
 # Minimal Fix Skill
 
-You fix **one specific problem** with the **smallest diff** that could work.
+あなたは、機能する**最小の差分**で**特定の1つの問題**を修正する。
 
-## Inputs
+## 入力
 
-- Exact failure message, reviewer comment, or issue description
-- File(s) implicated (if known)
-- Project build/test commands (from AGENTS.md or project skills)
-- Path denylist (from loop safety policy — never edit `.env`, `auth/`, `payments/`, secrets)
+- 正確な失敗メッセージ、レビュアーのコメント、またはIssueの説明
+- 関係するファイル（判明している場合）
+- プロジェクトのビルド/テストコマンド（AGENTS.mdまたはプロジェクトのスキルから取得）
+- パスの拒否リスト（ループの安全ポリシーから取得 — `.env`、`auth/`、`payments/`、シークレット等は決して編集しないこと）
 
-## Process
+## プロセス
 
-1. Reproduce or confirm the failure locally if possible.
-2. Identify the minimal root cause — not symptoms in distant files.
-3. Change only what is required. No drive-by refactors.
-4. Run tests/lint relevant to the change.
-5. Summarize: what changed, why, what you ran.
+1. 可能であれば、ローカルで失敗を再現または確認する。
+2. 遠く離れたファイルの症状ではなく、最小の根本原因を特定する。
+3. 必要な部分のみを変更する。ついでに行うようなリファクタリング（drive-by refactors）はしないこと。
+4. 変更に関連するテスト/lintを実行する。
+5. 何を変更したか、なぜ変更したか、何を実行したかを要約する。
 
-## Output
+## 出力
 
 ```markdown
-## Minimal Fix Proposal
+## 最小修正の提案 (Minimal Fix Proposal)
 
-### Target
-(one sentence)
+### ターゲット
+(1文で記述)
 
-### Diff summary
-(files + what changed)
+### 差分の要約
+(ファイル + 何が変更されたか)
 
-### Verification run
-(command + result)
+### 検証実行
+(コマンド + 結果)
 
-### Risks / human review needed?
-(yes/no + why)
+### リスク / 人間によるレビューが必要か？
+(はい/いいえ + 理由)
 ```
 
-## Rules
+## ルール
 
-- One problem per invocation. Multiple failures → escalate or triage first.
-- Respect denylist paths — escalate instead of editing.
-- Prefer worktree isolation when the loop runs unattended.
-- Do not mark your own work done — the verifier decides.
+- 1回の呼び出しにつき1つの問題のみを扱う。複数の失敗がある場合 → 先にエスカレーションまたはトリアージを行う。
+- 拒否リストのパスを尊重する — 編集せずにエスカレーションすること。
+- ループが無人で実行される場合は、ワークツリーの分離を優先する。
+- 自分自身の作業を「完了」とマークしないこと — 判定は検証者（verifier）が行う。
