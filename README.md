@@ -13,8 +13,8 @@
 - `.gitignore`: Node.jsプロジェクトに共通するignoreパターン（依存物・ビルド出力・IDE/OSファイル・環境変数ファイルなど）
 - `.claude/settings.json`: Claude Codeの共通permissions設定（機密ファイルへのReadEdit禁止、危険コマンド禁止、基本的な許可コマンドなど）
 - `docs/cicd-pipeline-specification.md`: `reusable-ci.yml` / `reusable-cd.yml` が提供する共通CI/CDパイプラインの仕様（Architecture・各ワークフローの実行内容・リリース運用・同期PR運用のためのブランチ保護設定）。プロダクト固有のデプロイ手順・環境変数は対象外であり、参照側リポジトリの `docs/cicd-pipeline-specification.md` に記載する。
-- `.github/workflows/reusable-ci.yml`: commitlint / frontend・backendのlint・test・build / frontendのE2Eテスト（Playwright、任意） / CIジョブ成功時の自動マージ（squash＋作業ブランチ削除） / release→baseブランチの同期を行う reusable workflow（`workflow_call`）
-- `.github/workflows/reusable-cd.yml`: base_branch→release_branchの同期 / semantic-releaseの実行 / release_branch→base_branchの同期PR作成・自動マージを行う reusable workflow（`workflow_call`）。frontend/backendのビルド・デプロイ手順（GitHub Pages・Serverless Frameworkなど）はプロダクトごとに異なるため対象外であり、参照側リポジトリの `.github/workflows/cd.yml` に残す。
+- `.github/workflows/reusable-ci.yml`: commitlint / frontend・backendのlint・test・build / frontendのE2Eテスト（Playwright、任意） / マージ前の作業ブランチ上でのsemantic-release実行・base_branchへの自動マージ（squash＋作業ブランチ削除）・タグ付け替えを行う reusable workflow（`workflow_call`）
+- `.github/workflows/reusable-cd.yml`: base_branchへのpush時、HEADのタグからリリースかどうかを検知する reusable workflow（`workflow_call`）。frontend/backendのビルド・デプロイ手順（GitHub Pages・Serverless Frameworkなど）はプロダクトごとに異なるため対象外であり、参照側リポジトリの `.github/workflows/cd.yml` に残す。
 
 ## 利用方法（参照側リポジトリ）
 
@@ -35,28 +35,15 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   |---|---|---|
   | `frontend_dir` | frontendパッケージのディレクトリ名 | `frontend` |
   | `backend_dir` | backendパッケージのディレクトリ名 | `backend` |
-  | `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン | `20` |
+  | `node_version` | frontend/backend/semantic-releaseの実行に使うNode.jsのバージョン | `20` |
   | `workspaces` | frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う | `false` |
   | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |
-  | `enable_release_sync` | release_branchへの同期ジョブ(sync-release)を実行するかどうか。release運用をしないリポジトリはfalseを指定する | `true` |
-  | `base_branch` | リリース同期元となるベースブランチ名 | `main` |
-  | `release_branch` | リリースブランチ名 | `release` |
-  | `sync_branch_prefix` | release→base_branch同期PRのブランチ名prefix | `sync/release-to-main` |
-  | `merge_ours_paths` | release→base_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可） | `""` |
-
-  `secrets.BOT_TOKEN`（任意）を渡すと、commitlintジョブのsubmodule取得やsync-releaseジョブのpushで利用される。
-- `.github/workflows/reusable-cd.yml`: 参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@main` ＋ `with:` で値を指定して呼び出す。指定できる入力は以下の通り。
-
-  | 入力 | 説明 | デフォルト |
-  |---|---|---|
-  | `node_version` | semantic-releaseの実行に使うNode.jsのバージョン | `lts/*` |
-  | `base_branch` | リリース同期元となるベースブランチ名 | `main` |
-  | `release_branch` | リリースブランチ名 | `release` |
-  | `sync_branch_prefix` | release_branch→base_branch同期PRのブランチ名prefix | `sync/release-to-main` |
-  | `merge_ours_paths` | base_branch→release_branch同期時にmerge=oursで扱うファイルパス（改行区切りで複数指定可） | `""` |
+  | `enable_release` | マージ前の作業ブランチ上でsemantic-releaseを実行するかどうか。release運用をしないリポジトリはfalseを指定する | `true` |
+  | `base_branch` | マージ先となるベースブランチ名 | `main` |
   | `enable_changelog_json` | `CHANGELOG.md`をJSON化するスクリプト（`scripts/convert-changelog-to-json.js`）をSemantic Releaseの直前にジョブ内で生成するかどうか。参照側リポジトリがこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる（このジョブのcheckoutはsubmoduleを取得しないため、symlinkにすると壊れる） | `false` |
   | `changelog_source_path` | 変換元の`CHANGELOG.md`パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `CHANGELOG.md` |
   | `changelog_json_output_path` | 変換後のJSON出力先パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `frontend/src/changelog.json` |
 
-  `secrets.BOT_TOKEN`（任意）を渡すと、release_branchへのpushやsync PRの作成・自動マージで利用される。出力 `new_release_published`（semantic-releaseが新バージョンを発行したかどうか）を呼び出し側のデプロイジョブの実行条件に利用できる。
+  `secrets.BOT_TOKEN`（任意）を渡すと、commitlintジョブのsubmodule取得や、`merge` jobでの実際のPRマージ（squash merge API呼び出し）で利用される。**`base_branch`へのpushがCDワークフローのトリガーとなるため、`enable_release: true`で運用する場合は`BOT_TOKEN`の設定を推奨する**（`GITHUB_TOKEN`によるpushはCDをトリガーしない）。
+- `.github/workflows/reusable-cd.yml`: 参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@main` で呼び出す（入力パラメータなし）。`base_branch`へのpush時、HEADコミットに`vX.Y.Z`形式のタグが付いているかどうかで新規リリースを検知し、出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。バージョン計算・タグ付け自体は`reusable-ci.yml`の`merge` jobがマージ前に完了させている。
 
