@@ -19,6 +19,10 @@ on:
         description: "frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う。"
         type: boolean
         default: false
+      enable_e2e_test:
+        description: "frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下にtest:e2eスクリプトが必要。"
+        type: boolean
+        default: false
       enable_release_sync:
         description: "release_branchへの同期ジョブ(sync-release)を実行するかどうか。release運用をしないリポジトリはfalseを指定する。"
         type: boolean
@@ -60,10 +64,15 @@ jobs:
         run: npm ci
       - name: Validate current commit (last commit)
         if: github.event_name == 'push'
-        run: npm run lint
+        run: npx commitlint --from HEAD~1 --to HEAD --verbose
       - name: Validate PR commits
         if: github.event_name == 'pull_request'
-        run: npm run lint
+        run: |
+          npx commitlint \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to ${{ github.event.pull_request.head.sha }} \
+            --git-log-args="--no-merges" \
+            --verbose
 
   frontend-test:
     needs: commitlint
@@ -112,9 +121,46 @@ jobs:
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage
 
+  frontend-e2e-test:
+    needs: commitlint
+    if: inputs.enable_e2e_test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
+      - name: Install dependencies
+        working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
+        run: npm ci
+      - name: Install Playwright Browsers
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npx playwright install chromium --with-deps
+      - name: Build
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npm run build
+      - name: Run E2E tests
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: ${{ inputs.frontend_dir }}/playwright-report/
+          retention-days: 30
+
   merge:
-    needs: [frontend-test, backend-test]
-    if: github.event_name == 'pull_request' && success()
+    needs: [frontend-test, backend-test, frontend-e2e-test]
+    if: |
+      always() &&
+      github.event_name == 'pull_request' &&
+      needs.frontend-test.result == 'success' &&
+      needs.backend-test.result == 'success' &&
+      (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7

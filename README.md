@@ -10,7 +10,7 @@
 - `.claude/skills/safe-bash-commands/`: Bashコマンドのハング・対話プロンプト回避スキル
 - `commitlint.config.cjs`: commitlint共通設定
 - `.clineignore`: Cline向け共通ignore設定
-- `.github/workflows/reusable-ci.yml`: commitlint / frontend・backendのlint・test・build / CIジョブ成功時の自動マージ（squash＋作業ブランチ削除） / release→baseブランチの同期を行う reusable workflow（`workflow_call`）
+- `.github/workflows/reusable-ci.yml`: commitlint / frontend・backendのlint・test・build / frontendのE2Eテスト（Playwright、任意） / CIジョブ成功時の自動マージ（squash＋作業ブランチ削除） / release→baseブランチの同期を行う reusable workflow（`workflow_call`）
 - `.github/workflows/reusable-cd.yml`: base_branch→release_branchの同期 / semantic-releaseの実行 / release_branch→base_branchの同期PR作成・自動マージを行う reusable workflow（`workflow_call`）。frontend/backendのビルド・デプロイ手順（GitHub Pages・Serverless Frameworkなど）はプロダクトごとに異なるため対象外であり、参照側リポジトリの `.github/workflows/cd.yml` に残す。
 
 ## 利用方法（参照側リポジトリ）
@@ -29,6 +29,10 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   |---|---|---|
   | `frontend_dir` | frontendパッケージのディレクトリ名 | `frontend` |
   | `backend_dir` | backendパッケージのディレクトリ名 | `backend` |
+  | `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン | `20` |
+  | `workspaces` | frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う | `false` |
+  | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |
+  | `enable_release_sync` | release_branchへの同期ジョブ(sync-release)を実行するかどうか。release運用をしないリポジトリはfalseを指定する | `true` |
   | `base_branch` | リリース同期元となるベースブランチ名 | `main` |
   | `release_branch` | リリースブランチ名 | `release` |
   | `sync_branch_prefix` | release→base_branch同期PRのブランチ名prefix | `sync/release-to-main` |
