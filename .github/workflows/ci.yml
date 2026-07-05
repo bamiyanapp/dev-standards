@@ -30,7 +30,12 @@ jobs:
         run: npm run lint
       - name: Validate PR commits
         if: github.event_name == 'pull_request'
-        run: npm run lint
+        run: |
+          npx commitlint \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to ${{ github.event.pull_request.head.sha }} \
+            --git-log-args="--no-merges" \
+            --verbose
 
   validate:
     needs: commitlint
