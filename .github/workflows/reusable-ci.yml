@@ -12,7 +12,7 @@ on:
         type: string
         default: "backend"
       node_version:
-        description: "frontend/backend/semantic-releaseの実行に使うNode.jsのバージョン"
+        description: "frontend/backendのビルド・テストに使うNode.jsのバージョン"
         type: string
         default: "20"
       workspaces:
@@ -27,6 +27,10 @@ on:
         description: "マージ前にsemantic-releaseでバージョン更新を行うかどうか。release運用をしないリポジトリはfalseを指定する。"
         type: boolean
         default: true
+      semantic_release_node_version:
+        description: "semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインがfrontend/backendより新しいNode.jsを要求することがあるため、node_versionとは別に指定する。"
+        type: string
+        default: "lts/*"
       base_branch:
         description: "マージ先となるベースブランチ名"
         type: string
@@ -192,7 +196,7 @@ jobs:
         if: inputs.enable_release
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ inputs.node_version }}
+          node-version: ${{ inputs.semantic_release_node_version }}
           cache: "npm"
 
       - name: Install dependencies

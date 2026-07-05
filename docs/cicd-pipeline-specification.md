@@ -31,7 +31,9 @@ graph TD
     3. リリースが発行されていた場合、squash merge によって生成された新しいコミットへ tag と GitHub Release の `target_commitish` を付け替える（squash merge はコミットを作り変えるため、作業ブランチ上で打ったタグはそのままでは `base_branch` の祖先ではなくなる）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされてもバージョン計算が競合しない（順番待ちであり、キャンセルはされない）
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_release` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は README.md を参照。
+入力パラメータ（`frontend_dir` / `backend_dir` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は README.md を参照。
+
+semantic-release本体および一部プラグイン（`@semantic-release/npm`、`semantic-release`本体など）は、frontend/backendのビルド・テストに使うNode.jsのバージョン（`node_version`、多くの場合プロダクトのランタイムに合わせて20系などを指定）よりも新しいNode.jsを要求することがある。そのため`merge` job内のsemantic-release実行専用に`semantic_release_node_version`（デフォルト`lts/*`）を別途用意している。
 
 ## 2. CD ワークフロー (`reusable-cd.yml`)
 - **トリガー**: 参照側 `cd.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ）

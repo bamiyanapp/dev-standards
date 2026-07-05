@@ -35,10 +35,11 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   |---|---|---|
   | `frontend_dir` | frontendパッケージのディレクトリ名 | `frontend` |
   | `backend_dir` | backendパッケージのディレクトリ名 | `backend` |
-  | `node_version` | frontend/backend/semantic-releaseの実行に使うNode.jsのバージョン | `20` |
+  | `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン | `20` |
   | `workspaces` | frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う | `false` |
   | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |
   | `enable_release` | マージ前の作業ブランチ上でsemantic-releaseを実行するかどうか。release運用をしないリポジトリはfalseを指定する | `true` |
+  | `semantic_release_node_version` | semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインがfrontend/backendより新しいNode.jsを要求することがあるため`node_version`とは別に指定する | `lts/*` |
   | `base_branch` | マージ先となるベースブランチ名 | `main` |
   | `enable_changelog_json` | `CHANGELOG.md`をJSON化するスクリプト（`scripts/convert-changelog-to-json.js`）をSemantic Releaseの直前にジョブ内で生成するかどうか。参照側リポジトリがこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる（このジョブのcheckoutはsubmoduleを取得しないため、symlinkにすると壊れる） | `false` |
   | `changelog_source_path` | 変換元の`CHANGELOG.md`パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `CHANGELOG.md` |
