@@ -16,7 +16,7 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v6
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Use Node.js
         uses: actions/setup-node@v6
         with:
@@ -57,6 +57,10 @@ jobs:
     needs: [validate]
     if: github.event_name == 'pull_request' && success()
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      workflows: write
     steps:
       - uses: actions/github-script@v9
         with:
