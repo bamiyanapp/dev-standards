@@ -1,3 +1,7 @@
+---
+name: git-workflow
+description: 作業開始から終了までのGitブランチ戦略および基本操作フローを定めたスキル。
+---
 # Git Workflow
 
 作業開始

@@ -1,3 +1,7 @@
+---
+name: verifier
+description: 成果物がGoalを満たしていることを保証する品質保証プロセス（静的チェック、コードレビュー、Goal確認）を実行するスキル。
+---
 # Verifier
 
 目的

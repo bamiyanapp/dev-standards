@@ -1,3 +1,7 @@
+---
+name: commit
+description: コミットを作成する際の前提条件と必須項目を確認するスキル。
+---
 # Commit
 
 コミット前提

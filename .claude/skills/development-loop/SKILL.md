@@ -1,3 +1,7 @@
+---
+name: development-loop
+description: 開発をGoal達成まで進めるための基本ループ（Observe→Plan→Act→Verify→Reflect）を実行するスキル。
+---
 # Development Loop
 
 目的
