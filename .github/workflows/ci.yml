@@ -57,8 +57,12 @@ jobs:
     needs: [validate]
     if: github.event_name == 'pull_request' && success()
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      workflows: write
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
