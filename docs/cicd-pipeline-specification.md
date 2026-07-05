@@ -162,3 +162,58 @@ graph TD
 #### 理由
 
 - ブランチ制限を Bot が回避できないと PR 作成・マージに失敗する
+
+---
+
+# dev-standards submodule の自動更新（Renovate）について
+
+`dev-standards` を git submodule として特定コミットに固定参照しているリポジトリ（例: karuta）では、
+`dev-standards` の `main` が更新されても、submodule 参照コミットを更新しない限り変更が反映されない。
+
+これを自動化するため、Renovate（Mend Renovate）の `git-submodules` マネージャーを利用し、
+`dev-standards` の `main` 更新を検知して自動で submodule 更新 PR を作成する。
+
+## 1. 参照側リポジトリへの設定ファイル追加
+
+参照側リポジトリのルートに `renovate.json` を追加する。
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "git-submodules": {
+    "enabled": true
+  }
+}
+```
+
+`git-submodules` マネージャーは Renovate のデフォルトでは無効になっているため、明示的な有効化が必須。
+
+## 2. Mend Renovate GitHub App のインストール
+
+[GitHub Marketplace の Renovate](https://github.com/apps/renovate) から GitHub App をインストールする。
+
+- **インストール先（resource owner）**: 対象リポジトリを所有する **Organization** を選択する（個人アカウントに誤ってインストールすると、Organization 所有のリポジトリには効かない）
+- **Repository access**: 対象リポジトリを含む（`All repositories` または個別選択で対象を含める）
+- **アクティベーションキー入力画面**: Mend の有料プラン（Enterprise 向け機能）を有効化するためのものであり、**任意入力**。無料利用（submodule 更新 PR の自動作成など）には不要なため、入力せずスキップしてよい
+
+## 3. リポジトリ単位のモード設定（重要）
+
+インストール後、[Mend ダッシュボード](https://developer.mend.io) の対象リポジトリ設定で、動作モードが以下になっていることを確認する。
+
+- ✅ **自動化された PR（Automated PRs）**
+- ❌ **サイレントモード（Silent）** ← このモードのままだと、更新を検知してもスキャン結果がログに残るだけで **PR・Issue は一切作成されない**
+
+「設定ファイルが必要です」の項目は、リポジトリに既に `renovate.json` を用意しているためそのままでよい（オンボーディング PR の作成は不要）。
+
+## 4. 動作確認
+
+GitHub 上で以下を確認する。
+
+- 対象リポジトリに `renovate[bot]`（`author:app/renovate`）による PR・Issue（Dependency Dashboard 含む）が作成されているか
+- 未作成の場合は、モード設定（上記3）または Organization/Repository access（上記2）を再確認する
+
+## 5. 承認・マージについて
+
+Renovate が作成する submodule 更新 PR も、通常の PR と同様に人間による承認・マージが必要な運用（CI 自動マージ機構がある場合はそれに従う）とし、
+Claude Code がこの PR を承認・マージしてはならない。
