@@ -8,10 +8,12 @@
   },
   "scripts": {
     "lint": "commitlint --last --verbose",
-    "test": "node scripts/validate.js"
+    "lint:workflows": "node scripts/check-workflows.js",
+    "test": "node scripts/validate.js && node --test scripts/*.test.js"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.0",
-    "@commitlint/config-conventional": "^21.0.0"
+    "@commitlint/config-conventional": "^21.0.0",
+    "actionlint": "^2.0.6"
   }
 }
