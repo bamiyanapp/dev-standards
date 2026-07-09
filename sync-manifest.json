@@ -1,0 +1,16 @@
+{
+  "symlinks": [
+    { "source": ".clinerules/01-development-process.md", "target": ".clinerules/01-development-process.md" },
+    { "source": ".clinerules/02-git-conventions.md", "target": ".clinerules/02-git-conventions.md" },
+    { "source": ".clinerules/03-safe-bash-commands.md", "target": ".clinerules/03-safe-bash-commands.md" },
+    { "source": "commitlint.config.cjs", "target": "commitlint.config.cjs" },
+    { "source": ".clineignore", "target": ".clineignore" },
+    { "source": ".claude/settings.json", "target": ".claude/settings.json" }
+  ],
+  "symlinkAllInDir": [
+    { "source": ".claude/skills", "target": ".claude/skills" }
+  ],
+  "copies": [
+    { "source": ".gitignore", "target": ".gitignore" }
+  ]
+}

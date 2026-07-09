@@ -51,6 +51,10 @@ on:
         description: "変換後のJSON出力先パス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
         type: string
         default: "frontend/src/changelog.json"
+      enable_standards_check:
+        description: "dev-standards submoduleのsync-manifest.jsonに基づき、symlink欠落・リンク切れ・.gitignoreの内容乖離を`scripts/bootstrap.js --check`で検知するジョブを実行するかどうか。"
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -160,15 +164,32 @@ jobs:
           path: ${{ inputs.frontend_dir }}/playwright-report/
           retention-days: 30
 
+  standards-check:
+    needs: commitlint
+    if: inputs.enable_standards_check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+      - name: Check dev-standards symlinks / .gitignore drift
+        run: node dev-standards/scripts/bootstrap.js --check
+
   merge:
-    needs: [frontend-test, backend-test, frontend-e2e-test]
+    needs: [frontend-test, backend-test, frontend-e2e-test, standards-check]
     if: |
       always() &&
       inputs.enable_auto_merge &&
       github.event_name == 'pull_request' &&
       needs.frontend-test.result == 'success' &&
       needs.backend-test.result == 'success' &&
-      (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped')
+      (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped') &&
+      (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
