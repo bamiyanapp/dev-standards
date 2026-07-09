@@ -55,6 +55,10 @@ on:
         description: "dev-standards submoduleのsync-manifest.jsonに基づき、symlink欠落・リンク切れ・.gitignoreの内容乖離を`scripts/bootstrap.js --check`で検知するジョブを実行するかどうか。"
         type: boolean
         default: false
+      enable_shared_release_config:
+        description: "semantic-releaseの共通設定（release-config.cjs のbuildReleaseConfig()）を参照側リポジトリへコピーするかどうか。有効にする場合、参照側の.releaserc.cjsで`require('./release-config.cjs').buildReleaseConfig({...})`を呼び出す構成にする必要がある。"
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -228,6 +232,14 @@ jobs:
       - name: Install dependencies
         if: inputs.enable_release
         run: npm ci
+
+      # semantic-releaseの`extends`はplugins配列を連結してしまい同名プラグインが
+      # 重複実行されるため使用せず、release-config.cjsを参照側にコピーして
+      # .releaserc.cjsから素のrequire()で読み込む構成にしている（詳細は
+      # release-config.cjs冒頭のコメントを参照）。
+      - name: Copy shareable semantic-release config
+        if: inputs.enable_release && inputs.enable_shared_release_config
+        uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@main
 
       # 参照側リポジトリがsubmodule経由のシンボリックリンクとしてこのスクリプトを
       # 持つ場合でも、このジョブのcheckoutはsubmoduleを取得しないためリンク先が

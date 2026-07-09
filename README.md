@@ -10,6 +10,8 @@
   - `development-loop` / `git-workflow` / `verifier` / `commit` / `code-review` / `git-conventions` / `safe-bash-commands`: 通常の開発ループで使用するSkill
   - `loop-triage` / `minimal-fix` / `loop-verifier` / `loop-budget`: 自律ループ（`/loop`等）実行時に使用するSkill
 - `commitlint.config.cjs`: commitlint共通設定
+- `release-config.cjs`: semantic-releaseの共通設定を組み立てる`buildReleaseConfig()`関数。参照側の`.releaserc.cjs`から`require`して使う（`enable_shared_release_config`入力を参照）
+- `sync-manifest.json` / `scripts/bootstrap.js`: 参照側リポジトリのセットアップ（symlink作成・`.gitignore`コピー）を自動化するスクリプトと、その対象一覧を定義するマニフェスト
 - `.clineignore`: Cline向け共通ignore設定
 - `.gitignore`: Node.jsプロジェクトに共通するignoreパターン（依存物・ビルド出力・IDE/OSファイル・環境変数ファイルなど）
 - `.claude/settings.json`: Claude Codeの共通permissions設定（機密ファイルへのReadEdit禁止、危険コマンド禁止、基本的な許可コマンドなど）
@@ -54,6 +56,8 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   | `enable_changelog_json` | `CHANGELOG.md`をJSON化するスクリプト（`scripts/convert-changelog-to-json.js`）をSemantic Releaseの直前にジョブ内で生成するかどうか。参照側リポジトリがこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる（このジョブのcheckoutはsubmoduleを取得しないため、symlinkにすると壊れる） | `false` |
   | `changelog_source_path` | 変換元の`CHANGELOG.md`パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `CHANGELOG.md` |
   | `changelog_json_output_path` | 変換後のJSON出力先パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `frontend/src/changelog.json` |
+  | `enable_standards_check` | `sync-manifest.json`に基づき、symlink欠落・リンク切れ・`.gitignore`の内容乖離を`scripts/bootstrap.js --check`で検知する`standards-check` jobを実行するかどうか。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ | `false` |
+  | `enable_shared_release_config` | semantic-releaseの共通設定（`release-config.cjs`の`buildReleaseConfig()`）を`merge` job内で参照側リポジトリへコピーするかどうか。有効にする場合、参照側の`.releaserc.cjs`を`require("./release-config.cjs").buildReleaseConfig({...})`を呼び出す構成にする必要がある（`repositoryUrl`・`gitAssets`等のプロダクト固有値のみを渡す） | `false` |
 
   `secrets.BOT_TOKEN`（任意）を渡すと、commitlintジョブのsubmodule取得や、`merge` jobでの実際のPRマージ（squash merge API呼び出し）で利用される。**`base_branch`へのpushがCDワークフローのトリガーとなるため、`enable_release: true`で運用する場合は`BOT_TOKEN`の設定を推奨する**（`GITHUB_TOKEN`によるpushはCDをトリガーしない）。
 - `.github/workflows/reusable-cd.yml`: 参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@main` で呼び出す（入力パラメータなし）。`base_branch`へのpush時、HEADコミットに`vX.Y.Z`形式のタグが付いているかどうかで新規リリースを検知し、出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。バージョン計算・タグ付け自体は`reusable-ci.yml`の`merge` jobがマージ前に完了させている。

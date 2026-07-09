@@ -1,0 +1,14 @@
+name: "Copy shareable semantic-release config"
+description: >-
+  dev-standards本体が持つ release-config.cjs を、呼び出し元リポジトリの
+  release-config.cjs へコピーする。呼び出し元の .releaserc.cjs から
+  `require("./release-config.cjs")` して使う想定（semantic-releaseの`extends`機能は
+  plugins配列を連結してしまい同名プラグインが重複実行されるため使用しない。詳細は
+  release-config.cjs 冒頭のコメントを参照）。
+
+runs:
+  using: "composite"
+  steps:
+    - name: Copy release-config.cjs into caller repository
+      shell: bash
+      run: cp "${{ github.action_path }}/../../../release-config.cjs" release-config.cjs
