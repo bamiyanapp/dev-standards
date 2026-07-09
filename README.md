@@ -6,8 +6,9 @@
 
 - `CLAUDE.md`: Claude Codeの汎用開発ルール（ブランチ戦略・静的チェック・コードレビュー観点・コミット規約・完了条件など）
 - `.clinerules/`: Cline向けルールファイル（実体はすべてCLAUDE.md・skillsを参照するポインタ）
-- `.claude/skills/git-conventions/`: ブランチ命名・コミットメッセージのフォーマット規約スキル
-- `.claude/skills/safe-bash-commands/`: Bashコマンドのハング・対話プロンプト回避スキル
+- `.claude/skills/`: CLAUDE.mdから呼び出す共通Skill一式。新規Skillを追加した場合は本README・参照側リポジトリのシンボリックリンク双方を更新すること。
+  - `development-loop` / `git-workflow` / `verifier` / `commit` / `code-review` / `git-conventions` / `safe-bash-commands`: 通常の開発ループで使用するSkill
+  - `loop-triage` / `minimal-fix` / `loop-verifier` / `loop-budget`: 自律ループ（`/loop`等）実行時に使用するSkill
 - `commitlint.config.cjs`: commitlint共通設定
 - `.clineignore`: Cline向け共通ignore設定
 - `.gitignore`: Node.jsプロジェクトに共通するignoreパターン（依存物・ビルド出力・IDE/OSファイル・環境変数ファイルなど）
@@ -25,7 +26,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 ```
 
 - `CLAUDE.md`: 参照側の `CLAUDE.md` 先頭で `@dev-standards/CLAUDE.md` と記述してインポートし、プロジェクト固有のルール（対象パッケージ名、CI/自動マージ構成など）のみを参照側ファイルに追記する。
-- `.clinerules/*.md` ・ `.claude/skills/git-conventions/` ・ `.claude/skills/safe-bash-commands/` ・ `commitlint.config.cjs` ・ `.clineignore` ・ `.claude/settings.json`: これらはツール（Cline・commitlint・Claude Code等）が直接読み込む実ファイルであり、Claude Codeの `@import` 構文では解決されないため、参照側リポジトリの対応パスから本リポジトリ配下の実体へのシンボリックリンクとして参照する。
+- `.clinerules/*.md` ・ `.claude/skills/` 配下の**全Skill** ・ `commitlint.config.cjs` ・ `.clineignore` ・ `.claude/settings.json`: これらはツール（Cline・commitlint・Claude Code等）が直接読み込む実ファイルであり、Claude Codeの `@import` 構文では解決されないため、参照側リポジトリの対応パスから本リポジトリ配下の実体へのシンボリックリンクとして参照する。`.claude/skills/`は一部のSkillのみをリンクするのではなく、本リポジトリに存在する全Skillディレクトリをそれぞれ `参照側/.claude/skills/<name>` → `../../dev-standards/.claude/skills/<name>` の相対シンボリックリンクとしてリンクすること（新規Skill追加時は参照側リポジトリにもリンクの追加が必要）。
   - `.claude/settings.json` はプロジェクト固有の許可ルールを追加できないため、そのようなルールは参照側リポジトリの `.claude/settings.local.json`（Claude Codeが `settings.json` と合わせてマージする、プロジェクト固有の追加設定ファイル）に記載する。
 - `.gitignore`: `.gitignore` はGitHub側の制約によりシンボリックリンクにできない（symlink化した `.gitignore`/`.gitattributes` はsubmodule経由の攻撃に使われた前例があり、pushしようとすると `gitignoreSymlink` 警告が出る）ため、参照側リポジトリは本ファイルの内容を実体ファイルとしてコピーし、更新時に手動で同期する。プロジェクト固有のignoreエントリ（特定パッケージのビルド成果物・バックアップファイルなど）はリポジトリ直下ではなく該当パッケージ配下（例: `backend/.gitignore`）に個別に配置する。
 - `docs/cicd-pipeline-specification.md`: Claude Codeの `@import` 構文で解決可能なMarkdownのため、シンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
