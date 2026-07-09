@@ -25,13 +25,14 @@ graph TD
   - `frontend-test`: frontend の Lint・Vitest テスト・ビルド
   - `backend-test`: backend の Lint・Vitest テスト
   - `frontend-e2e-test`（任意、`enable_e2e_test: true` の場合のみ）: Playwright による E2E テスト
-  - `merge`: PR の場合、テスト成功後に以下を**1つのジョブ内で直列に**実行する
+  - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に以下を**1つのジョブ内で直列に**実行する
     1. （`enable_release: true` の場合）PR の作業ブランチに `base_branch` の最新コミットを取り込んだうえで、その作業ブランチ上で直接 `semantic-release`（`--no-ci --branches <作業ブランチ名>`）を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付けを行う
     2. `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）
     3. リリースが発行されていた場合、squash merge によって生成された新しいコミットへ tag と GitHub Release の `target_commitish` を付け替える（squash merge はコミットを作り変えるため、作業ブランチ上で打ったタグはそのままでは `base_branch` の祖先ではなくなる）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされてもバージョン計算が競合しない（順番待ちであり、キャンセルはされない）
+  - `enable_auto_merge: false` を指定すると `merge` job 全体（semantic-release 実行・自動マージ・タグ付け替えを含む）がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は README.md を参照。
+入力パラメータ（`frontend_dir` / `backend_dir` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_release` / `enable_auto_merge` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は README.md を参照。
 
 semantic-release本体および一部プラグイン（`@semantic-release/npm`、`semantic-release`本体など）は、frontend/backendのビルド・テストに使うNode.jsのバージョン（`node_version`、多くの場合プロダクトのランタイムに合わせて20系などを指定）よりも新しいNode.jsを要求することがある。そのため`merge` job内のsemantic-release実行専用に`semantic_release_node_version`（デフォルト`lts/*`）を別途用意している。
 
