@@ -39,6 +39,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   | `workspaces` | frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う | `false` |
   | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |
   | `enable_release` | マージ前の作業ブランチ上でsemantic-releaseを実行するかどうか。release運用をしないリポジトリはfalseを指定する | `true` |
+  | `enable_auto_merge` | CI（frontend-test/backend-test/frontend-e2e-test）成功後に`merge` jobでPRを自動マージするかどうか。falseの場合`merge` job自体（semantic-release実行を含む）がスキップされ、マージは人手で行う | `true` |
   | `semantic_release_node_version` | semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインがfrontend/backendより新しいNode.jsを要求することがあるため`node_version`とは別に指定する | `lts/*` |
   | `base_branch` | マージ先となるベースブランチ名 | `main` |
   | `enable_changelog_json` | `CHANGELOG.md`をJSON化するスクリプト（`scripts/convert-changelog-to-json.js`）をSemantic Releaseの直前にジョブ内で生成するかどうか。参照側リポジトリがこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる（このジョブのcheckoutはsubmoduleを取得しないため、symlinkにすると壊れる） | `false` |
