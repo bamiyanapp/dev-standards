@@ -61,13 +61,13 @@ function validateSkills() {
   const skillsDir = path.join(repoRoot, ".claude", "skills");
   if (!fs.existsSync(skillsDir)) {
     errors.push(".claude/skills が見つかりません");
-    return;
+    return [];
   }
   const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
   const skillDirs = entries.filter((entry) => entry.isDirectory());
   if (skillDirs.length === 0) {
     errors.push(".claude/skills 配下にスキルディレクトリが1つもありません");
-    return;
+    return [];
   }
   for (const entry of skillDirs) {
     const skillMdPath = path.join(skillsDir, entry.name, "SKILL.md");
@@ -88,11 +88,64 @@ function validateSkills() {
       errors.push(`${skillMdPath}: frontmatterに description がありません`);
     }
   }
+  return skillDirs.map((entry) => entry.name);
+}
+
+// CLAUDE.mdの「# Skills (専門手順)」節に列挙されたスキル名一覧を抽出する。
+// 節は次の見出し（"# "で始まる行）またはファイル末尾までとする。
+function extractSkillsSectionNames(content) {
+  const lines = content.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => /^# Skills\b/.test(line));
+  if (startIndex === -1) {
+    errors.push('CLAUDE.md に "# Skills" セクションが見つかりません');
+    return null;
+  }
+  const names = [];
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^# /.test(line)) {
+      break;
+    }
+    const itemMatch = line.match(/^-\s+\*\*([^*]+)\*\*/);
+    if (itemMatch) {
+      names.push(itemMatch[1]);
+    }
+  }
+  return names;
+}
+
+function validateSkillsSectionDrift(skillDirNames) {
+  const filePath = path.join(repoRoot, "CLAUDE.md");
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+  const content = fs.readFileSync(filePath, "utf-8");
+  const listedNames = extractSkillsSectionNames(content);
+  if (listedNames === null) {
+    return;
+  }
+  const listedSet = new Set(listedNames);
+  const dirSet = new Set(skillDirNames);
+  for (const name of skillDirNames) {
+    if (!listedSet.has(name)) {
+      errors.push(
+        `CLAUDE.mdの"# Skills"セクションに.claude/skills/${name}が記載されていません`
+      );
+    }
+  }
+  for (const name of listedNames) {
+    if (!dirSet.has(name)) {
+      errors.push(
+        `CLAUDE.mdの"# Skills"セクションに記載されている${name}が.claude/skills配下に存在しません`
+      );
+    }
+  }
 }
 
 validateClaudeMd();
 validateCommitlintConfig();
-validateSkills();
+const skillDirNames = validateSkills();
+validateSkillsSectionDrift(skillDirNames);
 
 if (errors.length > 0) {
   console.error("検証エラー:");
