@@ -9,7 +9,7 @@
   "scripts": {
     "lint": "commitlint --last --verbose",
     "lint:workflows": "node scripts/check-workflows.js",
-    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js"
+    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js && npm run lint:workflows"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.0",

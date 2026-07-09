@@ -13,88 +13,10 @@ permissions:
   pull-requests: write
 
 jobs:
-  commitlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "lts/*"
-          cache: "npm"
-      - name: Install dependencies
-        run: npm ci
-      - name: Validate current commit (last commit)
-        if: github.event_name == 'push'
-        run: npm run lint
-      - name: Validate PR commits
-        if: github.event_name == 'pull_request'
-        run: |
-          npx commitlint \
-            --from ${{ github.event.pull_request.base.sha }} \
-            --to ${{ github.event.pull_request.head.sha }} \
-            --git-log-args="--no-merges" \
-            --verbose
-
-  validate:
-    needs: commitlint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "lts/*"
-          cache: "npm"
-      - name: Install dependencies
-        run: npm ci
-      - name: Validate CLAUDE.md / commitlint.config.cjs / SKILL.md
-        run: npm run test
-      - name: Lint GitHub Actions workflows (actionlint)
-        run: npm run lint:workflows
-
-  merge:
-    needs: [validate]
-    if: github.event_name == 'pull_request' && success()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/github-script@v9
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const prNumber = context.payload.pull_request.number;
-            const branchName = context.payload.pull_request.head.ref;
-            console.log(`Attempting to merge PR #${prNumber}`);
-            try {
-              await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                merge_method: "squash"
-              });
-              console.log(`Successfully merged PR #${prNumber}`);
-            } catch (error) {
-              console.error(`Failed to merge PR #${prNumber}:`, error.message);
-              throw error;
-            }
-
-            try {
-              console.log(`Attempting to delete branch: ${branchName}`);
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `heads/${branchName}`
-              });
-              console.log(`Successfully deleted branch: ${branchName}`);
-            } catch (error) {
-              if (error.status === 422 || error.message.includes("Reference does not exist")) {
-                console.log(`Branch ${branchName} already deleted or not found.`);
-              } else {
-                console.error(`Failed to delete branch ${branchName}:`, error.message);
-              }
-            }
+  ci:
+    # 自リポジトリのreusable-ci.ymlをdogfoodingする。相対パス参照のため、このPRで
+    # 変更中のreusable-ci.yml自体の内容がそのまま使われる（@main参照ではない）。
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      packages: '[{"dir":"."}]'
+      enable_release: false
