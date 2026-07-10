@@ -52,6 +52,8 @@ jobs:
         run: npm ci
       - name: Validate CLAUDE.md / commitlint.config.cjs / SKILL.md
         run: npm run test
+      - name: Lint GitHub Actions workflows (actionlint)
+        run: npm run lint:workflows
 
   merge:
     needs: [validate]
@@ -60,7 +62,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      workflows: write
     steps:
       - uses: actions/github-script@v9
         with:

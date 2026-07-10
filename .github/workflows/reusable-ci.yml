@@ -51,6 +51,14 @@ on:
         description: "変換後のJSON出力先パス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
         type: string
         default: "frontend/src/changelog.json"
+      enable_standards_check:
+        description: "dev-standards submoduleのsync-manifest.jsonに基づき、symlink欠落・リンク切れ・.gitignoreの内容乖離を`scripts/bootstrap.js --check`で検知するジョブを実行するかどうか。"
+        type: boolean
+        default: false
+      enable_shared_release_config:
+        description: "semantic-releaseの共通設定（release-config.cjs のbuildReleaseConfig()）を参照側リポジトリへコピーするかどうか。有効にする場合、参照側の.releaserc.cjsで`require('./release-config.cjs').buildReleaseConfig({...})`を呼び出す構成にする必要がある。"
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -160,15 +168,32 @@ jobs:
           path: ${{ inputs.frontend_dir }}/playwright-report/
           retention-days: 30
 
+  standards-check:
+    needs: commitlint
+    if: inputs.enable_standards_check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+      - name: Check dev-standards symlinks / .gitignore drift
+        run: node dev-standards/scripts/bootstrap.js --check
+
   merge:
-    needs: [frontend-test, backend-test, frontend-e2e-test]
+    needs: [frontend-test, backend-test, frontend-e2e-test, standards-check]
     if: |
       always() &&
       inputs.enable_auto_merge &&
       github.event_name == 'pull_request' &&
       needs.frontend-test.result == 'success' &&
       needs.backend-test.result == 'success' &&
-      (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped')
+      (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped') &&
+      (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -208,107 +233,22 @@ jobs:
         if: inputs.enable_release
         run: npm ci
 
+      # semantic-releaseの`extends`はplugins配列を連結してしまい同名プラグインが
+      # 重複実行されるため使用せず、release-config.cjsを参照側にコピーして
+      # .releaserc.cjsから素のrequire()で読み込む構成にしている（詳細は
+      # release-config.cjs冒頭のコメントを参照）。
+      - name: Copy shareable semantic-release config
+        if: inputs.enable_release && inputs.enable_shared_release_config
+        uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@main
+
       # 参照側リポジトリがsubmodule経由のシンボリックリンクとしてこのスクリプトを
       # 持つ場合でも、このジョブのcheckoutはsubmoduleを取得しないためリンク先が
-      # 存在せずsemantic-releaseのprepareCmdが失敗する。そのためこのジョブ内で
-      # 直接生成し、参照側にファイルの実体を持たせない。
-      - name: Generate changelog-to-JSON conversion script
+      # 存在せずsemantic-releaseのprepareCmdが失敗する。そのため、dev-standards
+      # 本体が持つ実体ファイル（scripts/convert-changelog-to-json.js）を
+      # このジョブ内で参照側リポジトリへコピーし、参照側に実体を持たせない。
+      - name: Copy changelog-to-JSON conversion script
         if: inputs.enable_release && inputs.enable_changelog_json
-        run: |
-          mkdir -p scripts "$(dirname '${{ inputs.changelog_json_output_path }}')"
-          cat > scripts/convert-changelog-to-json.js <<'SCRIPT_EOF'
-          const fs = require('fs');
-          const path = require('path');
-          const { execSync } = require('child_process');
-
-          const changelogPath = path.resolve(process.cwd(), '${{ inputs.changelog_source_path }}');
-          const outputPath = path.resolve(process.cwd(), '${{ inputs.changelog_json_output_path }}');
-
-          try {
-            if (!fs.existsSync(changelogPath)) {
-              console.log('CHANGELOG.md not found, skipping JSON generation.');
-              fs.writeFileSync(outputPath, '[]');
-              process.exit(0);
-            }
-
-            const content = fs.readFileSync(changelogPath, 'utf8');
-
-            // バージョンヘッダーのマッチング (例: ## [1.1.0](...) (2025-01-04) または # 1.1.0 (2025-01-04))
-            const versionRegex = /^#+ \[?([0-9.]+)\]?(?:\(.*\))? \(([0-9-]+)\)/gm;
-
-            const entries = [];
-            let match;
-
-            const matches = [];
-            while ((match = versionRegex.exec(content)) !== null) {
-              matches.push({
-                version: match[1],
-                date: match[2],
-                index: match.index,
-                endIndex: match.index + match[0].length
-              });
-            }
-
-            // タグのコミット日時（実際のリリース時刻）を取得する。タグがまだ
-            // 存在しない/取得できない場合（リリース対象バージョン自身の実行時等）はnullを返す。
-            // 呼び出し側でCHANGELOG.mdの日付（日付のみ、時刻情報を持たない）にフォールバックする。
-            function getReleaseDate(version) {
-              let dateStr;
-              try {
-                dateStr = execSync(`git log -1 --format=%ai v${version}`, { stdio: 'pipe' }).toString().trim();
-              } catch (e) {
-                // ignore
-              }
-
-              if (!dateStr) {
-                try {
-                  dateStr = execSync(`git log -1 --format=%ai ${version}`, { stdio: 'pipe' }).toString().trim();
-                } catch (e) {
-                  // ignore
-                }
-              }
-
-              if (!dateStr) return null;
-
-              const date = new Date(dateStr);
-              if (isNaN(date.getTime())) return null;
-
-              const y = date.getFullYear();
-              const m = String(date.getMonth() + 1).padStart(2, '0');
-              const d = String(date.getDate()).padStart(2, '0');
-              const H = String(date.getHours()).padStart(2, '0');
-              const M = String(date.getMinutes()).padStart(2, '0');
-              return `${y}/${m}/${d} ${H}:${M}`;
-            }
-
-            for (let i = 0; i < matches.length; i++) {
-              const current = matches[i];
-              const next = matches[i + 1];
-
-              const start = current.endIndex;
-              const end = next ? next.index : content.length;
-
-              let body = content.substring(start, end).trim();
-
-              const gitDate = getReleaseDate(current.version);
-
-              // タグのコミット時刻が取得できない場合、実際には無い時刻情報を「00:00」として
-              // 補ってしまうと実時刻と見分けがつかなくなるため、日付のみを表示する
-              entries.push({
-                version: current.version,
-                date: gitDate || current.date.replace(/-/g, '/'),
-                body: body
-              });
-            }
-
-            fs.writeFileSync(outputPath, JSON.stringify(entries, null, 2));
-            console.log(`Changelog converted to JSON: ${entries.length} entries`);
-
-          } catch (error) {
-            console.error('Error converting changelog:', error);
-            process.exit(1);
-          }
-          SCRIPT_EOF
+        uses: bamiyanapp/dev-standards/.github/actions/copy-changelog-script@main
 
       - name: Record pre-release commit
         if: inputs.enable_release
@@ -336,6 +276,8 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           GITHUB_REF: refs/heads/${{ github.event.pull_request.head.ref }}
           GITHUB_REF_NAME: ${{ github.event.pull_request.head.ref }}
+          CHANGELOG_SOURCE_PATH: ${{ inputs.changelog_source_path }}
+          CHANGELOG_JSON_OUTPUT_PATH: ${{ inputs.changelog_json_output_path }}
         run: npx semantic-release --no-ci --branches "$HEAD_REF"
 
       # semantic-releaseは新バージョンを発行した場合のみコミット・タグ push を
