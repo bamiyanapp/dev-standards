@@ -24,13 +24,16 @@ async function main() {
     return;
   }
 
-  const lint = await createLinter();
   let totalIssues = 0;
 
   for (const file of files) {
     const filePath = path.join(workflowsDir, file);
     const relativePath = path.relative(repoRoot, filePath);
     const content = fs.readFileSync(filePath, "utf8");
+    // ファイルごとに新しいlinterインスタンスを作る。同一インスタンスで複数ファイルを
+    // 連続してlintすると、ローカルの相対パス参照（`uses: ./...`）を含むワークフローの
+    // 組み合わせによってWASM内部状態が壊れ2件目以降がクラッシュする既知の問題があるため。
+    const lint = await createLinter();
     const results = lint(content, relativePath);
 
     for (const result of results) {

@@ -59,6 +59,17 @@ on:
         description: "semantic-releaseの共通設定（release-config.cjs のbuildReleaseConfig()）を参照側リポジトリへコピーするかどうか。有効にする場合、参照側の.releaserc.cjsで`require('./release-config.cjs').buildReleaseConfig({...})`を呼び出す構成にする必要がある。"
         type: boolean
         default: false
+      packages:
+        description: >-
+          frontend_dir/backend_dirによる固定2パッケージ構成の代わりに、matrix構成でlint/test/buildする
+          パッケージ一覧をJSON配列で指定する（例: '[{"dir":"frontend","build":true},{"dir":"backend"}]'）。
+          各要素は{dir, build, node_version}を持つオブジェクトで、dir以外は省略可能
+          （buildは省略時false、node_versionは省略時inputs.node_version）。
+          lint（`npm run lint --if-present`）・test（`npm test --if-present`）は対応するnpm scriptsが
+          package.jsonに存在しない場合は自動的にスキップする（テストランナー非依存。vitest直接呼び出しは行わない）。
+          空文字列（既定）の場合は既存通りfrontend_dir/backend_dirの固定ジョブを使う（後方互換のためデフォルトは空）。
+        type: string
+        default: ""
     secrets:
       BOT_TOKEN:
         required: false
@@ -91,6 +102,7 @@ jobs:
 
   frontend-test:
     needs: commitlint
+    if: inputs.packages == ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -116,6 +128,7 @@ jobs:
 
   backend-test:
     needs: commitlint
+    if: inputs.packages == ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -135,6 +148,37 @@ jobs:
       - name: Test
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage
+
+  package-test:
+    needs: commitlint
+    if: inputs.packages != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(inputs.packages) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.package.node_version || inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', matrix.package.dir) }}
+      - name: Install dependencies
+        working-directory: ${{ inputs.workspaces && '.' || matrix.package.dir }}
+        run: npm ci
+      - name: Lint
+        working-directory: ${{ matrix.package.dir }}
+        run: npm run lint --if-present
+      - name: Test
+        working-directory: ${{ matrix.package.dir }}
+        run: npm test --if-present
+      - name: Build
+        if: matrix.package.build == true
+        working-directory: ${{ matrix.package.dir }}
+        run: npm run build
 
   frontend-e2e-test:
     needs: commitlint
@@ -185,13 +229,14 @@ jobs:
         run: node dev-standards/scripts/bootstrap.js --check
 
   merge:
-    needs: [frontend-test, backend-test, frontend-e2e-test, standards-check]
+    needs: [frontend-test, backend-test, package-test, frontend-e2e-test, standards-check]
     if: |
       always() &&
       inputs.enable_auto_merge &&
       github.event_name == 'pull_request' &&
-      needs.frontend-test.result == 'success' &&
-      needs.backend-test.result == 'success' &&
+      (needs.frontend-test.result == 'success' || needs.frontend-test.result == 'skipped') &&
+      (needs.backend-test.result == 'success' || needs.backend-test.result == 'skipped') &&
+      (needs.package-test.result == 'success' || needs.package-test.result == 'skipped') &&
       (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped') &&
       (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped')
     runs-on: ubuntu-latest

@@ -44,13 +44,14 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 
   | 入力 | 説明 | デフォルト |
   |---|---|---|
-  | `frontend_dir` | frontendパッケージのディレクトリ名 | `frontend` |
-  | `backend_dir` | backendパッケージのディレクトリ名 | `backend` |
+  | `frontend_dir` | frontendパッケージのディレクトリ名。`packages`指定時は無視される | `frontend` |
+  | `backend_dir` | backendパッケージのディレクトリ名。`packages`指定時は無視される | `backend` |
+  | `packages` | frontend/backendの固定2パッケージ構成に代えて、matrix構成でlint（`npm run lint --if-present`）・test（`npm test --if-present`）・build（明示的にオプトインした場合のみ）するパッケージ一覧をJSON配列で指定する（例: `[{"dir":"frontend","build":true},{"dir":"backend"}]`。各要素は`dir`のみ必須、`build`・`node_version`は省略可）。指定した場合、`frontend-test`/`backend-test`固定ジョブは無効になり、代わりに`package-test`ジョブがmatrix実行される | `""`（空文字列＝既存の固定ジョブを使う） |
   | `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン | `20` |
   | `workspaces` | frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う | `false` |
   | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |
   | `enable_release` | マージ前の作業ブランチ上でsemantic-releaseを実行するかどうか。release運用をしないリポジトリはfalseを指定する | `true` |
-  | `enable_auto_merge` | CI（frontend-test/backend-test/frontend-e2e-test）成功後に`merge` jobでPRを自動マージするかどうか。falseの場合`merge` job自体（semantic-release実行を含む）がスキップされ、マージは人手で行う | `true` |
+  | `enable_auto_merge` | CI（frontend-test/backend-test または package-test、frontend-e2e-test）成功後に`merge` jobでPRを自動マージするかどうか。falseの場合`merge` job自体（semantic-release実行を含む）がスキップされ、マージは人手で行う | `true` |
   | `semantic_release_node_version` | semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインがfrontend/backendより新しいNode.jsを要求することがあるため`node_version`とは別に指定する | `lts/*` |
   | `base_branch` | マージ先となるベースブランチ名 | `main` |
   | `enable_changelog_json` | `CHANGELOG.md`をJSON化するスクリプト（`scripts/convert-changelog-to-json.js`）をSemantic Releaseの直前にジョブ内で生成するかどうか。参照側リポジトリがこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる（このジョブのcheckoutはsubmoduleを取得しないため、symlinkにすると壊れる） | `false` |
