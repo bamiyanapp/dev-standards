@@ -23,32 +23,37 @@ on:
         description: "frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下にtest:e2eスクリプトが必要。"
         type: boolean
         default: false
-      enable_release:
-        description: "マージ前にsemantic-releaseでバージョン更新を行うかどうか。release運用をしないリポジトリはfalseを指定する。"
-        type: boolean
-        default: true
       enable_auto_merge:
         description: "CI（frontend-test/backend-test/frontend-e2e-test）成功後にmergeジョブでPRを自動マージするかどうか。falseの場合、CIチェックのみ行い、マージは人手で行う。"
         type: boolean
         default: true
+      # 以下のrelease関連inputは後方互換のために残しているが、このワークフロー内では
+      # 使用しない（semantic-releaseの実行はreusable-cd.ymlのreleaseジョブへ移動した。
+      # 理由: pull_requestイベントのGITHUB_REF/GITHUB_REF_NAMEはrefs/pull/<PR番号>/mergeに
+      # 固定されGitHub Actions上で上書きできないため、PRブランチ上でsemantic-releaseの
+      # ブランチ判定を偽装する方式は機能しない。同じ入力名をreusable-cd.yml側で受け取る）。
+      enable_release:
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。reusable-cd.ymlの同名inputを指定すること。"
+        type: boolean
+        default: true
       semantic_release_node_version:
-        description: "semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインがfrontend/backendより新しいNode.jsを要求することがあるため、node_versionとは別に指定する。"
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: string
         default: "lts/*"
       base_branch:
-        description: "マージ先となるベースブランチ名"
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: string
         default: "main"
       enable_changelog_json:
-        description: "CHANGELOG.mdをJSON化するスクリプトを実行前に生成し、semantic-releaseのprepareCmd（scripts/convert-changelog-to-json.js）から利用可能にするかどうか。参照側リポジトリでこのファイルをsubmodule経由のシンボリックリンクとして持つ必要がなくなる。"
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: boolean
         default: false
       changelog_source_path:
-        description: "変換元のCHANGELOG.mdパス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: string
         default: "CHANGELOG.md"
       changelog_json_output_path:
-        description: "変換後のJSON出力先パス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: string
         default: "frontend/src/changelog.json"
       enable_standards_check:
@@ -56,7 +61,7 @@ on:
         type: boolean
         default: false
       enable_shared_release_config:
-        description: "semantic-releaseの共通設定（release-config.cjs のbuildReleaseConfig()）を参照側リポジトリへコピーするかどうか。有効にする場合、参照側の.releaserc.cjsで`require('./release-config.cjs').buildReleaseConfig({...})`を呼び出す構成にする必要がある。"
+        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: boolean
         default: false
       packages:
@@ -244,103 +249,15 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    # 複数PRの版番号計算・マージが競合しないよう、リポジトリ全体で1件ずつ直列に処理する。
+    # 複数PRのマージが競合しないよう、リポジトリ全体で1件ずつ直列に処理する。
     # cancel-in-progress: false でキャンセルではなく順番待ちにする。
     concurrency:
       group: merge-queue-${{ github.repository }}
       cancel-in-progress: false
     steps:
-      - name: Checkout PR branch
-        if: inputs.enable_release
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-          # GITHUB_TOKEN でのpushは他のworkflowをトリガーしないため、
-          # ここでのバージョン更新コミットのpushでPRのCIが再実行されるのを防ぐ
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update working branch with latest ${{ inputs.base_branch }}
-        if: inputs.enable_release
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin ${{ inputs.base_branch }} --tags
-          git merge origin/${{ inputs.base_branch }} --no-edit
-
-      - name: Setup Node.js
-        if: inputs.enable_release
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ inputs.semantic_release_node_version }}
-          cache: "npm"
-
-      - name: Install dependencies
-        if: inputs.enable_release
-        run: npm ci
-
-      # semantic-releaseの`extends`はplugins配列を連結してしまい同名プラグインが
-      # 重複実行されるため使用せず、release-config.cjsを参照側にコピーして
-      # .releaserc.cjsから素のrequire()で読み込む構成にしている（詳細は
-      # release-config.cjs冒頭のコメントを参照）。
-      - name: Copy shareable semantic-release config
-        if: inputs.enable_release && inputs.enable_shared_release_config
-        uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@main
-
-      # 参照側リポジトリがsubmodule経由のシンボリックリンクとしてこのスクリプトを
-      # 持つ場合でも、このジョブのcheckoutはsubmoduleを取得しないためリンク先が
-      # 存在せずsemantic-releaseのprepareCmdが失敗する。そのため、dev-standards
-      # 本体が持つ実体ファイル（scripts/convert-changelog-to-json.js）を
-      # このジョブ内で参照側リポジトリへコピーし、参照側に実体を持たせない。
-      - name: Copy changelog-to-JSON conversion script
-        if: inputs.enable_release && inputs.enable_changelog_json
-        uses: bamiyanapp/dev-standards/.github/actions/copy-changelog-script@main
-
-      - name: Record pre-release commit
-        if: inputs.enable_release
-        id: pre-release
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      # PRブランチ上で直接semantic-releaseを実行する。isPrガードとCI検知系の
-      # チェックを無効化するため --no-ci を付与し、対象ブランチをこのPRの
-      # 作業ブランチに一時的に上書きする（.releaserc.cjsのbranches設定は
-      # 通常運用時のCLI直接実行等を想定してそのまま残す）。
-      # ブランチ名はPR作成者が自由に決められる値のため、run:のシェルスクリプトへ
-      # 式展開で直接埋め込まずenv経由で渡す（シェルインジェクション対策）。
-      #
-      # pull_requestイベントではActionsが自動設定するGITHUB_REF/GITHUB_REF_NAMEが
-      # refs/pull/<PR番号>/merge・<PR番号>/mergeになる。semantic-releaseは--no-ci指定時も
-      # ブランチ判定にこの値をそのまま使うため、--branchesで指定した作業ブランチ名と
-      # 一致せず「このブランチからは公開しない」と判定されバージョンが発行されない
-      # （job自体は成功扱いになるため見逃しやすい）。ここで実際の作業ブランチを指す
-      # 値に上書きする。
-      - name: Semantic Release (on working branch)
-        if: inputs.enable_release
-        id: semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          GITHUB_REF: refs/heads/${{ github.event.pull_request.head.ref }}
-          GITHUB_REF_NAME: ${{ github.event.pull_request.head.ref }}
-          CHANGELOG_SOURCE_PATH: ${{ inputs.changelog_source_path }}
-          CHANGELOG_JSON_OUTPUT_PATH: ${{ inputs.changelog_json_output_path }}
-        run: npx semantic-release --no-ci --branches "$HEAD_REF"
-
-      # semantic-releaseは新バージョンを発行した場合のみコミット・タグ push を
-      # 行うため、実行前後のコミットを比較して新リリースの有無を判定する
-      - name: Check if a new release was published
-        if: inputs.enable_release
-        id: check-release
-        run: |
-          AFTER_SHA=$(git rev-parse HEAD)
-          if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
-            NEW_TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
-            echo "new_release_published=true" >> "$GITHUB_OUTPUT"
-            echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "new_release_published=false" >> "$GITHUB_OUTPUT"
-          fi
-
+      # バージョン計算・タグ付け・GitHub Release作成はreusable-cd.ymlのreleaseジョブが
+      # base_branchへのpush後に行う（詳細はreusable-cd.yml冒頭のコメントを参照）。
+      # このジョブはPRのsquash mergeのみを担当する。
       - name: Merge pull request
         id: merge-pr
         uses: actions/github-script@v9
@@ -393,29 +310,3 @@ jobs:
                 console.error(`Failed to delete branch ${branchName}:`, error.message);
               }
             }
-
-      # squash mergeによりPRブランチの版更新コミットはbase_branch上で新しい
-      # コミットに置き換わる（tagが指すコミットはbase_branchの祖先ではなくなる）
-      # ため、tagとGitHub Releaseのtarget_commitishをsquash後のコミットに
-      # 付け替える
-      - name: Retarget release tag to squashed commit
-        if: inputs.enable_release && steps.check-release.outputs.new_release_published == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.check-release.outputs.tag }}
-          MERGE_SHA: ${{ steps.merge-pr.outputs.merge_sha }}
-          BASE_BRANCH: ${{ inputs.base_branch }}
-        run: |
-          if [ -z "$TAG" ] || [ -z "$MERGE_SHA" ]; then
-            echo "::warning::tag or merge_sha is empty, skipping retarget"
-            exit 0
-          fi
-          # squash mergeで作られたコミットはこの時点でローカルに存在しないため、
-          # base_branchを取得してオブジェクトを取り込んでからタグを打ち直す
-          git fetch origin "$BASE_BRANCH"
-          git tag -f "$TAG" "$MERGE_SHA"
-          git push origin "refs/tags/$TAG" --force
-          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" --jq .id || true)
-          if [ -n "$RELEASE_ID" ]; then
-            gh api -X PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" -f target_commitish="$MERGE_SHA" || true
-          fi

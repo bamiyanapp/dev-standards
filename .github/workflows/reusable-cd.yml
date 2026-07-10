@@ -2,36 +2,128 @@ name: Reusable CD
 
 on:
   workflow_call:
+    inputs:
+      enable_release:
+        description: "semantic-releaseによるバージョン更新・タグ付け・GitHub Release作成を行うかどうか。release運用をしないリポジトリはfalseを指定する。"
+        type: boolean
+        default: true
+      semantic_release_node_version:
+        description: "semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインが他のジョブより新しいNode.jsを要求することがあるため別に指定する。"
+        type: string
+        default: "lts/*"
+      enable_shared_release_config:
+        description: "semantic-releaseの共通設定（release-config.cjs のbuildReleaseConfig()）を参照側リポジトリへコピーするかどうか。有効にする場合、参照側の.releaserc.cjsで`require('./release-config.cjs').buildReleaseConfig({...})`を呼び出す構成にする必要がある。"
+        type: boolean
+        default: false
+      enable_changelog_json:
+        description: "CHANGELOG.mdをJSON化するスクリプトを実行前に生成し、semantic-releaseのprepareCmd（scripts/convert-changelog-to-json.js）から利用可能にするかどうか。"
+        type: boolean
+        default: false
+      changelog_source_path:
+        description: "変換元のCHANGELOG.mdパス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
+        type: string
+        default: "CHANGELOG.md"
+      changelog_json_output_path:
+        description: "変換後のJSON出力先パス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
+        type: string
+        default: "frontend/src/changelog.json"
+    secrets:
+      BOT_TOKEN:
+        required: false
     outputs:
       new_release_published:
-        description: "このpush（base_branchへのsquash merge）がsemantic-releaseによる新バージョンのリリースだったかどうか"
+        description: "このpush（base_branchへのマージ）がsemantic-releaseによる新バージョンのリリースだったかどうか"
         value: ${{ jobs.release.outputs.new_release_published }}
       version:
         description: "リリースされたバージョン番号（リリースでない場合は空文字列）"
         value: ${{ jobs.release.outputs.version }}
 
 jobs:
-  # バージョンの計算・タグ付け・CHANGELOG更新は reusable-ci.yml の merge job で
-  # base_branchへのマージ前（PRの作業ブランチ上）に完了している。このジョブは
-  # base_branchへのpushが新規リリースかどうかをHEADのタグの有無から判定するのみ。
+  # base_branch（push）上で直接semantic-releaseを実行する。
+  #
+  # 以前はreusable-ci.ymlのmergeジョブがPRの作業ブランチ上でsemantic-releaseを
+  # 実行していたが、pull_requestイベントでGitHub Actionsが自動設定するGITHUB_REF/
+  # GITHUB_REF_NAMEはrefs/pull/<PR番号>/mergeに固定されており、ワークフローYAMLの
+  # env:では上書きできない（GitHub Actionsの予約変数のため）。そのためsemantic-release
+  # のブランチ判定は常にrefs/pull/<PR番号>/mergeを見てしまい、「対象ブランチと
+  # 一致しないため公開しない」と判定されて新バージョンが一切発行されない状態が
+  # 続いていた（各ジョブ自体は成功扱いになるため発覚しにくい）。
+  #
+  # base_branchへの実際のpushイベント上で実行すれば、GITHUB_REFは素直に
+  # refs/heads/<base_branch>になり、上記の問題が起きない。
   release:
-    name: Detect Release
+    name: Release
+    if: inputs.enable_release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # 複数のpushが短時間に連続した場合でもバージョン計算・タグ付けが競合しないよう、
+    # リポジトリ全体で1件ずつ直列に処理する。
+    concurrency:
+      group: release-${{ github.repository }}
+      cancel-in-progress: false
     outputs:
-      new_release_published: ${{ steps.detect.outputs.new_release_published }}
-      version: ${{ steps.detect.outputs.version }}
+      new_release_published: ${{ steps.check-release.outputs.new_release_published }}
+      version: ${{ steps.check-release.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Detect release tag at HEAD
-        id: detect
+          # @semantic-release/gitのpush・@semantic-release/githubのタグ/リリース作成に
+          # 書き込み権限が必要なため、BOT_TOKEN（未設定時はGITHUB_TOKEN）を使う
+          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || github.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.semantic_release_node_version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # semantic-releaseの`extends`はplugins配列を連結してしまい同名プラグインが
+      # 重複実行されるため使用せず、release-config.cjsを参照側にコピーして
+      # .releaserc.cjsから素のrequire()で読み込む構成にしている（詳細は
+      # release-config.cjs冒頭のコメントを参照）。
+      - name: Copy shareable semantic-release config
+        if: inputs.enable_shared_release_config
+        uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@main
+
+      # 参照側リポジトリがsubmodule経由のシンボリックリンクとしてこのスクリプトを
+      # 持つ場合でも、このジョブのcheckoutはsubmoduleを取得しないためリンク先が
+      # 存在せずsemantic-releaseのprepareCmdが失敗する。そのため、dev-standards
+      # 本体が持つ実体ファイル（scripts/convert-changelog-to-json.js）を
+      # このジョブ内で参照側リポジトリへコピーし、参照側に実体を持たせない。
+      - name: Copy changelog-to-JSON conversion script
+        if: inputs.enable_changelog_json
+        uses: bamiyanapp/dev-standards/.github/actions/copy-changelog-script@main
+
+      - name: Record pre-release commit
+        id: pre-release
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # base_branchへの実push上で実行するため、--no-ciやブランチ判定の上書きは不要。
+      # semantic-releaseは通常通りGITHUB_ACTIONS環境を自動検知してCIモードで動作する。
+      - name: Semantic Release
+        id: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          CHANGELOG_SOURCE_PATH: ${{ inputs.changelog_source_path }}
+          CHANGELOG_JSON_OUTPUT_PATH: ${{ inputs.changelog_json_output_path }}
+        run: npx semantic-release
+
+      # semantic-releaseは新バージョンを発行した場合のみコミット・タグ push を
+      # 行うため、実行前後のコミットを比較して新リリースの有無を判定する
+      - name: Check if a new release was published
+        id: check-release
         run: |
-          TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
-          if [ -n "$TAG" ]; then
+          AFTER_SHA=$(git rev-parse HEAD)
+          if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
+            NEW_TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
             echo "new_release_published=true" >> "$GITHUB_OUTPUT"
-            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "version=${NEW_TAG#v}" >> "$GITHUB_OUTPUT"
           else
             echo "new_release_published=false" >> "$GITHUB_OUTPUT"
             echo "version=" >> "$GITHUB_OUTPUT"
