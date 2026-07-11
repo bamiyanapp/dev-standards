@@ -1,0 +1,29 @@
+name: "Check coverage threshold"
+description: >-
+  coverage/coverage-summary.json（vitestのjson-summaryレポーター等が生成するv8/istanbul形式の集計）を
+  読み、Job Summaryにカバレッジを表示する。thresholdが0より大きい場合、いずれかの指標が下回っていれば
+  失敗する。coverage-summary.jsonが存在しない場合はthreshold未指定（0以下）なら何もせずスキップし、
+  threshold指定時はエラーで失敗する。
+
+inputs:
+  working-directory:
+    description: "coverage/coverage-summary.jsonを探すディレクトリ（パッケージのルート）"
+    required: true
+  threshold:
+    description: "カバレッジ閾値（%）。0以下の場合はゲートせず、表示のみ行う"
+    required: false
+    default: "0"
+  label:
+    description: "Job Summary上の見出しに使うラベル（例: frontend）。省略時はworking-directoryのディレクトリ名"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        THRESHOLD: ${{ inputs.threshold }}
+        LABEL: ${{ inputs.label }}
+      run: node "${{ github.action_path }}/check-coverage.js"
