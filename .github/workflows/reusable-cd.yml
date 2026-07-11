@@ -261,6 +261,14 @@ jobs:
       # @semantic-release/githubのpublishステップはpush失敗により実行されないため、
       # GitHub Releaseを別途作成する。リリースノートはsemantic-releaseが既に更新した
       # CHANGELOG.mdの該当バージョン節から抽出する。
+      #
+      # createではなくedit優先のupsertにしているのは、同名タグのReleaseが既に
+      # 存在するケースが実際に発生したため（過去に何らかの経緯でgit tagの実体が
+      # 失われた状態のままGitHub Release自体は残っていたリポジトリがあり、
+      # semantic-releaseはgit tag側しか見ないため同じバージョン番号を再計算して
+      # 衝突した）。`gh release create`はタグ名が既存のReleaseと重複すると
+      # HTTP 422で失敗するため、まずeditを試し、対象が存在しない通常ケースでは
+      # editが失敗するのでcreateにフォールバックする。
       - name: Create GitHub Release
         if: steps.check-release.outputs.release_needs_pr == 'true'
         env:
@@ -276,4 +284,5 @@ jobs:
           if [ -z "$NOTES" ]; then
             NOTES="See CHANGELOG.md for details."
           fi
-          gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+          gh release edit "$TAG" --title "$TAG" --notes "$NOTES" \
+            || gh release create "$TAG" --title "$TAG" --notes "$NOTES"
