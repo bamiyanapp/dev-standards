@@ -1,0 +1,53 @@
+name: "Deploy to GitHub Pages"
+description: >-
+  Node.jsプロジェクトをビルドし、GitHub Pagesへデプロイする定型パターン
+  （setup-node → npm ci → build → upload-pages-artifact → deploy-pages）
+  を共通化した複合アクション。呼び出し側ジョブは`environment: { name: github-pages }`と
+  `permissions: { pages: write, id-token: write }`を指定する必要がある
+  （複合アクションからはjob単位の設定を行えないため）。
+
+inputs:
+  working-directory:
+    description: "ビルド対象のディレクトリ（package-lock.jsonが存在する場所）"
+    required: true
+  node-version:
+    description: "ビルドに使うNode.jsのバージョン"
+    required: false
+    default: "lts/*"
+  build-command:
+    description: "ビルドコマンド"
+    required: false
+    default: "npm run build"
+  artifact-path:
+    description: "GitHub Pagesにアップロードする成果物のパス（ビルド出力ディレクトリ）"
+    required: true
+
+outputs:
+  page-url:
+    description: "デプロイされたGitHub PagesのURL"
+    value: ${{ steps.deployment.outputs.page_url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "npm"
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
+    - name: Build
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ inputs.build-command }}
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: ${{ inputs.artifact-path }}
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v5
