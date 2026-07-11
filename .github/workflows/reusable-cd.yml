@@ -112,8 +112,11 @@ jobs:
       # @semantic-release/gitのprepareステップ内のgit push（base_branchへの直接push）は
       # GH013エラーで拒否される。ただしこの時点で@semantic-release/changelog・npm・execの
       # prepareは既に完了しており、CHANGELOG.md/package.json/変換後JSONの更新と
-      # ローカルコミット・タグ作成は完了している（gitプラグインはコミット→タグ付け→pushの
-      # 順で処理し、失敗するのはpushのみ）。そのため、continue-on-errorでこのpush失敗を
+      # ローカルコミットは完了している（gitプラグインはコミット→pushの順で処理し、
+      # 失敗するのはpushのみ）。なお、semantic-releaseコア本体によるgitタグの作成は
+      # このpush処理よりも後の工程で行われるため、ここではまだ作成されていない
+      # （タグ名の取得方法は後続の check-release ステップのコメントを参照）。
+      # そのため、continue-on-errorでこのpush失敗を
       # 致命的エラーとして扱わず、後続のステップでsteps.semantic-release.outcomeを見て
       # 「実際に失敗したか」を判定したうえで、ローカルに作成済みのコミットを新しいブランチへ
       # push・PR作成・APIでのマージという「PR経由」の手段でbase_branchへ反映する
@@ -133,15 +136,26 @@ jobs:
       # base_branchが保護されておらず直接pushが成功していた場合はこの時点で
       # @semantic-release/githubのpublishまで完了済みのため、release_needs_pr=falseとし
       # 後続のPRフォールバック処理をスキップする。
+      #
+      # タグ名の取得に`git tag --points-at HEAD`を使わないのは、base_branchが
+      # 保護されている場合、@semantic-release/gitのprepareステップは「コミット→
+      # push」の順で処理し、pushがGH013で失敗した時点でsemantic-release全体が
+      # 例外終了するため。この場合、実際にはコミットのみがローカルに作成された
+      # 状態であり、git tagによるタグ付け（semantic-releaseコア側のpublish直前の
+      # 処理）自体が一度も実行されないため、git tagで探しても何も見つからない。
+      # 一方@semantic-release/npmのprepareはこのpush処理より前に完了しており、
+      # package.jsonには新バージョンが既に書き込まれているため、これを信頼できる
+      # 取得元として使う（base_branchが保護されておらず直接pushが成功した場合も
+      # package.jsonの内容は同一のため、この方法はどちらのケースでも正しく動作する）。
       - name: Check if a release was prepared locally
         id: check-release
         run: |
           AFTER_SHA=$(git rev-parse HEAD)
           if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
-            NEW_TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+            VERSION=$(node -p "require('./package.json').version")
             echo "release_prepared=true" >> "$GITHUB_OUTPUT"
-            echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
-            echo "version=${NEW_TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           else
             echo "release_prepared=false" >> "$GITHUB_OUTPUT"
             echo "tag=" >> "$GITHUB_OUTPUT"
