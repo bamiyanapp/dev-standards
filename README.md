@@ -18,6 +18,7 @@
 - `docs/cicd-pipeline-specification.md`: `reusable-ci.yml` / `reusable-cd.yml` が提供する共通CI/CDパイプラインの仕様（Architecture・各ワークフローの実行内容・リリース運用・同期PR運用のためのブランチ保護設定）。プロダクト固有のデプロイ手順・環境変数は対象外であり、参照側リポジトリの `docs/cicd-pipeline-specification.md` に記載する。
 - `.github/workflows/reusable-ci.yml`: commitlint / frontend・backendのlint・test・build / frontendのE2Eテスト（Playwright、任意） / base_branchへの自動マージ（squash＋作業ブランチ削除）を行う reusable workflow（`workflow_call`）。バージョン計算・タグ付けは行わない（`reusable-cd.yml`側で行う）
 - `.github/workflows/reusable-cd.yml`: base_branchへのpush時、base_branch上で直接semantic-releaseを実行しバージョン自動採番・CHANGELOG更新・タグ付け・GitHub Release作成を行う reusable workflow（`workflow_call`）。frontend/backendのビルド・デプロイ手順（GitHub Pages・Serverless Frameworkなど）はプロダクトごとに異なるため対象外であり、参照側リポジトリの `.github/workflows/cd.yml` に残す。
+- `.releaserc.cjs` / `.github/workflows/cd.yml`: dev-standards自身も`reusable-cd.yml`を（相対パス参照で）dogfoodingし、`vX.Y.Z`形式のタグを発行する。参照側リポジトリはこのタグを`uses: ...@vX.Y.Z`で指定し、`@main`のような未固定のブランチ参照は避けること（詳細は`docs/cicd-pipeline-specification.md`の「reusable workflow参照のバージョン固定」を参照）。
 
 ## 利用方法（参照側リポジトリ）
 
@@ -46,7 +47,8 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   |---|---|---|
   | `frontend_dir` | frontendパッケージのディレクトリ名。`packages`指定時は無視される | `frontend` |
   | `backend_dir` | backendパッケージのディレクトリ名。`packages`指定時は無視される | `backend` |
-  | `packages` | frontend/backendの固定2パッケージ構成に代えて、matrix構成でlint（`npm run lint --if-present`）・test（`npm test --if-present`）・build（明示的にオプトインした場合のみ）するパッケージ一覧をJSON配列で指定する（例: `[{"dir":"frontend","build":true},{"dir":"backend"}]`。各要素は`dir`のみ必須、`build`・`node_version`は省略可）。指定した場合、`frontend-test`/`backend-test`固定ジョブは無効になり、代わりに`package-test`ジョブがmatrix実行される | `""`（空文字列＝既存の固定ジョブを使う） |
+  | `packages` | frontend/backendの固定2パッケージ構成に代えて、matrix構成でlint（`npm run lint --if-present`）・test（`npm test --if-present`）・build（明示的にオプトインした場合のみ）するパッケージ一覧をJSON配列で指定する（例: `[{"dir":"frontend","build":true},{"dir":"backend"}]`。各要素は`dir`のみ必須、`build`・`node_version`・`coverage_threshold`は省略可）。指定した場合、`frontend-test`/`backend-test`固定ジョブは無効になり、代わりに`package-test`ジョブがmatrix実行される | `""`（空文字列＝既存の固定ジョブを使う） |
+  | `coverage_threshold` | カバレッジ閾値（%）。0以下（既定）の場合、`vitest run --coverage`に`--coverage.reporter=json-summary`を追加して`coverage/coverage-summary.json`を生成するところまでは行うが、`.github/actions/check-coverage-threshold`（reusable-ci.ymlと同一リポジトリ内の複合アクションのため相対パス`./`で参照し、呼び出し元リポジトリに関わらずreusable-ci.yml自身と同じrefから解決される）による閾値判定・Job Summaryへの表示ステップ自体をスキップする。0より大きい値を指定するとこのステップが実行され、閾値判定とJob Summaryへの表示を行う。`packages`のmatrix構成では各要素の`coverage_threshold`で上書きできる（対象パッケージのテストコマンド自体がjson-summaryレポートを出力する設定になっている必要がある） | `0` |
   | `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン | `20` |
   | `workspaces` | frontend/backendがnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う | `false` |
   | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |

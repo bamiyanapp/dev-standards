@@ -9,11 +9,19 @@
   "scripts": {
     "lint": "commitlint --last --verbose",
     "lint:workflows": "node scripts/check-workflows.js",
-    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js && npm run lint:workflows"
+    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js && npm run lint:workflows"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^21.0.0",
-    "actionlint": "^2.0.6"
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.0",
+    "@semantic-release/exec": "^7.0.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.0",
+    "@semantic-release/npm": "^13.1.3",
+    "@semantic-release/release-notes-generator": "^14.0.1",
+    "actionlint": "^2.0.6",
+    "semantic-release": "^25.0.2"
   }
 }

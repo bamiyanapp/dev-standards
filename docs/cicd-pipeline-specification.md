@@ -20,14 +20,16 @@ graph TD
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
 - **実行内容**:
   - `commitlint`: コミットメッセージが Conventional Commits 形式に従っているか検証
-  - `frontend-test`: frontend の Lint・Vitest テスト・ビルド
-  - `backend-test`: backend の Lint・Vitest テスト
+  - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
+  - `backend-test`: backend の Lint・Vitest テスト（カバレッジ集計付き）
+  - `package-test`（`packages` 入力指定時、`frontend-test`/`backend-test` の代わりに実行）: 指定したパッケージ一覧を `strategy.matrix` で展開し、lint/test（`--if-present`）・任意のbuildを行う
+  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`.github/actions/check-coverage-threshold` で `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない。この複合アクションは `reusable-ci.yml` と同一リポジトリ内にあるため相対パス（`uses: ./.github/actions/check-coverage-threshold`）で参照しており、呼び出し元リポジトリの内容に関わらず常に `reusable-ci.yml` 自身と同じref（呼び出し側が指定したタグ・ブランチ、dev-standards自身のdogfooding CIではこのPRのコミット自体）から解決される
   - `frontend-e2e-test`（任意、`enable_e2e_test: true` の場合のみ）: Playwright による E2E テスト
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
+入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
 
 ## 2. CD ワークフロー (`reusable-cd.yml`)
 - **トリガー**: 参照側 `cd.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ）
@@ -111,3 +113,25 @@ GitHub 上で以下を確認する。
 
 Renovate が作成する submodule 更新 PR も、通常の PR と同様に人間による承認・マージが必要な運用（CI 自動マージ機構がある場合はそれに従う）とし、
 Claude Code がこの PR を承認・マージしてはならない。
+
+## 6. reusable workflow参照のバージョン固定
+
+`reusable-ci.yml` / `reusable-cd.yml` は上記の `git-submodules` 経由の固定運用とは別に、参照側の `ci.yml` / `cd.yml` から
+`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@<ref>` の形で直接参照される。この `<ref>` を `main`（ブランチ）にしたままだと、
+dev-standards の `main` への変更が全参照側リポジトリの CI/CD に **即時・無告知** で反映されてしまう（意図しない破壊、事前検証不能）。
+
+dev-standards 自身も本ファイルが定める CD ワークフロー（`.releaserc.cjs` + `.github/workflows/cd.yml`、`reusable-cd.yml` を dogfooding で呼び出す構成）で
+semantic-release による `vX.Y.Z` 形式のタグを発行する。参照側リポジトリは `<ref>` にこのタグを指定し、ブランチ（`@main`）を使わない。
+
+```yaml
+uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@vX.Y.Z
+```
+
+タグ更新の検知には Renovate の `github-actions` マネージャーを使う。`config:recommended`（上記1の `renovate.json` が既に `extends` している）には
+`github-actions` マネージャーが標準で含まれているため、`git-submodules` のような追加の明示的な有効化は不要で、参照側リポジトリの `renovate.json` に
+変更を加えなくても `uses: ...@vX.Y.Z` 形式の参照を Renovate が自動的に検知し、新しいタグが発行されるたびに更新 PR を作成する。
+
+このタグ更新 PR も通常の PR・Renovate submodule 更新 PR と同様、Claude Code が承認・マージしてはならない（上記5と同じ運用）。
+
+submodule 参照コミット（ルール・スキル）とワークフロータグ（CI/CD挙動）は別々の Renovate PR として作成される（同一 PR へのグループ化は本ドキュメント作成時点では未設定）。
+両者のバージョンがずれることがあるため、どちらか一方だけを先にマージしても他方の追従が必要な場合がある点に留意する。

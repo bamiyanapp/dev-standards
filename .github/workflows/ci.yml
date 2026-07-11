@@ -18,5 +18,8 @@ jobs:
     # 変更中のreusable-ci.yml自体の内容がそのまま使われる（@main参照ではない）。
     uses: ./.github/workflows/reusable-ci.yml
     with:
-      packages: '[{"dir":"."}]'
+      # semantic-release本体・一部プラグインがNode 22以上を要求するため、
+      # reusable-ci.ymlのnode_version既定値（20）ではpackage-lock.jsonの
+      # 整合性検証（npm ci）でnpmのバージョン差異により失敗する。
+      packages: '[{"dir":".","node_version":"22"}]'
       enable_release: false

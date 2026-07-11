@@ -68,13 +68,23 @@ on:
         description: >-
           frontend_dir/backend_dirによる固定2パッケージ構成の代わりに、matrix構成でlint/test/buildする
           パッケージ一覧をJSON配列で指定する（例: '[{"dir":"frontend","build":true},{"dir":"backend"}]'）。
-          各要素は{dir, build, node_version}を持つオブジェクトで、dir以外は省略可能
-          （buildは省略時false、node_versionは省略時inputs.node_version）。
+          各要素は{dir, build, node_version, coverage_threshold}を持つオブジェクトで、dir以外は省略可能
+          （buildは省略時false、node_versionは省略時inputs.node_version、coverage_thresholdは省略時
+          inputs.coverage_threshold）。
           lint（`npm run lint --if-present`）・test（`npm test --if-present`）は対応するnpm scriptsが
           package.jsonに存在しない場合は自動的にスキップする（テストランナー非依存。vitest直接呼び出しは行わない）。
           空文字列（既定）の場合は既存通りfrontend_dir/backend_dirの固定ジョブを使う（後方互換のためデフォルトは空）。
         type: string
         default: ""
+      coverage_threshold:
+        description: >-
+          カバレッジ閾値（%、0以下でゲート無効）。frontend-test/backend-testでは`npx vitest run --coverage`に
+          `--coverage.reporter=json-summary`を追加して集計を出力し、閾値未満ならジョブを失敗させる。
+          いずれの場合もcoverage/coverage-summary.jsonが存在すればJob Summaryにカバレッジ表を出力する
+          （閾値を設定していない場合も表示のみは行われる）。packagesのmatrix構成では各要素の
+          coverage_thresholdで上書きできる（テストコマンド自体がjson-summaryを出力する設定になっている必要がある）。
+        type: number
+        default: 0
     secrets:
       BOT_TOKEN:
         required: false
@@ -126,7 +136,14 @@ jobs:
         run: npm run lint
       - name: Test
         working-directory: ${{ inputs.frontend_dir }}
-        run: npx vitest run --coverage
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+      - name: Check coverage threshold
+        if: inputs.coverage_threshold > 0
+        uses: ./.github/actions/check-coverage-threshold
+        with:
+          working-directory: ${{ inputs.frontend_dir }}
+          threshold: ${{ inputs.coverage_threshold }}
+          label: frontend
       - name: Build
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run build
@@ -152,7 +169,14 @@ jobs:
         run: npm run lint
       - name: Test
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+      - name: Check coverage threshold
+        if: inputs.coverage_threshold > 0
+        uses: ./.github/actions/check-coverage-threshold
+        with:
+          working-directory: ${{ inputs.backend_dir }}
+          threshold: ${{ inputs.coverage_threshold }}
+          label: backend
 
   package-test:
     needs: commitlint
@@ -180,6 +204,13 @@ jobs:
       - name: Test
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
+      - name: Check coverage threshold
+        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
+        uses: ./.github/actions/check-coverage-threshold
+        with:
+          working-directory: ${{ matrix.package.dir }}
+          threshold: ${{ matrix.package.coverage_threshold || inputs.coverage_threshold }}
+          label: ${{ matrix.package.dir }}
       - name: Build
         if: matrix.package.build == true
         working-directory: ${{ matrix.package.dir }}
