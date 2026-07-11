@@ -1,0 +1,19 @@
+name: CD
+run-name: CD ${{ github.event.head_commit.message }}
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # 自リポジトリのreusable-cd.ymlをdogfoodingする。相対パス参照のため、このPRで
+  # 変更中のreusable-cd.yml自体の内容がそのまま使われる（@main参照ではない）。
+  release:
+    uses: ./.github/workflows/reusable-cd.yml
+    with:
+      enable_shared_release_config: false

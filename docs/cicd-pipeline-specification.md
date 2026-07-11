@@ -111,3 +111,25 @@ GitHub 上で以下を確認する。
 
 Renovate が作成する submodule 更新 PR も、通常の PR と同様に人間による承認・マージが必要な運用（CI 自動マージ機構がある場合はそれに従う）とし、
 Claude Code がこの PR を承認・マージしてはならない。
+
+## 6. reusable workflow参照のバージョン固定
+
+`reusable-ci.yml` / `reusable-cd.yml` は上記の `git-submodules` 経由の固定運用とは別に、参照側の `ci.yml` / `cd.yml` から
+`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@<ref>` の形で直接参照される。この `<ref>` を `main`（ブランチ）にしたままだと、
+dev-standards の `main` への変更が全参照側リポジトリの CI/CD に **即時・無告知** で反映されてしまう（意図しない破壊、事前検証不能）。
+
+dev-standards 自身も本ファイルが定める CD ワークフロー（`.releaserc.cjs` + `.github/workflows/cd.yml`、`reusable-cd.yml` を dogfooding で呼び出す構成）で
+semantic-release による `vX.Y.Z` 形式のタグを発行する。参照側リポジトリは `<ref>` にこのタグを指定し、ブランチ（`@main`）を使わない。
+
+```yaml
+uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@vX.Y.Z
+```
+
+タグ更新の検知には Renovate の `github-actions` マネージャーを使う。`config:recommended`（上記1の `renovate.json` が既に `extends` している）には
+`github-actions` マネージャーが標準で含まれているため、`git-submodules` のような追加の明示的な有効化は不要で、参照側リポジトリの `renovate.json` に
+変更を加えなくても `uses: ...@vX.Y.Z` 形式の参照を Renovate が自動的に検知し、新しいタグが発行されるたびに更新 PR を作成する。
+
+このタグ更新 PR も通常の PR・Renovate submodule 更新 PR と同様、Claude Code が承認・マージしてはならない（上記5と同じ運用）。
+
+submodule 参照コミット（ルール・スキル）とワークフロータグ（CI/CD挙動）は別々の Renovate PR として作成される（同一 PR へのグループ化は本ドキュメント作成時点では未設定）。
+両者のバージョンがずれることがあるため、どちらか一方だけを先にマージしても他方の追従が必要な場合がある点に留意する。
