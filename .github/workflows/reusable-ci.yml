@@ -138,6 +138,7 @@ jobs:
         working-directory: ${{ inputs.frontend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       - name: Check coverage threshold
+        if: inputs.coverage_threshold > 0
         uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@main
         with:
           working-directory: ${{ inputs.frontend_dir }}
@@ -170,6 +171,7 @@ jobs:
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       - name: Check coverage threshold
+        if: inputs.coverage_threshold > 0
         uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@main
         with:
           working-directory: ${{ inputs.backend_dir }}
@@ -203,6 +205,7 @@ jobs:
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
       - name: Check coverage threshold
+        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
         uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@main
         with:
           working-directory: ${{ matrix.package.dir }}

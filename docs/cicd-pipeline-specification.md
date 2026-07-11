@@ -23,7 +23,7 @@ graph TD
   - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
   - `backend-test`: backend の Lint・Vitest テスト（カバレッジ集計付き）
   - `package-test`（`packages` 入力指定時、`frontend-test`/`backend-test` の代わりに実行）: 指定したパッケージ一覧を `strategy.matrix` で展開し、lint/test（`--if-present`）・任意のbuildを行う
-  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が設定されている場合、`.github/actions/check-coverage-threshold` で `coverage/coverage-summary.json` を読み、閾値未満の指標があればジョブを失敗させる。閾値未設定でもレポートが存在すれば Job Summary にカバレッジ表を表示する
+  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`.github/actions/check-coverage-threshold` で `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない（dev-standards自身のdogfooding CIのように、このリポジトリにまだ存在しないバージョンの本アクションを`@main`参照で解決しようとして失敗するのを避けるため）
   - `frontend-e2e-test`（任意、`enable_e2e_test: true` の場合のみ）: Playwright による E2E テスト
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
