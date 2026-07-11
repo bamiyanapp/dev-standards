@@ -57,13 +57,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     # 複数のpushが短時間に連続した場合でもバージョン計算・タグ付けが競合しないよう、
     # リポジトリ全体で1件ずつ直列に処理する。
     concurrency:
       group: release-${{ github.repository }}
       cancel-in-progress: false
     outputs:
-      new_release_published: ${{ steps.check-release.outputs.new_release_published }}
+      new_release_published: ${{ steps.check-release.outputs.release_prepared }}
       version: ${{ steps.check-release.outputs.version }}
     steps:
       - name: Checkout
@@ -106,25 +107,159 @@ jobs:
 
       # base_branchへの実push上で実行するため、--no-ciやブランチ判定の上書きは不要。
       # semantic-releaseは通常通りGITHUB_ACTIONS環境を自動検知してCIモードで動作する。
-      - name: Semantic Release
+      #
+      # base_branchが「変更は必ずPR経由」のリポジトリルールで保護されている場合、
+      # @semantic-release/gitのprepareステップ内のgit push（base_branchへの直接push）は
+      # GH013エラーで拒否される。ただしこの時点で@semantic-release/changelog・npm・execの
+      # prepareは既に完了しており、CHANGELOG.md/package.json/変換後JSONの更新と
+      # ローカルコミット・タグ作成は完了している（gitプラグインはコミット→タグ付け→pushの
+      # 順で処理し、失敗するのはpushのみ）。そのため、continue-on-errorでこのpush失敗を
+      # 致命的エラーとして扱わず、後続のステップでsteps.semantic-release.outcomeを見て
+      # 「実際に失敗したか」を判定したうえで、ローカルに作成済みのコミットを新しいブランチへ
+      # push・PR作成・APIでのマージという「PR経由」の手段でbase_branchへ反映する
+      # （base_branchが保護されていないリポジトリでは直接pushがそのまま成功するため、
+      # 後述のフォールバック処理は実行されず不要なPRは作られない）。
+      - name: Semantic Release (prepare; direct push to a protected base_branch is expected to fail here)
         id: semantic-release
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
           CHANGELOG_SOURCE_PATH: ${{ inputs.changelog_source_path }}
           CHANGELOG_JSON_OUTPUT_PATH: ${{ inputs.changelog_json_output_path }}
         run: npx semantic-release
 
-      # semantic-releaseは新バージョンを発行した場合のみコミット・タグ push を
-      # 行うため、実行前後のコミットを比較して新リリースの有無を判定する
-      - name: Check if a new release was published
+      # semantic-releaseは新バージョンを発行する場合のみローカルにコミット・タグを
+      # 作成するため、実行前後のコミットを比較してリリース有無を判定する。
+      # base_branchが保護されておらず直接pushが成功していた場合はこの時点で
+      # @semantic-release/githubのpublishまで完了済みのため、release_needs_pr=falseとし
+      # 後続のPRフォールバック処理をスキップする。
+      - name: Check if a release was prepared locally
         id: check-release
         run: |
           AFTER_SHA=$(git rev-parse HEAD)
           if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
             NEW_TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
-            echo "new_release_published=true" >> "$GITHUB_OUTPUT"
+            echo "release_prepared=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
             echo "version=${NEW_TAG#v}" >> "$GITHUB_OUTPUT"
           else
-            echo "new_release_published=false" >> "$GITHUB_OUTPUT"
+            echo "release_prepared=false" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
             echo "version=" >> "$GITHUB_OUTPUT"
           fi
+          if [ "${{ steps.semantic-release.outcome }}" = "failure" ]; then
+            echo "release_needs_pr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ローカルに作成済みのバージョン更新コミットを新しいブランチへpushする
+      # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。
+      - name: Push the prepared release commit to a new branch
+        if: steps.check-release.outputs.release_needs_pr == 'true'
+        id: push-release-branch
+        env:
+          TAG: ${{ steps.check-release.outputs.tag }}
+        run: |
+          BRANCH="chore/release-${TAG}"
+          git checkout -b "$BRANCH"
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      # 新しいブランチからbase_branchへのPRを作成し、API経由でsquash mergeする。
+      # 「PR経由の変更」としてリポジトリルールを満たしたうえでbase_branchへ反映する。
+      - name: Create and merge the release pull request
+        if: steps.check-release.outputs.release_needs_pr == 'true'
+        id: merge-release-pr
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = "${{ steps.push-release-branch.outputs.branch }}";
+            const tag = "${{ steps.check-release.outputs.tag }}";
+            const baseBranch = context.ref.replace("refs/heads/", "");
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: branch,
+              base: baseBranch,
+              title: `chore(release): ${tag} [skip ci]`,
+              body: "semantic-releaseによる自動バージョン更新PRです。",
+            });
+            console.log(`Created release PR #${pr.number}`);
+
+            let mergeSha = "";
+            // pushで作成したブランチ直後はGitHub側のmergeable判定が
+            // 追いついていないことがあるため、短い間隔でリトライする
+            const maxAttempts = 5;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              try {
+                const { data } = await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  merge_method: "squash",
+                });
+                mergeSha = data.sha;
+                core.setOutput("merge_sha", mergeSha);
+                console.log(`Successfully merged release PR #${pr.number} as ${mergeSha}`);
+                break;
+              } catch (error) {
+                if (attempt === maxAttempts) {
+                  console.error(`Failed to merge release PR #${pr.number}:`, error.message);
+                  throw error;
+                }
+                console.log(`Merge attempt ${attempt} failed (${error.message}), retrying...`);
+                await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
+              }
+            }
+
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${branch}`,
+              });
+            } catch (error) {
+              if (!(error.status === 422 || error.message.includes("Reference does not exist"))) {
+                console.error(`Failed to delete branch ${branch}:`, error.message);
+              }
+            }
+
+      # squash mergeによりリリースコミットはbase_branch上で新しいコミットに
+      # 置き換わる（タグが指すコミットはbase_branchの祖先ではなくなる）ため、
+      # タグをsquash後のコミットへ付け替える（tagはrefs/tags/以下でありrefs/heads/への
+      # 変更を対象とするリポジトリルールの影響を受けない）。
+      - name: Retarget release tag to the squashed commit
+        if: steps.check-release.outputs.release_needs_pr == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.check-release.outputs.tag }}
+          MERGE_SHA: ${{ steps.merge-release-pr.outputs.merge_sha }}
+        run: |
+          # squash mergeで作られたコミットはこの時点でローカルに存在しないため、
+          # base_branchを取得してオブジェクトを取り込んでからタグを打ち直す
+          git fetch origin "${{ github.ref_name }}"
+          git tag -f "$TAG" "$MERGE_SHA"
+          git push origin "refs/tags/$TAG" --force
+
+      # @semantic-release/githubのpublishステップはpush失敗により実行されないため、
+      # GitHub Releaseを別途作成する。リリースノートはsemantic-releaseが既に更新した
+      # CHANGELOG.mdの該当バージョン節から抽出する。
+      - name: Create GitHub Release
+        if: steps.check-release.outputs.release_needs_pr == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.check-release.outputs.tag }}
+          VERSION: ${{ steps.check-release.outputs.version }}
+        run: |
+          NOTES=$(awk -v ver="$VERSION" '
+            $0 ~ "^# \\[?" ver { flag=1; next }
+            flag && /^# \[?[0-9]/ { exit }
+            flag { print }
+          ' CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="See CHANGELOG.md for details."
+          fi
+          gh release create "$TAG" --title "$TAG" --notes "$NOTES"
