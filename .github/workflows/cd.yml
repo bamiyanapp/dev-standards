@@ -17,3 +17,5 @@ jobs:
     uses: ./.github/workflows/reusable-cd.yml
     with:
       enable_shared_release_config: false
+    secrets:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
