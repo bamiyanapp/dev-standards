@@ -42,7 +42,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   - `.claude/settings.json` はプロジェクト固有の許可ルールを追加できないため、そのようなルールは参照側リポジトリの `.claude/settings.local.json`（Claude Codeが `settings.json` と合わせてマージする、プロジェクト固有の追加設定ファイル）に記載する。
   - `.gitignore` はGitHub側の制約によりシンボリックリンクにできない（symlink化した `.gitignore`/`.gitattributes` はsubmodule経由の攻撃に使われた前例があり、pushしようとすると `gitignoreSymlink` 警告が出る）ため、`bootstrap.js` は実体ファイルとしてコピーする。本リポジトリ側の `.gitignore` を更新した場合、参照側では自動上書きされないため（内容が意図的にカスタマイズされている可能性があるため）、`--check` で乖離を検知したうえで手動で再同期すること。プロジェクト固有のignoreエントリ（特定パッケージのビルド成果物・バックアップファイルなど）はリポジトリ直下ではなく該当パッケージ配下（例: `backend/.gitignore`）に個別に配置する。
 - `docs/cicd-pipeline-specification.md`: Claude Codeの `@import` 構文で解決可能なMarkdownのため、シンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
-- `.github/workflows/reusable-ci.yml`: 参照側の `.github/workflows/ci.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@main` ＋ `with:` で値を指定して呼び出す。指定できる入力は以下の通り。
+- `.github/workflows/reusable-ci.yml`: 参照側の `.github/workflows/ci.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す（`@main`のような未固定のブランチ参照は避け、タグで固定すること）。指定できる入力は以下の通り。
 
   | 入力 | 説明 | デフォルト |
   |---|---|---|
@@ -59,7 +59,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   `enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` は非推奨（後方互換のため入力自体は残しているが、このワークフロー内では使用しない）。同名の入力を`reusable-cd.yml`側に指定すること（下記）。
 
   `secrets.BOT_TOKEN`（任意）を渡すと、commitlintジョブのsubmodule取得や、`merge` jobでの実際のPRマージ（squash merge API呼び出し）で利用される。
-- `.github/workflows/reusable-cd.yml`: 参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@main` ＋ `with:` で値を指定して呼び出す。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行してバージョン自動採番・タグ付け・GitHub Release作成を行い、出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
+- `.github/workflows/reusable-cd.yml`: 参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す（`@main`のような未固定のブランチ参照は避け、タグで固定すること）。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行してバージョン自動採番・タグ付け・GitHub Release作成を行い、出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
 
   | 入力 | 説明 | デフォルト |
   |---|---|---|
