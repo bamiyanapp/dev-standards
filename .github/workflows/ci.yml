@@ -23,3 +23,9 @@ jobs:
       # 整合性検証（npm ci）でnpmのバージョン差異により失敗する。
       packages: '[{"dir":".","node_version":"22"}]'
       enable_release: false
+    secrets:
+      # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
+      # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、
+      # mainへのpushイベントが発生せずcd.ymlが起動しない（未設定時はGITHUB_TOKENに
+      # フォールバックする）。
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
