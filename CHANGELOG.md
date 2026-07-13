@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/bamiyanapp/dev-standards/compare/v1.0.0...v1.0.1) (2026-07-13)
+
+
+### Bug Fixes
+
+* **cd:** reusable-cd.ymlが自身の複合actionを[@main](https://github.com/main)参照している不整合を解消する ([#53](https://github.com/bamiyanapp/dev-standards/issues/53)) ([5de0cb4](https://github.com/bamiyanapp/dev-standards/commit/5de0cb49751ddf73850a0428508b5f10bbe55b04))
+
 # 1.0.0 (2026-07-12)
 
 
