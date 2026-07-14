@@ -76,7 +76,7 @@ jobs:
           token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || github.token }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.semantic_release_node_version }}
           cache: "npm"
