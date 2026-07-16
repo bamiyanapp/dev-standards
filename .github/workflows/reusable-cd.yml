@@ -75,7 +75,23 @@ jobs:
           # 書き込み権限が必要なため、BOT_TOKEN（未設定時はGITHUB_TOKEN）を使う
           token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || github.token }}
 
-      - name: Setup Node.js
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Setup Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.semantic_release_node_version }}
+          cache: "npm"
+
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+
+      - name: Setup Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.semantic_release_node_version }}
