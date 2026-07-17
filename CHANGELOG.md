@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/bamiyanapp/dev-standards/compare/v1.2.3...v1.2.4) (2026-07-17)
+
+
+### Bug Fixes
+
+* **ci:** E2Eスクリーンショットの見出しに日本語キャプションを使えるようにする ([#73](https://github.com/bamiyanapp/dev-standards/issues/73)) ([cda83ae](https://github.com/bamiyanapp/dev-standards/commit/cda83aee05f411cd1860b85706d6932e55b6b52e)), closes [bamiyanapp/karuta#601](https://github.com/bamiyanapp/karuta/issues/601)
+
 ## [1.2.3](https://github.com/bamiyanapp/dev-standards/compare/v1.2.2...v1.2.3) (2026-07-17)
 
 
