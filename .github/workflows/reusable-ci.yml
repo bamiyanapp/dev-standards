@@ -502,9 +502,18 @@ jobs:
             echo ""
             for f in e2e-screenshots/*.png; do
               name="$(basename "$f" .png)"
-              echo "**${name}**"
+              # 呼び出し側（frontend/e2e/screenshot.jsのcaptureScreenshot()）が
+              # 同名の*.caption.txtを書き出していれば、それを見出しに使う（issue
+              # bamiyanapp/karuta#601）。無ければ従来どおりファイル名をそのまま使う
+              caption_file="e2e-screenshots/${name}.caption.txt"
+              if [ -f "$caption_file" ]; then
+                caption="$(cat "$caption_file")"
+              else
+                caption="$name"
+              fi
+              echo "**${caption}**"
               echo ""
-              echo "![${name}](https://raw.githubusercontent.com/${{ github.repository }}/e2e-screenshots/runs/${{ github.run_id }}/$(basename "$f"))"
+              echo "![${caption}](https://raw.githubusercontent.com/${{ github.repository }}/e2e-screenshots/runs/${{ github.run_id }}/$(basename "$f"))"
               echo ""
             done
           } | tee screenshots-summary.md >> "$GITHUB_STEP_SUMMARY"
