@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/bamiyanapp/dev-standards/compare/v1.1.0...v1.2.0) (2026-07-17)
+
+
+### Features
+
+* **ci:** E2Eスクリーンショットを専用ブランチへ公開しJob Summary/PRコメントへ埋め込む ([#64](https://github.com/bamiyanapp/dev-standards/issues/64)) ([521a3db](https://github.com/bamiyanapp/dev-standards/commit/521a3db361e93533398544e8986fea065aa83459))
+
 # [1.1.0](https://github.com/bamiyanapp/dev-standards/compare/v1.0.2...v1.1.0) (2026-07-17)
 
 
