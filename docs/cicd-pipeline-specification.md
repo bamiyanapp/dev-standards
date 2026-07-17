@@ -23,13 +23,32 @@ graph TD
   - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
   - `backend-test`: backend の Lint・Vitest テスト（カバレッジ集計付き）
   - `package-test`（`packages` 入力指定時、`frontend-test`/`backend-test` の代わりに実行）: 指定したパッケージ一覧を `strategy.matrix` で展開し、lint/test（`--if-present`）・任意のbuildを行う
-  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`.github/actions/check-coverage-threshold` で `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない。この複合アクションは `reusable-ci.yml` と同一リポジトリ内にあるため相対パス（`uses: ./.github/actions/check-coverage-threshold`）で参照しており、呼び出し元リポジトリの内容に関わらず常に `reusable-ci.yml` 自身と同じref（呼び出し側が指定したタグ・ブランチ、dev-standards自身のdogfooding CIではこのPRのコミット自体）から解決される
+  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`check-coverage-threshold` 複合アクションで `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない。この複合アクションは `bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@<ref>` という完全修飾（owner/repo/path@ref）形式で参照する（[bamiyanapp/karuta#573](https://github.com/bamiyanapp/karuta/pull/573)で修正。以前は相対パス（`uses: ./.github/actions/check-coverage-threshold`）で参照しており「呼び出し元リポジトリの内容に関わらず常にreusable-ci.yml自身と同じrefから解決される」と誤って想定していたが、**ステップレベルの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした対象）のチェックアウト内容に対して解決される**というのが実際のGitHub Actionsの挙動であり、dev-standards自身のdogfooding CI（呼び出し元と定義元が同一リポジトリ）でしか正しく動作しない不具合だった。他リポジトリから呼び出した際、`coverage_threshold`が0（既定）のジョブでは該当ステップ自体が実行されないため潜在化していたが、常時実行される`frontend-e2e-test`の「Show E2E coverage」ステップで初めて顕在化した）。`<ref>`は各ジョブ内の「Resolve this workflow's own ref」ステップが`github.workflow_ref`（`owner/repo/path@ref`形式）から動的に導出し、呼び出し側が指定したタグ・ブランチ（dev-standards自身のdogfooding CIではこのPRのブランチ自体）と一致させる
   - `frontend-e2e-test`（任意、`enable_e2e_test: true` の場合のみ）: Playwright による E2E テスト
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
 
 入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
+
+### `commitlint`が`pull_request`/`push`の両方で実行される理由
+
+`commitlint` job は参照側 `ci.yml` の `on` 設定次第で、1回のマージにつき2回実行されることがある（`pull_request`イベントと、マージ後に`base_branch`へのpushで再度起動する`push`イベント）。それぞれ検証対象が異なり、どちらも意図した挙動である。
+
+- `pull_request`イベント: `Validate PR commits`ステップが、そのPRに含まれる全コミット（`base.sha`〜`head.sha`）を検証する。**マージ前のゲート**として機能し、`merge` job は `needs.commitlint.result == 'success'`（またはinfra起因の失敗）を要求するため、ここで規約違反があればマージされない。
+- `push`イベント（`base_branch`への実push、通常は`merge` jobによるSquash merge直後）: `Validate current commit (last commit)`ステップが、実際に生成された最終コミット（`HEAD~1`〜`HEAD`、Squash mergeコミットメッセージそのもの）を検証する。これは**マージ前のゲートではなく**（push自体がマージ完了後にしか発火しないため、原理的にゲートにはなり得ない）、`reusable-cd.yml`の`release` jobが`base_branch`のコミット履歴をConventional Commitsとして解釈しバージョンを自動採番するため、**Squash mergeで実際に生成されたコミットメッセージがConventional Commits形式に従っているかを最終確認する**ためのチェックである（PRのコミット範囲チェックだけでは、GitHubのSquash merge時にタイトル・本文が想定外の形式に変換されるケースまでは検知できない）。
+
+そのため、push側の`commitlint`が失敗しても「規約違反のコミットがマージ前のゲートをすり抜けた」ことを意味しない。むしろ「マージ済みのコミットメッセージが不正な形式で、このままでは`release` jobのバージョン計算が期待通りに動かない可能性がある」ことを示すシグナルであり、対応（コミットメッセージの手動修正やタグの調整）は別途必要になる。
+
+なお、この`push`側チェックの前段（Node.jsセットアップ・`npm ci`）がインフラ起因（一時的なネットワーク障害、参照側リポジトリルート直下の`package-lock.json`同期漏れ等）で失敗した場合に備え、`infra_failure`出力で他ジョブへの巻き添えブロックを避ける仕組みを既に導入済み（[dev-standards#60](https://github.com/bamiyanapp/dev-standards/pull/60)）。この失敗は`::warning::`として明示的に表示されるため、`npm ci`の健全性（ルート直下`package-lock.json`の同期等）を別途スケジュール実行で継続監視する仕組みは、現状のシグナルで十分検知可能と判断し追加しない（過剰な仕組みを避ける）。
+
+参照側`ci.yml`は`pull_request`と`push`の両イベントで同じワークフロー（`CI`）を起動するため、GitHub Actionsの実行一覧では見た目がほぼ同じ「CI ...」の実行が2件（PRの実行とマージ後pushの実行）並ぶ。`run-name`にイベント種別を明示するラベルを含め、実行一覧だけでどちらか判別できるようにすることを推奨する。例:
+
+```yaml
+run-name: >-
+  CI (${{ github.event_name == 'pull_request' && 'PR' || 'push-to-main' }})
+  ${{ github.event.head_commit.message || github.event.pull_request.title }}
+```
 
 ## 2. CD ワークフロー (`reusable-cd.yml`)
 - **トリガー**: 参照側 `cd.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ）

@@ -212,9 +212,26 @@ jobs:
       - name: Test
         working-directory: ${{ inputs.frontend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+      # ステップの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした
+      # 対象、frontend_dir/backend_dirを持つ側）のチェックアウト内容に対して解決される
+      # （reusable-ci.yml自身のrefには解決されない。ジョブレベルの`uses:`でreusable
+      # workflow自体を参照する場合と異なる点に注意）。そのため、このワークフロー自身と
+      # 同じref（dev-standards側のcheck-coverage-thresholdアクション）を明示的に
+      # 指定して参照する。dev-standards自身のdogfooding CI（呼び出し元と定義元が
+      # 同一リポジトリ）ではこの問題が顕在化しないため、他リポジトリから呼び出して
+      # 実際に確認するまで気づかなかった（詳細: bamiyanapp/karuta#573）
+      - name: Resolve this workflow's own ref (for cross-repo composite action reference)
+        id: dev-standards-ref
+        if: inputs.coverage_threshold > 0
+        shell: bash
+        run: |
+          ref="${GITHUB_WORKFLOW_REF#*@}"
+          ref="${ref#refs/tags/}"
+          ref="${ref#refs/heads/}"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
-        uses: ./.github/actions/check-coverage-threshold
+        uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@${{ steps.dev-standards-ref.outputs.ref }}
         with:
           working-directory: ${{ inputs.frontend_dir }}
           threshold: ${{ inputs.coverage_threshold }}
@@ -263,9 +280,19 @@ jobs:
       - name: Test
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+      # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#573）
+      - name: Resolve this workflow's own ref (for cross-repo composite action reference)
+        id: dev-standards-ref
+        if: inputs.coverage_threshold > 0
+        shell: bash
+        run: |
+          ref="${GITHUB_WORKFLOW_REF#*@}"
+          ref="${ref#refs/tags/}"
+          ref="${ref#refs/heads/}"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
-        uses: ./.github/actions/check-coverage-threshold
+        uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@${{ steps.dev-standards-ref.outputs.ref }}
         with:
           working-directory: ${{ inputs.backend_dir }}
           threshold: ${{ inputs.coverage_threshold }}
@@ -315,9 +342,19 @@ jobs:
       - name: Test
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
+      # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#573）
+      - name: Resolve this workflow's own ref (for cross-repo composite action reference)
+        id: dev-standards-ref
+        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
+        shell: bash
+        run: |
+          ref="${GITHUB_WORKFLOW_REF#*@}"
+          ref="${ref#refs/tags/}"
+          ref="${ref#refs/heads/}"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Check coverage threshold
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
-        uses: ./.github/actions/check-coverage-threshold
+        uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@${{ steps.dev-standards-ref.outputs.ref }}
         with:
           working-directory: ${{ matrix.package.dir }}
           threshold: ${{ matrix.package.coverage_threshold || inputs.coverage_threshold }}
@@ -383,9 +420,23 @@ jobs:
       # 再利用する。閾値によるゲートは行わない（thresholdは常に0、ログ出力のみが
       # このissueのスコープ。ゲート運用の要否は別issueで検討する）。テストが失敗した
       # 場合でも、そこまでに収集できたカバレッジを確認できるようif: always()にする
+      # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#573）。
+      # このステップは実際に他リポジトリ（karuta）から呼び出された際に初めて
+      # 顕在化した不具合の発生源そのもの（if: always()で必ず実行されるため、
+      # coverage_thresholdが0のfrontend-test/backend-testでは潜在化していた同じ
+      # 不具合が最初に表面化した）
+      - name: Resolve this workflow's own ref (for cross-repo composite action reference)
+        id: dev-standards-ref
+        if: always()
+        shell: bash
+        run: |
+          ref="${GITHUB_WORKFLOW_REF#*@}"
+          ref="${ref#refs/tags/}"
+          ref="${ref#refs/heads/}"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Show E2E coverage
         if: always()
-        uses: ./.github/actions/check-coverage-threshold
+        uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@${{ steps.dev-standards-ref.outputs.ref }}
         with:
           working-directory: ${{ inputs.frontend_dir }}
           threshold: 0
