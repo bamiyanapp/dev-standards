@@ -370,11 +370,32 @@ jobs:
       - name: Run E2E tests
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run test:e2e
+      # E2EテストのJSカバレッジ算出結果をログ・Job Summaryへ出力する（issue #541）。
+      # frontend側のPlaywright設定（playwright.config.jsのmonocart-reporter）が
+      # frontend-testジョブのユニットテストカバレッジと同じ形式・パス
+      # （coverage/coverage-summary.json）で出力する構成になっているため、
+      # frontend-test/backend-testで使っているのと同じ複合アクションをそのまま
+      # 再利用する。閾値によるゲートは行わない（thresholdは常に0、ログ出力のみが
+      # このissueのスコープ。ゲート運用の要否は別issueで検討する）。テストが失敗した
+      # 場合でも、そこまでに収集できたカバレッジを確認できるようif: always()にする
+      - name: Show E2E coverage
+        if: always()
+        uses: ./.github/actions/check-coverage-threshold
+        with:
+          working-directory: ${{ inputs.frontend_dir }}
+          threshold: 0
+          label: frontend-e2e
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
           path: ${{ inputs.frontend_dir }}/playwright-report/
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: e2e-coverage-report
+          path: ${{ inputs.frontend_dir }}/coverage/
           retention-days: 30
 
   standards-check:
