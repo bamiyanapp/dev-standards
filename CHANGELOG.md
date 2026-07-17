@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/bamiyanapp/dev-standards/compare/v1.2.2...v1.2.3) (2026-07-17)
+
+
+### Bug Fixes
+
+* **ci:** check-coverage-thresholdの参照先を固定タグ指定に変更する（2回目の障害是正） ([#71](https://github.com/bamiyanapp/dev-standards/issues/71)) ([475da03](https://github.com/bamiyanapp/dev-standards/commit/475da03d0b25ed72e203f5b4e92128bafd1fc1da)), closes [bamiyanapp/karuta#583](https://github.com/bamiyanapp/karuta/issues/583)
+
 ## [1.2.2](https://github.com/bamiyanapp/dev-standards/compare/v1.2.1...v1.2.2) (2026-07-17)
 
 
