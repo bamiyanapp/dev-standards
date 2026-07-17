@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/bamiyanapp/dev-standards/compare/v1.2.1...v1.2.2) (2026-07-17)
+
+
+### Bug Fixes
+
+* **ci:** check-coverage-thresholdの参照方式を修正する（前回のCI完全停止の是正） ([#70](https://github.com/bamiyanapp/dev-standards/issues/70)) ([11aee0b](https://github.com/bamiyanapp/dev-standards/commit/11aee0b298f9369eea840067221f47584afcd287)), closes [bamiyanapp/karuta#583](https://github.com/bamiyanapp/karuta/issues/583)
+
 ## [1.2.1](https://github.com/bamiyanapp/dev-standards/compare/v1.2.0...v1.2.1) (2026-07-17)
 
 
