@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/bamiyanapp/dev-standards/compare/v1.0.2...v1.1.0) (2026-07-17)
+
+
+### Features
+
+* **ci:** E2EテストのJSカバレッジ算出結果をログ・Job Summaryへ出力する ([#63](https://github.com/bamiyanapp/dev-standards/issues/63)) ([9aa8f59](https://github.com/bamiyanapp/dev-standards/commit/9aa8f591ba19e40d71f9d0e53e21ce692c62f5d3))
+
 ## [1.0.2](https://github.com/bamiyanapp/dev-standards/compare/v1.0.1...v1.0.2) (2026-07-17)
 
 
