@@ -220,25 +220,22 @@ jobs:
       # （`steps.<id>.outputs`のような実行時の値を`uses:`に直接渡すと、そのジョブが
       # 1つも作成されないまま即座に失敗する＝startup failureになる。過去の修正で
       # 一度この誤った実装をリリースしてしまい、他リポジトリ（karuta）のCIを完全に
-      # 止めた実例がある。bamiyanapp/karuta#583参照）。そのため、`with:`（`actions/checkout`
-      # の`ref:`。こちらはsteps contextを問題なく参照できる）でこのワークフロー自身と
-      # 同じrefをdev-standardsの別ディレクトリへ明示的にcheckoutし、`uses:`には固定の
-      # 相対パス文字列のみを渡す
-      - name: Resolve this workflow's own ref
-        id: dev-standards-ref
-        if: inputs.coverage_threshold > 0
-        shell: bash
-        run: |
-          ref="${GITHUB_WORKFLOW_REF#*@}"
-          ref="${ref#refs/tags/}"
-          ref="${ref#refs/heads/}"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      # 止めた実例がある）。
+      #
+      # このワークフロー自身のrefを動的に取得する試み（`GITHUB_WORKFLOW_REF`環境変数
+      # から抽出する方式）も試したが、これは呼び出し元（karuta等）のトップレベル
+      # ワークフロー自身のref（PRのマージref等）を返すのであってdev-standards側の
+      # refではなく、実際にcheckoutしようとして失敗した（詳細はbamiyanapp/karuta#583）。
+      # ライブ環境でしか検証できない性質の問題を2度誤って踏んだため、これ以上の動的
+      # 解決は試みず、固定タグを明示的に指定する方式にする。dev-standardsの新しい
+      # リリースのたびに、この参照タグを手動で最新へ更新すること（check-coverage-threshold
+      # 自体の内容が変わらない限り、多少古いタグのままでも実害はない）
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: ${{ steps.dev-standards-ref.outputs.ref }}
+          ref: v1.2.2
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -292,21 +289,12 @@ jobs:
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
-      - name: Resolve this workflow's own ref
-        id: dev-standards-ref
-        if: inputs.coverage_threshold > 0
-        shell: bash
-        run: |
-          ref="${GITHUB_WORKFLOW_REF#*@}"
-          ref="${ref#refs/tags/}"
-          ref="${ref#refs/heads/}"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: ${{ steps.dev-standards-ref.outputs.ref }}
+          ref: v1.2.2
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -361,21 +349,12 @@ jobs:
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
-      - name: Resolve this workflow's own ref
-        id: dev-standards-ref
-        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
-        shell: bash
-        run: |
-          ref="${GITHUB_WORKFLOW_REF#*@}"
-          ref="${ref#refs/tags/}"
-          ref="${ref#refs/heads/}"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Checkout dev-standards (for the local composite action)
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: ${{ steps.dev-standards-ref.outputs.ref }}
+          ref: v1.2.2
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -450,21 +429,12 @@ jobs:
       # 顕在化した不具合の発生源そのもの（if: always()で必ず実行されるため、
       # coverage_thresholdが0のfrontend-test/backend-testでは潜在化していた同じ
       # 不具合が最初に表面化した）
-      - name: Resolve this workflow's own ref
-        id: dev-standards-ref
-        if: always()
-        shell: bash
-        run: |
-          ref="${GITHUB_WORKFLOW_REF#*@}"
-          ref="${ref#refs/tags/}"
-          ref="${ref#refs/heads/}"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Checkout dev-standards (for the local composite action)
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: ${{ steps.dev-standards-ref.outputs.ref }}
+          ref: v1.2.2
           path: .dev-standards-actions
       - name: Show E2E coverage
         if: always()
