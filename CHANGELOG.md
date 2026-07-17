@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/bamiyanapp/dev-standards/compare/v1.0.1...v1.0.2) (2026-07-17)
+
+
+### Bug Fixes
+
+* **ci:** setup-nodeの一時的な失敗を自動リトライし、インフラ起因ならテストを継続する ([#60](https://github.com/bamiyanapp/dev-standards/issues/60)) ([f51ea19](https://github.com/bamiyanapp/dev-standards/commit/f51ea19c6f2c9ea0cfaddbfb67311cc1fac04283))
+
 ## [1.0.1](https://github.com/bamiyanapp/dev-standards/compare/v1.0.0...v1.0.1) (2026-07-13)
 
 
