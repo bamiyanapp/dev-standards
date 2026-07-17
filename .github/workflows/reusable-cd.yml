@@ -10,7 +10,7 @@ on:
       semantic_release_node_version:
         description: "semantic-releaseの実行に使うNode.jsのバージョン。semantic-release本体やプラグインが他のジョブより新しいNode.jsを要求することがあるため別に指定する。"
         type: string
-        default: "lts/*"
+        default: "22"
       enable_shared_release_config:
         description: "semantic-releaseの共通設定（release-config.cjs のbuildReleaseConfig()）を参照側リポジトリへコピーするかどうか。有効にする場合、参照側の.releaserc.cjsで`require('./release-config.cjs').buildReleaseConfig({...})`を呼び出す構成にする必要がある。"
         type: boolean
