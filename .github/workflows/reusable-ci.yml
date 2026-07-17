@@ -334,6 +334,11 @@ jobs:
       inputs.enable_e2e_test &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
+    # E2Eスクリーンショットの公開（issue #568）に、専用ブランチへのpush（contents）と
+    # PRへのコメント投稿（pull-requests）が必要
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -397,6 +402,77 @@ jobs:
           name: e2e-coverage-report
           path: ${{ inputs.frontend_dir }}/coverage/
           retention-days: 30
+      # E2Eスクリーンショットの見やすい形での共有（issue #568）。
+      # GitHub Actionsのアーティファクト（zip）はダウンロード・展開が必要で、
+      # 特にスマホ版GitHubアプリからは実質閲覧不可能なため、代わりに
+      # スクリーンショットPNGを専用ブランチ（e2e-screenshots）へ公開し、
+      # raw.githubusercontent.comのURLとしてJob Summary・PRコメントへ画像を
+      # 直接埋め込む（どちらもGitHubのモバイルアプリでネイティブに表示される）。
+      # frontend/e2e/screenshot.jsのcaptureScreenshot()がこのディレクトリへ
+      # PNGを書き出す（テストが1件もスクリーンショットを撮っていない場合は
+      # ディレクトリ自体が存在しないため、以降のステップはスキップされる）
+      - name: Check for E2E screenshots
+        id: screenshots
+        if: always()
+        working-directory: ${{ inputs.frontend_dir }}
+        run: |
+          if [ -d e2e-screenshots ] && [ -n "$(ls -A e2e-screenshots/*.png 2>/dev/null)" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      # 補助的な機能であり、このステップの失敗（ブランチ保護やトークン権限の問題等）が
+      # 実際のE2Eテスト結果（成功/失敗）の判定を上書きしてはならないため
+      # continue-on-error: trueにする
+      - name: Publish E2E screenshots to a dedicated branch
+        id: publish-screenshots
+        if: always() && steps.screenshots.outputs.found == 'true'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_dir: ${{ inputs.frontend_dir }}/e2e-screenshots
+          publish_branch: e2e-screenshots
+          destination_dir: runs/${{ github.run_id }}
+          # 過去の実行分を上書き・削除せず蓄積する（他のPR・実行から参照されている
+          # 可能性があるURLを壊さないため）。リポジトリ肥大化の対応（古い実行分の
+          # 定期削除等）は必要になった時点で別途検討する
+          keep_files: true
+      - name: Build E2E screenshots summary
+        id: screenshots-summary
+        if: always() && steps.publish-screenshots.outcome == 'success'
+        continue-on-error: true
+        working-directory: ${{ inputs.frontend_dir }}
+        run: |
+          {
+            echo "### E2Eスクリーンショット"
+            echo ""
+            for f in e2e-screenshots/*.png; do
+              name="$(basename "$f" .png)"
+              echo "**${name}**"
+              echo ""
+              echo "![${name}](https://raw.githubusercontent.com/${{ github.repository }}/e2e-screenshots/runs/${{ github.run_id }}/$(basename "$f"))"
+              echo ""
+            done
+          } | tee screenshots-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment E2E screenshots on the pull request
+        if: always() && steps.screenshots-summary.outcome == 'success' && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const body = fs.readFileSync(
+              path.join('${{ inputs.frontend_dir }}', 'screenshots-summary.md'),
+              'utf-8'
+            );
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
 
   standards-check:
     needs: commitlint
