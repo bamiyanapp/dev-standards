@@ -123,7 +123,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
       - name: Wait before retrying Node.js setup
         if: steps.setup-node-1.outcome == 'failure'
@@ -135,7 +135,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
       - name: Install dependencies
         id: install
@@ -396,7 +396,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Wait before retrying Node.js setup
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -405,7 +405,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Check dev-standards symlinks / .gitignore drift
         run: node dev-standards/scripts/bootstrap.js --check
 
