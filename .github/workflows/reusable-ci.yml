@@ -39,7 +39,7 @@ on:
       semantic_release_node_version:
         description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: string
-        default: "lts/*"
+        default: "22"
       base_branch:
         description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: string
@@ -90,39 +90,114 @@ on:
         required: false
 
 jobs:
+  # commitlintジョブは実際のコミットメッセージ検証の前に、Node.jsセットアップ・
+  # 依存関係インストールという「インフラ起因で失敗しうる」工程を挟む。これらが
+  # GitHub側の一時的な障害（setup-nodeのバージョンマニフェスト取得失敗等）で
+  # 失敗した場合と、コミットメッセージ自体が実際に規約違反だった場合を区別できるよう、
+  # 各工程をcontinue-on-error付きで実行し、最後の「Determine result」ステップで
+  # 出力（infra_failure）へ反映する。後続の各テストジョブは、commitlintジョブが
+  # 失敗していてもinfra_failure=trueであれば実行される（インフラ起因の失敗で
+  # テスト結果自体が見えなくなることを防ぐ）。ただし`merge`ジョブは、コミット
+  # メッセージを実際に検証できていない以上、いずれの失敗理由でも従来通りブロックされる
+  # （needs.commitlint.result == 'success'を要求したまま変更しない）。
   commitlint:
     runs-on: ubuntu-latest
+    outputs:
+      infra_failure: ${{ steps.result.outputs.infra_failure }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: true
-      - uses: actions/setup-node@v7
+      # setup-nodeはNode.jsバージョンマニフェストの取得をGitHub側から行うため、
+      # 一時的な障害（HTMLのエラーページが返りJSONパースに失敗する等）で失敗することがある。
+      # 特に"lts/*"のようなエイリアスはこの障害の影響を受けやすい専用の解決経路
+      # （"Attempt to resolve LTS alias from manifest..."）を通るため、具体的な
+      # メジャーバージョン番号（"22"）へ固定してこの経路自体を回避する。それでも
+      # 発生しうる一時的な失敗に備え、同一の呼び出しを1回だけ自動リトライする
+      # （新しいアクション参照を追加すると、このリポジトリ自身が未タグ付けの状態で
+      # それを参照することになり解決できないため、複合アクション化はせずジョブ内に
+      # インラインで実装する）
+      - name: Setup Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
         with:
-          node-version: "lts/*"
+          node-version: "22"
+          cache: "npm"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Setup Node.js (attempt 2/2, retry after a transient failure)
+        id: setup-node-2
+        if: steps.setup-node-1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
           cache: "npm"
       - name: Install dependencies
+        id: install
+        if: steps.setup-node-1.outcome == 'success' || steps.setup-node-2.outcome == 'success'
+        continue-on-error: true
         run: npm ci
       - name: Validate current commit (last commit)
-        if: github.event_name == 'push'
+        id: lint-push
+        if: steps.install.outcome == 'success' && github.event_name == 'push'
+        continue-on-error: true
         run: npx commitlint --from HEAD~1 --to HEAD --verbose
       - name: Validate PR commits
-        if: github.event_name == 'pull_request'
+        id: lint-pr
+        if: steps.install.outcome == 'success' && github.event_name == 'pull_request'
+        continue-on-error: true
         run: |
           npx commitlint \
             --from ${{ github.event.pull_request.base.sha }} \
             --to ${{ github.event.pull_request.head.sha }} \
             --git-log-args="--no-merges" \
             --verbose
+      - name: Determine result
+        id: result
+        shell: bash
+        run: |
+          if [ "${{ steps.install.outcome }}" != "success" ]; then
+            echo "infra_failure=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::commitlintジョブの環境構築（Node.jsセットアップ/npm ci）に失敗したため、コミットメッセージの検証自体を実行できませんでした。GitHub側の一時的な問題（setup-nodeのバージョンマニフェスト取得失敗等）の場合もあれば、ルート直下のpackage.json/package-lock.jsonの不整合等、実際に対応が必要な問題の場合もあります。いずれにせよコミットメッセージ自体の内容とは無関係なため、後続のテストジョブはこの失敗を理由にブロックしませんが、mergeジョブはコミットメッセージを実際に検証できていないため引き続きブロックされます。"
+            exit 1
+          fi
+          echo "infra_failure=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.lint-push.outcome }}" = "failure" ] || [ "${{ steps.lint-pr.outcome }}" = "failure" ]; then
+            exit 1
+          fi
+          exit 0
 
   frontend-test:
     needs: commitlint
-    if: inputs.packages == ''
+    if: |
+      always() &&
+      inputs.packages == '' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Use Node.js
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
@@ -150,12 +225,30 @@ jobs:
 
   backend-test:
     needs: commitlint
-    if: inputs.packages == ''
+    if: |
+      always() &&
+      inputs.packages == '' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Use Node.js
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.backend_dir) }}
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
@@ -180,7 +273,10 @@ jobs:
 
   package-test:
     needs: commitlint
-    if: inputs.packages != ''
+    if: |
+      always() &&
+      inputs.packages != '' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     strategy:
       fail-fast: false
       matrix:
@@ -189,7 +285,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Use Node.js
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.package.node_version || inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', matrix.package.dir) }}
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.package.node_version || inputs.node_version }}
@@ -218,12 +329,30 @@ jobs:
 
   frontend-e2e-test:
     needs: commitlint
-    if: inputs.enable_e2e_test
+    if: |
+      always() &&
+      inputs.enable_e2e_test &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Use Node.js
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
@@ -250,17 +379,33 @@ jobs:
 
   standards-check:
     needs: commitlint
-    if: inputs.enable_standards_check
+    if: |
+      always() &&
+      inputs.enable_standards_check &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           submodules: true
-      - name: Use Node.js
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: 'lts/*'
+          node-version: '22'
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
       - name: Check dev-standards symlinks / .gitignore drift
         run: node dev-standards/scripts/bootstrap.js --check
 

@@ -13,7 +13,7 @@ inputs:
   node-version:
     description: "ビルドに使うNode.jsのバージョン"
     required: false
-    default: "lts/*"
+    default: "22"
   build-command:
     description: "ビルドコマンド"
     required: false
