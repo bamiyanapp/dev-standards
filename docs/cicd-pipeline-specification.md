@@ -35,13 +35,20 @@ graph TD
     E2Eテストがスクリーンショットを撮影している場合（後述の呼び出し規約に従い`<frontend_dir>/e2e-screenshots/`へPNGを書き出している場合）、このjobは追加で次を行う（開発環境の制約「スマホオンリー」対応、[bamiyanapp/karuta#568](https://github.com/bamiyanapp/karuta/issues/568)）。
 
     1. `e2e-screenshots/*.png`の存在を確認する（無ければ以降のステップはスキップ）
-    2. `peaceiris/actions-gh-pages`で`e2e-screenshots`ブランチの`runs/<run_id>/`配下へPNGを公開する（`continue-on-error: true`。このステップの失敗がE2Eテスト自体の成否判定を上書きしてはならないため）
-    3. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う
-    4. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
+    2. `pull_request`イベントの場合、GitHub API（`pulls.listFiles`）でそのPRの変更ファイル一覧を取得し`<frontend_dir>/changed-files.json`へ書き出す（`continue-on-error: true`。取得できない場合やイベントが`pull_request`以外の場合は後述の関連判定が常にフォールバックする）
+    3. `peaceiris/actions-gh-pages`で`e2e-screenshots`ブランチの`runs/<run_id>/`配下へPNGを公開する（`continue-on-error: true`。このステップの失敗がE2Eテスト自体の成否判定を上書きしてはならないため）
+    4. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）と`<frontend_dir>/e2e/spec-source-map.json`（スペックファイルごとの検証対象ソースパスの宣言）の両方が用意されており、かつ手順2で変更ファイル一覧が取得できている場合は、そのスペックの宣言パスと変更ファイル一覧を突き合わせ、重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A）。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
+    5. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認でき、スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
 
     **参照側リポジトリでの呼び出し規約**: `<frontend_dir>/e2e-screenshots/<name>.png`へPNGを書き出すヘルパー関数（例: karutaの`frontend/e2e/screenshot.js`の`captureScreenshot(page, testInfo, name, caption)`）を各プロダクトのE2Eテストコード側に用意する。`caption`（第4引数、任意）を渡した場合は同名の`<name>.caption.txt`も書き出し、Job Summary・PRコメントの見出しに日本語等の説明文を使えるようにする。`name`自体は`raw.githubusercontent.com`のURLの一部になるため、英数字のみのASCII安全な識別子にすること（日本語等の非ASCII文字を含めるとURLエンコードの問題が起き得るため、キャプションとして分離する）。
+
+    **関連スクリーンショットの折りたたみ判定（任意、オプトイン）**: テストケース・スクリーンショット数が増えるとPRコメント・Job Summaryが常に全展開の状態で見にくくなるため、以下の2つを両方用意した場合にのみ、そのPRの変更と無関係なグループを自動的に折りたたむ。
+    - 呼び出し側のヘルパー関数が、撮影に使ったスペックファイル名（Playwrightの`testInfo.file`から自動取得できる。呼び出し側の追加対応は不要）を同名の`<name>.spec.txt`として書き出す
+    - `<frontend_dir>/e2e/spec-source-map.json`に、スペックファイル名をキーとして、そのスペックが検証対象とするソースパス（リポジトリルート相対）の配列を宣言する（例: `{"quiz-room.spec.js": ["frontend/src/views/QuizRoomView.jsx", ...]}`）
+
+    この2つのいずれか、または変更ファイル一覧の取得（`pull_request`イベントでの実行）のいずれかが欠けている場合は、その旨を機械的に判定する材料が無いため、常に展開表示にフォールバックする（既存の呼び出し側に影響を与えない後方互換動作）。
 
     このヘルパー関数自体は現時点でdev-standards側の共有アセットとしては提供していない（各プロダクトが上記の書き出し規約に従って個別に実装する）。将来、複数プロダクトでの採用が進み共有ユーティリティとして切り出す場合は、6節で述べる`reusable-ci.yml`/`reusable-cd.yml`のバージョン固定と同じ規律（固定タグ参照・Renovateによる更新PR・参照側リポジトリ自身のCIをゲートにした明示的なバージョン引き上げ）を最初から適用し、あるプロダクト向けの変更が他プロダクトへ無自覚に波及しないようにすること。
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
