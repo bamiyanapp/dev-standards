@@ -58,4 +58,5 @@ code-review Skillを使用する。
 - test成功
 - build成功
 - code-review成功
+- 人間による手動確認手順を要求する場合、スマホのみで実行可能か（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）
 - コミット作成可能
