@@ -106,7 +106,7 @@ jobs:
       # release-config.cjs冒頭のコメントを参照）。
       - name: Copy shareable semantic-release config
         if: inputs.enable_shared_release_config
-        uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@v1.2.2
+        uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@v1.2.3
 
       # 参照側リポジトリがsubmodule経由のシンボリックリンクとしてこのスクリプトを
       # 持つ場合でも、このジョブのcheckoutはsubmoduleを取得しないためリンク先が
@@ -115,7 +115,7 @@ jobs:
       # このジョブ内で参照側リポジトリへコピーし、参照側に実体を持たせない。
       - name: Copy changelog-to-JSON conversion script
         if: inputs.enable_changelog_json
-        uses: bamiyanapp/dev-standards/.github/actions/copy-changelog-script@v1.2.2
+        uses: bamiyanapp/dev-standards/.github/actions/copy-changelog-script@v1.2.3
 
       - name: Record pre-release commit
         id: pre-release
