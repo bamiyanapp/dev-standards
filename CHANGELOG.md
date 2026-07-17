@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/bamiyanapp/dev-standards/compare/v1.2.4...v1.3.0) (2026-07-17)
+
+
+### Features
+
+* **ci:** PRの変更と無関係なE2Eスクリーンショットを折りたたむ ([#81](https://github.com/bamiyanapp/dev-standards/issues/81)) ([0e23db8](https://github.com/bamiyanapp/dev-standards/commit/0e23db868d3aa18ed70ea5f173cc4405b4e914f5)), closes [bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)
+
 ## [1.2.4](https://github.com/bamiyanapp/dev-standards/compare/v1.2.3...v1.2.4) (2026-07-17)
 
 
