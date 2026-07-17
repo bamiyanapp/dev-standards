@@ -491,32 +491,104 @@ jobs:
           # 可能性があるURLを壊さないため）。リポジトリ肥大化の対応（古い実行分の
           # 定期削除等）は必要になった時点で別途検討する
           keep_files: true
+      # issue #628: スクリーンショット数が増えるほど、そのPRの変更と無関係な
+      # 既存機能の回帰確認用スクリーンショットまで常に展開表示され見にくくなる。
+      # そのPRで実際に変更されたファイル一覧を先に取得しておき、「Build E2E
+      # screenshots summary」で各スペックの宣言（spec-source-map.json）と
+      # 突き合わせて関連の有無を判定する。pull_request以外のイベントでは
+      # 変更ファイル一覧を取得できないため、後段は常にフォールバック（全展開）
+      # 動作になる
+      - name: Determine PR changed files
+        id: changed-files
+        if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            fs.writeFileSync(
+              path.join('${{ inputs.frontend_dir }}', 'changed-files.json'),
+              JSON.stringify(files.map((f) => f.filename))
+            );
       - name: Build E2E screenshots summary
         id: screenshots-summary
         if: always() && steps.publish-screenshots.outcome == 'success'
         continue-on-error: true
-        working-directory: ${{ inputs.frontend_dir }}
-        run: |
-          {
-            echo "### E2Eスクリーンショット"
-            echo ""
-            for f in e2e-screenshots/*.png; do
-              name="$(basename "$f" .png)"
-              # 呼び出し側（frontend/e2e/screenshot.jsのcaptureScreenshot()）が
-              # 同名の*.caption.txtを書き出していれば、それを見出しに使う（issue
-              # bamiyanapp/karuta#601）。無ければ従来どおりファイル名をそのまま使う
-              caption_file="e2e-screenshots/${name}.caption.txt"
-              if [ -f "$caption_file" ]; then
-                caption="$(cat "$caption_file")"
-              else
-                caption="$name"
-              fi
-              echo "**${caption}**"
-              echo ""
-              echo "![${caption}](https://raw.githubusercontent.com/${{ github.repository }}/e2e-screenshots/runs/${{ github.run_id }}/$(basename "$f"))"
-              echo ""
-            done
-          } | tee screenshots-summary.md >> "$GITHUB_STEP_SUMMARY"
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const frontendDir = '${{ inputs.frontend_dir }}';
+            const screenshotDir = path.join(frontendDir, 'e2e-screenshots');
+            const runId = '${{ github.run_id }}';
+            const repo = '${{ github.repository }}';
+
+            // 呼び出し側（karuta等）が任意で用意するファイル。無い場合は常に
+            // 展開表示にフォールバックする（この機能は宣言ファイルを用意した
+            // プロダクトだけがオプトインする形で、それ以外は従来どおりの挙動を保つ）
+            const readJsonIfExists = (p) => {
+              try {
+                return JSON.parse(fs.readFileSync(p, 'utf-8'));
+              } catch {
+                return null;
+              }
+            };
+            // 各スペックファイル（例: quiz-room.spec.js）が検証対象とする
+            // ソースパスの宣言（issue #628、bamiyanapp/karuta#628「案A」）
+            const sourceMap = readJsonIfExists(path.join(frontendDir, 'e2e', 'spec-source-map.json')) || {};
+            // このPRで実際に変更されたファイル一覧（前段のステップが取得。
+            // pull_request以外のイベントや取得失敗時はnullのまま）
+            const changedFiles = readJsonIfExists(path.join(frontendDir, 'changed-files.json'));
+            const changedSet = changedFiles ? new Set(changedFiles) : null;
+
+            const pngFiles = fs.readdirSync(screenshotDir).filter((f) => f.endsWith('.png')).sort();
+            const groups = new Map();
+            for (const png of pngFiles) {
+              const name = png.slice(0, -'.png'.length);
+              // 呼び出し側（frontend/e2e/screenshot.jsのcaptureScreenshot()）が
+              // 同名の*.caption.txtを書き出していれば、それを見出しに使う（issue
+              // bamiyanapp/karuta#601）。無ければ従来どおりファイル名をそのまま使う
+              const captionPath = path.join(screenshotDir, `${name}.caption.txt`);
+              const caption = fs.existsSync(captionPath) ? fs.readFileSync(captionPath, 'utf-8') : name;
+              // 同名の*.spec.txtにどのスペックファイルが撮影したかが記録されている
+              // （issue #628）。無い場合は関連判定できないグループとして扱う
+              const specPath = path.join(screenshotDir, `${name}.spec.txt`);
+              const spec = fs.existsSync(specPath) ? fs.readFileSync(specPath, 'utf-8').trim() : null;
+              const key = spec || '(spec不明)';
+              if (!groups.has(key)) {
+                groups.set(key, []);
+              }
+              groups.get(key).push({ name, caption });
+            }
+
+            const imageMarkdown = ({ name, caption }) =>
+              `**${caption}**\n\n![${caption}](https://raw.githubusercontent.com/${repo}/e2e-screenshots/runs/${runId}/${name}.png)\n`;
+
+            let body = '### E2Eスクリーンショット\n\n';
+            for (const [spec, items] of groups) {
+              const declaredPaths = sourceMap[spec];
+              // 判定材料（宣言・変更ファイル一覧のいずれか）が欠けている場合は、
+              // 誤って無関係と判定し見落とすことを避けるため常に展開表示にする
+              const related = !changedSet || !declaredPaths || declaredPaths.some((p) => changedSet.has(p));
+              if (related) {
+                body += items.map(imageMarkdown).join('\n') + '\n';
+              } else {
+                body += `<details>\n<summary>${spec}（このPRの変更とは無関係の可能性があるため折りたたみ）</summary>\n\n`;
+                body += items.map(imageMarkdown).join('\n');
+                body += '\n</details>\n\n';
+              }
+            }
+
+            fs.writeFileSync(path.join(frontendDir, 'screenshots-summary.md'), body, 'utf-8');
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body);
       - name: Comment E2E screenshots on the pull request
         if: always() && steps.screenshots-summary.outcome == 'success' && github.event_name == 'pull_request'
         continue-on-error: true
