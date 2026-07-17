@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/bamiyanapp/dev-standards/compare/v1.2.0...v1.2.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **ci:** check-coverage-thresholdの相対パス参照を完全修飾参照に修正する ([6f803c1](https://github.com/bamiyanapp/dev-standards/commit/6f803c15c1cc4be3db596b96493f2391497843ce)), closes [bamiyanapp/karuta#573](https://github.com/bamiyanapp/karuta/issues/573)
+* **ci:** CI実行一覧でPR時点とpush-to-main時点の実行を判別できるようにする ([24910ee](https://github.com/bamiyanapp/dev-standards/commit/24910eeda03604cd24d7bc50f95a540e543606c5)), closes [#558](https://github.com/bamiyanapp/dev-standards/issues/558)
+
 # [1.2.0](https://github.com/bamiyanapp/dev-standards/compare/v1.1.0...v1.2.0) (2026-07-17)
 
 
