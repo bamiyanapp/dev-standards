@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/bamiyanapp/dev-standards/compare/v1.4.0...v1.5.0) (2026-07-18)
+
+
+### Features
+
+* **ci:** deploy-github-pages複合actionをnpm workspaces構成に対応させる ([#89](https://github.com/bamiyanapp/dev-standards/issues/89)) ([157db5d](https://github.com/bamiyanapp/dev-standards/commit/157db5d7272067447f44a2a8d66b0427e875d1d7))
+
 # [1.4.0](https://github.com/bamiyanapp/dev-standards/compare/v1.3.1...v1.4.0) (2026-07-18)
 
 
