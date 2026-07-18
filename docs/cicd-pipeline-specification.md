@@ -83,7 +83,7 @@ run-name: >-
 - **実行内容**:
   - `release`（`enable_release: true`（デフォルト）の場合のみ）: `base_branch` 上で直接 `semantic-release` を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付け・GitHub Release作成を行う
   - frontend/backend のビルド・デプロイ（GitHub Pages・AWS Lambda 等）はプロダクトごとに異なるため対象外。参照側リポジトリの `cd.yml` に `needs: release` かつ `if: success() && needs.release.outputs.new_release_published == 'true'` の条件でジョブを追加する
-  - GitHub Pagesへのデプロイに限っては、`.github/actions/deploy-github-pages`（setup-node→npm ci→build→upload-pages-artifact→deploy-pages の定型パターンを共通化した複合action）を利用できる。呼び出し側の`cd.yml`は`environment: { name: github-pages }`・`permissions: { pages: write, id-token: write }`をjob単位で指定した上で、このactionを`with: working-directory / node-version / build-command / artifact-path`付きで呼び出す（`page-url`をoutputする）。AWS Lambda等それ以外のデプロイ先は現状対象外で、参照側の`cd.yml`に個別実装する
+  - GitHub Pagesへのデプロイに限っては、`.github/actions/deploy-github-pages`（setup-node→npm ci→build→upload-pages-artifact→deploy-pages の定型パターンを共通化した複合action）を利用できる。呼び出し側の`cd.yml`は`environment: { name: github-pages }`・`permissions: { pages: write, id-token: write }`をjob単位で指定した上で、このactionを`with: working-directory / node-version / build-command / artifact-path`付きで呼び出す（`page-url`をoutputする）。AWS Lambda等それ以外のデプロイ先は現状対象外で、参照側の`cd.yml`に個別実装する。参照側がnpm workspaces構成（[bamiyanapp/karuta#608](https://github.com/bamiyanapp/karuta/issues/608)）の場合は`workspaces: true`も併せて渡す。この場合`working-directory`はビルドコマンドの実行先ディレクトリのみを指し、依存インストール（`npm ci`）はリポジトリルートで行われる（`reusable-ci.yml`の同名inputと同じ意味）
 
 入力パラメータ（`enable_release` / `semantic_release_node_version` / `enable_shared_release_config` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は README.md を参照。
 

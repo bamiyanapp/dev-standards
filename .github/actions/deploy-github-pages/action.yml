@@ -8,7 +8,7 @@ description: >-
 
 inputs:
   working-directory:
-    description: "ビルド対象のディレクトリ（package-lock.jsonが存在する場所）"
+    description: "ビルド対象のディレクトリ（package-lock.jsonが存在する場所。workspaces: trueの場合はビルドコマンドの実行先ディレクトリのみを指し、依存インストールはリポジトリルートで行う）"
     required: true
   node-version:
     description: "ビルドに使うNode.jsのバージョン"
@@ -21,6 +21,10 @@ inputs:
   artifact-path:
     description: "GitHub Pagesにアップロードする成果物のパス（ビルド出力ディレクトリ）"
     required: true
+  workspaces:
+    description: "呼び出し元がnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う（reusable-ci.ymlの同名inputと同じ意味）。"
+    required: false
+    default: "false"
 
 outputs:
   page-url:
@@ -35,10 +39,10 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: "npm"
-        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+        cache-dependency-path: ${{ inputs.workspaces == 'true' && 'package-lock.json' || format('{0}/package-lock.json', inputs.working-directory) }}
     - name: Install dependencies
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.workspaces == 'true' && '.' || inputs.working-directory }}
       run: npm ci
     - name: Build
       shell: bash
