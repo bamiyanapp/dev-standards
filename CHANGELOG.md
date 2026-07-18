@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/bamiyanapp/dev-standards/compare/v1.3.1...v1.4.0) (2026-07-18)
+
+
+### Features
+
+* **ci:** E2Eスクリーンショットの折りたたみ判定をテストケース単位に細かくする ([#88](https://github.com/bamiyanapp/dev-standards/issues/88)) ([cc93acb](https://github.com/bamiyanapp/dev-standards/commit/cc93acbe7e88be388c018fb8588cca1d833b350c))
+
 ## [1.3.1](https://github.com/bamiyanapp/dev-standards/compare/v1.3.0...v1.3.1) (2026-07-18)
 
 
