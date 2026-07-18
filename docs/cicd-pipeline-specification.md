@@ -66,7 +66,9 @@ graph TD
 
 そのため、push側の`commitlint`が失敗しても「規約違反のコミットがマージ前のゲートをすり抜けた」ことを意味しない。むしろ「マージ済みのコミットメッセージが不正な形式で、このままでは`release` jobのバージョン計算が期待通りに動かない可能性がある」ことを示すシグナルであり、対応（コミットメッセージの手動修正やタグの調整）は別途必要になる。
 
-なお、この`push`側チェックの前段（Node.jsセットアップ・`npm ci`）がインフラ起因（一時的なネットワーク障害、参照側リポジトリルート直下の`package-lock.json`同期漏れ等）で失敗した場合に備え、`infra_failure`出力で他ジョブへの巻き添えブロックを避ける仕組みを既に導入済み（[dev-standards#60](https://github.com/bamiyanapp/dev-standards/pull/60)）。この失敗は`::warning::`として明示的に表示されるため、`npm ci`の健全性（ルート直下`package-lock.json`の同期等）を別途スケジュール実行で継続監視する仕組みは、現状のシグナルで十分検知可能と判断し追加しない（過剰な仕組みを避ける）。
+なお、この`push`側チェックの前段（Node.jsセットアップ・`npm ci`）がインフラ起因（一時的なネットワーク障害等）で失敗した場合に備え、`infra_failure`出力で他ジョブへの巻き添えブロックを避ける仕組みを既に導入済み（[dev-standards#60](https://github.com/bamiyanapp/dev-standards/pull/60)）。
+
+ただし`infra_failure=true`となるのはNode.jsセットアップ自体が2回とも失敗した場合のみに限定している。`npm ci`（Install dependencies）自体の失敗は、Node.jsセットアップの成否とは独立した問題であり、GitHub側の一時的な障害ではなく参照側リポジトリのルート直下`package.json`/`package-lock.json`自体の不整合である可能性が高いため、`infra_failure=false`のまま`::error::`とする（かつては`npm ci`の失敗も一律`infra_failure=true`としていたが、`bamiyanapp/karuta#639`由来のロックファイル不整合がCI完了を待たない手動マージにより素通りし、CD側の`release` jobでのみ`npm ci`が失敗し続けるという事例が発生したため区別した）。この区別により、`npm ci`自体の不整合は`commitlint` jobを明確な失敗として扱えるようになるが、それでも「CI完了前にマージされてしまう」ケースまでは防げない。CI完了を待たないマージ自体を防ぐには、各参照側リポジトリのブランチ保護設定で`commitlint`（および他の必須ジョブ）を必須ステータスチェックとして指定する必要があり、これはこのワークフロー自体の責務ではない。
 
 参照側`ci.yml`は`pull_request`と`push`の両イベントで同じワークフロー（`CI`）を起動するため、GitHub Actionsの実行一覧では見た目がほぼ同じ「CI ...」の実行が2件（PRの実行とマージ後pushの実行）並ぶ。`run-name`にイベント種別を明示するラベルを含め、実行一覧だけでどちらか判別できるようにすることを推奨する。例:
 
