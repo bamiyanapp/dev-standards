@@ -100,6 +100,18 @@ jobs:
   # テスト結果自体が見えなくなることを防ぐ）。ただし`merge`ジョブは、コミット
   # メッセージを実際に検証できていない以上、いずれの失敗理由でも従来通りブロックされる
   # （needs.commitlint.result == 'success'を要求したまま変更しない）。
+  #
+  # infra_failure=trueとするのはNode.jsセットアップが2回とも失敗した場合のみに限定する。
+  # npm ci（Install dependencies）自体の失敗はNode.jsセットアップの成否とは独立した問題
+  # であり、GitHub側の一時的な障害ではなくルート直下のpackage.json/package-lock.json
+  # 自体の不整合である可能性が高い。かつてはnpm ciの失敗も一律infra_failure=trueとして
+  # いたため、後続のfrontend-test等はブロックされないもののcommitlintジョブ自体は
+  # 失敗扱いとなりmergeジョブ（needs.commitlint.result == 'success'を要求）は正しく
+  # ブロックされていたが、CI完了を待たずに手動マージされた場合はこの検知を素通りして
+  # しまい、実際にCD（release job）側でのみ`npm ci`が失敗するという事例が発生した
+  # （bamiyanapp/karuta#639由来のロックファイル不整合、CD run #340以降の連続失敗）。
+  # infra_failureか否かの分類自体を誤りにくくすることが目的で、根本的な対策
+  # （CI完了前のマージを防ぐ）は各リポジトリのブランチ保護設定側の責務とする。
   commitlint:
     runs-on: ubuntu-latest
     outputs:
@@ -161,9 +173,21 @@ jobs:
         id: result
         shell: bash
         run: |
-          if [ "${{ steps.install.outcome }}" != "success" ]; then
+          if [ "${{ steps.setup-node-1.outcome }}" != "success" ] && [ "${{ steps.setup-node-2.outcome }}" != "success" ]; then
+            # Node.jsセットアップ自体が2回とも失敗した場合のみ、GitHub側の一時的な
+            # 問題とみなしinfra_failureとして扱う（後続のテストジョブをブロックしない）
             echo "infra_failure=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::commitlintジョブの環境構築（Node.jsセットアップ/npm ci）に失敗したため、コミットメッセージの検証自体を実行できませんでした。GitHub側の一時的な問題（setup-nodeのバージョンマニフェスト取得失敗等）の場合もあれば、ルート直下のpackage.json/package-lock.jsonの不整合等、実際に対応が必要な問題の場合もあります。いずれにせよコミットメッセージ自体の内容とは無関係なため、後続のテストジョブはこの失敗を理由にブロックしませんが、mergeジョブはコミットメッセージを実際に検証できていないため引き続きブロックされます。"
+            echo "::warning::commitlintジョブのNode.jsセットアップに2回とも失敗したため、コミットメッセージの検証自体を実行できませんでした。GitHub側の一時的な問題（setup-nodeのバージョンマニフェスト取得失敗等）とみなし、後続のテストジョブはこの失敗を理由にブロックしませんが、mergeジョブはコミットメッセージを実際に検証できていないため引き続きブロックされます。"
+            exit 1
+          fi
+          if [ "${{ steps.install.outcome }}" != "success" ]; then
+            # Node.jsセットアップは成功しているため、npm ci自体の失敗はルート直下の
+            # package.json/package-lock.jsonの不整合等、実際に対応が必要な問題である
+            # 可能性が高い。一時的なインフラ障害と誤って扱いテストジョブの実行を許して
+            # しまうと、CDでのみ`npm ci`が実行される問題（release job等）がCIをすり抜けて
+            # マージされてしまうため、infra_failureとはせず通常の失敗として扱う
+            echo "infra_failure=false" >> "$GITHUB_OUTPUT"
+            echo "::error::commitlintジョブの`npm ci`が失敗しました。Node.jsセットアップは成功しているため、GitHub側の一時的な問題ではなく、ルート直下のpackage.json/package-lock.jsonの不整合等、実際に対応が必要な問題の可能性が高いです。`npm install`でロックファイルを更新してから再コミットしてください。"
             exit 1
           fi
           echo "infra_failure=false" >> "$GITHUB_OUTPUT"
