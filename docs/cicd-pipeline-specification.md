@@ -37,7 +37,7 @@ graph TD
     1. `e2e-screenshots/*.png`の存在を確認する（無ければ以降のステップはスキップ）
     2. `pull_request`イベントの場合、GitHub API（`pulls.listFiles`）でそのPRの変更ファイル一覧を取得し`<frontend_dir>/changed-files.json`へ書き出す（`continue-on-error: true`。取得できない場合やイベントが`pull_request`以外の場合は後述の関連判定が常にフォールバックする）
     3. `peaceiris/actions-gh-pages`で`e2e-screenshots`ブランチの`runs/<run_id>/`配下へPNGを公開する（`continue-on-error: true`。このステップの失敗がE2Eテスト自体の成否判定を上書きしてはならないため）
-    4. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）と`<frontend_dir>/e2e/spec-source-map.json`（スペックファイルごとの検証対象ソースパスの宣言）の両方が用意されており、かつ手順2で変更ファイル一覧が取得できている場合は、そのスペックの宣言パスと変更ファイル一覧を突き合わせ、重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A）。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
+    4. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）・`<name>.title.txt`（撮影したテストケース名）と`<frontend_dir>/e2e/spec-source-map.json`（検証対象ソースパスの宣言）の両方が用意されており、かつ手順2で変更ファイル一覧が取得できている場合は、その宣言パスと変更ファイル一覧を突き合わせ、重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A。グルーピング・宣言の単位をテストケース単位まで細かくした経緯は[bamiyanapp/karuta#651](https://github.com/bamiyanapp/karuta/issues/651)）。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
     5. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認でき、スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
@@ -45,8 +45,8 @@ graph TD
     **参照側リポジトリでの呼び出し規約**: `<frontend_dir>/e2e-screenshots/<name>.png`へPNGを書き出すヘルパー関数（例: karutaの`frontend/e2e/screenshot.js`の`captureScreenshot(page, testInfo, name, caption)`）を各プロダクトのE2Eテストコード側に用意する。`caption`（第4引数、任意）を渡した場合は同名の`<name>.caption.txt`も書き出し、Job Summary・PRコメントの見出しに日本語等の説明文を使えるようにする。`name`自体は`raw.githubusercontent.com`のURLの一部になるため、英数字のみのASCII安全な識別子にすること（日本語等の非ASCII文字を含めるとURLエンコードの問題が起き得るため、キャプションとして分離する）。
 
     **関連スクリーンショットの折りたたみ判定（任意、オプトイン）**: テストケース・スクリーンショット数が増えるとPRコメント・Job Summaryが常に全展開の状態で見にくくなるため、以下の2つを両方用意した場合にのみ、そのPRの変更と無関係なグループを自動的に折りたたむ。
-    - 呼び出し側のヘルパー関数が、撮影に使ったスペックファイル名（Playwrightの`testInfo.file`から自動取得できる。呼び出し側の追加対応は不要）を同名の`<name>.spec.txt`として書き出す
-    - `<frontend_dir>/e2e/spec-source-map.json`に、スペックファイル名をキーとして、そのスペックが検証対象とするソースパス（リポジトリルート相対）の配列を宣言する（例: `{"quiz-room.spec.js": ["frontend/src/views/QuizRoomView.jsx", ...]}`）
+    - 呼び出し側のヘルパー関数が、撮影に使ったスペックファイル名（Playwrightの`testInfo.file`から自動取得できる。呼び出し側の追加対応は不要）を同名の`<name>.spec.txt`として書き出す。加えて、撮影したテストケース名（`testInfo.title`）を同名の`<name>.title.txt`として書き出していれば、グループ化の単位はスペックファイル単位ではなく**テストケース単位**（`<spec>::<title>`）になる（[bamiyanapp/karuta#651](https://github.com/bamiyanapp/karuta/issues/651)）。`<name>.title.txt`が無い場合は従来どおりスペックファイル単位に留まる（後方互換）
+    - `<frontend_dir>/e2e/spec-source-map.json`に検証対象ソースパス（リポジトリルート相対）を宣言する。値が配列の場合はスペックファイル単位の宣言（従来形式、例: `{"quiz-room.spec.js": ["frontend/src/views/QuizRoomView.jsx", ...]}`）、値がオブジェクトの場合はテストケース名をキーとするテストケース単位の宣言（例: `{"quiz-room.spec.js": {"admin judges a buzz": ["backend/quizRoomHandler.js"]}}`）として扱う。`<name>.title.txt`が無いスクリーンショットには後者の宣言は適用されない（宣言なしとして扱われ、常に展開表示にフォールバックする）
 
     この2つのいずれか、または変更ファイル一覧の取得（`pull_request`イベントでの実行）のいずれかが欠けている場合は、その旨を機械的に判定する材料が無いため、常に展開表示にフォールバックする（既存の呼び出し側に影響を与えない後方互換動作）。
 

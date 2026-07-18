@@ -566,7 +566,11 @@ jobs:
               }
             };
             // 各スペックファイル（例: quiz-room.spec.js）が検証対象とする
-            // ソースパスの宣言（issue #628、bamiyanapp/karuta#628「案A」）
+            // ソースパスの宣言（issue #628、bamiyanapp/karuta#628「案A」）。
+            // 値がテストケース名をキーとするオブジェクトの場合はテストケース単位の
+            // 宣言（issue #651）、配列の場合は従来どおりファイル単位の宣言として扱う
+            // （宣言ファイルをまだテストケース単位に移行していない呼び出し側との
+            // 後方互換のため）
             const sourceMap = readJsonIfExists(path.join(frontendDir, 'e2e', 'spec-source-map.json')) || {};
             // このPRで実際に変更されたファイル一覧（前段のステップが取得。
             // pull_request以外のイベントや取得失敗時はnullのまま）
@@ -586,26 +590,39 @@ jobs:
               // （issue #628）。無い場合は関連判定できないグループとして扱う
               const specPath = path.join(screenshotDir, `${name}.spec.txt`);
               const spec = fs.existsSync(specPath) ? fs.readFileSync(specPath, 'utf-8').trim() : null;
-              const key = spec || '(spec不明)';
+              // 同名の*.title.txtにテストケース名（testInfo.title）が記録されて
+              // いれば、スペックファイル単位ではなくテストケース単位でグループ化する
+              // （issue #651: 同じファイル内の無関係なシナリオが一括りにされ、
+              // 折りたたみの単位として粗い問題への対応）。無ければ従来どおり
+              // スペックファイル単位までの粒度に留める
+              const titlePath = path.join(screenshotDir, `${name}.title.txt`);
+              const title = fs.existsSync(titlePath) ? fs.readFileSync(titlePath, 'utf-8').trim() : null;
+              // 同名タイトルが別ファイルに存在する可能性を考慮し、グルーピングの
+              // キー自体はspecとtitleの組で一意にする
+              const key = spec && title ? `${spec}::${title}` : (spec || '(spec不明)');
               if (!groups.has(key)) {
-                groups.set(key, []);
+                groups.set(key, { spec, title, items: [] });
               }
-              groups.get(key).push({ name, caption });
+              groups.get(key).items.push({ name, caption });
             }
 
             const imageMarkdown = ({ name, caption }) =>
               `**${caption}**\n\n![${caption}](https://raw.githubusercontent.com/${repo}/e2e-screenshots/runs/${runId}/${name}.png)\n`;
 
             let body = '### E2Eスクリーンショット\n\n';
-            for (const [spec, items] of groups) {
-              const declaredPaths = sourceMap[spec];
+            for (const { spec, title, items } of groups.values()) {
+              const specDeclaration = spec ? sourceMap[spec] : undefined;
+              const declaredPaths = Array.isArray(specDeclaration)
+                ? specDeclaration // 旧形式（ファイル単位の宣言）
+                : (title ? specDeclaration?.[title] : undefined); // 新形式（テストケース単位の宣言）
               // 判定材料（宣言・変更ファイル一覧のいずれか）が欠けている場合は、
               // 誤って無関係と判定し見落とすことを避けるため常に展開表示にする
               const related = !changedSet || !declaredPaths || declaredPaths.some((p) => changedSet.has(p));
+              const label = title || spec || '(spec不明)';
               if (related) {
                 body += items.map(imageMarkdown).join('\n') + '\n';
               } else {
-                body += `<details>\n<summary>${spec}（このPRの変更とは無関係の可能性があるため折りたたみ）</summary>\n\n`;
+                body += `<details>\n<summary>${label}${title && spec ? ` (${spec})` : ''}（このPRの変更とは無関係の可能性があるため折りたたみ）</summary>\n\n`;
                 body += items.map(imageMarkdown).join('\n');
                 body += '\n</details>\n\n';
               }
