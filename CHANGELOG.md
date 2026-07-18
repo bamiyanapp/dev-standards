@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/bamiyanapp/dev-standards/compare/v1.3.0...v1.3.1) (2026-07-18)
+
+
+### Bug Fixes
+
+* **ci:** npm ci自体の失敗をNode.jsセットアップ失敗と区別する ([#86](https://github.com/bamiyanapp/dev-standards/issues/86)) ([73dcc96](https://github.com/bamiyanapp/dev-standards/commit/73dcc9671dda73ba02ed3a1a6f19fd70c8b2aa8c))
+
 # [1.3.0](https://github.com/bamiyanapp/dev-standards/compare/v1.2.4...v1.3.0) (2026-07-17)
 
 
