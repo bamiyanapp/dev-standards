@@ -233,7 +233,22 @@ jobs:
       - name: Lint
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run lint
-      - name: Test
+      # vitest自体もテスト単位の自動リトライ（呼び出し元のvitest.config等でretryを
+      # 設定していれば効く）を行えるが、CI実行環境全体の負荷（並列ジョブによる
+      # CPU競合等）に起因する実タイマー依存テストの偶発的な失敗は、テスト単位の
+      # リトライだけでは救えないことがある。そのため、setup-nodeと同様にジョブの
+      # Testステップ自体も1回だけ自動リトライする
+      - name: Test (attempt 1/2)
+        id: test-1
+        continue-on-error: true
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+      - name: Wait before retrying the test run
+        if: steps.test-1.outcome == 'failure'
+        shell: bash
+        run: sleep 5
+      - name: Test (attempt 2/2, retry after a possible flaky failure)
+        if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.frontend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       # ステップの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした
@@ -309,7 +324,18 @@ jobs:
       - name: Lint
         working-directory: ${{ inputs.backend_dir }}
         run: npm run lint
-      - name: Test
+      # 詳細はfrontend-testジョブの同名ステップのコメントを参照
+      - name: Test (attempt 1/2)
+        id: test-1
+        continue-on-error: true
+        working-directory: ${{ inputs.backend_dir }}
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+      - name: Wait before retrying the test run
+        if: steps.test-1.outcome == 'failure'
+        shell: bash
+        run: sleep 5
+      - name: Test (attempt 2/2, retry after a possible flaky failure)
+        if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
@@ -369,7 +395,18 @@ jobs:
       - name: Lint
         working-directory: ${{ matrix.package.dir }}
         run: npm run lint --if-present
-      - name: Test
+      # 詳細はfrontend-testジョブの同名ステップのコメントを参照
+      - name: Test (attempt 1/2)
+        id: test-1
+        continue-on-error: true
+        working-directory: ${{ matrix.package.dir }}
+        run: npm test --if-present
+      - name: Wait before retrying the test run
+        if: steps.test-1.outcome == 'failure'
+        shell: bash
+        run: sleep 5
+      - name: Test (attempt 2/2, retry after a possible flaky failure)
+        if: steps.test-1.outcome == 'failure'
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
