@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/bamiyanapp/dev-standards/compare/v1.6.1...v1.6.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* **ci:** check-coverage-thresholdの参照タグ更新漏れと並列実行時のカバレッジ集計不整合を修正する ([#104](https://github.com/bamiyanapp/dev-standards/issues/104)) ([7bf1334](https://github.com/bamiyanapp/dev-standards/commit/7bf133487268a87e1ea604a13fcf03cd95c58ea5))
+
 ## [1.6.1](https://github.com/bamiyanapp/dev-standards/compare/v1.6.0...v1.6.1) (2026-07-23)
 
 
