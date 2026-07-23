@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/bamiyanapp/dev-standards/compare/v1.5.0...v1.6.0) (2026-07-23)
+
+
+### Features
+
+* **check-coverage-threshold:** 指標絞り込み・ファイル単位の閾値判定に対応する ([#100](https://github.com/bamiyanapp/dev-standards/issues/100)) ([081266f](https://github.com/bamiyanapp/dev-standards/commit/081266f7b8e30b6ae6da34203a610a5f0853c962))
+
 # [1.5.0](https://github.com/bamiyanapp/dev-standards/compare/v1.4.0...v1.5.0) (2026-07-18)
 
 
