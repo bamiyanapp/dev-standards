@@ -273,21 +273,20 @@ jobs:
       # リトライだけでは救えないことがある。そのため、setup-nodeと同様にジョブの
       # Testステップ自体も1回だけ自動リトライする
       #
-      # `--no-file-parallelism`（テストファイルを並列実行せず直列実行する）を
-      # 付けているのは、`@vitest/coverage-v8`が複数ワーカー（デフォルトのfileごとの
-      # 並列実行）にまたがって同一ソースファイルを計測する際、カバレッジの集計に
-      # 不整合が生じる現象を実際に確認したため（bamiyanapp/karuta#459で
-      # coverage_threshold: 80を有効化した際、ローカルの直列実行では分岐カバレッジ
-      # 84%だったファイルが、CI上の既定の並列実行では50%と計測され、実際には
-      # 満たしている閾値を誤って未達と判定してしまっていた）。複数のテストファイルが
-      # 同じソースファイルを import する構成（例: 複数のLambdaハンドラファイルが
-      # 共通のヘルパー関数を1つのファイルから読み込む等）で起きやすい。実行時間は
-      # 延びるが、カバレッジ判定の正確性を優先する
+      # frontend-testでは（backend-testと異なり）`--no-isolate`は付けない。実際に
+      # 試したところ、frontendのテストスイートはモジュールスコープの状態（例: 共有
+      # <audio>要素のシングルトン等）をテストファイルごとに独立している前提で書かれて
+      # おり、`--no-isolate`でモジュールレジストリを全ファイル間で共有すると、この前提が
+      # 崩れて54件のテストが失敗した。backend側と同じ「複数のテストファイルが同一の
+      # ソースファイルをimportする際にカバレッジ集計が壊れる」問題がfrontend側にも
+      # 将来生じた場合は、`--no-isolate`を安易に適用せず、モジュール側の状態リセットを
+      # 見直す等の別の対応を検討すること（詳細はbackend-testジョブの同名ステップの
+      # コメントを参照）
       - name: Test (attempt 1/2)
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.frontend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       - name: Wait before retrying the test run
         if: steps.test-1.outcome == 'failure'
         shell: bash
@@ -295,7 +294,7 @@ jobs:
       - name: Test (attempt 2/2, retry after a possible flaky failure)
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.frontend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
       # ステップの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした
       # 対象、frontend_dir/backend_dirを持つ側）のチェックアウト内容に対して解決される
       # （reusable-ci.yml自身のrefには解決されない。ジョブレベルの`uses:`でreusable
@@ -380,12 +379,35 @@ jobs:
       - name: Lint
         working-directory: ${{ inputs.backend_dir }}
         run: npm run lint
-      # 詳細はfrontend-testジョブの同名ステップのコメントを参照
+      # 自動リトライの理由自体はfrontend-testジョブの同名ステップのコメントを参照。
+      #
+      # `--no-isolate`（テストファイル間でモジュールレジストリを共有する）を付けて
+      # いるのは、`@vitest/coverage-v8`のデフォルト動作（`isolate: true`、テスト
+      # ファイルごとに新しいモジュールレジストリで対象ソースをre-import する）では、
+      # 複数のテストファイルが同一のソースファイルをimportする構成において、
+      # カバレッジの集計が壊れる現象を実際に確認したため（bamiyanapp/karuta#459で
+      # coverage_threshold: 80を有効化した際、`handler.js`単体のテストでは分岐
+      # カバレッジ97%だったところ、`handler.js`のdocClient/resolveAllowedOrigin等を
+      # 再利用する別のテストファイル（`quizRoomHandler.test.js`や
+      # `efudaPdfHandler.test.js`）が同じ実行に加わるだけで50%まで下がって計測され、
+      # 実際には満たしている閾値を誤って未達と判定してしまっていた）。`--no-isolate`で
+      # 全テストファイルが同じモジュールレジストリ（＝同じインスタンス・同じ
+      # カバレッジ計測コンテキスト）を共有するようにしたところ、正しい数値
+      # （84%程度）に戻ることを確認した。`--no-file-parallelism`（ファイル単位の
+      # 並列実行を無効化するだけ）は本質的な解決にならず、`--no-isolate`が必要
+      # だった点に注意（詳しくは本コミットの変更履歴を参照）。
+      #
+      # frontend-test側では同じ`--no-isolate`を適用すると、モジュールスコープの
+      # 状態（共有<audio>要素のシングルトン等）がテストファイル間で意図せず
+      # 共有されてしまい54件のテストが失敗したため、backend-testのみに限定して
+      # いる。参照側リポジトリのbackendコードでこの種の対象外にしたい
+      # モジュールスコープの状態がある場合は、`--no-isolate`の適用自体を
+      # 見直すこと。
       - name: Test (attempt 1/2)
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate
       - name: Wait before retrying the test run
         if: steps.test-1.outcome == 'failure'
         shell: bash
@@ -393,7 +415,7 @@ jobs:
       - name: Test (attempt 2/2, retry after a possible flaky failure)
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
