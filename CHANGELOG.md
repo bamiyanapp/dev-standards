@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/bamiyanapp/dev-standards/compare/v1.6.0...v1.6.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **ci:** squash mergeで反映されるPRタイトル自体もcommitlintで検証する（issue [#722](https://github.com/bamiyanapp/dev-standards/issues/722)） ([#102](https://github.com/bamiyanapp/dev-standards/issues/102)) ([650e856](https://github.com/bamiyanapp/dev-standards/commit/650e856a548c659716f5fde38724201f6c057ad1))
+
 # [1.6.0](https://github.com/bamiyanapp/dev-standards/compare/v1.5.0...v1.6.0) (2026-07-23)
 
 
