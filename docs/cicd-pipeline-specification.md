@@ -19,7 +19,7 @@ graph TD
 ## 1. CI ワークフロー (`reusable-ci.yml`)
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
 - **実行内容**:
-  - `commitlint`: コミットメッセージが Conventional Commits 形式に従っているか検証
+  - `commitlint`: コミットメッセージ（`pull_request`イベントではPRタイトル自体も含む。Squash merge時にmainへ残る唯一のコミットの件名になるため）が Conventional Commits 形式に従っているか検証
   - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
   - `backend-test`: backend の Lint・Vitest テスト（カバレッジ集計付き）
   - `package-test`（`packages` 入力指定時、`frontend-test`/`backend-test` の代わりに実行）: 指定したパッケージ一覧を `strategy.matrix` で展開し、lint/test（`--if-present`）・任意のbuildを行う
@@ -61,8 +61,10 @@ graph TD
 
 `commitlint` job は参照側 `ci.yml` の `on` 設定次第で、1回のマージにつき2回実行されることがある（`pull_request`イベントと、マージ後に`base_branch`へのpushで再度起動する`push`イベント）。それぞれ検証対象が異なり、どちらも意図した挙動である。
 
-- `pull_request`イベント: `Validate PR commits`ステップが、そのPRに含まれる全コミット（`base.sha`〜`head.sha`）を検証する。**マージ前のゲート**として機能し、`merge` job は `needs.commitlint.result == 'success'`（またはinfra起因の失敗）を要求するため、ここで規約違反があればマージされない。
-- `push`イベント（`base_branch`への実push、通常は`merge` jobによるSquash merge直後）: `Validate current commit (last commit)`ステップが、実際に生成された最終コミット（`HEAD~1`〜`HEAD`、Squash mergeコミットメッセージそのもの）を検証する。これは**マージ前のゲートではなく**（push自体がマージ完了後にしか発火しないため、原理的にゲートにはなり得ない）、`reusable-cd.yml`の`release` jobが`base_branch`のコミット履歴をConventional Commitsとして解釈しバージョンを自動採番するため、**Squash mergeで実際に生成されたコミットメッセージがConventional Commits形式に従っているかを最終確認する**ためのチェックである（PRのコミット範囲チェックだけでは、GitHubのSquash merge時にタイトル・本文が想定外の形式に変換されるケースまでは検知できない）。
+- `pull_request`イベント: `Validate PR commits`ステップが、そのPRに含まれる全コミット（`base.sha`〜`head.sha`）を検証する。加えて`Validate PR title (squash merge commit subject)`ステップが、PRタイトル自体を同じcommitlintルールで検証する。**マージ前のゲート**として機能し、`merge` job は `needs.commitlint.result == 'success'`（またはinfra起因の失敗）を要求するため、ここで規約違反があればマージされない。
+- `push`イベント（`base_branch`への実push、通常は`merge` jobによるSquash merge直後）: `Validate current commit (last commit)`ステップが、実際に生成された最終コミット（`HEAD~1`〜`HEAD`、Squash mergeコミットメッセージそのもの）を検証する。これは**マージ前のゲートではなく**（push自体がマージ完了後にしか発火しないため、原理的にゲートにはなり得ない）、`reusable-cd.yml`の`release` jobが`base_branch`のコミット履歴をConventional Commitsとして解釈しバージョンを自動採番するため、**Squash mergeで実際に生成されたコミットメッセージがConventional Commits形式に従っているかを最終確認する**ためのチェックである。
+
+`merge` jobはPRをsquash mergeする際、コミットタイトルを明示的に指定していない（`github.rest.pulls.merge`呼び出しに`commit_title`/`commit_message`を渡していない）ため、GitHubはデフォルトでPRタイトルをそのままmainに残る唯一のコミットの件名にする。かつて`Validate PR commits`（PR内の個々のコミットメッセージ）だけを検証していたときは、PRタイトル自体がConventional Commits形式（単一の有効なtype）に反していても素通りしていた。実際に、PRタイトルで複数のtypeを`/`で連結する（例:`fix/feat: ...`）とsquash merge後のcommit-analyzerがtypeを認識できずリリースが生成されない問題が発生した（[bamiyanapp/karuta#722](https://github.com/bamiyanapp/karuta/issues/722)）。`Validate PR title`ステップの追加により、この種の不整合は個々のコミット内容に関わらずマージ前のゲートで検知できるようになった（PRタイトルは第三者が自由に入力できる値のため、シェルへの直接展開ではなく`env:`経由でcommitlintへ渡し、コマンドインジェクションを防いでいる）。
 
 そのため、push側の`commitlint`が失敗しても「規約違反のコミットがマージ前のゲートをすり抜けた」ことを意味しない。むしろ「マージ済みのコミットメッセージが不正な形式で、このままでは`release` jobのバージョン計算が期待通りに動かない可能性がある」ことを示すシグナルであり、対応（コミットメッセージの手動修正やタグの調整）は別途必要になる。
 
