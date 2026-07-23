@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/bamiyanapp/dev-standards/compare/v1.6.2...v1.6.3) (2026-07-23)
+
+
+### Bug Fixes
+
+* **ci:** 並列実行ではなくisolateがカバレッジ集計不整合の真因だったため--no-isolateへ差し替える ([#105](https://github.com/bamiyanapp/dev-standards/issues/105)) ([a1e0105](https://github.com/bamiyanapp/dev-standards/commit/a1e010558b1c7073b268b482996bad91b4edeaa8))
+
 ## [1.6.2](https://github.com/bamiyanapp/dev-standards/compare/v1.6.1...v1.6.2) (2026-07-23)
 
 
