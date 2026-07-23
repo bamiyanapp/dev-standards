@@ -272,11 +272,22 @@ jobs:
       # CPU競合等）に起因する実タイマー依存テストの偶発的な失敗は、テスト単位の
       # リトライだけでは救えないことがある。そのため、setup-nodeと同様にジョブの
       # Testステップ自体も1回だけ自動リトライする
+      #
+      # `--no-file-parallelism`（テストファイルを並列実行せず直列実行する）を
+      # 付けているのは、`@vitest/coverage-v8`が複数ワーカー（デフォルトのfileごとの
+      # 並列実行）にまたがって同一ソースファイルを計測する際、カバレッジの集計に
+      # 不整合が生じる現象を実際に確認したため（bamiyanapp/karuta#459で
+      # coverage_threshold: 80を有効化した際、ローカルの直列実行では分岐カバレッジ
+      # 84%だったファイルが、CI上の既定の並列実行では50%と計測され、実際には
+      # 満たしている閾値を誤って未達と判定してしまっていた）。複数のテストファイルが
+      # 同じソースファイルを import する構成（例: 複数のLambdaハンドラファイルが
+      # 共通のヘルパー関数を1つのファイルから読み込む等）で起きやすい。実行時間は
+      # 延びるが、カバレッジ判定の正確性を優先する
       - name: Test (attempt 1/2)
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.frontend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
       - name: Wait before retrying the test run
         if: steps.test-1.outcome == 'failure'
         shell: bash
@@ -284,7 +295,7 @@ jobs:
       - name: Test (attempt 2/2, retry after a possible flaky failure)
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.frontend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
       # ステップの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした
       # 対象、frontend_dir/backend_dirを持つ側）のチェックアウト内容に対して解決される
       # （reusable-ci.yml自身のrefには解決されない。ジョブレベルの`uses:`でreusable
@@ -301,14 +312,23 @@ jobs:
       # refではなく、実際にcheckoutしようとして失敗した（詳細はbamiyanapp/karuta#583）。
       # ライブ環境でしか検証できない性質の問題を2度誤って踏んだため、これ以上の動的
       # 解決は試みず、固定タグを明示的に指定する方式にする。dev-standardsの新しい
-      # リリースのたびに、この参照タグを手動で最新へ更新すること（check-coverage-threshold
-      # 自体の内容が変わらない限り、多少古いタグのままでも実害はない）
+      # リリースのたびに、この参照タグを手動で最新へ更新すること。
+      #
+      # 「check-coverage-threshold自体の内容が変わらない限り実害はない」という
+      # 想定は誤りだった。v1.2.2のまま長期間更新を忘れていたため、後にaction.ymlへ
+      # 追加された`metrics`/`check-per-file`入力（[dev-standards#57](https://github.com/bamiyanapp/dev-standards/issues/57)）を
+      # 参照側（karuta等）が指定しても、古いv1.2.2版のaction.ymlにその入力定義が
+      # 無いため`Unexpected input(s)`という警告だけが出て黙って無視され、
+      # coverage_metrics/coverage_check_per_fileによる絞り込みが一切効かないまま
+      # 全指標・total平均のみでの判定にフォールバックしてしまう不具合が発生した
+      # （bamiyanapp/karuta#459でcoverage_threshold: 80を有効化した際に発覚）。
+      # action.ymlに入力を追加・変更した場合は、このrefの更新を絶対に忘れないこと。
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.2.2
+          ref: v1.6.1
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -365,7 +385,7 @@ jobs:
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
       - name: Wait before retrying the test run
         if: steps.test-1.outcome == 'failure'
         shell: bash
@@ -373,14 +393,14 @@ jobs:
       - name: Test (attempt 2/2, retry after a possible flaky failure)
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-file-parallelism
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.2.2
+          ref: v1.6.1
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -453,7 +473,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.2.2
+          ref: v1.6.1
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -535,7 +555,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.2.2
+          ref: v1.6.1
           path: .dev-standards-actions
       - name: Show E2E coverage
         if: always()
