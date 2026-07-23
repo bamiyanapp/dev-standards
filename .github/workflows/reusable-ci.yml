@@ -185,6 +185,24 @@ jobs:
             --to ${{ github.event.pull_request.head.sha }} \
             --git-log-args="--no-merges" \
             --verbose
+      # mergeジョブはPRをsquash mergeし、コミットタイトルを指定しないため、GitHubは
+      # デフォルトでPRタイトルをそのままmainに残る唯一のコミットの件名にする。
+      # 上の「Validate PR commits」はPR内の個々のコミットメッセージしか検証しないため、
+      # 実際にsemantic-releaseの入力になるPRタイトル自体がConventional Commits形式
+      # （単一の有効なtype）に反していても素通りしていた。これによりPRタイトルで
+      # 複数のtypeを`/`で連結する（例:`fix/feat: ...`）と、squash merge後の
+      # commit-analyzerがtypeを認識できずリリースが生成されない問題が発生した
+      # （bamiyanapp/karuta#722）。PRタイトル自体も同じcommitlintルールで検証する。
+      # PRタイトルは第三者が自由に入力できる値のため、シェルへの直接展開（`${{ }}`を
+      # runスクリプト内に埋め込む書き方）を避け、env経由で渡すことでコマンド
+      # インジェクションを防ぐ
+      - name: Validate PR title (squash merge commit subject)
+        id: lint-pr-title
+        if: steps.install.outcome == 'success' && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | npx commitlint --verbose
       - name: Determine result
         id: result
         shell: bash
@@ -207,7 +225,7 @@ jobs:
             exit 1
           fi
           echo "infra_failure=false" >> "$GITHUB_OUTPUT"
-          if [ "${{ steps.lint-push.outcome }}" = "failure" ] || [ "${{ steps.lint-pr.outcome }}" = "failure" ]; then
+          if [ "${{ steps.lint-push.outcome }}" = "failure" ] || [ "${{ steps.lint-pr.outcome }}" = "failure" ] || [ "${{ steps.lint-pr-title.outcome }}" = "failure" ]; then
             exit 1
           fi
           exit 0
