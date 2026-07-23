@@ -17,6 +17,18 @@ inputs:
     description: "Job Summary上の見出しに使うラベル（例: frontend）。省略時はworking-directoryのディレクトリ名"
     required: false
     default: ""
+  metrics:
+    description: >-
+      閾値判定の対象とする指標をカンマ区切りで指定する（例: "branches"）。省略時はlines/statements/
+      functions/branchesの全4種を判定対象にする。表自体は常に全指標を表示し、判定のみ絞り込む
+    required: false
+    default: ""
+  check-per-file:
+    description: >-
+      "true"の場合、total（パッケージ全体平均）に加えて、ファイル単位でも同じ指標・閾値で判定する。
+      一部のファイルのカバレッジが著しく低くても全体平均でクリアしてしまう問題に対応する
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -26,4 +38,6 @@ runs:
       env:
         THRESHOLD: ${{ inputs.threshold }}
         LABEL: ${{ inputs.label }}
+        METRICS: ${{ inputs.metrics }}
+        CHECK_PER_FILE: ${{ inputs.check-per-file }}
       run: node "${{ github.action_path }}/check-coverage.js"
