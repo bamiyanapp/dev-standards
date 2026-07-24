@@ -634,6 +634,52 @@ jobs:
           # 可能性があるURLを壊さないため）。リポジトリ肥大化の対応（古い実行分の
           # 定期削除等）は必要になった時点で別途検討する
           keep_files: true
+      # 画像diffによる差分表示（issue bamiyanapp/karuta#750）: baseブランチへの
+      # マージ後（push イベント）にのみ、その時点のスクリーンショットを"latest"として
+      # 上書き公開する。以後のPRはこの"latest"と比較することで、実際に見た目が
+      # 変わったスクリーンショットだけをPRへ添付できるようにする。keep_files: trueだが
+      # 同名ファイルはpublish_dirの内容で上書きされるため、"latest"は常に直近のmain時点の
+      # 内容になる（名前が変わった・削除されたテストの古いファイルが残り続ける点は許容する）
+      - name: Publish E2E screenshots as the latest baseline
+        if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'push'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_dir: ${{ inputs.frontend_dir }}/e2e-screenshots
+          publish_branch: e2e-screenshots
+          destination_dir: latest
+          keep_files: true
+      # 比較対象のベースライン（直近のmain時点のスクリーンショット）をPRのビルドへ
+      # チェックアウトする。e2e-screenshotsブランチ自体がまだ存在しない（初回実行等）
+      # 場合はこのステップ自体が失敗するが、continue-on-errorにより後続はベースライン
+      # 無し（全件"new"扱い＝従来どおり全件表示）にフォールバックする
+      - name: Checkout previous E2E screenshot baseline
+        id: baseline-checkout
+        if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          ref: e2e-screenshots
+          path: e2e-screenshots-baseline
+          sparse-checkout: |
+            latest
+          sparse-checkout-cone-mode: false
+      # ローカル複合アクション自体はこの後の「Compare E2E screenshots」で使うが、
+      # 「Show E2E coverage」で既にdev-standards自身を.dev-standards-actionsへ
+      # チェックアウト済み（このジョブ内、if: always()）のため、ここでは再度
+      # チェックアウトしない
+      - name: Compare E2E screenshots against the previous baseline
+        id: compare-screenshots
+        if: >-
+          always() && steps.screenshots.outputs.found == 'true' &&
+          github.event_name == 'pull_request' && steps.baseline-checkout.outcome == 'success'
+        continue-on-error: true
+        uses: ./.dev-standards-actions/.github/actions/compare-e2e-screenshots
+        with:
+          screenshot-dir: ${{ inputs.frontend_dir }}/e2e-screenshots
+          baseline-dir: e2e-screenshots-baseline/latest
+          output-file: ${{ inputs.frontend_dir }}/screenshot-diff.json
       # issue #628: スクリーンショット数が増えるほど、そのPRの変更と無関係な
       # 既存機能の回帰確認用スクリーンショットまで常に展開表示され見にくくなる。
       # そのPRで実際に変更されたファイル一覧を先に取得しておき、「Build E2E
@@ -695,6 +741,11 @@ jobs:
             // pull_request以外のイベントや取得失敗時はnullのまま）
             const changedFiles = readJsonIfExists(path.join(frontendDir, 'changed-files.json'));
             const changedSet = changedFiles ? new Set(changedFiles) : null;
+            // 前回バージョンとの画像diff結果（issue bamiyanapp/karuta#750、"Compare E2E
+            // screenshots"ステップが書き出す{name: "new"|"changed"|"unchanged"}）。
+            // ベースラインが無い（初回実行、e2e-screenshotsブランチ未作成、pull_request
+            // 以外のイベント等）場合はnullのままとなり、後段は全件表示にフォールバックする
+            const diffResults = readJsonIfExists(path.join(frontendDir, 'screenshot-diff.json'));
 
             const pngFiles = fs.readdirSync(screenshotDir).filter((f) => f.endsWith('.png')).sort();
             const groups = new Map();
@@ -729,7 +780,19 @@ jobs:
               `**${caption}**\n\n![${caption}](https://raw.githubusercontent.com/${repo}/e2e-screenshots/runs/${runId}/${name}.png)\n`;
 
             let body = '### E2Eスクリーンショット\n\n';
+            let unchangedCount = 0;
             for (const { spec, title, items } of groups.values()) {
+              // 前回バージョンから見た目が変わっていないスクリーンショットは添付自体を
+              // 省略する（issue bamiyanapp/karuta#750）。diffResultsが無い（フォールバック時）
+              // は判定できないため全件表示のまま維持する
+              const displayItems = diffResults
+                ? items.filter(({ name }) => diffResults[name] !== 'unchanged')
+                : items;
+              unchangedCount += items.length - displayItems.length;
+              if (displayItems.length === 0) {
+                continue;
+              }
+
               const specDeclaration = spec ? sourceMap[spec] : undefined;
               const declaredPaths = Array.isArray(specDeclaration)
                 ? specDeclaration // 旧形式（ファイル単位の宣言）
@@ -739,12 +802,15 @@ jobs:
               const related = !changedSet || !declaredPaths || declaredPaths.some((p) => changedSet.has(p));
               const label = title || spec || '(spec不明)';
               if (related) {
-                body += items.map(imageMarkdown).join('\n') + '\n';
+                body += displayItems.map(imageMarkdown).join('\n') + '\n';
               } else {
                 body += `<details>\n<summary>${label}${title && spec ? ` (${spec})` : ''}（このPRの変更とは無関係の可能性があるため折りたたみ）</summary>\n\n`;
-                body += items.map(imageMarkdown).join('\n');
+                body += displayItems.map(imageMarkdown).join('\n');
                 body += '\n</details>\n\n';
               }
+            }
+            if (unchangedCount > 0) {
+              body += `前回バージョンから見た目に変化のなかったスクリーンショット: ${unchangedCount}件（添付省略）\n`;
             }
 
             fs.writeFileSync(path.join(frontendDir, 'screenshots-summary.md'), body, 'utf-8');

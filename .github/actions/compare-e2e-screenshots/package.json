@@ -1,0 +1,10 @@
+{
+  "name": "compare-e2e-screenshots-action",
+  "private": true,
+  "version": "1.0.0",
+  "description": "E2Eスクリーンショットを前回バージョンと画像比較するcompare-e2e-screenshots複合アクションの実装",
+  "dependencies": {
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0"
+  }
+}

@@ -9,6 +9,7 @@
   "scripts": {
     "lint": "commitlint --last --verbose",
     "lint:workflows": "node scripts/check-workflows.js",
+    "pretest": "npm --prefix .github/actions/compare-e2e-screenshots ci",
     "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js && npm run lint:workflows"
   },
   "devDependencies": {

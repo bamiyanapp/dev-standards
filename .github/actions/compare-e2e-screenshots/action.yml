@@ -1,0 +1,33 @@
+name: "Compare E2E screenshots"
+description: >-
+  screenshot-dir配下の新しいE2EスクリーンショットPNGを、baseline-dir配下の同名の
+  以前のスクリーンショットとピクセル単位で比較し、判定結果（{name: "new"|"changed"|"unchanged"}）を
+  output-fileへJSONで書き出す。baseline-dirに同名ファイルが無い場合は"new"、寸法が異なる場合や
+  1ピクセルでも差があれば"changed"、完全に一致すれば"unchanged"とする。baseline-dir自体が
+  存在しない場合は全件"new"扱いになる
+
+inputs:
+  screenshot-dir:
+    description: "新しいスクリーンショットPNGが置かれているディレクトリ"
+    required: true
+  baseline-dir:
+    description: "比較対象となる以前のスクリーンショットPNGが置かれているディレクトリ"
+    required: true
+  output-file:
+    description: "判定結果（JSON）の書き出し先パス"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install screenshot diff dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --no-audit --no-fund
+    - shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        SCREENSHOT_DIR: ${{ inputs.screenshot-dir }}
+        BASELINE_DIR: ${{ inputs.baseline-dir }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+      run: node "${{ github.action_path }}/compare-screenshots.js"
