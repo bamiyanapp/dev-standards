@@ -42,8 +42,11 @@ graph TD
     1. `e2e-screenshots/*.png`の存在を確認する（無ければ以降のステップはスキップ）
     2. `pull_request`イベントの場合、GitHub API（`pulls.listFiles`）でそのPRの変更ファイル一覧を取得し`<frontend_dir>/changed-files.json`へ書き出す（`continue-on-error: true`。取得できない場合やイベントが`pull_request`以外の場合は後述の関連判定が常にフォールバックする）
     3. `peaceiris/actions-gh-pages`で`e2e-screenshots`ブランチの`runs/<run_id>/`配下へPNGを公開する（`continue-on-error: true`。このステップの失敗がE2Eテスト自体の成否判定を上書きしてはならないため）
-    4. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）・`<name>.title.txt`（撮影したテストケース名）と`<frontend_dir>/e2e/spec-source-map.json`（検証対象ソースパスの宣言）の両方が用意されており、かつ手順2で変更ファイル一覧が取得できている場合は、その宣言パスと変更ファイル一覧を突き合わせ、重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A。グルーピング・宣言の単位をテストケース単位まで細かくした経緯は[bamiyanapp/karuta#651](https://github.com/bamiyanapp/karuta/issues/651)）。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
-    5. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
+    4. `push`イベント（`base_branch`へのマージ後）の場合のみ、同じPNGを`e2e-screenshots`ブランチの`latest/`配下へも上書き公開する（`keep_files: true`だが同名ファイルはpublish_dirの内容で上書きされるため、`latest/`配下は常に直近の`base_branch`時点の内容になる。テスト名の変更・削除で参照されなくなった古いファイルが残り続ける点は許容している）。これが後述の画像diffのベースラインになる（[bamiyanapp/karuta#750](https://github.com/bamiyanapp/karuta/issues/750)）
+    5. `pull_request`イベントの場合、`e2e-screenshots`ブランチの`latest/`配下（前項の直近`base_branch`時点のスクリーンショット）を`sparse-checkout`で取得する（`continue-on-error: true`。`e2e-screenshots`ブランチ自体が未作成の初回等はこのステップが失敗し、後続の画像diffは全件「ベースライン無し」＝新規扱いにフォールバックする）
+    6. 上記のチェックアウトに成功した場合、ローカル複合アクション`compare-e2e-screenshots`（後述）で新しいスクリーンショットと`latest/`の同名ファイルをピクセル単位で比較し、`<frontend_dir>/screenshot-diff.json`へ`{name: "new"|"changed"|"unchanged"}`を書き出す
+    7. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。手順6の`screenshot-diff.json`が存在する場合、`"unchanged"`と判定されたスクリーンショットは添付自体を省略し（[bamiyanapp/karuta#750](https://github.com/bamiyanapp/karuta/issues/750)）、末尾に省略件数を1行で示す。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）・`<name>.title.txt`（撮影したテストケース名）と`<frontend_dir>/e2e/spec-source-map.json`（検証対象ソースパスの宣言）の両方が用意されており、かつ手順2で変更ファイル一覧が取得できている場合は、その宣言パスと変更ファイル一覧を突き合わせ、重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A。グルーピング・宣言の単位をテストケース単位まで細かくした経緯は[bamiyanapp/karuta#651](https://github.com/bamiyanapp/karuta/issues/651)）。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
+    8. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認でき、スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
 
@@ -54,6 +57,8 @@ graph TD
     - `<frontend_dir>/e2e/spec-source-map.json`に検証対象ソースパス（リポジトリルート相対）を宣言する。値が配列の場合はスペックファイル単位の宣言（従来形式、例: `{"quiz-room.spec.js": ["frontend/src/views/QuizRoomView.jsx", ...]}`）、値がオブジェクトの場合はテストケース名をキーとするテストケース単位の宣言（例: `{"quiz-room.spec.js": {"admin judges a buzz": ["backend/quizRoomHandler.js"]}}`）として扱う。`<name>.title.txt`が無いスクリーンショットには後者の宣言は適用されない（宣言なしとして扱われ、常に展開表示にフォールバックする）
 
     この2つのいずれか、または変更ファイル一覧の取得（`pull_request`イベントでの実行）のいずれかが欠けている場合は、その旨を機械的に判定する材料が無いため、常に展開表示にフォールバックする（既存の呼び出し側に影響を与えない後方互換動作）。
+
+    **前回バージョンとの画像diffによる添付省略（[bamiyanapp/karuta#750](https://github.com/bamiyanapp/karuta/issues/750)）**: 呼び出し側の追加対応は不要（`<name>.png`を書き出す既存の規約のみで動作する）。`.github/actions/compare-e2e-screenshots`複合アクション（`pixelmatch`・`pngjs`を使用、PRのみ実行）が、新しいスクリーンショットと`e2e-screenshots`ブランチの`latest/`配下（直近の`base_branch`時点）の同名PNGをピクセル単位で比較する。寸法が異なる場合や1ピクセルでも差があれば`"changed"`、完全一致なら`"unchanged"`、`latest/`に同名ファイルが無ければ`"new"`と判定し、`"unchanged"`と判定されたスクリーンショットのみPRコメント・Job Summaryへの添付を省略する。比較対象（`latest/`）自体は`push`イベント（`base_branch`へのマージ後）のたびに上書き公開されるため、常に「直近のbase_branchと比べて見た目が変わったかどうか」を表す。閾値判定ではなく単純な視覚的差分の有無のみを見るため、意図した見た目の変更であってもスクリーンショットは通常どおり表示される（レビュー時に見るべき差分を減らすのが目的であり、変更の可否を自動判定するものではない）。
 
     このヘルパー関数自体は現時点でdev-standards側の共有アセットとしては提供していない（各プロダクトが上記の書き出し規約に従って個別に実装する）。将来、複数プロダクトでの採用が進み共有ユーティリティとして切り出す場合は、6節で述べる`reusable-ci.yml`/`reusable-cd.yml`のバージョン固定と同じ規律（固定タグ参照・Renovateによる更新PR・参照側リポジトリ自身のCIをゲートにした明示的なバージョン引き上げ）を最初から適用し、あるプロダクト向けの変更が他プロダクトへ無自覚に波及しないようにすること。
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
