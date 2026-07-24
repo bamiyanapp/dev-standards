@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/bamiyanapp/dev-standards/compare/v1.6.3...v1.7.0) (2026-07-24)
+
+
+### Features
+
+* **e2e:** 前回バージョンとの画像diffで差分の無いスクリーンショットの添付を省略する ([#107](https://github.com/bamiyanapp/dev-standards/issues/107)) ([a52d0ed](https://github.com/bamiyanapp/dev-standards/commit/a52d0edf832efa98bac927cbd453206d9216c5d5))
+
 ## [1.6.3](https://github.com/bamiyanapp/dev-standards/compare/v1.6.2...v1.6.3) (2026-07-23)
 
 
