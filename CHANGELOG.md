@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/bamiyanapp/dev-standards/compare/v1.7.0...v1.7.1) (2026-07-24)
+
+
+### Bug Fixes
+
+* **ci:** E2Eスクリーンショットのベースラインsparse-checkoutパターンをリポジトリルート基準に固定する ([#109](https://github.com/bamiyanapp/dev-standards/issues/109)) ([2854908](https://github.com/bamiyanapp/dev-standards/commit/28549086ee38c86574a3e9c5f0bcd5f4850d82b1))
+
 # [1.7.0](https://github.com/bamiyanapp/dev-standards/compare/v1.6.3...v1.7.0) (2026-07-24)
 
 
