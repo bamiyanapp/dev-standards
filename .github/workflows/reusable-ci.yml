@@ -662,8 +662,12 @@ jobs:
         with:
           ref: e2e-screenshots
           path: e2e-screenshots-baseline
+          # non-cone modeのsparse-checkoutパターンは.gitignore同様の書式で、先頭の
+          # スラッシュが無いと木のどの深さの同名ディレクトリにもマッチしてしまう
+          # （e2e-screenshotsブランチ直下には現状runs/とlatest/しか無いため実害は無いが、
+          # リポジトリルート直下の"latest"だけを明示的に指すよう先頭にスラッシュを付ける）
           sparse-checkout: |
-            latest
+            /latest
           sparse-checkout-cone-mode: false
       # ローカル複合アクション自体はこの後の「Compare E2E screenshots」で使うが、
       # 「Show E2E coverage」で既にdev-standards自身を.dev-standards-actionsへ
