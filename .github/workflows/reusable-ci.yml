@@ -327,7 +327,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.6.1
+          ref: v1.7.0
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -422,7 +422,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.6.1
+          ref: v1.7.0
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -495,7 +495,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.6.1
+          ref: v1.7.0
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -577,7 +577,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.6.1
+          ref: v1.7.0
           path: .dev-standards-actions
       - name: Show E2E coverage
         if: always()
