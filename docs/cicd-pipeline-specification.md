@@ -18,6 +18,8 @@ graph TD
     H -.-> I[analyze job: SARIFをSecurityタブへアップロード];
 ```
 
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。`enable_mermaid_render`（`render-mermaid-diagrams` job）で事前レンダリングしたSVGをJob Summary・PRコメントから確認できる。
+
 ## 1. CI ワークフロー (`reusable-ci.yml`)
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
 - **実行内容**:
