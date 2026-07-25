@@ -25,6 +25,9 @@ jobs:
       # 整合性検証（npm ci）でnpmのバージョン差異により失敗する。
       packages: '[{"dir":".","node_version":"22"}]'
       enable_release: false
+      # issue bamiyanapp/karuta#824: dev-standards自身のArchitecture図もdogfoodingする
+      enable_mermaid_render: true
+      mermaid_doc_paths: "docs/cicd-pipeline-specification.md"
     secrets:
       # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
       # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、

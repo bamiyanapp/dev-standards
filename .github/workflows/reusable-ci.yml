@@ -1012,7 +1012,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.9.0
+          ref: v1.10.0
           path: .dev-standards-actions
 
       - name: Render mermaid diagrams
