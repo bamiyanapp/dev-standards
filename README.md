@@ -56,6 +56,8 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか。実行する場合、frontend_dir配下に`test:e2e`スクリプトが必要 | `false` |
   | `enable_auto_merge` | CI（frontend-test/backend-test または package-test、frontend-e2e-test）成功後に`merge` jobでPRを自動マージするかどうか。falseの場合`merge` job自体がスキップされ、マージは人手で行う | `true` |
   | `enable_standards_check` | `sync-manifest.json`に基づき、symlink欠落・リンク切れ・`.gitignore`の内容乖離を`scripts/bootstrap.js --check`で検知する`standards-check` jobを実行するかどうか。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ | `false` |
+  | `enable_duplication_check` | `jscpd`によるコード重複検知（`duplication-check` job）を実行するかどうか。SonarCloud相当の静的解析をCIネイティブなツールで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。ESLintの`complexity`ルール・`eslint-plugin-sonarjs`はこのワークフローでは扱わず、参照側リポジトリのESLint設定へ直接追加する | `false` |
+  | `duplication_threshold` | コード重複率のしきい値（%）。0以下（既定）の場合`jscpd`にゲート判定（`--threshold`）を渡さず、Job Summaryへのレポート表示のみを行う。0より大きい値を指定すると、リポジトリ全体（`.gitignore`に従い除外、javascript/jsx/typescript/tsxが対象）の重複率がこの値を超えた場合に`duplication-check` jobを失敗させる | `0` |
 
   `enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` は非推奨（後方互換のため入力自体は残しているが、このワークフロー内では使用しない）。同名の入力を`reusable-cd.yml`側に指定すること（下記）。
 

@@ -101,6 +101,21 @@ on:
           coverage_check_per_fileで上書きできる。
         type: boolean
         default: false
+      enable_duplication_check:
+        description: >-
+          jscpdによるコード重複検知ジョブ（duplication-check）を実行するかどうか。
+          SonarCloud相当の静的解析をCIネイティブなツールの組み合わせで代替する取り組みの一部
+          （bamiyanapp/karuta#806）。ESLintのcomplexityルール・eslint-plugin-sonarjsは
+          各参照側リポジトリのESLint設定へ直接追加するため、このワークフロー側では扱わない。
+        type: boolean
+        default: false
+      duplication_threshold:
+        description: >-
+          コード重複率のしきい値（%、0以下でゲート無効・レポート表示のみ）。jscpdの
+          `--threshold`へ渡し、リポジトリ全体（.gitignoreに従い除外）のjavascript/jsx/
+          typescript/tsxファイルを対象に判定する。
+        type: number
+        default: 0
     secrets:
       BOT_TOKEN:
         required: false
@@ -870,8 +885,55 @@ jobs:
       - name: Check dev-standards symlinks / .gitignore drift
         run: node dev-standards/scripts/bootstrap.js --check
 
+  duplication-check:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_duplication_check &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      # jscpdはリポジトリ直下の.gitignoreを既定で尊重する（node_modules/dist/coverage等の
+      # 生成物は追加のignore指定なしで自動的に除外される）。frontend_dir/backend_dir/packages
+      # のどの構成にも依存しないよう、スキャン対象はリポジトリ全体（"."）とし、
+      # フォーマット（-f）で対象拡張子をソースコードに限定する（データファイル・
+      # ワークフローYAML等の意図しない重複検知を避けるため）。v4系からv5系（Rust製への
+      # 全面書き換え）で破壊的変更があったため、メジャーバージョンを固定する
+      - name: Run jscpd (duplication check)
+        run: |
+          npx --yes jscpd@5 . \
+            -f javascript,jsx,typescript,tsx \
+            -r markdown,console \
+            -o ./jscpd-report \
+            ${{ inputs.duplication_threshold > 0 && format('-t {0}', inputs.duplication_threshold) || '' }}
+      - name: Show duplication report in Job Summary
+        if: always()
+        run: |
+          if [ -f ./jscpd-report/jscpd-report.md ]; then
+            cat ./jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check]
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -881,7 +943,8 @@ jobs:
       (needs.backend-test.result == 'success' || needs.backend-test.result == 'skipped') &&
       (needs.package-test.result == 'success' || needs.package-test.result == 'skipped') &&
       (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped') &&
-      (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped')
+      (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped') &&
+      (needs.duplication-check.result == 'success' || needs.duplication-check.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write

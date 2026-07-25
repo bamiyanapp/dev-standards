@@ -63,11 +63,14 @@ graph TD
     **前回バージョンとの画像diffによる添付省略（[bamiyanapp/karuta#750](https://github.com/bamiyanapp/karuta/issues/750)）**: 呼び出し側の追加対応は不要（`<name>.png`を書き出す既存の規約のみで動作する）。`.github/actions/compare-e2e-screenshots`複合アクション（`pixelmatch`・`pngjs`を使用、PRのみ実行）が、新しいスクリーンショットと`e2e-screenshots`ブランチの`latest/`配下（直近の`base_branch`時点）の同名PNGをピクセル単位で比較する。寸法が異なる場合や1ピクセルでも差があれば`"changed"`、完全一致なら`"unchanged"`、`latest/`に同名ファイルが無ければ`"new"`と判定し、`"unchanged"`と判定されたスクリーンショットのみPRコメント・Job Summaryへの添付を省略する。比較対象（`latest/`）自体は`push`イベント（`base_branch`へのマージ後）のたびに上書き公開されるため、常に「直近のbase_branchと比べて見た目が変わったかどうか」を表す。閾値判定ではなく単純な視覚的差分の有無のみを見るため、意図した見た目の変更であってもスクリーンショットは通常どおり表示される（レビュー時に見るべき差分を減らすのが目的であり、変更の可否を自動判定するものではない）。
 
     このヘルパー関数自体は現時点でdev-standards側の共有アセットとしては提供していない（各プロダクトが上記の書き出し規約に従って個別に実装する）。将来、複数プロダクトでの採用が進み共有ユーティリティとして切り出す場合は、6節で述べる`reusable-ci.yml`/`reusable-cd.yml`のバージョン固定と同じ規律（固定タグ参照・Renovateによる更新PR・参照側リポジトリ自身のCIをゲートにした明示的なバージョン引き上げ）を最初から適用し、あるプロダクト向けの変更が他プロダクトへ無自覚に波及しないようにすること。
+  - `duplication-check`（任意、`enable_duplication_check: true` の場合のみ）: SonarCloud相当の静的解析をCIネイティブなツールの組み合わせで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。`jscpd`（Rust製、依存なし）でリポジトリ全体（`.gitignore`に従い`node_modules`等を除外、javascript/jsx/typescript/tsxのみ対象）のコード重複を検知し、markdownレポーターの出力をJob Summaryへそのまま表示する。`duplication_threshold`が0（既定）の場合はレポート表示のみでゲートしない。0より大きい値を指定すると`jscpd`の`--threshold`により、重複率がその値を超えた場合にjob自体を失敗させる。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
+
+    SonarCloudが持つ「複雑度（cyclomatic complexity）」「コードスメル・保守性（cognitive complexity等）」の代替（ESLintの`complexity`ルール・`eslint-plugin-sonarjs`）は、dev-standardsが共有ESLint設定を提供していないため、このワークフローでは扱わない。参照側リポジトリの各パッケージの`eslint.config.js`へ直接追加すること。
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
+入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
 
 ### `commitlint`が`pull_request`/`push`の両方で実行される理由
 
