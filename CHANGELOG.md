@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/bamiyanapp/dev-standards/compare/v1.9.0...v1.10.0) (2026-07-25)
+
+
+### Features
+
+* **ci:** Markdown中のmermaid図をSVG事前レンダリングするjobを追加する（issue bamiyanapp/karuta[#824](https://github.com/bamiyanapp/dev-standards/issues/824)） ([#116](https://github.com/bamiyanapp/dev-standards/issues/116)) ([e716767](https://github.com/bamiyanapp/dev-standards/commit/e7167676cbbd0548fc84d3bf3ba3f25d5ae51496))
+
 # [1.9.0](https://github.com/bamiyanapp/dev-standards/compare/v1.8.0...v1.9.0) (2026-07-25)
 
 
