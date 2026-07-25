@@ -1046,6 +1046,23 @@ jobs:
           destination_dir: runs/${{ github.run_id }}
           keep_files: true
 
+      # PRコメント・Job Summaryはその場限りで、PRがクローズされた後に確認しに行くのは
+      # 現実的ではない。base_branchへのマージ後（pushイベント）にのみ、その時点の
+      # レンダリング結果を"latest"として上書き公開し、Markdown本文（mermaidソースの
+      # 直後）から常に最新の画像として参照できる安定URLにする（issue
+      # bamiyanapp/karuta#824のフィードバックで判明: PRコメントだけでは
+      # 「ドキュメント本体に組み込まれていない」ため実質見に行けない）
+      - name: Publish rendered diagrams as the latest baseline
+        if: steps.diagrams.outputs.found == 'true' && github.event_name == 'push'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_dir: mermaid-diagrams
+          publish_branch: docs-diagrams
+          destination_dir: latest
+          keep_files: true
+
       - name: Build mermaid diagrams summary
         id: diagrams-summary
         if: steps.publish-diagrams.outcome == 'success'

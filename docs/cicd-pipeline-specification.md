@@ -18,7 +18,9 @@ graph TD
     H -.-> I[analyze job: SARIFをSecurityタブへアップロード];
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。`enable_mermaid_render`（`render-mermaid-diagrams` job）で事前レンダリングしたSVGをJob Summary・PRコメントから確認できる。
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持しつつ、以下は`enable_mermaid_render`（`render-mermaid-diagrams` job）が`base_branch`へのマージのたびに再レンダリングし、`docs-diagrams`ブランチの`latest/`へ上書き公開している画像（常に最新版）。
+
+![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification.svg)
 
 ## 1. CI ワークフロー (`reusable-ci.yml`)
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
@@ -68,7 +70,9 @@ graph TD
   - `duplication-check`（任意、`enable_duplication_check: true` の場合のみ）: SonarCloud相当の静的解析をCIネイティブなツールの組み合わせで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。`jscpd`（Rust製、依存なし）でリポジトリ全体（`.gitignore`に従い`node_modules`等を除外、javascript/jsx/typescript/tsxのみ対象）のコード重複を検知し、markdownレポーターの出力をJob Summaryへそのまま表示する。`duplication_threshold`が0（既定）の場合はレポート表示のみでゲートしない。0より大きい値を指定すると`jscpd`の`--threshold`により、重複率がその値を超えた場合にjob自体を失敗させる。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
 
     SonarCloudが持つ「複雑度（cyclomatic complexity）」「コードスメル・保守性（cognitive complexity等）」の代替（ESLintの`complexity`ルール・`eslint-plugin-sonarjs`）は、dev-standardsが共有ESLint設定を提供していないため、このワークフローでは扱わない。参照側リポジトリの各パッケージの`eslint.config.js`へ直接追加すること。
-  - `render-mermaid-diagrams`（任意、`enable_mermaid_render: true` の場合のみ）: GitHubのMarkdownビューア自体は```` ```mermaid ```` フェンスをネイティブにレンダリングするが、PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。`mermaid_doc_paths`で指定したMarkdownファイルから```` ```mermaid ```` ブロックを`.github/actions/render-mermaid-diagrams`複合アクション（`@mermaid-js/mermaid-cli`使用）でSVG画像へ事前レンダリングし、E2Eスクリーンショット報告機能と同じ「専用ブランチ（`docs-diagrams`）へ公開しraw.githubusercontent.com経由でJob Summary・PRコメントへ埋め込む」方式で確認できるようにする。Markdown側のmermaidソース自体は書き換えない。
+  - `render-mermaid-diagrams`（任意、`enable_mermaid_render: true` の場合のみ）: GitHubのMarkdownビューア自体は```` ```mermaid ```` フェンスをネイティブにレンダリングするが、PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。`mermaid_doc_paths`で指定したMarkdownファイルから```` ```mermaid ```` ブロックを`.github/actions/render-mermaid-diagrams`複合アクション（`@mermaid-js/mermaid-cli`使用）でSVG画像へ事前レンダリングする。Markdown側のmermaidソース自体は書き換えない。
+
+    公開先は2段階（E2Eスクリーンショット報告機能と同じ構成）。`runs/<run_id>/`配下へは実行のたびに公開し、Job Summary・PRコメント（`pull_request`イベントのみ）へその場限りの確認用として埋め込む。加えて、`push`イベント（`base_branch`へのマージ後）のたびに`latest/`配下へ上書き公開し、こちらのURL（`https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>`）を対象Markdownファイル自身の```` ```mermaid ```` ブロック直後へ`![...](...)`として恒久的に埋め込んでおくことで、PRコメントというその場限りの確認手段だけでなく、ドキュメント本体を開いた際にも常に最新のレンダリング結果を確認できるようにする（最初の1回のみ手動で埋め込みが必要。以後は`latest/`側の画像内容が自動更新されるため、Markdown側の再編集は不要）。
 
     `pull_request`イベントでは、`mermaid_doc_paths`で指定したファイルがそのPRで実際に変更されたかを判定し、変更が無ければレンダリング自体をスキップする（無関係なPRでの無駄なChromiumセットアップ・同じ画像コメントの繰り返しを避けるため）。判定できない場合（`push`イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを避けるため常に実行する側にフォールバックする。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
