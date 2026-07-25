@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/bamiyanapp/dev-standards/compare/v1.7.1...v1.8.0) (2026-07-25)
+
+
+### Features
+
+* **ci:** CodeQLによる静的解析を提供するreusable workflowを追加する（issue bamiyanapp/karuta[#808](https://github.com/bamiyanapp/dev-standards/issues/808)） ([#112](https://github.com/bamiyanapp/dev-standards/issues/112)) ([c696ec9](https://github.com/bamiyanapp/dev-standards/commit/c696ec91fe5d251fd8ad4a447bb9237ed2fc6c7c))
+
 ## [1.7.1](https://github.com/bamiyanapp/dev-standards/compare/v1.7.0...v1.7.1) (2026-07-24)
 
 
