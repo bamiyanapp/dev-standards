@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/bamiyanapp/dev-standards/compare/v1.10.0...v1.11.0) (2026-07-25)
+
+
+### Features
+
+* **ci:** mermaid図の事前レンダリングをdev-standards自身で有効化する ([#117](https://github.com/bamiyanapp/dev-standards/issues/117)) ([989833c](https://github.com/bamiyanapp/dev-standards/commit/989833c66afee1b6618f1e4dc62d59aa1f76e71a)), closes [bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)
+
 # [1.10.0](https://github.com/bamiyanapp/dev-standards/compare/v1.9.0...v1.10.0) (2026-07-25)
 
 
