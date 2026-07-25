@@ -20,6 +20,7 @@
 - `.github/workflows/reusable-cd.yml`: base_branchへのpush時、base_branch上で直接semantic-releaseを実行しバージョン自動採番・CHANGELOG更新・タグ付け・GitHub Release作成を行う reusable workflow（`workflow_call`）。frontend/backendのビルド・デプロイ手順（GitHub Pages・Serverless Frameworkなど）はプロダクトごとに異なるため対象外であり、参照側リポジトリの `.github/workflows/cd.yml` に残す。
 - `.releaserc.cjs` / `.github/workflows/cd.yml`: dev-standards自身も`reusable-cd.yml`を（相対パス参照で）dogfoodingし、`vX.Y.Z`形式のタグを発行する。参照側リポジトリはこのタグを`uses: ...@vX.Y.Z`で指定し、`@main`のような未固定のブランチ参照は避けること（詳細は`docs/cicd-pipeline-specification.md`の「reusable workflow参照のバージョン固定」を参照）。
 - `.github/actions/deploy-github-pages/`: Node.jsプロジェクトのビルド〜GitHub Pagesデプロイ（setup-node→npm ci→build→upload-pages-artifact→deploy-pages）を共通化した複合action。参照側の`.github/workflows/cd.yml`から`uses: bamiyanapp/dev-standards/.github/actions/deploy-github-pages@v1.0.0`＋`with:`（`working-directory`・`node-version`・`build-command`・`artifact-path`・`workspaces`（任意、npm workspaces構成の場合にtrue。依存インストールをリポジトリルートで行う）。`@main`のような未固定のブランチ参照は避け、タグで固定すること）で呼び出す。呼び出し側ジョブ自体には`environment: { name: github-pages }`・`permissions: { pages: write, id-token: write }`の指定が引き続き必要（複合actionからはjob単位の設定ができないため）。
+- `.github/workflows/reusable-codeql.yml`: CodeQLによる静的解析（SARIFをGitHub Securityタブへアップロード）を行う reusable workflow（`workflow_call`）。`reusable-ci.yml`のジョブ群とは独立しており、`merge` jobのゲートには関与しない。`schedule`トリガーは参照側の`.github/workflows/codeql.yml`側で設定する。
 
 ## 利用方法（参照側リポジトリ）
 
@@ -71,4 +72,11 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   | `changelog_json_output_path` | 変換後のJSON出力先パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `frontend/src/changelog.json` |
 
   `secrets.BOT_TOKEN`（任意）を渡すと、`release` jobでのバージョン更新コミット・タグのpush、GitHub Release作成に利用される。**`base_branch`へのpushがCDワークフローのトリガーとなるため、`enable_release: true`で運用する場合は`BOT_TOKEN`の設定を推奨する**（`GITHUB_TOKEN`によるpushはCDをトリガーしない）。
+- `.github/workflows/reusable-codeql.yml`: 参照側の `.github/workflows/codeql.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-codeql.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す（`@main`のような未固定のブランチ参照は避け、タグで固定すること）。参照側の`codeql.yml`自体の`on:`に`push`・`pull_request`・`schedule`（週次等の定期実行、コード変更が無い期間もクエリセット更新を検知するため推奨）を設定する。指定できる入力は以下の通り。
+
+  | 入力 | 説明 | デフォルト |
+  |---|---|---|
+  | `languages` | CodeQLで解析する言語をJSON配列形式で指定する（例: `'["javascript-typescript"]'`）。GitHub Actions matrixとしてlanguageごとに展開される | `'["javascript-typescript"]'` |
+
+  CodeQLを必須チェックにするかどうかは参照側リポジトリのブランチ保護設定（Required status checks）側の責務であり、このワークフロー自体は`reusable-ci.yml`の`merge` jobのマージ処理に関与しない。
 

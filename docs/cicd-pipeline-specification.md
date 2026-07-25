@@ -14,6 +14,8 @@ graph TD
     D --> E[CD Workflow: reusable-cd.yml];
     E --> F[release job: base_branch上でSemantic Release実行];
     F --> G[（プロダクト固有）Deploy jobs];
+    A -.-> H[CodeQL Workflow: reusable-codeql.yml];
+    H -.-> I[analyze job: SARIFをSecurityタブへアップロード];
 ```
 
 ## 1. CI ワークフロー (`reusable-ci.yml`)
@@ -101,7 +103,17 @@ run-name: >-
 
 semantic-release本体および一部プラグイン（`@semantic-release/npm`、`semantic-release`本体など）は、frontend/backendのビルド・テストに使うNode.jsのバージョン（多くの場合プロダクトのランタイムに合わせて20系などを指定）よりも新しいNode.jsを要求することがある。そのため`release` job内のsemantic-release実行専用に`semantic_release_node_version`（デフォルト`lts/*`）を別途用意している。
 
-## 3. リリース運用
+## 3. CodeQL ワークフロー (`reusable-codeql.yml`)
+- **トリガー**: 参照側 `codeql.yml` の `on` 設定に従う（`push`・`pull_request`に加え、`schedule`での定期実行を推奨）
+- **実行内容**:
+  - `analyze`（`languages`入力で指定した言語ごとに`matrix`展開、既定は`["javascript-typescript"]`）: `github/codeql-action/init` → `github/codeql-action/analyze` を実行し、結果をSARIFとしてGitHub Securityタブへアップロードする。JavaScript/TypeScriptはインタプリタ言語のため、コンパイル言語向けのautobuildステップは不要
+- **`reusable-ci.yml`とは独立したワークフローとして提供する理由**:
+  - CodeQLはコード変更が無い期間もクエリセット自体の更新を検知するため、`schedule`トリガーでの定期実行が公式に推奨されている。`schedule`トリガーは呼び出し元（参照側の`.github/workflows/codeql.yml`）の`on:`に設定する必要があり、`workflow_call`先のこのワークフロー自体では設定できない
+  - `reusable-ci.yml`の`merge` job（squash merge実行）に組み込むと、CodeQLの実行時間がPRのマージ可否に直結してしまう。CodeQLを必須チェックにするかどうかは各参照側リポジトリのブランチ保護設定（Required status checks）側の責務とし、このワークフロー自体はマージ処理に関与しない
+
+入力パラメータ（`languages`）は README.md を参照。
+
+## 4. リリース運用
 - **リリース条件**: `base_branch` へのpush後に `semantic-release` を実行した結果、リリース対象のコミット（`feat`/`fix` 等）が含まれる場合にのみバージョンが発行される。
 - **リリースの手順**:
   1. 通常どおり PR を作成する。

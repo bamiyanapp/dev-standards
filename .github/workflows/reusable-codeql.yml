@@ -1,0 +1,55 @@
+name: Reusable CodeQL
+
+# CodeQLは他のCIジョブ（reusable-ci.ymlのfrontend-test/backend-test等）とは独立した
+# ワークフローとして提供する。理由:
+# - CodeQLはコード変更が無い期間もクエリセット自体の更新を検知するため、schedule
+#   トリガーでの定期実行が公式に推奨されている。schedule トリガーは呼び出し元
+#   （参照側の.github/workflows/codeql.yml）の`on:`に設定する必要があり、
+#   workflow_call先のこのファイル自体では設定できない
+# - reusable-ci.ymlのmergeジョブ（squash merge実行）に組み込むと、CodeQLの実行時間が
+#   PRのマージ可否に直結してしまう。CodeQLを必須チェックにするかどうかは各参照側
+#   リポジトリのブランチ保護設定（Required status checks）側の責務とし、この
+#   ワークフロー自体はマージ処理に関与しない
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: >-
+          CodeQLで解析する言語をJSON配列形式で指定する
+          （例: '["javascript-typescript"]'）。GitHub Actions matrixとしてlanguageごとに
+          展開される。JavaScript/TypeScriptは"javascript-typescript"の1つにまとめて
+          解析されるため、frontend/backendのどちらもJavaScriptのみのリポジトリでは
+          配列の要素は通常1つで足りる
+        type: string
+        default: '["javascript-typescript"]'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      # 解析結果（SARIF）をGitHubのSecurityタブへアップロードするために必要
+      security-events: write
+      # codeql-actionが解析対象言語の自動検出等でAPIを参照するために必要
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # JavaScript/TypeScriptはインタプリタ言語のため、コンパイル言語向けの
+      # autobuildステップは不要（init→analyzeのみで解析できる）
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
