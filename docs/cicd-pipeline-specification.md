@@ -66,11 +66,14 @@ graph TD
   - `duplication-check`（任意、`enable_duplication_check: true` の場合のみ）: SonarCloud相当の静的解析をCIネイティブなツールの組み合わせで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。`jscpd`（Rust製、依存なし）でリポジトリ全体（`.gitignore`に従い`node_modules`等を除外、javascript/jsx/typescript/tsxのみ対象）のコード重複を検知し、markdownレポーターの出力をJob Summaryへそのまま表示する。`duplication_threshold`が0（既定）の場合はレポート表示のみでゲートしない。0より大きい値を指定すると`jscpd`の`--threshold`により、重複率がその値を超えた場合にjob自体を失敗させる。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
 
     SonarCloudが持つ「複雑度（cyclomatic complexity）」「コードスメル・保守性（cognitive complexity等）」の代替（ESLintの`complexity`ルール・`eslint-plugin-sonarjs`）は、dev-standardsが共有ESLint設定を提供していないため、このワークフローでは扱わない。参照側リポジトリの各パッケージの`eslint.config.js`へ直接追加すること。
+  - `render-mermaid-diagrams`（任意、`enable_mermaid_render: true` の場合のみ）: GitHubのMarkdownビューア自体は```` ```mermaid ```` フェンスをネイティブにレンダリングするが、PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。`mermaid_doc_paths`で指定したMarkdownファイルから```` ```mermaid ```` ブロックを`.github/actions/render-mermaid-diagrams`複合アクション（`@mermaid-js/mermaid-cli`使用）でSVG画像へ事前レンダリングし、E2Eスクリーンショット報告機能と同じ「専用ブランチ（`docs-diagrams`）へ公開しraw.githubusercontent.com経由でJob Summary・PRコメントへ埋め込む」方式で確認できるようにする。Markdown側のmermaidソース自体は書き換えない。
+
+    `pull_request`イベントでは、`mermaid_doc_paths`で指定したファイルがそのPRで実際に変更されたかを判定し、変更が無ければレンダリング自体をスキップする（無関係なPRでの無駄なChromiumセットアップ・同じ画像コメントの繰り返しを避けるため）。判定できない場合（`push`イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを避けるため常に実行する側にフォールバックする。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
+入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold` / `enable_mermaid_render` / `mermaid_doc_paths`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
 
 ### `commitlint`が`pull_request`/`push`の両方で実行される理由
 

@@ -116,6 +116,21 @@ on:
           typescript/tsxファイルを対象に判定する。
         type: number
         default: 0
+      enable_mermaid_render:
+        description: >-
+          mermaid_doc_pathsで指定したMarkdown中の```mermaid```ブロックをSVG画像として
+          事前レンダリングし、専用ブランチへ公開してJob Summary・PRコメントへ埋め込む
+          `render-mermaid-diagrams` jobを実行するかどうか（bamiyanapp/karuta#824）。
+          GitHubのPR差分ビュー・API経由でのファイル取得等、mermaidがネイティブ
+          レンダリングされない場面向け。
+        type: boolean
+        default: false
+      mermaid_doc_paths:
+        description: >-
+          enable_mermaid_render: trueの場合にレンダリング対象とするMarkdownファイルパス
+          （リポジトリルート基準）。カンマまたは改行区切りで複数指定できる。
+        type: string
+        default: ""
     secrets:
       BOT_TOKEN:
         required: false
@@ -932,8 +947,143 @@ jobs:
             cat ./jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
+  # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され
+  # 図として確認できない（bamiyanapp/karuta#824）。mermaid_doc_pathsで指定した
+  # Markdownファイルから```mermaid```ブロックを事前にSVG画像化し、E2Eスクリーンショット
+  # 報告機能（frontend-e2e-testジョブ）と同じ「専用ブランチへ公開しraw.githubusercontent.com
+  # 経由でJob Summary・PRコメントへ埋め込む」方式で確認できるようにする
+  # （スマートフォンのブラウザからも閲覧可能）。Markdown側のmermaidソース自体は
+  # このジョブでは一切書き換えない
+  render-mermaid-diagrams:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_mermaid_render &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    # 専用ブランチへのpush（contents）とPRへのコメント投稿（pull-requests）が必要
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # 無関係なPRで毎回Chromiumのセットアップ・レンダリングを行う無駄、および無関係な
+      # PRに毎回同じ画像コメントが付く煩わしさを避けるため、pull_requestイベントでは
+      # mermaid_doc_pathsで指定したファイルが実際に変更されたかを判定する。判定できない
+      # 場合（push イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを
+      # 避けるため常に実行する側にフォールバックする
+      - name: Determine whether target docs changed
+        id: gate
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const targetPaths = `${{ inputs.mermaid_doc_paths }}`.split(/[\n,]/).map((p) => p.trim()).filter(Boolean);
+            if (context.eventName !== 'pull_request') {
+              core.setOutput('should_run', 'true');
+              return;
+            }
+            try {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                per_page: 100,
+              });
+              const changedFiles = new Set(files.map((f) => f.filename));
+              const anyChanged = targetPaths.some((p) => changedFiles.has(p));
+              core.setOutput('should_run', String(anyChanged));
+            } catch (error) {
+              core.warning(`Failed to determine changed files, rendering unconditionally: ${error.message}`);
+              core.setOutput('should_run', 'true');
+            }
+
+      - name: Use Node.js
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
+      - name: Checkout dev-standards (for the local composite action)
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: v1.9.0
+          path: .dev-standards-actions
+
+      - name: Render mermaid diagrams
+        if: steps.gate.outputs.should_run == 'true'
+        uses: ./.dev-standards-actions/.github/actions/render-mermaid-diagrams
+        with:
+          markdown-paths: ${{ inputs.mermaid_doc_paths }}
+          output-dir: mermaid-diagrams
+
+      - name: Check for rendered diagrams
+        id: diagrams
+        if: steps.gate.outputs.should_run == 'true'
+        run: |
+          if [ -f mermaid-diagrams/manifest.json ] && [ -s mermaid-diagrams/manifest.json ] && [ "$(cat mermaid-diagrams/manifest.json)" != "[]" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 補助的な機能であり、このステップの失敗（ブランチ保護やトークン権限の問題等）が
+      # このジョブ自体の成否判定を上書きしてはならないためcontinue-on-error: trueにする
+      - name: Publish rendered diagrams to a dedicated branch
+        id: publish-diagrams
+        if: steps.diagrams.outputs.found == 'true'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ github.token }}
+          publish_dir: mermaid-diagrams
+          publish_branch: docs-diagrams
+          destination_dir: runs/${{ github.run_id }}
+          keep_files: true
+
+      - name: Build mermaid diagrams summary
+        id: diagrams-summary
+        if: steps.publish-diagrams.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const runId = '${{ github.run_id }}';
+            const repo = '${{ github.repository }}';
+            const manifest = JSON.parse(fs.readFileSync('mermaid-diagrams/manifest.json', 'utf-8'));
+
+            let body = '### レンダリングされたmermaid図\n\n';
+            for (const { sourceFile, fileName } of manifest) {
+              body += `**${sourceFile}**\n\n![${sourceFile}](https://raw.githubusercontent.com/${repo}/docs-diagrams/runs/${runId}/${fileName})\n\n`;
+            }
+
+            fs.writeFileSync('mermaid-diagrams-summary.md', body, 'utf-8');
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body);
+
+      - name: Comment rendered diagrams on the pull request
+        if: >-
+          steps.diagrams-summary.outcome == 'success' && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('mermaid-diagrams-summary.md', 'utf-8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, render-mermaid-diagrams]
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -944,7 +1094,8 @@ jobs:
       (needs.package-test.result == 'success' || needs.package-test.result == 'skipped') &&
       (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped') &&
       (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped') &&
-      (needs.duplication-check.result == 'success' || needs.duplication-check.result == 'skipped')
+      (needs.duplication-check.result == 'success' || needs.duplication-check.result == 'skipped') &&
+      (needs.render-mermaid-diagrams.result == 'success' || needs.render-mermaid-diagrams.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write

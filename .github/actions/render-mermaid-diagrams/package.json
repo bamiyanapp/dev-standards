@@ -1,0 +1,9 @@
+{
+  "name": "render-mermaid-diagrams-action",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Markdown中の```mermaid```ブロックをSVG画像として事前レンダリングするrender-mermaid-diagrams複合アクションの実装",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "^11.16.0"
+  }
+}
