@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/bamiyanapp/dev-standards/compare/v1.11.0...v1.12.0) (2026-07-25)
+
+
+### Features
+
+* **ci:** mermaid図の最新レンダリング結果をドキュメント本体から常時確認できるようにする（issue bamiyanapp/karuta[#824](https://github.com/bamiyanapp/dev-standards/issues/824)） ([#119](https://github.com/bamiyanapp/dev-standards/issues/119)) ([1e2576f](https://github.com/bamiyanapp/dev-standards/commit/1e2576f62042a59d78077d651a9b3aef139554d8))
+
 # [1.11.0](https://github.com/bamiyanapp/dev-standards/compare/v1.10.0...v1.11.0) (2026-07-25)
 
 
