@@ -1,0 +1,31 @@
+name: "Render mermaid diagrams"
+description: >-
+  markdown-pathsで指定したMarkdownファイル群から```mermaid```フェンスを抽出し、
+  @mermaid-js/mermaid-cli（mmdc）でSVG画像へ事前レンダリングする。GitHubのPR差分ビュー・
+  API経由でのファイル取得等、mermaidがネイティブレンダリングされない場面
+  （bamiyanapp/karuta#824）向けの画像を生成するのが目的で、Markdown側のmermaidソース自体は
+  一切書き換えない。生成したSVGはoutput-dir配下に「<ファイル名>.svg」（1ファイルに複数の
+  mermaidブロックがある場合は「<ファイル名>-<連番>.svg」）として書き出され、
+  一覧はoutput-dir/manifest.jsonに書き出される
+
+inputs:
+  markdown-paths:
+    description: "レンダリング対象のMarkdownファイルパス（リポジトリルート基準）。カンマまたは改行区切りで複数指定できる"
+    required: true
+  output-dir:
+    description: "レンダリング結果（SVG・manifest.json）の出力先ディレクトリ"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install mermaid-cli
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --no-audit --no-fund
+    - shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        MARKDOWN_PATHS: ${{ inputs.markdown-paths }}
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: node "${{ github.action_path }}/render-mermaid.js"
