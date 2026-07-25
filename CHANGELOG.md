@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/bamiyanapp/dev-standards/compare/v1.8.0...v1.9.0) (2026-07-25)
+
+
+### Features
+
+* **ci:** jscpdによるコード重複検知jobを追加する（issue bamiyanapp/karuta[#806](https://github.com/bamiyanapp/dev-standards/issues/806)） ([#113](https://github.com/bamiyanapp/dev-standards/issues/113)) ([446a646](https://github.com/bamiyanapp/dev-standards/commit/446a646ccb3a8e93bf4f26b66bbe2c4c227fa548))
+
 # [1.8.0](https://github.com/bamiyanapp/dev-standards/compare/v1.7.1...v1.8.0) (2026-07-25)
 
 
