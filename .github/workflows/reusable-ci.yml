@@ -1007,14 +1007,14 @@ jobs:
           node-version: "24"
 
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）。
-      # v1.12.1で、render-mermaid-diagramsの出力をSVGからPNGへ切り替えた
-      # （issue bamiyanapp/karuta#837）ため、その修正を含むタグへ更新した
+      # v1.12.3で、render-mermaid-diagramsにCJKフォントインストールを追加した
+      # （issue bamiyanapp/karuta#849）ため、その修正を含むタグへ更新した
       - name: Checkout dev-standards (for the local composite action)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.12.1
+          ref: v1.12.3
           path: .dev-standards-actions
 
       - name: Render mermaid diagrams
