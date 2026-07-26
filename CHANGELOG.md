@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/bamiyanapp/dev-standards/compare/v1.12.0...v1.12.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **mermaid:** render-mermaid-diagramsの出力をSVGからPNGへ切り替える（issue bamiyanapp/karuta[#837](https://github.com/bamiyanapp/dev-standards/issues/837)） ([#122](https://github.com/bamiyanapp/dev-standards/issues/122)) ([91b2037](https://github.com/bamiyanapp/dev-standards/commit/91b2037657c2a8a28e819e5c681db81ec014097c))
+
 # [1.12.0](https://github.com/bamiyanapp/dev-standards/compare/v1.11.0...v1.12.0) (2026-07-25)
 
 
