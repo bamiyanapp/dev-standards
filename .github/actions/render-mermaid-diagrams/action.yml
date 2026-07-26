@@ -19,6 +19,12 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # GitHub Actionsのubuntu-latestランナーには日本語（CJK）フォントが既定で
+    # インストールされておらず、レンダリング結果（PNG）の日本語ラベルが文字化け
+    # （tofu表示、□の連続）する問題があった（bamiyanapp/karuta#849）
+    - name: Install Japanese (CJK) fonts for rendering
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk
     - name: Install mermaid-cli
       shell: bash
       working-directory: ${{ github.action_path }}
