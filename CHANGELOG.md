@@ -1,3 +1,10 @@
+## [1.12.3](https://github.com/bamiyanapp/dev-standards/compare/v1.12.2...v1.12.3) (2026-07-26)
+
+
+### Bug Fixes
+
+* **mermaid:** render-mermaid-diagramsで日本語フォントをインストールする（issue bamiyanapp/karuta[#849](https://github.com/bamiyanapp/dev-standards/issues/849)） ([#126](https://github.com/bamiyanapp/dev-standards/issues/126)) ([1ddc87d](https://github.com/bamiyanapp/dev-standards/commit/1ddc87da270cb3504f325034cf23a6e3365ceeb1))
+
 ## [1.12.2](https://github.com/bamiyanapp/dev-standards/compare/v1.12.1...v1.12.2) (2026-07-26)
 
 
