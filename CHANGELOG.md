@@ -1,3 +1,10 @@
+## [1.12.4](https://github.com/bamiyanapp/dev-standards/compare/v1.12.3...v1.12.4) (2026-07-26)
+
+
+### Bug Fixes
+
+* **ci:** render-mermaid-diagramsの自己参照タグをv1.12.3へ更新する（issue bamiyanapp/karuta[#849](https://github.com/bamiyanapp/dev-standards/issues/849)） ([#128](https://github.com/bamiyanapp/dev-standards/issues/128)) ([132400f](https://github.com/bamiyanapp/dev-standards/commit/132400fd6acd03cea1e2eceacf7de0f9b52e26c1))
+
 ## [1.12.3](https://github.com/bamiyanapp/dev-standards/compare/v1.12.2...v1.12.3) (2026-07-26)
 
 
