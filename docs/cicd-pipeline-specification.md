@@ -79,6 +79,8 @@ graph TD
 
     出力形式は当初SVGだったが、GitHubモバイルアプリで埋め込み画像をタップしても拡大表示できない（SVG形式が画像ビューアのタップ拡大表示に対応していない）問題があったため、標準的な画像ビューアとの互換性が高いPNGへ切り替えた（[bamiyanapp/karuta#837](https://github.com/bamiyanapp/karuta/issues/837)）。あわせて、```` ```mermaid ```` ソースブロック自体はレンダリング済み画像がある場面では読む必要が無く冗長なため、埋め込み側（各ドキュメント）で`<details><summary>`により折りたたむ運用とする。
 
+    GitHub Actionsの`ubuntu-latest`ランナーには日本語（CJK）フォントが既定でインストールされておらず、レンダリング結果の日本語ラベルが文字化け（tofu表示、`□`の連続）する問題があったため、`render-mermaid-diagrams`複合アクション内で`mmdc`実行前に`fonts-noto-cjk`パッケージを`apt-get install`している（[bamiyanapp/karuta#849](https://github.com/bamiyanapp/karuta/issues/849)）。
+
     公開先は2段階（E2Eスクリーンショット報告機能と同じ構成）。`runs/<run_id>/`配下へは実行のたびに公開し、Job Summary・PRコメント（`pull_request`イベントのみ）へその場限りの確認用として埋め込む。加えて、`push`イベント（`base_branch`へのマージ後）のたびに`latest/`配下へ上書き公開し、こちらのURL（`https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>`）を対象Markdownファイル自身の```` ```mermaid ```` ブロック直後へ`![...](...)`として恒久的に埋め込んでおくことで、PRコメントというその場限りの確認手段だけでなく、ドキュメント本体を開いた際にも常に最新のレンダリング結果を確認できるようにする（最初の1回のみ手動で埋め込みが必要。以後は`latest/`側の画像内容が自動更新されるため、Markdown側の再編集は不要）。
 
     `pull_request`イベントでは、`mermaid_doc_paths`で指定したファイルがそのPRで実際に変更されたかを判定し、変更が無ければレンダリング自体をスキップする（無関係なPRでの無駄なChromiumセットアップ・同じ画像コメントの繰り返しを避けるため）。判定できない場合（`push`イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを避けるため常に実行する側にフォールバックする。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
