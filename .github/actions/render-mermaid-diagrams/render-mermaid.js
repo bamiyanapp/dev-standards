@@ -7,17 +7,22 @@ const { extractMermaidBlocks } = require("./extract-mermaid.js");
 
 // GitHub上でmermaidがネイティブレンダリングされない場面（PR差分ビュー、API経由での
 // ファイル取得等、issue bamiyanapp/karuta#824参照）向けに、ドキュメント中の
-// ```mermaid```ブロックを事前にSVG画像化しておく。ソース（Markdown内のmermaid記法）は
-// このアクション自身では一切書き換えず、レンダリング結果（SVG）とその一覧（manifest.json）を
+// ```mermaid```ブロックを事前に画像化しておく。ソース（Markdown内のmermaid記法）は
+// このアクション自身では一切書き換えず、レンダリング結果とその一覧（manifest.json）を
 // output-dir配下に生成するだけに留める
+//
+// 出力形式はPNG（ラスター画像）を使う。当初はSVGだったが、GitHubモバイルアプリの
+// 画像タップ拡大表示がSVGに対応しておらずエラーになる問題（issue
+// bamiyanapp/karuta#837）があり、モバイルの標準的な画像ビューアとの互換性が高い
+// PNGへ切り替えた
 
-function renderBlock(mermaidSource, outputSvgPath, actionDir) {
-  const tmpMmdPath = `${outputSvgPath}.mmd`;
+function renderBlock(mermaidSource, outputImagePath, actionDir) {
+  const tmpMmdPath = `${outputImagePath}.mmd`;
   fs.writeFileSync(tmpMmdPath, mermaidSource, "utf-8");
   try {
     execFileSync(
       path.join(actionDir, "node_modules", ".bin", "mmdc"),
-      ["-i", tmpMmdPath, "-o", outputSvgPath, "-p", path.join(actionDir, "puppeteer-config.json")],
+      ["-i", tmpMmdPath, "-o", outputImagePath, "-p", path.join(actionDir, "puppeteer-config.json")],
       { stdio: "inherit" }
     );
   } finally {
@@ -42,9 +47,9 @@ function run() {
     const baseName = path.basename(markdownPath, path.extname(markdownPath));
 
     blocks.forEach((block, index) => {
-      const fileName = blocks.length > 1 ? `${baseName}-${index + 1}.svg` : `${baseName}.svg`;
-      const outputSvgPath = path.join(outputDir, fileName);
-      renderBlock(block, outputSvgPath, actionDir);
+      const fileName = blocks.length > 1 ? `${baseName}-${index + 1}.png` : `${baseName}.png`;
+      const outputImagePath = path.join(outputDir, fileName);
+      renderBlock(block, outputImagePath, actionDir);
       manifest.push({ sourceFile: markdownPath, index: index + 1, fileName });
     });
   }
