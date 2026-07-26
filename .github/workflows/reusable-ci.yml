@@ -113,7 +113,10 @@ on:
         description: >-
           コード重複率のしきい値（%、0以下でゲート無効・レポート表示のみ）。jscpdの
           `--threshold`へ渡し、リポジトリ全体（.gitignoreに従い除外）のjavascript/jsx/
-          typescript/tsxファイルを対象に判定する。
+          typescript/tsxファイルのうち、テストファイル（*.test.js等、*.spec.js等、
+          e2eディレクトリ配下）を除いたプロダクトコードのみを対象に判定する
+          （bamiyanapp/karuta#833。テストコードの重複はArrange-Act-Assert等の
+          意図的な繰り返しであることが多く、プロダクトコードの重複とは性質が異なるため）。
         type: number
         default: 0
       enable_mermaid_render:
@@ -932,11 +935,16 @@ jobs:
       # のどの構成にも依存しないよう、スキャン対象はリポジトリ全体（"."）とし、
       # フォーマット（-f）で対象拡張子をソースコードに限定する（データファイル・
       # ワークフローYAML等の意図しない重複検知を避けるため）。v4系からv5系（Rust製への
-      # 全面書き換え）で破壊的変更があったため、メジャーバージョンを固定する
+      # 全面書き換え）で破壊的変更があったため、メジャーバージョンを固定する。
+      # テストファイル（*.test.*・*.spec.*・e2eディレクトリ配下）は-iで除外し、
+      # プロダクトコードのみを判定対象にする（bamiyanapp/karuta#833。テストコードの
+      # 重複はセットアップ・アサーションの意図的な繰り返しであることが多く、
+      # プロダクトコードの重複とは性質・対応の要否が異なるため）
       - name: Run jscpd (duplication check)
         run: |
           npx --yes jscpd@5 . \
             -f javascript,jsx,typescript,tsx \
+            -i "**/*.test.js,**/*.test.jsx,**/*.test.ts,**/*.test.tsx,**/*.spec.js,**/*.spec.jsx,**/*.spec.ts,**/*.spec.tsx,**/e2e/**" \
             -r markdown,console \
             -o ./jscpd-report \
             ${{ inputs.duplication_threshold > 0 && format('-t {0}', inputs.duplication_threshold) || '' }}
