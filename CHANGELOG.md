@@ -1,3 +1,10 @@
+## [1.12.5](https://github.com/bamiyanapp/dev-standards/compare/v1.12.4...v1.12.5) (2026-07-26)
+
+
+### Bug Fixes
+
+* **ci:** jscpdの重複検知対象からテストファイルを除外する ([#132](https://github.com/bamiyanapp/dev-standards/issues/132)) ([cd15a58](https://github.com/bamiyanapp/dev-standards/commit/cd15a5807f90b7c411cbfb5472e921330c7feeca))
+
 ## [1.12.4](https://github.com/bamiyanapp/dev-standards/compare/v1.12.3...v1.12.4) (2026-07-26)
 
 
