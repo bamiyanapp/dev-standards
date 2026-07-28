@@ -101,6 +101,23 @@ on:
           coverage_check_per_fileで上書きできる。
         type: boolean
         default: false
+      e2e_coverage_threshold:
+        description: >-
+          frontend-e2e-testジョブのE2EテストJSカバレッジ閾値（%、0以下でゲート無効）。
+          coverage_thresholdと同じcheck-coverage-threshold複合actionを使うが、対象は
+          Playwright（monocart-reporter）が出力するE2E実行時のカバレッジであり、
+          frontend-testジョブのユニットテストカバレッジ（coverage_threshold）とは
+          独立している（issue #541・#576）。
+        type: number
+        default: 0
+      e2e_coverage_metrics:
+        description: >-
+          e2e_coverage_thresholdによるゲート判定の対象指標をカンマ区切りで指定する
+          （例: "statements,functions,lines"）。省略時（空文字列）はlines/statements/
+          functions/branchesの全4種を判定対象にする。coverage_metricsと同様、表自体は
+          常に全指標を表示し、判定のみ絞り込む。
+        type: string
+        default: ""
       enable_duplication_check:
         description: >-
           jscpdによるコード重複検知ジョブ（duplication-check）を実行するかどうか。
@@ -597,9 +614,9 @@ jobs:
       # frontend-testジョブのユニットテストカバレッジと同じ形式・パス
       # （coverage/coverage-summary.json）で出力する構成になっているため、
       # frontend-test/backend-testで使っているのと同じ複合アクションをそのまま
-      # 再利用する。閾値によるゲートは行わない（thresholdは常に0、ログ出力のみが
-      # このissueのスコープ。ゲート運用の要否は別issueで検討する）。テストが失敗した
-      # 場合でも、そこまでに収集できたカバレッジを確認できるようif: always()にする
+      # 再利用する。閾値によるゲートはe2e_coverage_threshold（既定0、無効）で
+      # 制御する（bamiyanapp/karuta#576）。テストが失敗した場合でも、そこまでに
+      # 収集できたカバレッジを確認できるようif: always()にする
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）。
       # このステップは実際に他リポジトリ（karuta）から呼び出された際に初めて
       # 顕在化した不具合の発生源そのもの（if: always()で必ず実行されるため、
@@ -617,7 +634,8 @@ jobs:
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
           working-directory: ${{ inputs.frontend_dir }}
-          threshold: 0
+          threshold: ${{ inputs.e2e_coverage_threshold }}
+          metrics: ${{ inputs.e2e_coverage_metrics }}
           label: frontend-e2e
       - uses: actions/upload-artifact@v7
         if: always()
