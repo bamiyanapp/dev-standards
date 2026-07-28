@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/bamiyanapp/dev-standards/compare/v1.12.5...v1.13.0) (2026-07-28)
+
+
+### Features
+
+* **ci:** E2Eテストのカバレッジ閾値をゲート可能にする ([#134](https://github.com/bamiyanapp/dev-standards/issues/134)) ([66b6c69](https://github.com/bamiyanapp/dev-standards/commit/66b6c69a74a2843d645d2ef350c203ab8da785a0))
+
 ## [1.12.5](https://github.com/bamiyanapp/dev-standards/compare/v1.12.4...v1.12.5) (2026-07-26)
 
 
