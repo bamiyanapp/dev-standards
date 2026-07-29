@@ -128,3 +128,78 @@ test("flags a copy target whose content has drifted from the source, without ove
   assert.equal(afterApply.status, STATUS.DRIFTED, "drifted copies are reported, not auto-overwritten");
   assert.equal(fs.readFileSync(gitignorePath, "utf-8"), "node_modules\n!.env.example\n");
 });
+
+// issue #138: コピー元にdev-standards管理区間のマーカーがある場合、その区間の外側
+// （プロダクト固有の追記）は完全一致チェックの対象外とし、区間内の差分のみ検知する。
+const MANAGED_SOURCE_GITIGNORE =
+  "# --- dev-standards managed: start ---\nnode_modules\ndist/\n# --- dev-standards managed: end ---\n";
+
+test("treats a copy target as OK when only content outside the managed region differs", () => {
+  const { repoRoot, devStandardsDir } = makeFixture();
+  fs.writeFileSync(path.join(devStandardsDir, ".gitignore"), MANAGED_SOURCE_GITIGNORE);
+  const manifest = loadManifest(devStandardsDir);
+  applyPlan(repoRoot, computePlan(repoRoot, devStandardsDir, manifest));
+
+  // プロダクト固有の追記をマーカー区間の外に追加する
+  const gitignorePath = path.join(repoRoot, ".gitignore");
+  const productSpecific = `${MANAGED_SOURCE_GITIGNORE}\n# Serverless\n.serverless/\n`;
+  fs.writeFileSync(gitignorePath, productSpecific);
+
+  const plan = computePlan(repoRoot, devStandardsDir, manifest);
+  const item = plan.find((entry) => entry.target === ".gitignore");
+  assert.equal(item.status, STATUS.OK, "additions outside the managed region must not be flagged as drift");
+});
+
+test("flags managed-region drift as auto-fixable and resyncs only that region, preserving product-specific additions", () => {
+  const { repoRoot, devStandardsDir } = makeFixture();
+  fs.writeFileSync(path.join(devStandardsDir, ".gitignore"), MANAGED_SOURCE_GITIGNORE);
+  const manifest = loadManifest(devStandardsDir);
+  applyPlan(repoRoot, computePlan(repoRoot, devStandardsDir, manifest));
+
+  const gitignorePath = path.join(repoRoot, ".gitignore");
+  const productSpecific = "\n# Serverless\n.serverless/\n";
+  fs.writeFileSync(
+    gitignorePath,
+    "# --- dev-standards managed: start ---\nnode_modules\n# --- dev-standards managed: end ---\n" +
+      productSpecific
+  );
+
+  const plan = computePlan(repoRoot, devStandardsDir, manifest);
+  const item = plan.find((entry) => entry.target === ".gitignore");
+  assert.equal(item.status, STATUS.DRIFTED);
+  assert.equal(item.managed, true, "a mismatch where both sides have markers must be flagged as auto-fixable");
+
+  const results = applyPlan(repoRoot, plan);
+  const afterApply = results.find((entry) => entry.target === ".gitignore");
+  assert.equal(afterApply.status, STATUS.FIXED);
+  assert.equal(
+    fs.readFileSync(gitignorePath, "utf-8"),
+    MANAGED_SOURCE_GITIGNORE + productSpecific,
+    "the managed region is resynced while content outside it is preserved untouched"
+  );
+
+  // 再実行してOKになる（冪等性）
+  const secondPlan = computePlan(repoRoot, devStandardsDir, manifest);
+  const secondItem = secondPlan.find((entry) => entry.target === ".gitignore");
+  assert.equal(secondItem.status, STATUS.OK);
+});
+
+test("flags a copy target with no managed-region markers as drifted and does not auto-fix it", () => {
+  const { repoRoot, devStandardsDir } = makeFixture();
+  fs.writeFileSync(path.join(devStandardsDir, ".gitignore"), MANAGED_SOURCE_GITIGNORE);
+  const manifest = loadManifest(devStandardsDir);
+
+  // ターゲットは移行前（マーカー無し）の内容のまま
+  fs.mkdirSync(repoRoot, { recursive: true });
+  fs.writeFileSync(path.join(repoRoot, ".gitignore"), "node_modules\ndist/\n");
+
+  const plan = computePlan(repoRoot, devStandardsDir, manifest);
+  const item = plan.find((entry) => entry.target === ".gitignore");
+  assert.equal(item.status, STATUS.DRIFTED);
+  assert.equal(item.managed, undefined, "without markers on the target side, the region cannot be safely located");
+
+  const results = applyPlan(repoRoot, plan);
+  const afterApply = results.find((entry) => entry.target === ".gitignore");
+  assert.equal(afterApply.status, STATUS.DRIFTED, "must not silently overwrite content whose markers are missing");
+  assert.equal(fs.readFileSync(path.join(repoRoot, ".gitignore"), "utf-8"), "node_modules\ndist/\n");
+});

@@ -112,6 +112,28 @@ function checkSymlinkAllInDirEntry(repoRoot, devStandardsDir, sourceRel, targetR
   );
 }
 
+// コピー対象ファイルの一部を「dev-standards管理区間」として明示するマーカー。
+// この区間で挟まれた内容のみを同期対象とし、区間外への追記（プロダクト固有の
+// 追加エントリ等）はcopiesの完全一致チェックの対象外として許容する（issue #138）。
+const MANAGED_REGION_START = "# --- dev-standards managed: start ---";
+const MANAGED_REGION_END = "# --- dev-standards managed: end ---";
+
+// テキスト中からマーカー区間（マーカー行自体を含む）を1つ取り出す。
+// マーカーが無い、またはstart/endが揃っていない場合はnullを返す
+// （＝この関数の呼び出し元は従来通りファイル全体の完全一致チェックにフォールバックする）。
+function findManagedRegion(text) {
+  const start = text.indexOf(MANAGED_REGION_START);
+  if (start === -1) {
+    return null;
+  }
+  const endMarkerStart = text.indexOf(MANAGED_REGION_END, start + MANAGED_REGION_START.length);
+  if (endMarkerStart === -1) {
+    return null;
+  }
+  const end = endMarkerStart + MANAGED_REGION_END.length;
+  return { text: text.slice(start, end), start, end };
+}
+
 function checkCopyEntry(repoRoot, devStandardsDir, sourceRel, targetRel) {
   const sourceAbsPath = path.join(devStandardsDir, sourceRel);
   const targetAbsPath = path.join(repoRoot, targetRel);
@@ -136,20 +158,69 @@ function checkCopyEntry(repoRoot, devStandardsDir, sourceRel, targetRel) {
     };
   }
 
-  const sourceContent = fs.readFileSync(sourceAbsPath);
-  const targetContent = fs.readFileSync(targetAbsPath);
-  if (!sourceContent.equals(targetContent)) {
+  const sourceText = fs.readFileSync(sourceAbsPath, "utf-8");
+  const sourceRegion = findManagedRegion(sourceText);
+
+  if (!sourceRegion) {
+    // コピー元にマーカーが無い場合は従来通りファイル全体のバイト単位完全一致を要求する
+    const sourceContent = fs.readFileSync(sourceAbsPath);
+    const targetContent = fs.readFileSync(targetAbsPath);
+    if (!sourceContent.equals(targetContent)) {
+      return {
+        type: "copy",
+        target: targetRel,
+        status: STATUS.DRIFTED,
+        detail: `内容がdev-standards側と異なります（手動で再同期してください）`,
+        sourceAbsPath,
+        targetAbsPath,
+      };
+    }
+    return { type: "copy", target: targetRel, status: STATUS.OK };
+  }
+
+  const targetText = fs.readFileSync(targetAbsPath, "utf-8");
+  const targetRegion = findManagedRegion(targetText);
+
+  if (!targetRegion) {
     return {
       type: "copy",
       target: targetRel,
       status: STATUS.DRIFTED,
-      detail: `内容がdev-standards側と異なります（手動で再同期してください）`,
+      detail: `dev-standards管理区間（${MANAGED_REGION_START} 〜 ${MANAGED_REGION_END}）のマーカーがコピー先に見つかりません（手動で再同期してください）`,
+      sourceAbsPath,
+      targetAbsPath,
+    };
+  }
+
+  if (targetRegion.text !== sourceRegion.text) {
+    return {
+      type: "copy",
+      target: targetRel,
+      status: STATUS.DRIFTED,
+      // マーカーが両方に揃っており、区間の位置を安全に特定できるため、
+      // 自動修正の対象にできることを示すフラグ（applyPlan参照）
+      managed: true,
+      detail: `dev-standards管理区間（マーカー行の間）の内容がdev-standards側と異なります`,
       sourceAbsPath,
       targetAbsPath,
     };
   }
 
   return { type: "copy", target: targetRel, status: STATUS.OK };
+}
+
+// dev-standards管理区間のみをコピー元の内容へ差し替える。区間外
+// （プロダクト固有の追記）はそのまま維持する。target側にマーカーが
+// 見つからない場合は安全に差し替え位置を特定できないためnullを返す
+// （呼び出し側は自動修正を諦め、従来通りレポートのみに留める）。
+function resyncManagedRegion(sourceAbsPath, targetAbsPath) {
+  const sourceRegion = findManagedRegion(fs.readFileSync(sourceAbsPath, "utf-8"));
+  const targetText = fs.readFileSync(targetAbsPath, "utf-8");
+  const targetRegion = findManagedRegion(targetText);
+  if (!sourceRegion || !targetRegion) {
+    return null;
+  }
+  return targetText.slice(0, targetRegion.start) + sourceRegion.text + targetText.slice(targetRegion.end);
 }
 
 // リポジトリの現状とマニフェストを突き合わせ、各エントリの状態一覧を返す（副作用なし）。
@@ -171,13 +242,28 @@ function computePlan(repoRoot, devStandardsDir, manifest) {
   return plan;
 }
 
-// computePlan()の結果のうち、修正可能な項目（symlinkのmissing/wrong-target、copyのmissing）を実際に直す。
-// copyのdrifted（内容差分）は自動上書きせず、手動同期を促すレポートに留める。
+// computePlan()の結果のうち、修正可能な項目（symlinkのmissing/wrong-target、copyのmissing、
+// および位置を安全に特定できるcopyのdrifted managed区間差分）を実際に直す。
+// マーカーで区間を特定できないcopyのdrifted（ファイル全体の差分、または区間位置が
+// 不明な差分）は、これまで通り自動上書きせず手動同期を促すレポートに留める。
 function applyPlan(repoRoot, plan) {
   const results = [];
 
   for (const item of plan) {
-    if (item.status === STATUS.OK || item.status === STATUS.BLOCKED || item.status === STATUS.DRIFTED) {
+    if (item.status === STATUS.OK || item.status === STATUS.BLOCKED) {
+      results.push(item);
+      continue;
+    }
+
+    if (item.type === "copy" && item.status === STATUS.DRIFTED) {
+      if (item.managed) {
+        const fixedText = resyncManagedRegion(item.sourceAbsPath, item.targetAbsPath);
+        if (fixedText !== null) {
+          fs.writeFileSync(item.targetAbsPath, fixedText, "utf-8");
+          results.push({ ...item, status: STATUS.FIXED });
+          continue;
+        }
+      }
       results.push(item);
       continue;
     }
