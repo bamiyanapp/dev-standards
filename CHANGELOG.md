@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/bamiyanapp/dev-standards/compare/v1.13.0...v1.14.0) (2026-07-29)
+
+
+### Features
+
+* **bootstrap:** copiesの完全一致チェックにマーカー区間方式を導入 ([#141](https://github.com/bamiyanapp/dev-standards/issues/141)) ([9602dc1](https://github.com/bamiyanapp/dev-standards/commit/9602dc1a72f9d1f58c4167ff440d8a541e5d1483))
+
 # [1.13.0](https://github.com/bamiyanapp/dev-standards/compare/v1.12.5...v1.13.0) (2026-07-28)
 
 
