@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/bamiyanapp/dev-standards/compare/v1.14.0...v1.14.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* **ci:** packages: "[]"構成でmergeジョブが常にスキップされる不具合を修正 ([#144](https://github.com/bamiyanapp/dev-standards/issues/144)) ([afe8bef](https://github.com/bamiyanapp/dev-standards/commit/afe8befa79c0bad491b5f02964b9498d6daca868))
+
 # [1.14.0](https://github.com/bamiyanapp/dev-standards/compare/v1.13.0...v1.14.0) (2026-07-29)
 
 
