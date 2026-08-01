@@ -1,0 +1,65 @@
+name: "Deploy via Serverless Framework"
+description: >-
+  Serverless Framework（osls等のCLIフォーク含む）を使ったAWSデプロイの定型パターン
+  （setup-node → npm ci → デプロイコマンド実行）を共通化した複合アクション。npm workspaces
+  構成かつ`package.individually: true`で多数のLambda関数を個別packagingする場合、
+  node_modules配下の走査でランナーのデフォルトのファイルディスクリプタ上限（1024）を
+  超えて`EMFILE: too many open files`が発生することがあるため（bamiyanapp/karuta#608,
+  #663で実際に発生・対応）、デフォルトでデプロイコマンド実行前にソフトリミットを
+  ハードリミットまで引き上げる（`raise-fd-limit: false`で無効化可能）。ulimitの変更は
+  同一シェルプロセス内でのみ有効なため、引き上げとデプロイコマンドの実行は同一stepの
+  同一`run`ブロック内で行う。
+
+inputs:
+  working-directory:
+    description: "serverless.ymlが存在するディレクトリ"
+    required: true
+  node-version:
+    description: "デプロイに使うNode.jsのバージョン"
+    required: false
+    default: "22"
+  deploy-command:
+    description: "実行するデプロイコマンド（例: npx osls deploy、npx serverless deploy）"
+    required: false
+    default: "npx serverless deploy"
+  workspaces:
+    description: "呼び出し元がnpm workspaces構成（ルート直下に単一のpackage-lock.jsonのみを持つ）かどうか。trueの場合、依存インストールをリポジトリルートで行う（reusable-ci.ymlの同名inputと同じ意味）。"
+    required: false
+    default: "false"
+  raise-fd-limit:
+    description: "デプロイコマンド実行前にファイルディスクリプタのソフトリミットをハードリミットまで引き上げるかどうか"
+    required: false
+    default: "true"
+  aws-access-key-id:
+    description: "AWSアクセスキーID"
+    required: true
+  aws-secret-access-key:
+    description: "AWSシークレットアクセスキー"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "npm"
+        cache-dependency-path: ${{ inputs.workspaces == 'true' && 'package-lock.json' || format('{0}/package-lock.json', inputs.working-directory) }}
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.workspaces == 'true' && '.' || inputs.working-directory }}
+      run: npm ci
+    - name: Deploy
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ "${{ inputs.raise-fd-limit }}" = "true" ]; then
+          echo "file descriptor limits: soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+          ulimit -n "$(ulimit -Hn)"
+          echo "file descriptor limit after adjustment: $(ulimit -n)"
+        fi
+        ${{ inputs.deploy-command }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
