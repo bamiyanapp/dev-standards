@@ -1,3 +1,10 @@
+## [1.14.2](https://github.com/bamiyanapp/dev-standards/compare/v1.14.1...v1.14.2) (2026-08-01)
+
+
+### Bug Fixes
+
+* **ci:** matrix要素0件のpackage-testを正しくブロック対象外にする ([#145](https://github.com/bamiyanapp/dev-standards/issues/145)) ([1a99236](https://github.com/bamiyanapp/dev-standards/commit/1a99236eb0989c89edfcf870895b7e437d2d8f53))
+
 ## [1.14.1](https://github.com/bamiyanapp/dev-standards/compare/v1.14.0...v1.14.1) (2026-08-01)
 
 
