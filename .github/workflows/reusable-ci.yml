@@ -1129,18 +1129,27 @@ jobs:
 
   merge:
     needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, render-mermaid-diagrams]
+    # package-testはpackages入力がmatrix要素0件の配列（例: '[]'）の場合、ジョブ自体が
+    # 一度も生成されない。この場合needs.package-test.resultは'skipped'とは一致しない
+    # 値（空文字列相当）になり、旧実装（'success'または'skipped'との一致を要求する方式）
+    # ではこの条件が常にfalseとなり、他の必須ジョブが成功していてもmergeジョブ自体が
+    # 常にskipされ自動マージが機能しなくなっていた（bamiyanapp/dev-standards#143。
+    # frontend-test/backend-test/duplication-check/render-mermaid-diagrams/
+    # frontend-e2e-testも、有効化していない限り同様にmatrix絡みではないが通常の
+    # if条件によるskipであり実害は確認していないものの、将来同種の問題を踏まないよう
+    # 統一的に「失敗・キャンセルでなければブロックしない」方式に変更する）
     if: |
       always() &&
       inputs.enable_auto_merge &&
       github.event_name == 'pull_request' &&
       needs.commitlint.result == 'success' &&
-      (needs.frontend-test.result == 'success' || needs.frontend-test.result == 'skipped') &&
-      (needs.backend-test.result == 'success' || needs.backend-test.result == 'skipped') &&
-      (needs.package-test.result == 'success' || needs.package-test.result == 'skipped') &&
-      (needs.frontend-e2e-test.result == 'success' || needs.frontend-e2e-test.result == 'skipped') &&
-      (needs.standards-check.result == 'success' || needs.standards-check.result == 'skipped') &&
-      (needs.duplication-check.result == 'success' || needs.duplication-check.result == 'skipped') &&
-      (needs.render-mermaid-diagrams.result == 'success' || needs.render-mermaid-diagrams.result == 'skipped')
+      !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-test.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.backend-test.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.package-test.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-e2e-test.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result)
     runs-on: ubuntu-latest
     permissions:
       contents: write
