@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/bamiyanapp/dev-standards/compare/v1.14.2...v1.15.0) (2026-08-01)
+
+
+### Features
+
+* **cd:** Serverless Frameworkデプロイの複合actionを共通化する ([#148](https://github.com/bamiyanapp/dev-standards/issues/148)) ([41fe9c2](https://github.com/bamiyanapp/dev-standards/commit/41fe9c268edd258f97b957cce87952c9475c83f2)), closes [bamiyanapp/karuta#608](https://github.com/bamiyanapp/karuta/issues/608)
+
 ## [1.14.2](https://github.com/bamiyanapp/dev-standards/compare/v1.14.1...v1.14.2) (2026-08-01)
 
 
