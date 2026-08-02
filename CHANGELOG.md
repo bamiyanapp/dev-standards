@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/bamiyanapp/dev-standards/compare/v1.15.0...v1.15.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **ci:** packages: "[]"構成でCI全体のconclusionがfailureになる不具合を修正 ([#152](https://github.com/bamiyanapp/dev-standards/issues/152)) ([827efe3](https://github.com/bamiyanapp/dev-standards/commit/827efe35722fac97a2cfea939dafe0d0eca66961))
+
 # [1.15.0](https://github.com/bamiyanapp/dev-standards/compare/v1.14.2...v1.15.0) (2026-08-01)
 
 
