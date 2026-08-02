@@ -486,9 +486,15 @@ jobs:
 
   package-test:
     needs: commitlint
+    # packages: '[]'（空配列）はinputs.packages != ''を満たしてしまい、matrix展開が
+    # 0件のままif:trueでジョブが「実行されるべきだったが1つも実行されなかった」状態になる。
+    # GitHub Actions側はこれをワークフロー全体のconclusion=failureとして扱うため、
+    # fromJSON(inputs.packages)[0] == null（要素0件）の場合はif自体をfalseにして
+    # 通常のskip扱いにする（#151。mergeジョブ側の同種の判定は#145で対応済み）
     if: |
       always() &&
       inputs.packages != '' &&
+      fromJSON(inputs.packages)[0] != null &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     strategy:
       fail-fast: false
