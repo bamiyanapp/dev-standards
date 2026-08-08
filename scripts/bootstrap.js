@@ -25,6 +25,39 @@ function loadManifest(devStandardsDir) {
   return JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 }
 
+// sync-manifest.jsonはdev-standards本体が持つ唯一のマニフェストであり、全参照側
+// リポジトリで共通に成立するパス（.clinerules/等）のみを収録する前提になっている。
+// プロダクトごとにディレクトリ構成が異なる同期対象（例: examinationのapp/top/配下の
+// ような、そのリポジトリだけに存在するパス）をここへ直接追加すると、他の参照側
+// リポジトリでのbootstrap実行がそのリポジトリに存在しないパスを操作しようとして
+// 壊れてしまう。そのため、参照側リポジトリ自身のルートに置く任意のローカル
+// マニフェスト（sync-manifest.local.json）を追加で読み込めるようにし、
+// プロダクト固有の同期対象はそちらに書けるようにする。ファイルが存在しない
+// （＝ローカルマニフェストを使わないリポジトリ）場合はエラーにせず空として扱う
+function loadLocalManifest(repoRoot) {
+  const localManifestPath = path.join(repoRoot, "sync-manifest.local.json");
+  if (!fs.existsSync(localManifestPath)) {
+    return { symlinks: [], symlinkAllInDir: [], copies: [] };
+  }
+  const parsed = JSON.parse(fs.readFileSync(localManifestPath, "utf-8"));
+  return {
+    symlinks: parsed.symlinks || [],
+    symlinkAllInDir: parsed.symlinkAllInDir || [],
+    copies: parsed.copies || [],
+  };
+}
+
+// dev-standards本体のマニフェストと参照側リポジトリのローカルマニフェストを
+// 単純に連結する。source/targetの意味（sourceはdev-standardsディレクトリ相対、
+// targetはリポジトリルート相対）はどちらのマニフェストのエントリでも変わらない
+function mergeManifests(manifest, localManifest) {
+  return {
+    symlinks: [...(manifest.symlinks || []), ...(localManifest.symlinks || [])],
+    symlinkAllInDir: [...(manifest.symlinkAllInDir || []), ...(localManifest.symlinkAllInDir || [])],
+    copies: [...(manifest.copies || []), ...(localManifest.copies || [])],
+  };
+}
+
 function relativeSymlinkValue(repoRoot, targetRelPath, sourceAbsPath) {
   const targetDir = path.dirname(path.join(repoRoot, targetRelPath));
   return path.relative(targetDir, sourceAbsPath);
@@ -331,7 +364,7 @@ function main() {
     process.exit(1);
   }
 
-  const manifest = loadManifest(devStandardsDir);
+  const manifest = mergeManifests(loadManifest(devStandardsDir), loadLocalManifest(repoRoot));
   const plan = computePlan(repoRoot, devStandardsDir, manifest);
 
   if (checkOnly) {
@@ -347,6 +380,8 @@ function main() {
 module.exports = {
   STATUS,
   loadManifest,
+  loadLocalManifest,
+  mergeManifests,
   computePlan,
   applyPlan,
   hasUnresolvedIssues,
