@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/bamiyanapp/dev-standards/compare/v1.18.2...v1.19.0) (2026-08-08)
+
+
+### Features
+
+* **shared:** textarea自動リサイズ用ユーティリティを共有化する ([#181](https://github.com/bamiyanapp/dev-standards/issues/181)) ([d61a678](https://github.com/bamiyanapp/dev-standards/commit/d61a678a84f3d0af93598a64c8c71de1db21dc63)), closes [#164](https://github.com/bamiyanapp/dev-standards/issues/164)
+
 ## [1.18.2](https://github.com/bamiyanapp/dev-standards/compare/v1.18.1...v1.18.2) (2026-08-08)
 
 
