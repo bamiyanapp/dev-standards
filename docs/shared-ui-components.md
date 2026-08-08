@@ -47,6 +47,24 @@ Speculation Rules API（Chrome）による他ページのprefetch。`urls`（先
 />
 ```
 
+### `shared/ui/resizeTextareaToFitContent.js`
+
+textareaを入力内容に応じて高さ可変にする関数。フックではなくプレーンな関数で、`ref`コールバック（マウント時・既存内容の初期表示）と`onInput`ハンドラ（入力のたび）の両方に同じ関数をそのまま渡せる。
+
+```jsx
+import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.js";
+
+<textarea
+  value={value}
+  onChange={(e) => setValue(e.target.value)}
+  onInput={(e) => resizeTextareaToFitContent(e.target)}
+  ref={resizeTextareaToFitContent}
+  className="textarea resize-none overflow-hidden"
+/>
+```
+
+`resize-none overflow-hidden`をtextarea自体のクラスに指定し、ブラウザ標準のリサイズハンドル・スクロールバーを出さないようにすること。
+
 ### `shared/ui/ShareButton.jsx`
 
 現在のページをQRコードで表示し、URLをワンタップコピーできるボタン＋モーダル。スマートフォンオンリーの利用環境での画面共有を想定。
@@ -77,7 +95,8 @@ export default defineConfig({
     { "source": "shared/ui/BackToTop.jsx", "target": "app/top/src/components/BackToTop.jsx" },
     { "source": "shared/ui/SpeculationRules.jsx", "target": "app/top/src/components/SpeculationRules.jsx" },
     { "source": "shared/pwa/BackendCacheWarmer.jsx", "target": "app/top/src/components/BackendCacheWarmer.jsx" },
-    { "source": "shared/ui/ShareButton.jsx", "target": "app/top/src/components/ShareButton.jsx" }
+    { "source": "shared/ui/ShareButton.jsx", "target": "app/top/src/components/ShareButton.jsx" },
+    { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" }
   ]
 }
 ```
