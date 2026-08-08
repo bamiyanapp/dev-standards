@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/bamiyanapp/dev-standards/compare/v1.16.0...v1.17.0) (2026-08-08)
+
+
+### Features
+
+* **shared:** 横断的UIコンポーネント5点を共有化する ([#170](https://github.com/bamiyanapp/dev-standards/issues/170)) ([5fcc0d7](https://github.com/bamiyanapp/dev-standards/commit/5fcc0d78118375a7eb1b3c24e9476e2f0e584a46))
+
 # [1.16.0](https://github.com/bamiyanapp/dev-standards/compare/v1.15.1...v1.16.0) (2026-08-08)
 
 
