@@ -35,6 +35,7 @@ test("allows calls while under the daily limit and increments the counter", asyn
   const ddb = makeFakeDdb();
   const allowed1 = await incrementAndCheckDailyLimit({
     ddb,
+    UpdateItemCommand,
     tableName: "my-app-ai-api-issuance",
     keyAttribute: "emailDate",
     identifier: "taro@example.com",
@@ -42,6 +43,7 @@ test("allows calls while under the daily limit and increments the counter", asyn
   });
   const allowed2 = await incrementAndCheckDailyLimit({
     ddb,
+    UpdateItemCommand,
     tableName: "my-app-ai-api-issuance",
     keyAttribute: "emailDate",
     identifier: "taro@example.com",
@@ -56,6 +58,7 @@ test("returns false once the daily limit is reached, without throwing", async ()
   const ddb = makeFakeDdb();
   const options = {
     ddb,
+    UpdateItemCommand,
     tableName: "my-app-ai-api-issuance",
     keyAttribute: "emailDate",
     identifier: "taro@example.com",
@@ -71,7 +74,7 @@ test("returns false once the daily limit is reached, without throwing", async ()
 
 test("tracks separate counters per identifier", async () => {
   const ddb = makeFakeDdb();
-  const base = { ddb, tableName: "my-app-ai-api-issuance", keyAttribute: "emailDate", limit: 1 };
+  const base = { ddb, UpdateItemCommand, tableName: "my-app-ai-api-issuance", keyAttribute: "emailDate", limit: 1 };
 
   const taro = await incrementAndCheckDailyLimit({ ...base, identifier: "taro@example.com" });
   const hanako = await incrementAndCheckDailyLimit({ ...base, identifier: "hanako@example.com" });
@@ -91,6 +94,7 @@ test("re-throws unexpected DynamoDB errors instead of treating them as a limit h
     () =>
       incrementAndCheckDailyLimit({
         ddb,
+        UpdateItemCommand,
         tableName: "my-app-ai-api-issuance",
         keyAttribute: "emailDate",
         identifier: "taro@example.com",
@@ -112,6 +116,7 @@ test("builds the DynamoDB key as identifier#YYYY-MM-DD (UTC)", async () => {
 
   await incrementAndCheckDailyLimit({
     ddb,
+    UpdateItemCommand,
     tableName: "my-app-ai-api-issuance",
     keyAttribute: "emailDate",
     identifier: "taro@example.com",
@@ -134,6 +139,7 @@ test("sets expiresAt roughly ttlSeconds from now for TTL-based cleanup", async (
   const before = Math.floor(Date.now() / 1000);
   await incrementAndCheckDailyLimit({
     ddb,
+    UpdateItemCommand,
     tableName: "my-app-ai-api-issuance",
     keyAttribute: "emailDate",
     identifier: "taro@example.com",
