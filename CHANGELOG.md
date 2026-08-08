@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/bamiyanapp/dev-standards/compare/v1.17.0...v1.18.0) (2026-08-08)
+
+
+### Features
+
+* **shared:** 日次利用回数の上限カウンタを共有Lambdaユーティリティ化する ([#172](https://github.com/bamiyanapp/dev-standards/issues/172)) ([f769df9](https://github.com/bamiyanapp/dev-standards/commit/f769df9328706145cec6e616bc6ac0a45b71e2b3)), closes [identifier#YYYY-MM-DD](https://github.com/identifier/issues/YYYY-MM-DD)
+
 # [1.17.0](https://github.com/bamiyanapp/dev-standards/compare/v1.16.0...v1.17.0) (2026-08-08)
 
 
