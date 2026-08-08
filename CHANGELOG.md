@@ -1,3 +1,10 @@
+## [1.18.1](https://github.com/bamiyanapp/dev-standards/compare/v1.18.0...v1.18.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **shared:** dailyRateLimit.jsから@aws-sdk/client-dynamodbへの直接依存を無くす ([#173](https://github.com/bamiyanapp/dev-standards/issues/173)) ([770f095](https://github.com/bamiyanapp/dev-standards/commit/770f095e95ad1de2109cb5d05023d67e6d8c9544))
+
 # [1.18.0](https://github.com/bamiyanapp/dev-standards/compare/v1.17.0...v1.18.0) (2026-08-08)
 
 
