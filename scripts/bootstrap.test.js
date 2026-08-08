@@ -6,7 +6,15 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { STATUS, loadManifest, computePlan, applyPlan, hasUnresolvedIssues } = require("./bootstrap.js");
+const {
+  STATUS,
+  loadManifest,
+  loadLocalManifest,
+  mergeManifests,
+  computePlan,
+  applyPlan,
+  hasUnresolvedIssues,
+} = require("./bootstrap.js");
 
 // dev-standards本体（リンク元）と参照側リポジトリ（リンク先）を模した一時ディレクトリ構成を作る。
 function makeFixture() {
@@ -202,4 +210,77 @@ test("flags a copy target with no managed-region markers as drifted and does not
   const afterApply = results.find((entry) => entry.target === ".gitignore");
   assert.equal(afterApply.status, STATUS.DRIFTED, "must not silently overwrite content whose markers are missing");
   assert.equal(fs.readFileSync(path.join(repoRoot, ".gitignore"), "utf-8"), "node_modules\ndist/\n");
+});
+
+test("loadLocalManifest returns empty arrays when the consumer repo has no local manifest", () => {
+  const { repoRoot } = makeFixture();
+  assert.deepEqual(loadLocalManifest(repoRoot), { symlinks: [], symlinkAllInDir: [], copies: [] });
+});
+
+test("loadLocalManifest reads sync-manifest.local.json from the repo root when present", () => {
+  const { repoRoot } = makeFixture();
+  fs.writeFileSync(
+    path.join(repoRoot, "sync-manifest.local.json"),
+    JSON.stringify({
+      symlinks: [{ source: "shared/pwa/UpdateNotifier.jsx", target: "app/top/src/components/UpdateNotifier.jsx" }],
+    })
+  );
+
+  assert.deepEqual(loadLocalManifest(repoRoot), {
+    symlinks: [{ source: "shared/pwa/UpdateNotifier.jsx", target: "app/top/src/components/UpdateNotifier.jsx" }],
+    symlinkAllInDir: [],
+    copies: [],
+  });
+});
+
+test("mergeManifests concatenates entries from both manifests without mutating the inputs", () => {
+  const manifest = {
+    symlinks: [{ source: "a", target: "a" }],
+    symlinkAllInDir: [{ source: "dir-a", target: "dir-a" }],
+    copies: [{ source: "c", target: "c" }],
+  };
+  const localManifest = {
+    symlinks: [{ source: "b", target: "b" }],
+    symlinkAllInDir: [],
+    copies: [],
+  };
+
+  const merged = mergeManifests(manifest, localManifest);
+
+  assert.deepEqual(merged.symlinks, [
+    { source: "a", target: "a" },
+    { source: "b", target: "b" },
+  ]);
+  assert.deepEqual(merged.symlinkAllInDir, [{ source: "dir-a", target: "dir-a" }]);
+  assert.deepEqual(merged.copies, [{ source: "c", target: "c" }]);
+  assert.equal(manifest.symlinks.length, 1, "does not mutate the base manifest");
+});
+
+test("a repo-specific local manifest entry is picked up by computePlan/applyPlan alongside the shared manifest", () => {
+  const { repoRoot, devStandardsDir } = makeFixture();
+  fs.mkdirSync(path.join(devStandardsDir, "shared", "pwa"), { recursive: true });
+  fs.writeFileSync(path.join(devStandardsDir, "shared", "pwa", "UpdateNotifier.jsx"), "export default function () {}\n");
+  fs.writeFileSync(
+    path.join(repoRoot, "sync-manifest.local.json"),
+    JSON.stringify({
+      symlinks: [{ source: "shared/pwa/UpdateNotifier.jsx", target: "app/top/src/components/UpdateNotifier.jsx" }],
+    })
+  );
+
+  const manifest = mergeManifests(loadManifest(devStandardsDir), loadLocalManifest(repoRoot));
+  const plan = computePlan(repoRoot, devStandardsDir, manifest);
+  const localItem = plan.find((entry) => entry.target === "app/top/src/components/UpdateNotifier.jsx");
+  assert.equal(localItem.status, STATUS.MISSING);
+
+  const results = applyPlan(repoRoot, plan);
+  const appliedItem = results.find((entry) => entry.target === "app/top/src/components/UpdateNotifier.jsx");
+  assert.equal(appliedItem.status, STATUS.CREATED);
+  assert.equal(
+    fs.readFileSync(path.join(repoRoot, "app/top/src/components/UpdateNotifier.jsx"), "utf-8"),
+    "export default function () {}\n"
+  );
+
+  // sync-manifest.jsonのみを渡す既存の呼び出し方（ローカルマニフェスト無し）は影響を受けない
+  const plainPlan = computePlan(repoRoot, devStandardsDir, loadManifest(devStandardsDir));
+  assert.ok(!plainPlan.some((entry) => entry.target === "app/top/src/components/UpdateNotifier.jsx"));
 });
