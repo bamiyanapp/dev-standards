@@ -151,13 +151,13 @@ semantic-release本体および一部プラグイン（`@semantic-release/npm`�
 
 各プロダクトのフロントエンド構成（フレームワーク・ビルドツール）はプロダクトごとに異なるため、`reusable-cd.yml`自体の機能や共有UIコンポーネントとしては提供せず、以下の手順（コンベンション）として参照側リポジトリが個別に適用する。
 
-1. **バージョン・SHA・ビルド日時を環境変数として用意する**: `release` jobの`outputs.version`は追加のCD変更無しでそのまま使える。Git SHA・ビルド日時は参照側の`cd.yml`（`deploy` job等）内で1行で算出できる（例: `git rev-parse --short HEAD`、`date -u +%Y-%m-%dT%H:%M:%SZ`）。
+1. **バージョン・SHA・ビルド日時を環境変数として用意する**: `release` jobの`outputs.version`は「このCD実行でsemantic-releaseが新バージョンを発行した場合のみ」設定される値で、`feat`/`fix`を含まないコミット（`docs`/`chore`等）による実行では**空文字列になる**点に注意（上記「2. CDワークフロー」の`outputs`参照）。「新バージョンが出た時だけ知りたい」用途（Slack通知等）であればこの値をそのまま使えるが、examinationのように**常にアプリの現在バージョンを表示し続けたい**用途では、`outputs.version`ではなく`package.json`の`version`フィールドを直接読む（`node -p "require('./package.json').version"`）。`release` jobは新バージョンを発行しない実行でも`package.json`の内容自体は変更しないため、直前のリリースバージョンがそのまま読み取れる。Git SHA・ビルド日時は参照側の`cd.yml`（`deploy` job等）内で1行で算出できる（例: `git rev-parse --short HEAD`、`date -u +%Y-%m-%dT%H:%M:%SZ`）。
    ```yaml
    deploy:
      needs: release
      steps:
        - run: |
-           export APP_BUILD_VERSION="v${{ needs.release.outputs.version }}"
+           export APP_BUILD_VERSION="v$(node -p "require('./package.json').version")"
            export APP_BUILD_SHA="$(git rev-parse --short HEAD)"
            export APP_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
            npm run build
