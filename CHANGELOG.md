@@ -1,3 +1,10 @@
+## [1.18.2](https://github.com/bamiyanapp/dev-standards/compare/v1.18.1...v1.18.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* **ci:** package-testジョブでenable_standards_check有効時にsubmoduleをcheckoutする ([#176](https://github.com/bamiyanapp/dev-standards/issues/176)) ([87566d3](https://github.com/bamiyanapp/dev-standards/commit/87566d33237c52c153aa81e1f68f8dbb5481b68f)), closes [dev-standards#175](https://github.com/dev-standards/issues/175)
+
 ## [1.18.1](https://github.com/bamiyanapp/dev-standards/compare/v1.18.0...v1.18.1) (2026-08-08)
 
 
