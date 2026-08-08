@@ -10,9 +10,10 @@
     "lint": "commitlint --last --verbose",
     "lint:workflows": "node scripts/check-workflows.js",
     "pretest": "npm --prefix .github/actions/compare-e2e-screenshots ci",
-    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js && npm run lint:workflows"
+    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1106.0",
     "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^21.0.0",
     "@semantic-release/changelog": "^7.0.0",
