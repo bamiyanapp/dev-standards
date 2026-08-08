@@ -57,6 +57,17 @@ Speculation Rules API（Chrome）による他ページのprefetch。`urls`（先
 
 **依存関係**: `qrcode.react`を利用側の`package.json`へ追加する必要がある（dev-standards側では強制できない）。
 
+**Viteの`resolve.preserveSymlinks`が必須**: `ShareButton.jsx`のようにnpmパッケージをimportするコンポーネントをsymlink経由で共有する場合、Viteは既定でシンボリックリンクの実体パス（dev-standards配下）を起点に`node_modules`を探索するため、利用側にインストール済みの`qrcode.react`を見つけられずビルドエラーになる。利用側の`vite.config.js`へ以下を追加すること（PRECACHE等プロダクト固有値を持たないコンポーネント同士でも、npmパッケージに依存する共有コンポーネントを1つでも導入する場合はアプリ全体でこの設定が必要になる）。
+
+```js
+export default defineConfig({
+  // ...
+  resolve: {
+    preserveSymlinks: true,
+  },
+});
+```
+
 ## `sync-manifest.local.json`への追加例
 
 ```json
