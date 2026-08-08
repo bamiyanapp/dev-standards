@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/bamiyanapp/dev-standards/compare/v1.19.0...v1.20.0) (2026-08-08)
+
+
+### Features
+
+* **templates:** 独立ビルドReactアプリのスキャフォールドをテンプレート化する ([#184](https://github.com/bamiyanapp/dev-standards/issues/184)) ([b458419](https://github.com/bamiyanapp/dev-standards/commit/b458419229bdb2e7b04b05bfc4fa1d736616319b)), closes [#169](https://github.com/bamiyanapp/dev-standards/issues/169)
+
 # [1.19.0](https://github.com/bamiyanapp/dev-standards/compare/v1.18.2...v1.19.0) (2026-08-08)
 
 
