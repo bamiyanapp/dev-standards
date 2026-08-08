@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/bamiyanapp/dev-standards/compare/v1.15.1...v1.16.0) (2026-08-08)
+
+
+### Features
+
+* **shared:** PWAキャッシュ更新パターンをshared/pwa/として共有化する ([#158](https://github.com/bamiyanapp/dev-standards/issues/158)) ([d9e1393](https://github.com/bamiyanapp/dev-standards/commit/d9e13931f39595609d506c1394da0d31feeeb581)), closes [examination#118](https://github.com/examination/issues/118) [#122](https://github.com/bamiyanapp/dev-standards/issues/122) [#133](https://github.com/bamiyanapp/dev-standards/issues/133)
+
 ## [1.15.1](https://github.com/bamiyanapp/dev-standards/compare/v1.15.0...v1.15.1) (2026-08-02)
 
 
