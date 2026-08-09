@@ -108,6 +108,17 @@ commitlint/semantic-release用の依存関係）で`npm ci`を実行して依存
 ローカルで実行し、対象コミットのメッセージ自体が実際に規則違反かどうかを先に確認してから
 対応方針を決める。
 
+`commitlint`ジョブはPRタイトル自体も検証する（`pull_request`イベント時、Squash merge時に
+mainへ残る唯一のコミットの件名になるため）。**このPRタイトル検証が失敗した場合、
+PRタイトルをGitHub API等で修正しただけでは直らない。** 失敗したワークフロー実行を
+`rerun_failed_jobs`で再実行しても、そのrunが最初にトリガーされた時点の`pull_request`
+イベントペイロード（修正前の古いタイトル）を再利用するだけで、GitHub側の最新のPR状態を
+再取得しないため、同じ失敗を繰り返す（bamiyanapp/karuta#920で実際に発生）。
+PRタイトル修正を実際に検証させるには、新しい`pull_request`イベント（`synchronize`、
+実質的には新しいpush）を発生させる必要がある。他に反映すべき変更が無い場合は、
+空コミット（`git commit --allow-empty`、有効なConventional Commitsメッセージを付与）を
+pushすればよい。
+
 ## 複合action・pinned tagを伴う変更の展開確認（重要）
 
 dev-standardsの複合action（`.github/actions/*`）は、参照側リポジトリから`reusable-ci.yml`経由でpinned tagにより参照される（bamiyanapp/karuta#583）。`reusable-ci.yml`自身も、内部の各jobで当該複合actionを利用するため、`.dev-standards-actions`という名前で**自己参照のpinned tagチェックアウト**（`ref: vX.Y.Z`）を持つ。
