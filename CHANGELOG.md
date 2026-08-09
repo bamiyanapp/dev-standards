@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/bamiyanapp/dev-standards/compare/v1.20.0...v1.21.0) (2026-08-09)
+
+
+### Features
+
+* **ci:** 同一refでの連続push時に古いCI実行をキャンセルする ([#188](https://github.com/bamiyanapp/dev-standards/issues/188)) ([a3057a7](https://github.com/bamiyanapp/dev-standards/commit/a3057a7e44cfefe400e57cee840ea60a16896f44))
+
 # [1.20.0](https://github.com/bamiyanapp/dev-standards/compare/v1.19.0...v1.20.0) (2026-08-08)
 
 
