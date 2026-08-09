@@ -155,6 +155,20 @@ on:
       BOT_TOKEN:
         required: false
 
+# 同一ref（同一ブランチ・同一PR）で新しいpushが発生した場合、古いCI実行を
+# キャンセルする（issue #187「CI/CD実行回数・実行時間削減バックログ」②）。
+# `github.repository`を含めるのは、複数の参照側リポジトリ（karuta等）から
+# このreusable workflowが呼び出されるため、リポジトリをまたいだグループ衝突を
+# 避けるため。mainブランチへのpush（squash merge後の検証）も同一グループに
+# 含まれるため、短時間に連続でmergeされた場合は古いpush分のCIもキャンセル
+# 対象になるが、最新コミットのCIが通れば実質的に検証済みとなるため許容する。
+# `merge`ジョブ自体のconcurrency（`merge-queue-${{ github.repository }}`、
+# cancel-in-progress: false）は、PRをまたいだsquash merge同士の直列化が目的で
+# あり本設定とは別軸のため、両者は独立して機能する。
+concurrency:
+  group: ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # commitlintジョブは実際のコミットメッセージ検証の前に、Node.jsセットアップ・
   # 依存関係インストールという「インフラ起因で失敗しうる」工程を挟む。これらが
