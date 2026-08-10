@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/bamiyanapp/dev-standards/compare/v1.21.0...v1.22.0) (2026-08-10)
+
+
+### Features
+
+* **ci:** push時に冗長な検証jobをスキップするskip_verification_on_push入力を追加 ([#194](https://github.com/bamiyanapp/dev-standards/issues/194)) ([15b4e37](https://github.com/bamiyanapp/dev-standards/commit/15b4e37ec44e465dab4fe109e4ec207d2ce5acf6))
+
 # [1.21.0](https://github.com/bamiyanapp/dev-standards/compare/v1.20.0...v1.21.0) (2026-08-09)
 
 
