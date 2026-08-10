@@ -88,7 +88,9 @@ graph TD
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold` / `enable_mermaid_render` / `mermaid_doc_paths`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
+**`skip_verification_on_push`（任意、既定`false`）**: CI/CD実行回数・実行時間削減バックログ（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)③）の対応。`true`かつ`push`イベント（`base_branch`への直接push、Squash merge後の`push-to-main`等）の場合、`frontend-test`・`backend-test`・`package-test`・`standards-check`・`duplication-check`をスキップする。これらのjobは、PRが「`base_branch`と同期済みでなければマージ不可」（up-to-date required）という前提のもとSquash mergeされる運用では、マージ後のmain上のツリーが直前の`pull_request`イベントで検証済みのPR head内容と完全に一致するため、push側での再実行が構造的に冗長であることを利用した最適化である。**この前提（up-to-date必須化＋Squash merge運用）が成り立たない参照側リポジトリでは有効化しないこと。** `frontend-e2e-test`（E2Eスクリーンショットの`latest/`ベースライン公開、前述）と`render-mermaid-diagrams`（mermaid画像の`latest/`公開、前述）は、いずれも`push`イベントでのみ発生する副作用（後続のPRが参照するベースラインの更新）を担うため、このスキップ対象には含めない。
+
+入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold` / `enable_mermaid_render` / `mermaid_doc_paths` / `skip_verification_on_push`）は README.md を参照。`enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` はこのワークフローでは非推奨（後方互換のため入力自体は残しているが未使用）であり、同名の入力を `reusable-cd.yml` 側に指定すること。
 
 ### `commitlint`が`pull_request`/`push`の両方で実行される理由
 
