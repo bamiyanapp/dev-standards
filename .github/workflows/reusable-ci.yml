@@ -151,6 +151,24 @@ on:
           （リポジトリルート基準）。カンマまたは改行区切りで複数指定できる。
         type: string
         default: ""
+      skip_verification_on_push:
+        description: >-
+          trueの場合、pushイベント（base_branchへの直接push、squash merge後の
+          push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
+          `standards-check`・`duplication-check`をスキップし、`commitlint`・
+          `frontend-e2e-test`・`render-mermaid-diagrams`（有効な場合）のみ実行する
+          （bamiyanapp/dev-standards#187「CI/CD実行回数・実行時間削減バックログ」③）。
+          これらのジョブはPRの「base_branchと同期済みでないとマージ不可」
+          （up-to-date required）＋squash merge運用（マージ後のmain上のツリーはPRの
+          headと完全に一致する）を前提に、pull_requestイベントで既に同一内容を
+          検証済みであることを利用した最適化のため、この前提が成り立たない運用
+          （merge commit方式、up-to-date必須化なし等）では有効化しないこと。
+          `frontend-e2e-test`はE2Eスクリーンショットの最新ベースライン公開
+          （push時のみ実行される副作用）を担うためスキップ対象に含めない。
+          `render-mermaid-diagrams`も同様にpush時のみ`latest/`へ画像を公開する
+          副作用があるためスキップ対象に含めない。
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -299,6 +317,7 @@ jobs:
     if: |
       always() &&
       inputs.packages == '' &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -411,6 +430,7 @@ jobs:
     if: |
       always() &&
       inputs.packages == '' &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -509,6 +529,7 @@ jobs:
       always() &&
       inputs.packages != '' &&
       fromJSON(inputs.packages)[0] != null &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     strategy:
       fail-fast: false
@@ -920,6 +941,7 @@ jobs:
     if: |
       always() &&
       inputs.enable_standards_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -952,6 +974,7 @@ jobs:
     if: |
       always() &&
       inputs.enable_duplication_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
