@@ -136,6 +136,20 @@ on:
           副作用があるためスキップ対象に含めない。
         type: boolean
         default: false
+      enable_path_filtering:
+        description: >-
+          trueの場合、`frontend_dir`/`backend_dir`配下の変更有無に応じて
+          `frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`を
+          選択的にスキップする（bamiyanapp/dev-standards#187「CI/CD実行回数・
+          実行時間削減バックログ」⑤）。ルート直下の`package.json`・
+          `package-lock.json`・`.github/workflows/**`の変更は共通変更とみなし、
+          いずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）
+          は対象外（常に全ジョブを実行する。パッケージ単位の変更検出は未対応）。
+          `standards-check`（symlink整合性チェック）は`frontend_dir`/`backend_dir`に
+          限定されないリポジトリ全体のチェックのため対象外（常に実行する）。
+          変更検出自体が失敗した場合は安全側に倒し、全ジョブを実行する。
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -279,12 +293,44 @@ jobs:
           fi
           exit 0
 
+  # frontend_dir/backend_dir配下の変更有無を検出する（issue #187「CI/CD実行回数・
+  # 実行時間削減バックログ」⑤、`enable_path_filtering`入力）。packagesモード
+  # （package-test）はパッケージ単位の変更検出が未対応のため対象外とし、
+  # このジョブ自体を実行しない（後続ジョブ側の`inputs.packages != ''`分岐で
+  # 「常に全ジョブ実行」にフォールバックする）。
+  detect-changes:
+    if: inputs.enable_path_filtering && inputs.packages == ''
+    runs-on: ubuntu-latest
+    outputs:
+      # dorny/paths-filterの実行自体が失敗した場合（GitHub側の一時的な障害等）は
+      # 安全側に倒し、frontend/backendとも「変更あり」として全ジョブを実行させる
+      frontend: ${{ steps.filter.outcome == 'success' && steps.filter.outputs.frontend || 'true' }}
+      backend: ${{ steps.filter.outcome == 'success' && steps.filter.outputs.backend || 'true' }}
+    steps:
+      - name: Detect changed paths
+        id: filter
+        continue-on-error: true
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - '${{ inputs.frontend_dir }}/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+            backend:
+              - '${{ inputs.backend_dir }}/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+
   frontend-test:
-    needs: commitlint
+    needs: [commitlint, detect-changes]
     if: |
       always() &&
       inputs.packages == '' &&
       !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (!inputs.enable_path_filtering || needs.detect-changes.outputs.frontend == 'true') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -400,11 +446,12 @@ jobs:
         run: npm run build
 
   backend-test:
-    needs: commitlint
+    needs: [commitlint, detect-changes]
     if: |
       always() &&
       inputs.packages == '' &&
       !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (!inputs.enable_path_filtering || needs.detect-changes.outputs.backend == 'true') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
@@ -590,10 +637,11 @@ jobs:
         run: npm run build
 
   frontend-e2e-test:
-    needs: commitlint
+    needs: [commitlint, detect-changes]
     if: |
       always() &&
       inputs.enable_e2e_test &&
+      (!inputs.enable_path_filtering || inputs.packages != '' || needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.backend == 'true') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     # E2Eスクリーンショットの公開（issue #568）に、専用ブランチへのpush（contents）と
@@ -958,11 +1006,12 @@ jobs:
         run: node dev-standards/scripts/bootstrap.js --check
 
   duplication-check:
-    needs: commitlint
+    needs: [commitlint, detect-changes]
     if: |
       always() &&
       inputs.enable_duplication_check &&
       !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (!inputs.enable_path_filtering || inputs.packages != '' || needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.backend == 'true') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
