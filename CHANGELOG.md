@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/bamiyanapp/dev-standards/compare/v1.22.0...v1.22.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **ci:** frontend-test/backend-test/frontend-e2e-testジョブでもsubmoduleを取得する ([#205](https://github.com/bamiyanapp/dev-standards/issues/205)) ([2175a9a](https://github.com/bamiyanapp/dev-standards/commit/2175a9a2de45b5a55986edb482f46bf90c283171)), closes [#204](https://github.com/bamiyanapp/dev-standards/issues/204)
+
 # [1.22.0](https://github.com/bamiyanapp/dev-standards/compare/v1.21.0...v1.22.0) (2026-08-10)
 
 
