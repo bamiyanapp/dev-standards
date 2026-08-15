@@ -27,41 +27,8 @@ on:
         description: "CI（frontend-test/backend-test/frontend-e2e-test）成功後にmergeジョブでPRを自動マージするかどうか。falseの場合、CIチェックのみ行い、マージは人手で行う。"
         type: boolean
         default: true
-      # 以下のrelease関連inputは後方互換のために残しているが、このワークフロー内では
-      # 使用しない（semantic-releaseの実行はreusable-cd.ymlのreleaseジョブへ移動した。
-      # 理由: pull_requestイベントのGITHUB_REF/GITHUB_REF_NAMEはrefs/pull/<PR番号>/mergeに
-      # 固定されGitHub Actions上で上書きできないため、PRブランチ上でsemantic-releaseの
-      # ブランチ判定を偽装する方式は機能しない。同じ入力名をreusable-cd.yml側で受け取る）。
-      enable_release:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。reusable-cd.ymlの同名inputを指定すること。"
-        type: boolean
-        default: true
-      semantic_release_node_version:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
-        type: string
-        default: "22"
-      base_branch:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
-        type: string
-        default: "main"
-      enable_changelog_json:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
-        type: boolean
-        default: false
-      changelog_source_path:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
-        type: string
-        default: "CHANGELOG.md"
-      changelog_json_output_path:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
-        type: string
-        default: "frontend/src/changelog.json"
       enable_standards_check:
         description: "dev-standards submoduleのsync-manifest.jsonに基づき、symlink欠落・リンク切れ・.gitignoreの内容乖離を`scripts/bootstrap.js --check`で検知するジョブを実行するかどうか。"
-        type: boolean
-        default: false
-      enable_shared_release_config:
-        description: "[非推奨・reusable-cd.ymlへ移動] このワークフロー内では使用しない。"
         type: boolean
         default: false
       packages:
