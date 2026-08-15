@@ -116,7 +116,10 @@ run-name: >-
 ```
 
 ## 2. CD ワークフロー (`reusable-cd.yml`)
-- **トリガー**: 参照側 `cd.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ）
+- **トリガー**: 参照側 `cd.yml` の `on` 設定に従う。`workflow_call`のためワークフロー自体に`on:`は持てず、呼び出し元（参照側の`cd.yml`）で以下いずれかの方式を選ぶ。
+  - **推奨: `schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり数十回のデプロイが発生しCI/CD実行回数の主要な無駄要因になる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する。dev-standards自身の`cd.yml`はこの方式を採用している（dogfooding）
+  - **従来方式: `base_branch`へのプッシュ**（Squash merge直後の`push`イベント）。mergeごとに即座にdeployしたいリポジトリ、または移行前の既存参照側リポジトリはこちらのまま運用してよい
+  - 検証・緊急deploy用に`workflow_dispatch`も併せて用意しておくと、scheduleを待たずに手動実行できる
 - **実行内容**:
   - `release`（`enable_release: true`（デフォルト）の場合のみ）: `base_branch` 上で直接 `semantic-release` を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付け・GitHub Release作成を行う
   - frontend/backend のビルド・デプロイ（GitHub Pages・AWS Lambda 等）はプロダクトごとに異なるため対象外。参照側リポジトリの `cd.yml` に `needs: release` かつ `if: success() && needs.release.outputs.new_release_published == 'true'` の条件でジョブを追加する
@@ -138,14 +141,14 @@ semantic-release本体および一部プラグイン（`@semantic-release/npm`�
 入力パラメータ（`languages`）は README.md を参照。
 
 ## 4. リリース運用
-- **リリース条件**: `base_branch` へのpush後に `semantic-release` を実行した結果、リリース対象のコミット（`feat`/`fix` 等）が含まれる場合にのみバージョンが発行される。
+- **リリース条件**: `release` job実行時点の `base_branch` を対象に `semantic-release` を実行した結果、前回リリース以降にリリース対象のコミット（`feat`/`fix` 等）が含まれる場合にのみバージョンが発行される。`schedule`トリガーの場合、直前の実行区間に複数のmergeが積み重なっていても、その時点の`base_branch`の最新状態を対象に1回だけ実行される（区間内の各commitを個別にリリースするわけではない）。
 - **リリースの手順**:
   1. 通常どおり PR を作成する。
   2. CI（テスト）成功後、`merge` job が `base_branch` へ squash merge する。
-  3. その push が CD ワークフローをトリガーし、`release` job が `base_branch` 上で `semantic-release` を実行してバージョンを計算し、`CHANGELOG.md`・`package.json` 等をローカルにコミットする。`git tag` によるタグ作成は semantic-release コア本体がこのコミット・push の後工程で行うため、この時点ではまだ作成されていない。
+  3. CD ワークフローが起動（`push`トリガーの場合はその都度、`schedule`トリガーの場合は次回のscheduled runで）し、`release` job が `base_branch` 上で `semantic-release` を実行してバージョンを計算し、`CHANGELOG.md`・`package.json` 等をローカルにコミットする。`git tag` によるタグ作成は semantic-release コア本体がこのコミット・push の後工程で行うため、この時点ではまだ作成されていない。
   4. `base_branch` が「変更は必ずPR経由」のリポジトリルールで保護されている場合、上記コミットの `base_branch` への直接pushは拒否される（想定内の失敗として扱う）。この場合 `git push` 失敗によって `semantic-release` プロセス自体が異常終了するため、タグは一度も作成されない。そのためタグ名はコミット済みの `package.json` に書き込まれたバージョンから導出する（`v<package.jsonのversion>`）。`release` job はローカルに作成済みのコミットを新しいブランチへpushし、`base_branch` へのPRを作成してAPI経由でsquash mergeすることで、「PR経由の変更」としてリポジトリルールを満たしたうえで反映する。タグはこの方法で導出した名前でsquash後のコミットへ新規に打ち、GitHub Releaseは`CHANGELOG.md`の該当バージョン節から作成する（`@semantic-release/github`のpublishステップは`semantic-release`プロセスの異常終了により実行されないため）。
   5. リリースPRの作成は参照側リポジトリの通常のCIワークフローも起動する（`pull_request`イベントであるため）。`release` jobはCIの完了を待たずに即座にマージを試みるため、リリースPR自体に対する`merge` jobの自動マージ処理と競合しうるが、後勝ち（`release` job側が先にマージすることが多い）で無害に失敗するのみで実害はない。
-- **なぜ `base_branch` へのpush後に実行するのか（旧方式からの変更点）**: 以前は PR の作業ブランチ上でマージ前に `semantic-release` を実行する方式だったが、`pull_request` イベントで GitHub Actions が自動設定する `GITHUB_REF`/`GITHUB_REF_NAME` は `refs/pull/<PR番号>/merge` に固定されておりワークフローYAMLの `env:` では上書きできない（GitHub Actionsの予約変数のため）。そのため semantic-release のブランチ判定が常に `refs/pull/<PR番号>/merge` を見てしまい、「対象ブランチと一致しないため公開しない」と判定されて新バージョンが一切発行されない状態になっていた（各ジョブ自体は成功扱いになるため発覚しにくい）。`base_branch` への実際のpushイベント上で実行すれば `GITHUB_REF` は素直に `refs/heads/<base_branch>` になり、この問題は起きない。ただし `base_branch` がPR必須のリポジトリルールで保護されている場合は上記4のフォールバックが必要になる。
+- **なぜ `base_branch` へのpush後に実行するのか（旧方式からの変更点）**: 以前は PR の作業ブランチ上でマージ前に `semantic-release` を実行する方式だったが、`pull_request` イベントで GitHub Actions が自動設定する `GITHUB_REF`/`GITHUB_REF_NAME` は `refs/pull/<PR番号>/merge` に固定されておりワークフローYAMLの `env:` では上書きできない（GitHub Actionsの予約変数のため）。そのため semantic-release のブランチ判定が常に `refs/pull/<PR番号>/merge` を見てしまい、「対象ブランチと一致しないため公開しない」と判定されて新バージョンが一切発行されない状態になっていた（各ジョブ自体は成功扱いになるため発覚しにくい）。`base_branch` への実際のpushイベント、または`base_branch`を対象とした`schedule`イベント上で実行すれば `GITHUB_REF` は素直に `refs/heads/<base_branch>` になり、この問題は起きない（`schedule`イベントもpushと同様にデフォルトブランチのrefで実行されるため）。ただし `base_branch` がPR必須のリポジトリルールで保護されている場合は上記4のフォールバックが必要になる。
 
 ## 5. ビルド時バージョン情報のアプリ内表示（任意）
 
@@ -173,7 +176,7 @@ semantic-release本体および一部プラグイン（`@semantic-release/npm`�
 | 変数名 | 説明 |
 |---|---|
 | `GITHUB_TOKEN` | GitHub Actions が自動的に提供するトークン。`BOT_TOKEN` 未設定時、`release` job の `@semantic-release/git`（バージョン更新コミットのpush）・`@semantic-release/github`（タグ・GitHub Release作成）のフォールバック先として使う |
-| `BOT_TOKEN` | `merge` job での実際の PR マージ（squash merge API 呼び出し）、および `release` job でのバージョン更新コミット・タグのpushに使用するボット用トークン（任意。未設定時は `GITHUB_TOKEN` にフォールバック）。**`base_branch` への push が CD ワークフローのトリガーとなるため、`GITHUB_TOKEN` による push ではCDが起動しない点に注意**（`GITHUB_TOKEN` によるイベントは新たな workflow 実行を作らないため）。`enable_release: true` で運用する場合は `BOT_TOKEN` の設定を推奨する。**リポジトリに `BOT_TOKEN` シークレットを登録するだけでは不十分で、参照側の `ci.yml`/`cd.yml` が `reusable-ci.yml`/`reusable-cd.yml` 呼び出しの `secrets:` で明示的に `BOT_TOKEN: ${{ secrets.BOT_TOKEN }}` を転送する必要がある**（`workflow_call` の `secrets` はリポジトリ全体のシークレットを自動継承しないため、転送を忘れると `merge` job が常に `GITHUB_TOKEN` にフォールバックし、CDが一度も起動しないまま気づきにくい）。dev-standards 自身も過去にこの転送漏れによりCDが起動しない状態が続いていたため、参照側リポジトリの `ci.yml`/`cd.yml` を書く際は必ず両方の `secrets:` ブロックを確認すること |
+| `BOT_TOKEN` | `merge` job での実際の PR マージ（squash merge API 呼び出し）、および `release` job でのバージョン更新コミット・タグのpushに使用するボット用トークン（任意。未設定時は `GITHUB_TOKEN` にフォールバック）。**CDのトリガーを`base_branch`への`push`にしている場合、`GITHUB_TOKEN` による push ではCDが起動しない点に注意**（`GITHUB_TOKEN` によるイベントは新たな workflow 実行を作らないため）。この制約は上記「2. CDワークフロー」の**`schedule`トリガー方式では発生しない**（`schedule`イベントはどのトークンでの直前のpushかに関わらず設定した時刻に発火するため）。`enable_release: true` で運用する場合は `BOT_TOKEN` の設定を推奨する。**リポジトリに `BOT_TOKEN` シークレットを登録するだけでは不十分で、参照側の `ci.yml`/`cd.yml` が `reusable-ci.yml`/`reusable-cd.yml` 呼び出しの `secrets:` で明示的に `BOT_TOKEN: ${{ secrets.BOT_TOKEN }}` を転送する必要がある**（`workflow_call` の `secrets` はリポジトリ全体のシークレットを自動継承しないため、転送を忘れると `merge` job が常に `GITHUB_TOKEN` にフォールバックし、CDが一度も起動しないまま気づきにくい）。dev-standards 自身も過去にこの転送漏れによりCDが起動しない状態が続いていたため、参照側リポジトリの `ci.yml`/`cd.yml` を書く際は必ず両方の `secrets:` ブロックを確認すること |
 
 プロダクト固有の環境変数（デプロイ先の認証情報など）は参照側リポジトリのドキュメントに記載する。
 
