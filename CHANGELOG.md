@@ -1,3 +1,17 @@
+# [2.0.0](https://github.com/bamiyanapp/dev-standards/compare/v1.24.0...v2.0.0) (2026-08-15)
+
+
+* chore(ci)!: reusable-ci.ymlの非推奨inputを削除する ([#214](https://github.com/bamiyanapp/dev-standards/issues/214)) ([0fa0ba3](https://github.com/bamiyanapp/dev-standards/commit/0fa0ba3650c25e305162e06ee20455809eb9a1be)), closes [#76](https://github.com/bamiyanapp/dev-standards/issues/76) [#76](https://github.com/bamiyanapp/dev-standards/issues/76)
+
+
+### BREAKING CHANGES
+
+* reusable-ci.ymlからenable_release /
+semantic_release_node_version / base_branch / enable_changelog_json /
+changelog_source_path / changelog_json_output_path /
+enable_shared_release_configの7入力を削除した。これらを渡している
+参照側ci.ymlは、reusable-cd.yml側の同名inputへ移行すること。
+
 # [1.24.0](https://github.com/bamiyanapp/dev-standards/compare/v1.23.0...v1.24.0) (2026-08-15)
 
 
