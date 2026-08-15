@@ -1025,6 +1025,13 @@ jobs:
       inputs.enable_mermaid_render &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
+    # mmdc（内部でPuppeteer/Chromiumを起動）が稀に応答不能になり、レンダリング自体
+    # （render-mermaid.js側にもexecFileSyncのtimeoutを設定済み）だけでなく、CJKフォント
+    # インストール・npm ci等を含むジョブ全体がGitHub Actionsのjobデフォルトタイムアウト
+    # （360分）まで停止し続ける事故が実際に発生した（bamiyanapp/dev-standards#223）。
+    # 通常はCJKフォントインストール・npm ci・複数図のレンダリングを含めても数分で
+    # 完了するため、10分あれば十分な余裕がある
+    timeout-minutes: 10
     # 専用ブランチへのpush（contents）とPRへのコメント投稿（pull-requests）が必要
     permissions:
       contents: write

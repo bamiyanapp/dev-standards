@@ -16,6 +16,13 @@ const { extractMermaidBlocks } = require("./extract-mermaid.js");
 // bamiyanapp/karuta#837）があり、モバイルの標準的な画像ビューアとの互換性が高い
 // PNGへ切り替えた
 
+// mmdc（内部でPuppeteer/Chromiumを起動する）が稀に応答不能になり、execFileSyncの
+// timeout未指定（＝無期限待機）のままだとジョブ全体がGitHub Actionsのjobデフォルト
+// タイムアウト（360分）まで停止し続ける事故が実際に発生した
+// （bamiyanapp/dev-standards#223）。1図あたりのレンダリングが数分を超えることは
+// 想定していないため、余裕を持たせつつ確実に検知できる値としてtimeoutを設定する
+const RENDER_TIMEOUT_MS = 120_000;
+
 function renderBlock(mermaidSource, outputImagePath, actionDir) {
   const tmpMmdPath = `${outputImagePath}.mmd`;
   fs.writeFileSync(tmpMmdPath, mermaidSource, "utf-8");
@@ -23,7 +30,7 @@ function renderBlock(mermaidSource, outputImagePath, actionDir) {
     execFileSync(
       path.join(actionDir, "node_modules", ".bin", "mmdc"),
       ["-i", tmpMmdPath, "-o", outputImagePath, "-p", path.join(actionDir, "puppeteer-config.json")],
-      { stdio: "inherit" }
+      { stdio: "inherit", timeout: RENDER_TIMEOUT_MS }
     );
   } finally {
     fs.unlinkSync(tmpMmdPath);
@@ -62,4 +69,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { renderBlock };
+module.exports = { renderBlock, RENDER_TIMEOUT_MS };
