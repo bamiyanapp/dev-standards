@@ -321,8 +321,15 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
+      # enable_standards_check有効時は、dev-standards submodule配下の実ファイルを
+      # sync-manifest.local.json経由でsymlink共有しているパッケージがある前提とし、
+      # submoduleも取得する（package-testジョブと同じ理由。examination#169:
+      # 未取得のまま`npm test`/buildするとsymlinkの参照先が存在せず"Failed to
+      # resolve import"等で失敗する）
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
       - name: Use Node.js (attempt 1/2)
@@ -434,8 +441,15 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
+      # enable_standards_check有効時は、dev-standards submodule配下の実ファイルを
+      # sync-manifest.local.json経由でsymlink共有しているパッケージがある前提とし、
+      # submoduleも取得する（package-testジョブと同じ理由。examination#169:
+      # 未取得のまま`npm test`/buildするとsymlinkの参照先が存在せず"Failed to
+      # resolve import"等で失敗する）
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
       - name: Use Node.js (attempt 1/2)
@@ -621,8 +635,15 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # enable_standards_check有効時は、dev-standards submodule配下の実ファイルを
+      # sync-manifest.local.json経由でsymlink共有しているパッケージがある前提とし、
+      # submoduleも取得する（frontend-test/backend-testジョブと同じ理由。
+      # examination#169: 未取得のまま`npm test`/buildするとsymlinkの参照先が
+      # 存在せず"Failed to resolve import"等で失敗する）
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
       - name: Use Node.js (attempt 1/2)
