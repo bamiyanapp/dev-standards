@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/bamiyanapp/dev-standards/compare/v1.23.0...v1.24.0) (2026-08-15)
+
+
+### Features
+
+* **e2e:** E2EスクリーンショットのcaptureScreenshot()ヘルパーをshared/e2e/へ共通化 ([#210](https://github.com/bamiyanapp/dev-standards/issues/210)) ([3b60fa1](https://github.com/bamiyanapp/dev-standards/commit/3b60fa19cc16a512762a958a2d67c9ef26a45995)), closes [#209](https://github.com/bamiyanapp/dev-standards/issues/209)
+
 # [1.23.0](https://github.com/bamiyanapp/dev-standards/compare/v1.22.1...v1.23.0) (2026-08-15)
 
 
