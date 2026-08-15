@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/bamiyanapp/dev-standards/compare/v1.22.1...v1.23.0) (2026-08-15)
+
+
+### Features
+
+* **skills:** planning-and-task-breakdown Skillを導入する ([#208](https://github.com/bamiyanapp/dev-standards/issues/208)) ([ebb71a0](https://github.com/bamiyanapp/dev-standards/commit/ebb71a04a51da42a49bed4881f0a82523e3d5f10)), closes [#206](https://github.com/bamiyanapp/dev-standards/issues/206)
+
 ## [1.22.1](https://github.com/bamiyanapp/dev-standards/compare/v1.22.0...v1.22.1) (2026-08-15)
 
 
