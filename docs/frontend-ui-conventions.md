@@ -29,5 +29,5 @@
 | リポジトリ | 共通フォント | トップページ必須構成 | 備考 |
 |---|---|---|---|
 | bamiyanapp/dev-standards | 対象外 | 対象外 | dev-standards自身はフロントエンドを持たない |
-| bamiyanapp/karuta | 未確認 | 未確認 | 本セッションはアクセス範囲外のため未確認。確認・対応は別セッション・人間に委ねる |
+| bamiyanapp/karuta | 対応中（[PR #1006](https://github.com/bamiyanapp/karuta/pull/1006)、未マージ） | 未対応（対応issue未起票） | 共通フォントはkaruta由来のBootstrapテーマ（`shared/ui/bootstrap-theme.css`、issue #232）にfont-family指定が含まれており、PR #1006でkaruta自身もこの共有CSSへ切り替える形で適用する。トップページのバージョン・更新日時表示はまだ着手していない |
 | bamiyanapp/Camp-Stock | 適用済み（[PR #130](https://github.com/bamiyanapp/Camp-Stock/pull/130)） | 適用済み（`frontend/src/App.jsx`の`AppHeader`、規約新設前から実装済みだったことを確認） | - |
