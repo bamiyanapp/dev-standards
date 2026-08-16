@@ -4,6 +4,18 @@
 
 ## 提供するコンポーネント
 
+### `shared/ui/bootstrap-theme.css`
+
+Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。共通フォント（`docs/frontend-ui-conventions.md`）・ダークモード（`data-bs-theme="dark"`）対応・ボタンの押下時トランジション等、karutaのUIから他プロダクトでも再利用できる部分のみを切り出したもの。かるた札の意匠等プロダクト固有のスタイルは含まない。
+
+利用側でBootstrap 5.3本体（CDN・npmいずれでも可）を読み込み、以下のようにグローバルCSSへ`@import`する。
+
+```css
+@import "./bootstrap-theme.css";
+```
+
+ダークモードの切り替え（`<html data-bs-theme="dark">`等の付与・トグルUI）自体は利用側アプリの責務であり、本ファイルはCSS側の追従のみを担う。
+
 ### `shared/ui/NavigationOverlay.jsx`
 
 SPAクライアントサイドルーティングを導入しない全ページ遷移の設計で、リンククリックから実際の画面遷移までの間、読み込み中であることが分かるオーバーレイを表示する。プロダクト固有の値は無いが、利用側のCSSに以下のルールが必要（Tailwindのユーティリティだけでは表現できない状態遷移のため）。
@@ -91,6 +103,7 @@ export default defineConfig({
 ```json
 {
   "symlinks": [
+    { "source": "shared/ui/bootstrap-theme.css", "target": "app/top/src/bootstrap-theme.css" },
     { "source": "shared/ui/NavigationOverlay.jsx", "target": "app/top/src/components/NavigationOverlay.jsx" },
     { "source": "shared/ui/BackToTop.jsx", "target": "app/top/src/components/BackToTop.jsx" },
     { "source": "shared/ui/SpeculationRules.jsx", "target": "app/top/src/components/SpeculationRules.jsx" },
