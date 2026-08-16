@@ -1,0 +1,38 @@
+/* フレームワーク非依存の共通テーマ（issue #236）。
+   共通フォント（docs/frontend-ui-conventions.md）・フェードイン/アウトの
+   共通ユーティリティ・ボタン押下時の軽い触覚的フィードバックを提供する。
+   Bootstrap固有のダークモード対応（data-bs-theme・--bs-*変数の上書き）は
+   含まない。Bootstrapベースのプロダクトはshared/ui/bootstrap-theme.cssを
+   使う（本ファイルを@importしている）。
+
+   前提:
+   - 「M PLUS Rounded 1c」フォントをGoogle Fonts等経由で利用側が読み込んで
+     いること。本ファイルはfont-familyの指定のみ行う */
+
+:root, #root {
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+}
+
+/* フェードイン・フェードアウト演出用の共通ユーティリティ */
+.fade-in {
+  opacity: 1;
+  transition: opacity 0.5s ease-in;
+}
+
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* ボタン押下時の軽い触覚的フィードバック */
+button {
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(2px);
+}

@@ -3,17 +3,21 @@
    他のBootstrapベースのプロダクトでも再現できるよう切り出した。karuta固有の意匠
    （かるた札・絵札印刷等）はここに含まれない。
 
+   フレームワーク非依存の部分（共通フォント・フェードイン/アウト・ボタン押下時の
+   触覚的フィードバック）はshared/ui/common-theme.cssへ切り出し、本ファイルは
+   それを@importしている（issue #236）。@importの解決のため、本ファイルを
+   利用する場合はcommon-theme.cssも同じディレクトリへ併せてsymlinkすること
+   （docs/shared-ui-components.md参照）。
+
    前提:
    - 利用側でBootstrap 5.3を読み込んでいること（bg-light/bg-white/text-dark等の
      カラーユーティリティ、data-bs-theme属性によるカラーモード切り替えを使う）
    - 「M PLUS Rounded 1c」フォント（docs/frontend-ui-conventions.md）をGoogle Fonts等
-     経由で利用側が読み込んでいること。本ファイルはfont-familyの指定のみ行う
+     経由で利用側が読み込んでいること。common-theme.css側でfont-familyの指定のみ行う
    - ダークモードの切り替え自体（data-bs-theme属性の付与・トグルUI）は利用側アプリの
      責務であり、本ファイルはCSS側の追従のみを担う */
 
-:root, #root {
-  font-family: 'M PLUS Rounded 1c', sans-serif;
-}
+@import "./common-theme.css";
 
 :root {
   --app-bg: #ffffff;
@@ -81,28 +85,4 @@ body {
   --bs-btn-hover-color: #121212;
   --bs-btn-hover-bg: #adb5bd;
   --bs-btn-hover-border-color: #adb5bd;
-}
-
-/* フェードイン・フェードアウト演出用の共通ユーティリティ */
-.fade-in {
-  opacity: 1;
-  transition: opacity 0.5s ease-in;
-}
-
-.fade-out {
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out;
-}
-
-/* ボタン押下時の軽い触覚的フィードバック */
-button {
-  transition: transform 0.2s, opacity 0.2s;
-}
-
-button:hover:not(:disabled) {
-  transform: scale(1.05);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(2px);
 }
