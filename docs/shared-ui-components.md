@@ -4,9 +4,21 @@
 
 ## 提供するコンポーネント
 
+### `shared/ui/common-theme.css`
+
+フレームワーク非依存の共通テーマ（issue #236）。共通フォント（`docs/frontend-ui-conventions.md`）・フェードイン/アウトの共通ユーティリティ（`.fade-in`/`.fade-out`）・ボタン押下時の軽い触覚的フィードバックを提供する。Bootstrap・Tailwind等どのCSSフレームワークを使うプロダクトでも利用できる（Bootstrap固有のダークモード対応は含まない。それが必要な場合は下記`bootstrap-theme.css`を使う）。
+
+利用側のグローバルCSSへ`@import`する。
+
+```css
+@import "./common-theme.css";
+```
+
+「M PLUS Rounded 1c」フォント自体（Google Fonts等からの読み込み）は利用側の既存の資産管理方針に従う。本ファイルは`font-family`の指定のみ行う。
+
 ### `shared/ui/bootstrap-theme.css`
 
-Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。共通フォント（`docs/frontend-ui-conventions.md`）・ダークモード（`data-bs-theme="dark"`）対応・ボタンの押下時トランジション等、karutaのUIから他プロダクトでも再利用できる部分のみを切り出したもの。かるた札の意匠等プロダクト固有のスタイルは含まない。
+Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。ダークモード（`data-bs-theme="dark"`）対応・Bootstrapボタンコンポーネントのダークモード配色等、Bootstrap固有の部分を提供する。フレームワーク非依存の部分（共通フォント・フェードイン/アウト・ボタン押下時の触覚的フィードバック）は上記`common-theme.css`を`@import`しているため、**本ファイルを利用する場合は`common-theme.css`も同じディレクトリへ併せてsymlinkすること**（`@import`の相対パス解決に必要）。かるた札の意匠等プロダクト固有のスタイルは含まない。
 
 利用側でBootstrap 5.3本体（CDN・npmいずれでも可）を読み込み、以下のようにグローバルCSSへ`@import`する。
 
@@ -103,6 +115,7 @@ export default defineConfig({
 ```json
 {
   "symlinks": [
+    { "source": "shared/ui/common-theme.css", "target": "app/top/src/common-theme.css" },
     { "source": "shared/ui/bootstrap-theme.css", "target": "app/top/src/bootstrap-theme.css" },
     { "source": "shared/ui/NavigationOverlay.jsx", "target": "app/top/src/components/NavigationOverlay.jsx" },
     { "source": "shared/ui/BackToTop.jsx", "target": "app/top/src/components/BackToTop.jsx" },
