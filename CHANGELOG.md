@@ -1,3 +1,16 @@
+# [2.2.0](https://github.com/bamiyanapp/dev-standards/compare/v2.1.0...v2.2.0) (2026-08-16)
+
+
+### Bug Fixes
+
+* **ci:** mmdcのハングでrender-mermaid-diagramsが無期限停止する事故を防ぐ ([#224](https://github.com/bamiyanapp/dev-standards/issues/224)) ([b359b9b](https://github.com/bamiyanapp/dev-standards/commit/b359b9b7ec78fd1bf76b663416ed46b43b8a3ab4)), closes [#223](https://github.com/bamiyanapp/dev-standards/issues/223)
+
+
+### Features
+
+* **shared/ui:** common-theme.cssをbootstrap-theme.cssから切り出す ([#237](https://github.com/bamiyanapp/dev-standards/issues/237)) ([0b6d67f](https://github.com/bamiyanapp/dev-standards/commit/0b6d67fda059fb8cd24d702bd3a06fe068e0daa7)), closes [#236](https://github.com/bamiyanapp/dev-standards/issues/236)
+* **shared/ui:** karutaのBootstrapテーマを共有CSSとして切り出す ([#233](https://github.com/bamiyanapp/dev-standards/issues/233)) ([529c76e](https://github.com/bamiyanapp/dev-standards/commit/529c76ed234031e5f318260d89b8f1caf42ec576))
+
 # [2.1.0](https://github.com/bamiyanapp/dev-standards/compare/v2.0.0...v2.1.0) (2026-08-16)
 
 
