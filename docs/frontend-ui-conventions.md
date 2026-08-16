@@ -31,3 +31,4 @@
 | bamiyanapp/dev-standards | 対象外 | 対象外 | dev-standards自身はフロントエンドを持たない |
 | bamiyanapp/karuta | 対応中（[PR #1006](https://github.com/bamiyanapp/karuta/pull/1006)、未マージ） | 未対応（対応issue未起票） | 共通フォントはkaruta由来のBootstrapテーマ（`shared/ui/bootstrap-theme.css`、issue #232）にfont-family指定が含まれており、PR #1006でkaruta自身もこの共有CSSへ切り替える形で適用する。トップページのバージョン・更新日時表示はまだ着手していない |
 | bamiyanapp/Camp-Stock | 適用済み（[PR #130](https://github.com/bamiyanapp/Camp-Stock/pull/130)） | 適用済み（`frontend/src/App.jsx`の`AppHeader`、規約新設前から実装済みだったことを確認） | - |
+| bamiyanapp/examination | 適用中（[PR #202](https://github.com/bamiyanapp/examination/pull/202)、未マージ） | 適用済み（`app/top/src/pages/TopPage.jsx`、examination#131・#137で規約新設前から実装済みだったことを確認） | 共通フォントは`shared/ui/common-theme.css`をsymlink経由で`app/`配下の全8app（top/mock-interviews/education-overview/interview-questions/profile-edit/voice-practice/line-link/allowed-emails）へ導入する形で適用する（examination#201） |

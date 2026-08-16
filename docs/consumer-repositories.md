@@ -11,6 +11,7 @@ dev-standardsを参照している既知のリポジトリの一覧。`docs/`配
 | [bamiyanapp/dev-standards](https://github.com/bamiyanapp/dev-standards) | 自己参照（dogfooding） | 本リポジトリ自身。`.github/workflows/cd.yml`が相対パスで`reusable-cd.yml`を参照 |
 | [bamiyanapp/karuta](https://github.com/bamiyanapp/karuta) | submodule + reusable workflow | もっとも古くからの参照側リポジトリ。`docs/`各所で個別issueへの参照が多数存在する |
 | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) | submodule + reusable workflow | キャンプ道具管理アプリ |
+| [bamiyanapp/examination](https://github.com/bamiyanapp/examination) | submodule + reusable workflow | 家族向けナレッジベース（小学校受験対策）。`app/`配下の複数React（Vite）アプリ構成 |
 
 ## 一覧の更新
 
