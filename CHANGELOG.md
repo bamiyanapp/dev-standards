@@ -1,3 +1,10 @@
+# [2.3.0](https://github.com/bamiyanapp/dev-standards/compare/v2.2.0...v2.3.0) (2026-08-16)
+
+
+### Features
+
+* **ci:** frontend/backend変更検出によるpaths制御を追加する ([#219](https://github.com/bamiyanapp/dev-standards/issues/219)) ([6f7cc30](https://github.com/bamiyanapp/dev-standards/commit/6f7cc3018f59144659032dc292600f4973956402)), closes [#218](https://github.com/bamiyanapp/dev-standards/issues/218)
+
 # [2.2.0](https://github.com/bamiyanapp/dev-standards/compare/v2.1.0...v2.2.0) (2026-08-16)
 
 
