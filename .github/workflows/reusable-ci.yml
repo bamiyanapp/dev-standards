@@ -310,7 +310,7 @@ jobs:
       - name: Detect changed paths
         id: filter
         continue-on-error: true
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             frontend:
