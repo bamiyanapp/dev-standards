@@ -1,0 +1,108 @@
+/* Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。
+   karutaのUI（丸みのあるフォント・ダークモード対応・ボタンの押下フィードバック）を
+   他のBootstrapベースのプロダクトでも再現できるよう切り出した。karuta固有の意匠
+   （かるた札・絵札印刷等）はここに含まれない。
+
+   前提:
+   - 利用側でBootstrap 5.3を読み込んでいること（bg-light/bg-white/text-dark等の
+     カラーユーティリティ、data-bs-theme属性によるカラーモード切り替えを使う）
+   - 「M PLUS Rounded 1c」フォント（docs/frontend-ui-conventions.md）をGoogle Fonts等
+     経由で利用側が読み込んでいること。本ファイルはfont-familyの指定のみ行う
+   - ダークモードの切り替え自体（data-bs-theme属性の付与・トグルUI）は利用側アプリの
+     責務であり、本ファイルはCSS側の追従のみを担う */
+
+:root, #root {
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+}
+
+:root {
+  --app-bg: #ffffff;
+  --app-fg: #213547;
+}
+
+[data-bs-theme="dark"] {
+  --app-bg: #121212;
+  --app-fg: #e4e4e4;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--app-bg);
+  color: var(--app-fg);
+}
+
+/* Viteのデフォルトスタイルをリセット */
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ダークモード: bg-light/bg-white/text-dark等はBootstrap 5.3のカラーモードに追従しない
+   静的ユーティリティのため、その参照元のCSS変数を直接再定義して連動させる */
+[data-bs-theme="dark"] {
+  --bs-light-rgb: 43, 43, 43;
+  --bs-dark-rgb: 228, 228, 228;
+  --bs-white-rgb: 30, 30, 30;
+}
+
+[data-bs-theme="dark"] .btn-dark {
+  --bs-btn-bg: #e4e4e4;
+  --bs-btn-border-color: #e4e4e4;
+  --bs-btn-color: #121212;
+  --bs-btn-hover-bg: #cfcfcf;
+  --bs-btn-hover-border-color: #cfcfcf;
+  --bs-btn-hover-color: #121212;
+  --bs-btn-active-bg: #cfcfcf;
+  --bs-btn-active-border-color: #cfcfcf;
+  --bs-btn-active-color: #121212;
+}
+
+/* btn-outline-dark/btn-outline-secondaryは--bs-btn-colorに固定の16進値を持つため、
+   --bs-dark-rgb等の再定義では追従しない。個別に上書きする */
+[data-bs-theme="dark"] .btn-outline-dark {
+  --bs-btn-color: #e4e4e4;
+  --bs-btn-border-color: #e4e4e4;
+  --bs-btn-hover-color: #121212;
+  --bs-btn-hover-bg: #e4e4e4;
+  --bs-btn-hover-border-color: #e4e4e4;
+  --bs-btn-active-color: #121212;
+  --bs-btn-active-bg: #e4e4e4;
+  --bs-btn-active-border-color: #e4e4e4;
+  --bs-btn-disabled-color: #e4e4e4;
+  --bs-btn-disabled-border-color: #e4e4e4;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+  --bs-btn-color: #adb5bd;
+  --bs-btn-border-color: #6c757d;
+  --bs-btn-hover-color: #121212;
+  --bs-btn-hover-bg: #adb5bd;
+  --bs-btn-hover-border-color: #adb5bd;
+}
+
+/* フェードイン・フェードアウト演出用の共通ユーティリティ */
+.fade-in {
+  opacity: 1;
+  transition: opacity 0.5s ease-in;
+}
+
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* ボタン押下時の軽い触覚的フィードバック */
+button {
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(2px);
+}
