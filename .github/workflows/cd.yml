@@ -1,10 +1,16 @@
 name: CD
-run-name: CD ${{ github.event.head_commit.message }}
+run-name: CD (${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }})
 
+# issue bamiyanapp/dev-standards#187（CI/CD実行回数・実行時間削減バックログ）⑥:
+# mainへのmergeごとの即時deployをやめ、1日4回（UTC 0/6/12/18時）のscheduleへ
+# まとめる。GitHubのscheduleイベントはpushと同様にデフォルトブランチの
+# refs/heads/<default-branch>に対して実行され、release jobの
+# context.ref.replace("refs/heads/", "") によるbaseBranch取得もそのまま動作する。
+# workflow_dispatchは検証・緊急時の手動実行用。
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write

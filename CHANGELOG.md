@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/bamiyanapp/dev-standards/compare/v2.0.0...v2.1.0) (2026-08-16)
+
+
+### Features
+
+* **cd:** CDのデプロイ頻度をpushごとから1日4回のscheduleへ変更する ([#221](https://github.com/bamiyanapp/dev-standards/issues/221)) ([eb93d81](https://github.com/bamiyanapp/dev-standards/commit/eb93d81a6af5e9d38c3cf1b9a7a1ac952cb0b0f6)), closes [#220](https://github.com/bamiyanapp/dev-standards/issues/220)
+
 # [2.0.0](https://github.com/bamiyanapp/dev-standards/compare/v1.24.0...v2.0.0) (2026-08-15)
 
 

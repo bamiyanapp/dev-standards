@@ -142,9 +142,9 @@ dev-standardsの複合action（`.github/actions/*`）は、参照側リポジト
 
 **PRがマージされた・CIが成功した、というだけでは「実際に修正が反映された」ことを意味しない。** このような複数段階のロールアウトが必要な変更では、Issueをクローズする前・完了報告をする前に、実際にmain上の挙動・生成物を再検証する（例: 生成されたファイルの形式・内容を実際に確認する、参照側リポジトリの`ci.yml`で実際に使われているタグを確認する等）。CIが緑であることや「マージできた」という報告だけを根拠に完了と判断してはならない。
 
-## `.github/workflows/*`変更時の自動マージ失敗（BOT_TOKENのworkflowスコープ不足）
+## `.github/workflows/*`変更時の自動マージ失敗（BOT_TOKENのworkflowスコープ不足、履歴）
 
-`.github/workflows/*.yml`（`ci.yml`・`cd.yml`等）を変更するPRは、CIの品質チェック（lint/test/e2e等）が全て成功していても、`ci / merge`ジョブ自体が失敗し自動マージされないことがある（bamiyanapp/karuta#920で実際に発生）。
+`.github/workflows/*.yml`（`ci.yml`・`cd.yml`等）を変更するPRで、CIの品質チェック（lint/test/e2e等）が全て成功していても`ci / merge`ジョブ自体が失敗し自動マージされない、という事象がbamiyanapp/karuta#920で発生していた。
 
 **症状**: `ci / merge`ジョブのログに以下のエラーが出る。
 
@@ -154,12 +154,13 @@ refusing to allow a Personal Access Token to create or update workflow `.github/
 
 **原因**: GitHubのMerge PR APIは、`.github/workflows/`配下のファイルを含む変更をマージする際、使用しているトークンに`workflow`スコープが無いと403を返す仕様になっている。`merge`ジョブが使う`BOT_TOKEN`にこのスコープが付与されていないと発生する。
 
-**対応**:
+**dev-standardsでは解消済み**: PR #214・#221（いずれも`.github/workflows/*`を変更）で`ci / merge`ジョブが正常に成功しており（2026-08-15確認）、dev-standardsのBOT_TOKENには現在`workflow`スコープが付与されている。そのため、**dev-standards自身のPRについては本制約はもはや発生せず、「事前に手動マージが必要と伝える」対応は不要**。
+
+**他リポジトリでは個別確認が必要**: `BOT_TOKEN`は各リポジトリが個別に設定するシークレットのため、この解消はdev-standards固有であり、他の参照側リポジトリ（karuta等）に自動的に及ぶものではない。`.github/workflows/*`を変更するPRを作成する際は、まず`ci / merge`ジョブの実行結果を確認し、上記403エラーが再び出た場合にのみ以下の対応を行う。
 
 - これはワークフローYAMLの記述ミスやコミットメッセージの体裁とは無関係の、トークン権限設定の問題。差分の内容を疑ってリトライや修正を試みても解決しない
 - 恒久的な修正には`BOT_TOKEN`（GitHub App/PATのシークレット）に`workflow`スコープを追加する必要があるが、これはGitHub上のシークレット・トークン設定変更であり、**Claudeが実行できる範囲を超える（人間による対応が必須）**。発見したら、原因（403エラーの内容）を明示してユーザーに報告し、対応を委ねる
 - 恒久対応がなされるまでの間、`.github/workflows/*`を含むPRは自動マージされないため、CIの品質チェックが全てgreenであることを確認したうえで、人間がGitHubのWeb/モバイルアプリからPRを手動でマージする必要がある（スマートフォンのブラウザ操作で完結するため、「開発環境の制約（スマホオンリー）」には抵触しない）
-- Claude自身が`.github/workflows/*`を変更するPRを作成した場合は、事前にこの制約をPR本文またはチャット上で明示し、「品質チェック通過後は手動マージが必要」と伝えること
 
 ## PR（MR）承認・マージ禁止（強制）
 
