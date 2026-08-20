@@ -1,10 +1,19 @@
 # 標準技術スタック（新規プロジェクトのクイックスタート）
 
-新しいプロダクトを立ち上げる際、ゼロから技術選定・雛形作成をせずに最短で始められるよう、examination（[bamiyanapp/examination](https://github.com/bamiyanapp/examination)）で検証済みの構成を「標準スタック」としてまとめる。個々の要素は既にdev-standards配下に個別ドキュメント・雛形として存在するため、本ドキュメントはそれらを一望できる索引と、着手手順のチェックリストを兼ねる。
+新しいプロダクトを立ち上げる際、ゼロから技術選定・雛形作成をせずに最短で始められるよう、検証済みの構成を「標準スタック」としてまとめる。個々の要素は既にdev-standards配下に個別ドキュメント・雛形として存在するため、本ドキュメントはそれらを一望できる索引と、着手手順のチェックリストを兼ねる。
 
-対象は、家族・チーム等の限定的な範囲で使う小規模なWebプロダクト（不特定多数への公開・大規模スケールは想定しない）。
+対象は、いずれも小規模なWebプロダクト（大規模スケールは想定しない）。現在、要件に応じて選べる2つの検証済みスタックがある。
 
-## スタック一覧
+| | スタックA（examination） | スタックB（Electric-Chair-Arena） |
+|---|---|---|
+| ログイン | 必要（Google OAuth、家族・チーム等の限定公開） | 不要（不特定多数への公開可） |
+| フロントエンド | React 19 + Vite、ページごとに独立ビルド | Next.js、npm workspacesモノレポ |
+| ホスティング | S3 + CloudFront + Cognito + Lambda@Edge | GitHub Pages |
+| 詳細 | 本ドキュメントの以下「スタック一覧」・`docs/serverless-static-site-pattern.md` | `docs/nextjs-static-lambda-pattern.md` |
+
+迷ったら「ログインが必要か」で選ぶ。ログイン不要な小規模プロダクトはスタックBの方がインフラ構成・運用コストともに軽量。
+
+## スタックA一覧（examination、ログインあり）
 
 | レイヤー | 技術 | 詳細ドキュメント |
 |---|---|---|
@@ -20,7 +29,20 @@
 | コミット規約 | Conventional Commits（commitlint） | リポジトリルート`commitlint.config.cjs`、`.claude/skills/git-conventions` |
 | 開発フロー | Issue駆動、Git運用、コードレビュー観点等（Claude Code向け） | リポジトリルート`CLAUDE.md`、`.claude/skills/` |
 
-## 新規プロジェクトの立ち上げ手順（最短ルート）
+## スタックB一覧（Electric-Chair-Arena、ログイン不要）
+
+| レイヤー | 技術 | 詳細ドキュメント |
+|---|---|---|
+| フロントエンド | Next.js（App Router、`output: 'export'`静的書き出し）+ Tailwind CSS v4、npm workspacesモノレポ構成 | `docs/nextjs-static-lambda-pattern.md` |
+| ホスティング | GitHub Pages（`actions/upload-pages-artifact` + `actions/deploy-pages`によるネイティブデプロイ） | `docs/nextjs-static-lambda-pattern.md` |
+| バックエンド | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）でデプロイ | `docs/nextjs-static-lambda-pattern.md` |
+| テスト | vitest + Testing Library（ユニット）、Playwright + monocart-reporter（E2E・カバレッジ） | `docs/nextjs-static-lambda-pattern.md`、`docs/cicd-pipeline-specification.md` |
+| CI/CD | reusable-ci.yml（lint/test/e2e/build/自動マージ）。semantic-release運用は必須ではない | `docs/cicd-pipeline-specification.md`、`docs/nextjs-static-lambda-pattern.md` |
+| コミット規約・開発フロー | スタックAと共通（Conventional Commits、Issue駆動） | リポジトリルート`commitlint.config.cjs`・`CLAUDE.md`、`.claude/skills/` |
+
+## 新規プロジェクトの立ち上げ手順（最短ルート、スタックA）
+
+以下はスタックA（examination、ログインあり）向けの手順。スタックB（ログイン不要）を選ぶ場合は、手順1・6は共通、手順2〜5を`docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意・npm workspacesの構成・`deploy-github-pages`/`deploy-serverless`複合actionを使ったCI/CD呼び出し）へ読み替える。
 
 1. **リポジトリ作成・dev-standardsの取り込み**
 
