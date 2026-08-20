@@ -13,7 +13,8 @@
 | フロントエンド共通規約 | 共通フォント、トップページ必須表示項目（バージョン・更新日時） | `docs/frontend-ui-conventions.md` |
 | テスト | vitest + Testing Library（フロントエンド）、oxlint（lint） | `docs/vite-react-app-template.md` |
 | PWA | 初期ローディング表示、Service Workerの更新反映パターン | `docs/pwa-initial-loading-indicator.md`、`docs/service-worker-update-pattern.md` |
-| インフラ・認証 | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` |
+| インフラ・認証（選択肢A: 静的サイト＋薄いAPI） | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` |
+| インフラ・認証（選択肢B: 独自バックエンドAPI） | API Gateway(HTTP API) + Lambda（単一関数、内部ルーティング） + DynamoDB + AWS SAM。CognitoではなくGoogle IDトークンをバックエンドで直接検証 | `docs/serverless-api-dynamodb-pattern.md` |
 | 認証まわりの個別パターン | ログインCSRF対策、別オリジンAPIへの短命トークン認証、日次レート制限 | `docs/oauth-csrf-nonce-pattern.md`、`docs/short-lived-bearer-token-pattern.md`、`docs/daily-rate-limit-pattern.md` |
 | バックエンド実装上の罠 | Node.js `https.request`のレスポンスボディはBufferのまま集めてから一度だけデコードする（マルチバイト文字のチャンク境界文字化け対策） | `docs/https-response-buffer-encoding-pattern.md` |
 | LLM API連携 | dual-format JSON応答の同時生成、緩いJSON出力のパース救済 | `docs/llm-dual-format-response-pattern.md` |
@@ -42,7 +43,10 @@
 
 4. **ログインが必要な場合はインフラ構成を導入**
 
-   `docs/serverless-static-site-pattern.md`に沿って`auth-stack`（Cognito）・`site-stack`（S3+CloudFront+Lambda@Edge）を構築する。別バックエンドAPI（LINE bot・外部AI連携等）が必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照し、`docs/short-lived-bearer-token-pattern.md`で接続する。
+   どちらの構成にするか選ぶ（後から一方だけを別方式に差し替えるのは手戻りが大きいため、着手前に決める）。
+
+   - **静的サイト＋薄いAPIで足りる場合**（DB読み書きを伴う独自バックエンドAPIを持たない）: `docs/serverless-static-site-pattern.md`に沿って`auth-stack`（Cognito）・`site-stack`（S3+CloudFront+Lambda@Edge）を構築する。別バックエンドAPI（LINE bot・外部AI連携等）が必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照し、`docs/short-lived-bearer-token-pattern.md`で接続する
+   - **独自バックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合**: `docs/serverless-api-dynamodb-pattern.md`に沿って、API Gateway + Lambda + DynamoDB + AWS SAMの単一スタック構成を構築する。Cognitoは使わず、Google IDトークンをバックエンドで直接検証する
 
 5. **CI/CDの有効化**
 
