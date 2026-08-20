@@ -21,10 +21,11 @@
 | フロントエンド共通コンポーネント | ナビゲーション・PWA関連コンポーネント等をsymlinkで共有 | `docs/shared-ui-components.md` |
 | フロントエンド共通規約 | 共通フォント、トップページ必須表示項目（バージョン・更新日時） | `docs/frontend-ui-conventions.md` |
 | テスト | vitest + Testing Library（フロントエンド）、oxlint（lint） | `docs/vite-react-app-template.md` |
-| PWA | 初期ローディング表示、Service Workerの更新反映パターン | `docs/pwa-initial-loading-indicator.md`、`docs/service-worker-update-pattern.md` |
+| PWA | 初期ローディング表示、Service Workerの更新反映パターン、ホーム画面アイコンの生成手順 | `docs/pwa-initial-loading-indicator.md`、`docs/service-worker-update-pattern.md`、`docs/pwa-icon-generation-pattern.md` |
 | インフラ・認証 | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` |
 | 認証まわりの個別パターン | ログインCSRF対策、別オリジンAPIへの短命トークン認証、日次レート制限 | `docs/oauth-csrf-nonce-pattern.md`、`docs/short-lived-bearer-token-pattern.md`、`docs/daily-rate-limit-pattern.md` |
 | バックエンド実装上の罠 | Node.js `https.request`のレスポンスボディはBufferのまま集めてから一度だけデコードする（マルチバイト文字のチャンク境界文字化け対策） | `docs/https-response-buffer-encoding-pattern.md` |
+| LLM API連携 | dual-format JSON応答の同時生成、緩いJSON出力のパース救済 | `docs/llm-dual-format-response-pattern.md` |
 | CI/CD | reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release） | `docs/cicd-pipeline-specification.md` |
 | コミット規約 | Conventional Commits（commitlint） | リポジトリルート`commitlint.config.cjs`、`.claude/skills/git-conventions` |
 | 開発フロー | Issue駆動、Git運用、コードレビュー観点等（Claude Code向け） | リポジトリルート`CLAUDE.md`、`.claude/skills/` |
