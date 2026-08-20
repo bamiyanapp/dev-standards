@@ -4,6 +4,7 @@
 
 ## 含まれるもの
 
+- `docs/standard-tech-stack.md`: 新規プロジェクトを最短で始めるための標準技術スタック索引・クイックスタート手順。個々の技術要素の詳細は下記の各ドキュメント・雛形を参照
 - `CLAUDE.md`: Claude Codeの汎用開発ルール（ブランチ戦略・静的チェック・コードレビュー観点・コミット規約・完了条件など）
 - `.clinerules/`: Cline向けルールファイル（実体はすべてCLAUDE.md・skillsを参照するポインタ）
 - `.claude/skills/`: CLAUDE.mdから呼び出す共通Skill一式。新規Skillを追加した場合は本README・参照側リポジトリのシンボリックリンク双方を更新すること。
