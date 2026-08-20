@@ -12,6 +12,7 @@ dev-standardsを参照している既知のリポジトリの一覧。`docs/`配
 | [bamiyanapp/karuta](https://github.com/bamiyanapp/karuta) | submodule + reusable workflow | もっとも古くからの参照側リポジトリ。`docs/`各所で個別issueへの参照が多数存在する |
 | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) | submodule + reusable workflow | キャンプ道具管理アプリ |
 | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) | submodule + reusable workflow | 家族向けナレッジベース（小学校受験対策）。`app/`配下の複数React（Vite）アプリ構成 |
+| [bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock) | submodule + `reusable-ci.yml`のみ（`cd.yml`は独自運用） | 家庭用品在庫管理アプリ。Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDB構成（`docs/lambda-api-firebase-auth-pattern.md`参照） |
 
 ## 一覧の更新
 
