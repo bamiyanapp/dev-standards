@@ -25,6 +25,7 @@
 | インフラ・認証 | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` |
 | 認証まわりの個別パターン | ログインCSRF対策、別オリジンAPIへの短命トークン認証、日次レート制限 | `docs/oauth-csrf-nonce-pattern.md`、`docs/short-lived-bearer-token-pattern.md`、`docs/daily-rate-limit-pattern.md` |
 | バックエンド実装上の罠 | Node.js `https.request`のレスポンスボディはBufferのまま集めてから一度だけデコードする（マルチバイト文字のチャンク境界文字化け対策） | `docs/https-response-buffer-encoding-pattern.md` |
+| データ同期 | 静的コンテンツをDynamoDB等へ冪等に同期する決定的ID、ユーザー生成コンテンツとのID体系の使い分け | `docs/deterministic-seed-id-pattern.md` |
 | LLM API連携 | dual-format JSON応答の同時生成、緩いJSON出力のパース救済 | `docs/llm-dual-format-response-pattern.md` |
 | 運用（サンドボックス環境） | 実認証情報の無いエージェントサンドボックスから、GitHub Actions経由で本番データを安全に調査・修正する（dry-run/apply切り替え） | `docs/sandboxed-agent-production-data-pattern.md` |
 | CI/CD | reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release） | `docs/cicd-pipeline-specification.md` |
