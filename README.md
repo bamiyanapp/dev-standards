@@ -11,19 +11,22 @@
 - 索引
   - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - フロントエンド
-  - [`vite-react-app-template.md`](docs/vite-react-app-template.md): 独立ビルドReactアプリ（Vite）のスキャフォールドテンプレート
+  - [`client-only-vite-spa-pattern.md`](docs/client-only-vite-spa-pattern.md): 単一パッケージReactアプリ（Vite + TypeScript + Bootstrap）構成
   - [`shared-ui-components.md`](docs/shared-ui-components.md): 横断的UIコンポーネントのsymlink共有（`shared/ui/`・`shared/pwa/`）
   - [`frontend-ui-conventions.md`](docs/frontend-ui-conventions.md): 共通フォント・トップページ必須表示項目等のUI規約
   - [`pwa-initial-loading-indicator.md`](docs/pwa-initial-loading-indicator.md): PWA起動時の白画面対策
   - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
   - [`service-worker-update-pattern.md`](docs/service-worker-update-pattern.md): Service Workerのキャッシュ更新・反映パターン
 - インフラ・認証
-  - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md): S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成
+  - [`static-hosting-pattern.md`](docs/static-hosting-pattern.md): S3 + CloudFrontによる静的サイト配信構成（標準ホスティング）
   - [`lambda-api-firebase-auth-pattern.md`](docs/lambda-api-firebase-auth-pattern.md): Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBのバックエンドAPI構成
-  - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）
-  - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理）
-  - [`short-lived-bearer-token-pattern.md`](docs/short-lived-bearer-token-pattern.md): 別オリジンバックエンドAPIへの短命Bearerトークン認証
+  - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証 + API Gateway/Lambda + DynamoDB + AWS SAMのバックエンドAPI構成
+  - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
+  - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
   - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
+  - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md): S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成（標準索引からは除外、サイト全体ログイン保護が必要な場合の追加パターン）
+  - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理。`serverless-static-site-pattern.md`向け）
+  - [`short-lived-bearer-token-pattern.md`](docs/short-lived-bearer-token-pattern.md): 別オリジンバックエンドAPIへの短命Bearerトークン認証（`serverless-static-site-pattern.md`向け）
 - バックエンド実装パターン
   - [`https-response-buffer-encoding-pattern.md`](docs/https-response-buffer-encoding-pattern.md): `https.request`のレスポンスボディ文字化け対策
   - [`llm-dual-format-response-pattern.md`](docs/llm-dual-format-response-pattern.md): LLM APIのdual-format JSON応答・パース救済

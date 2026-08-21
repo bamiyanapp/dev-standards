@@ -1,6 +1,8 @@
 # S3 + CloudFront + Cognito(Google) + Lambda@Edgeによる認証付き静的サイト配信パターン
 
-ログインが必要な小規模な静的サイト（家族・チーム向けナレッジベース等、不特定多数への公開を想定しないもの）を、専用のバックエンドサーバーを持たずに構築するための構成。**OSLS**（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)。Serverless Framework v4のライセンス変更を受けて採用した、v3系のままオープンソースで開発が継続されているフォーク。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」参照）でAWSリソースをコードとして定義する。examinationの`infra/`（[examination#6](https://github.com/bamiyanapp/examination/issues/6)）から、プロダクト固有の業務ロジック（LINE bot・面接練習機能等）を除いた、他プロダクトでも再利用できるインフラ構成部分を切り出したもの。
+**標準索引（`docs/standard-tech-stack.md`）からは外れた構成。** dev-standardsの標準では、ログインが必要な場合もフロントエンド自体は誰でも閲覧できるAPI単位認証（「2. ログイン」参照）とし、ホスティングはログイン要否によらずS3 + CloudFront（`docs/static-hosting-pattern.md`）に統一している。本ドキュメントは、サイトの閲覧自体をログイン必須にしたい（トップページ等を含め非公開にしたい）場合の構成として残す。
+
+ログインが必要な小規模な静的サイト（家族・チーム向けナレッジベース等、不特定多数への公開を想定しないもの）を、専用のバックエンドサーバーを持たずに構築するための構成。**OSLS**（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)。Serverless Framework v4のライセンス変更を受けて採用した、v3系のままオープンソースで開発が継続されているフォーク。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」参照）でAWSリソースをコードとして定義する。examinationの`infra/`（[examination#6](https://github.com/bamiyanapp/examination/issues/6)）から、プロダクト固有の業務ロジック（LINE bot・面接練習機能等）を除いた、他プロダクトでも再利用できるインフラ構成部分を切り出したもの。examinationは今後もこの構成を使い続けるため、実例としての価値を保持する目的で残している。
 
 コードそのものの共有（symlink化）ではなく、**インフラ構成・設計判断の共有**が目的。実際の完全な実装例はexaminationの`infra/site-stack/`を参照する。
 

@@ -1,49 +1,19 @@
-# 認証・バックエンド不要のクライアントのみSPA構成（`client-only-vite-spa-pattern`）
+# 単一パッケージReactアプリ構成（Vite + TypeScript + Bootstrap、`client-only-vite-spa-pattern`）
 
-shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）で検証済みの、**認証・バックエンドAPIを一切持たない、完全にブラウザ内で完結する小規模SPA**の標準構成をまとめる。ログイン不要・データ永続化不要（あってもURLパラメータ化やlocalStorageで足りる）なツール・シミュレータ・電卓系プロダクトの立ち上げに使う。
+shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）で検証済みの構成をベースにした、dev-standards標準のフロントエンド構成（`docs/standard-tech-stack.md`「1. フロントエンド」参照）。単一`frontend/`パッケージ（React 19 + Vite + TypeScript + Bootstrap 5.3）で、ログイン・バックエンドAPIの要否を問わず全プロダクトに適用する。
 
-examination由来の構成（サイト全体ログイン必須、`docs/serverless-static-site-pattern.md`、Cognito認証＋S3/CloudFront配信）・Electric-Chair-Arena由来の構成（ログイン不要・バックエンドAPIあり、`docs/nextjs-static-lambda-pattern.md`、Next.js＋Lambda＋DynamoDB）とは異なる、ログイン・バックエンドAPIいずれも不要な構成。要素ごとの使い分けは`docs/standard-tech-stack.md`を参照。
+ログイン・バックエンドAPIが不要なプロダクトはそのまま`frontend/`単体で完結する。ログインが必要な場合は「2. ログイン」、独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）が必要な場合は「3. バックエンドAPI」の標準構成と組み合わせる。後者の場合、`frontend/`は単独パッケージではなくnpm workspacesの一部として構成する（後述「npm workspacesでバックエンドと組み合わせる場合」参照）。
 
 ## アーキテクチャ
 
-- 単一`frontend/`パッケージ（React 19 + Vite + **TypeScript**）。`reusable-ci.yml`の`packages`入力で`[{"dir":"frontend","build":true}]`のように指定する（`docs/cicd-pipeline-specification.md`参照）
-- バックエンドAPI・認証基盤（Cognito等）は無し。データはすべてクライアント側（メモリ・URLクエリパラメータ・localStorage）で完結する
-- **GitHub Pagesのプロジェクトページ（`https://<owner>.github.io/<repo>/`）へ直接デプロイ**する。S3/CloudFront/Lambda@Edgeは不要。`.github/actions/deploy-github-pages`複合actionを`cd.yml`の`deploy` jobから呼び出す
-- Bootstrap等のCSSフレームワークは前提としない（プレーンなCSS変数＋インラインstyleでも成立する）。既存の`templates/vite-react-app/`（Bootstrap 5.3前提）をそのまま流用せず、後述の設定を手動で構築する
+- 単一`frontend/`パッケージ（React 19 + Vite + **TypeScript**）。バックエンドAPIを持たない場合は`reusable-ci.yml`の`packages`入力で`[{"dir":"frontend","build":true}]`のように指定する（`docs/cicd-pipeline-specification.md`参照）。バックエンドAPIと組み合わせる場合は後述「npm workspacesでバックエンドと組み合わせる場合」を参照
+- **UIフレームワークはBootstrap 5.3を標準とする**。`index.html`のCDN `<link>`で読み込む（npmパッケージとして導入してもよい）。共通フォント・ダークモード対応・ボタン押下フィードバック等は`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
+- **ホスティングはS3 + CloudFront**（`docs/static-hosting-pattern.md`）に統一する。バックエンドAPIの有無・ログインの有無によらずホスティング方式は変わらない
+- バックエンドAPI・認証基盤を持たない場合、データはすべてクライアント側（メモリ・URLクエリパラメータ・localStorage）で完結する
 
-## GitHub Pagesデプロイの要点
+## デプロイの要点
 
-プロジェクトページはリポジトリ名のサブパス（`/repo-name/`）配下に配信されるため、`vite.config.ts`の`base`をそのサブパスに合わせる。
-
-```ts
-export default defineConfig({
-  base: '/repo-name/',
-  // ...
-})
-```
-
-`cd.yml`側は`deploy-github-pages`複合actionを呼び出す（`working-directory`はfrontendパッケージのディレクトリ、`artifact-path`はそのビルド成果物）。
-
-```yaml
-deploy:
-  needs: release
-  if: success() && needs.release.outputs.new_release_published == 'true'
-  runs-on: ubuntu-latest
-  environment:
-    name: github-pages
-    url: ${{ steps.deploy.outputs.page-url }}
-  permissions:
-    pages: write
-    id-token: write
-  steps:
-    - uses: actions/checkout@v7
-    - uses: bamiyanapp/dev-standards/.github/actions/deploy-github-pages@vX.Y.Z
-      with:
-        working-directory: frontend
-        artifact-path: frontend/dist
-```
-
-サブパス配信は、後述のPWA導入時に`ServiceWorkerRegistration`の登録パスへも影響する（後述「PWA・共有UIコンポーネント導入時の注意点」参照）。
+ホスティング（S3 + CloudFrontのインフラ構築・キャッシュヘッダー戦略・デプロイ手順）は`docs/static-hosting-pattern.md`を参照する。CloudFrontは独自ドメイン直下（または任意のパス）で配信できるため、GitHub Pagesのプロジェクトページのようなリポジトリ名サブパスへの対応（`vite.config.ts`の`base`調整）は基本的に不要（サイトルート配信を既定とする）。
 
 ## TypeScript構成
 
@@ -71,7 +41,7 @@ deploy:
 
 ## 状態管理パターン（Zustand）
 
-外部データフェッチが無い（バックエンドAPIが存在しない）ため、Reduxやサーバーステート管理ライブラリ（TanStack Query等）は過剰。Zustandで十分。
+バックエンドAPIを持たない場合、外部データフェッチが無いためReduxやサーバーステート管理ライブラリ（TanStack Query等）は過剰でZustandのみで十分なことが多い。バックエンドAPIを持つ場合、API呼び出し結果のキャッシュ・再検証が必要ならTanStack Query等の導入を検討し、UIローカルな状態（フォーム入力・モーダル開閉等）はZustandで管理する、という役割分担が目安になる。
 
 ```ts
 interface AppState {
@@ -175,19 +145,25 @@ jobs:
 
 1. **`tsconfig.app.json`に`allowJs: true`を追加する**。symlinkされた`.jsx`ファイルをTypeScript側の型検査対象に含めなくても（`checkJs`は既定false）import解決自体はできるようにする必要がある
 2. **`vite.config.ts`に`resolve.preserveSymlinks: true`を追加する**。symlink共有されたコンポーネントが`react`等のnpmパッケージをimportする場合、Viteは既定でsymlinkの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索してしまい、利用側にインストール済みのパッケージを解決できずビルドエラーになる
-3. **`ServiceWorkerRegistration.jsx`はGitHub Pagesのサブパス配信では`symlink`のまま使えない**。`register("/sw.js")`が絶対パス固定のため、サブパス（`/repo-name/`）配下に配信している場合は実際に配信されるURLと一致しない。`import.meta.env.BASE_URL`を使うよう修正したコピー（`.tsx`化し、専用テストを付けると良い）を個別管理すること
-4. **daisyUIのクラス名（`toast`/`modal`/`btn`等）を使うコンポーネントは、daisyUI未導入のプロジェクトでは無スタイルになる**。`App.css`等へ、そのプロジェクトの配色に合わせた最小限のCSSを追加で補う（対象クラス名のみを狭くスコープし、汎用ユーティリティクラスとして再定義しないこと）
+3. **`ServiceWorkerRegistration.jsx`はサブパス配信では`symlink`のまま使えない**。`register("/sw.js")`が絶対パス固定のため、サイトルート以外のサブパス配下に配信している場合は実際に配信されるURLと一致しない。`import.meta.env.BASE_URL`を使うよう修正したコピー（`.tsx`化し、専用テストを付けると良い）を個別管理すること（サイトルート配信の場合は対応不要）
+4. **daisyUI固有のクラス名（`toast`/`modal`等）を使う共有コンポーネントを流用する場合、Bootstrap環境ではそのままでは無スタイルになりうる**。Bootstrap前提の場合は`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）を導入し、それでも足りない配色は`App.css`等へ対象クラス名のみを狭くスコープして追加で補う
+
+## npm workspacesでバックエンドと組み合わせる場合
+
+独自バックエンドAPI（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）が必要な場合、`frontend/`を単独パッケージではなくnpm workspacesの一部として構成する。
+
+- ルートpackage.jsonへ`workspaces: ["frontend", "backend"]`を追加する。ルート直下の`package-lock.json`1本で両ワークスペースの依存を一括管理する
+- `reusable-ci.yml`・`reusable-cd.yml`は`packages`入力ではなく`workspaces: true`入力を使う（`frontend_dir`/`backend_dir`が既定の`frontend`/`backend`のままなら追加指定不要。`docs/cicd-pipeline-specification.md`参照）
+- `.nvmrc`でNode.jsバージョンをバックエンドのLambdaランタイムと統一する（frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する）
+- ディレクトリ構成: `views/`＝画面単位のコンポーネント、`components/`＝画面内で再利用する部品、`hooks/`＝状態・副作用ロジック、`utils/`＝純関数。テストは実装と同じディレクトリに`*.test.tsx`/`*.test.ts`を併置する
+- **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。外部要因（バックエンドのコールドスタート等）に起因する既知のflakyへの対応は`docs/serverless-spa-pattern.md`「CI/CD連携」参照
+- バックエンドAPI自体の構成（OSLS/AWS SAM・API Gateway・DynamoDB等）は`docs/standard-tech-stack.md`「3. バックエンドAPI」の該当パターンを参照する
 
 ## 新規プロジェクトでの始め方
 
 1. `docs/standard-tech-stack.md`の手順1（dev-standards取り込み）を実施する
-2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行し、上記の`tsconfig`・`vite.config.ts`（`base`・`preserveSymlinks`は後で必要になったら追加）・`.oxlintrc.json`を整える
+2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行し、上記の`tsconfig`・`vite.config.ts`（`preserveSymlinks`は後で必要になったら追加）・`.oxlintrc.json`を整える。バックエンドと組み合わせる場合は上記「npm workspacesでバックエンドと組み合わせる場合」に沿ってworkspaces構成にする
 3. `vitest`・`@testing-library/react`・`@testing-library/jest-dom`・`@testing-library/user-event`・`@vitest/coverage-v8`・`jsdom`を導入し、上記のテスト戦略に沿ってセットアップする
 4. 状態管理が必要なら`zustand`を導入し、上記のstore設計パターンに沿う
-5. 上記の「CI/CDの構成例」に沿って`.github/workflows/ci.yml`・`cd.yml`を用意する。GitHub Pagesの`Settings → Pages`でソースを`GitHub Actions`に設定する
+5. 上記の「CI/CDの構成例」に沿って`.github/workflows/ci.yml`・`cd.yml`を用意する。ホスティングは`docs/static-hosting-pattern.md`に沿ってS3 + CloudFrontを構築する
 6. PWA対応・共有UIコンポーネントが必要になったら「PWA・共有UIコンポーネント導入時の注意点」を参照する
-
-## この構成を選ぶべきでない場合
-
-- ログイン・ユーザーごとのデータ永続化が必要 → `docs/serverless-static-site-pattern.md`（examination構成）を検討する
-- 複雑なドメインロジック・リアルタイム通信（WebSocket等）を独自バックエンドで持つ必要がある → karuta構成（#256）を検討する

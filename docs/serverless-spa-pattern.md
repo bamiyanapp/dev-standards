@@ -25,7 +25,7 @@ npm workspaces構成のモノレポで、`frontend`（SPA）と`backend`（Serve
 
 ## フロントエンド（`frontend/`）
 
-- **Vite + React 19**。UIフレームワークは**Bootstrap 5.3を`index.html`のCDN `<link>`で読み込む**（`docs/vite-react-app-template.md`のTailwind CSS v4 + daisyUI 5とは別系統）。共通フォント・ダークモード対応・ボタン押下フィードバック等は`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
+- **Vite + React 19**。UIフレームワークは**Bootstrap 5.3を`index.html`のCDN `<link>`で読み込む**（`docs/client-only-vite-spa-pattern.md`の標準フロントエンド構成と同じCSSフレームワーク）。共通フォント・ダークモード対応・ボタン押下フィードバック等は`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
 - PWA化する場合は`vite-plugin-pwa`を使う。
 
   ```js
