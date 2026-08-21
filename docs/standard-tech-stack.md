@@ -12,24 +12,25 @@
 |---|---|---|
 | 必要（閲覧自体を保護） | 任意 | 「2. ログイン」のサイト全体保護構成（`serverless-static-site-pattern.md`）。別オリジンのバックエンドAPIが必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照 |
 | 不要（誰でも閲覧可） | 必要（API呼び出し単位で認証） | 「2. ログイン」のAPI単位保護構成（`lambda-api-firebase-auth-pattern.md`または`serverless-api-dynamodb-pattern.md`） |
-| 不要 | 必要（認証不要な公開API） | 「3. バックエンドAPI」の`nextjs-static-lambda-pattern.md`構成 |
+| 不要 | 必要（認証不要な公開API） | 「3. バックエンドAPI」の`nextjs-static-lambda-pattern.md`構成（REST APIのみ）または`serverless-spa-pattern.md`構成（WebSocketによるリアルタイム双方向通信も必要な場合） |
 | 不要 | 不要 | バックエンド・認証系の節はいずれも採用しない。「1. フロントエンド」＋「4. ホスティング」（GitHub Pages直接デプロイ）のみで完結する |
 
 以下、要素ごとに標準構成を示す。
 
 ## 1. フロントエンド（全プロジェクトで採用）
 
-3つの実装パターンがある。複数ページ構成か、TypeScript前提の単一パッケージか、他要素（バックエンドAPI）とモノレポで組み合わせるかで選ぶ。
+4つの実装パターンがある。複数ページ構成か、TypeScript前提の単一パッケージか、他要素（バックエンドAPI）とモノレポで組み合わせるかで選ぶ。
 
 | パターン | 技術 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|---|
 | ページごとに独立ビルド | React 19 + Vite + Bootstrap 5.3 | `docs/vite-react-app-template.md` | examination（ページ構成の由来。CSSは元々Tailwind CSS v4 + daisyUI 5だったが、標準構成をBootstrap 5.3へ変更した。examination自体への遡及適用は未実施） |
 | 単一パッケージ・TypeScript | React 19 + Vite + TypeScript、CSSフレームワーク不使用、Zustand状態管理 | `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」 | shock-lab |
 | Next.jsモノレポ | Next.js（App Router、`output: 'export'`静的書き出し）+ Tailwind CSS v4、npm workspaces | `docs/nextjs-static-lambda-pattern.md` | Electric-Chair-Arena |
+| 単一SPA（npm workspaces、独自バックエンドAPIと一体） | Vite + React + Bootstrap 5.3（CDN読み込み） | `docs/serverless-spa-pattern.md` | karuta |
 
-横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント等のsymlink共有は`docs/shared-ui-components.md`、共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照（いずれもプロダクトに応じて任意採用）。
+横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は`docs/shared-ui-components.md`、共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照（いずれもプロダクトに応じて任意採用）。
 
-テスト・lint: vitest + Testing Library（フロントエンド）、oxlint（lint）。詳細は各フロントエンドパターンのドキュメントを参照。
+テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint/ESLint（lint）。単一SPAパターン（karuta）ではPlaywrightによる実バックエンド直結のE2Eも行う。詳細は各フロントエンドパターンのドキュメントを参照。
 
 ## 2. ログイン（認証）: 必要な場合のみ採用
 
@@ -54,7 +55,8 @@
 | サイト全体ログインと一体（別オリジンAPI） | 「2. ログイン」の`serverless-static-site-pattern.md`「別オリジンのバックエンドAPIが必要な場合」＋`docs/short-lived-bearer-token-pattern.md` |
 | API単位認証と一体（Firebase Authentication） | 「2. ログイン」の`lambda-api-firebase-auth-pattern.md`（Firebase Authentication + API Gateway + Lambda(OSLS) + DynamoDB） |
 | API単位認証と一体（Google IDトークン直接検証） | 「2. ログイン」の`serverless-api-dynamodb-pattern.md`（API Gateway + Lambda + DynamoDB + AWS SAM、独自のバックエンドAPI業務ロジックを持つ場合向け） |
-| ログイン不要（誰でも呼び出し可） | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）。詳細は`docs/nextjs-static-lambda-pattern.md` |
+| ログイン不要・REST APIのみ（誰でも呼び出し可） | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）。詳細は`docs/nextjs-static-lambda-pattern.md` |
+| ログイン不要・WebSocketによるリアルタイム双方向通信も必要 | Serverless Framework（osls）+ Lambda + DynamoDB + API Gateway REST/WebSocket。単一SPAフロントエンド（上記「1. フロントエンド」の単一SPAパターン）と一体で構築する。詳細は`docs/serverless-spa-pattern.md` |
 
 バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）: Node.js `https.request`のレスポンスボディ文字化け対策（`docs/https-response-buffer-encoding-pattern.md`）、LLM APIのdual-format JSON応答（`docs/llm-dual-format-response-pattern.md`）、静的コンテンツのDynamoDB冪等同期（`docs/deterministic-seed-id-pattern.md`）、実認証情報の無いサンドボックスからの本番データ調査・修正（`docs/sandboxed-agent-production-data-pattern.md`）。
 
@@ -93,6 +95,7 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
    - ページごと独立ビルド（Bootstrap）: `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す
    - 単一パッケージ・TypeScript（CSSフレームワーク無し）: `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿ってゼロから構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）
    - Next.jsモノレポ: `docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意、npm workspacesの構成）に沿って構築する
+   - 単一SPA（独自バックエンドAPIと一体、npm workspaces）: `npm create vite@latest frontend -- --template react`等で単一SPAとして立ち上げ、`docs/serverless-spa-pattern.md`の構成（Bootstrap 5.3のCDN読み込み、`views/`・`components/`・`hooks/`・`utils/`の層分け、vitest設定）に合わせる。ルートを`package.json`のnpm workspacesに含める
 
 3. **横断的UIコンポーネント・PWAパターンの適用**（「1. フロントエンド」共通規約・「5. PWA」が必要な場合のみ）
 
@@ -107,11 +110,11 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 5. **「3. バックエンドAPI」が必要な場合、前提に応じて構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
-   ログイン不要の公開APIとして単独で必要な場合は`docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。
+   ログイン不要の公開APIとして単独で必要な場合、REST APIのみなら`docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合は、`docs/serverless-spa-pattern.md`に沿って`backend/`にServerless Framework（osls）構成（`serverless.yml`・Lambdaハンドラー・DynamoDBテーブル）を構築する（フロントエンドは手順2の単一SPAパターンと組み合わせる）。
 
 6. **「6. CI/CD」を有効化**
 
-   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`packages`入力（ページごとに独立ビルドする構成の場合）・`enable_release`（semantic-release運用する場合）等、プロダクトに応じた入力を選ぶ。GitHub Pagesへのデプロイ構成例は`docs/client-only-vite-spa-pattern.md`「CI/CDの構成例」参照。
+   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`packages`入力（ページごとに独立ビルドする構成の場合）・`workspaces`（単一SPA等npm workspaces構成の場合）・`enable_release`（semantic-release運用する場合）・`enable_e2e_test`（Playwright E2Eを行う場合）等、プロダクトに応じた入力を選ぶ。デプロイは`.github/actions/deploy-github-pages`（GitHub Pages）・`.github/actions/deploy-serverless`（Serverless Framework）複合actionを使う。GitHub Pagesへのデプロイ構成例は`docs/client-only-vite-spa-pattern.md`「CI/CDの構成例」参照。
 
 7. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
 
