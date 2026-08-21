@@ -1,67 +1,83 @@
 # 標準技術スタック（新規プロジェクトのクイックスタート）
 
-新しいプロダクトを立ち上げる際、ゼロから技術選定・雛形作成をせずに最短で始められるよう、実プロダクトで検証済みの構成を「標準スタック」としてまとめる。個々の要素は既にdev-standards配下に個別ドキュメント・雛形として存在するため、本ドキュメントはそれらを一望できる索引と、着手手順のチェックリストを兼ねる。
+新しいプロダクトを立ち上げる際、ゼロから技術選定・雛形作成をせずに最短で始められるよう、実プロダクトで検証済みの構成を要素（関心事）ごとの「標準構成」としてまとめる。個々の要素は既にdev-standards配下に個別ドキュメント・雛形として存在するため、本ドキュメントはそれらを一望できる索引と、着手手順のチェックリストを兼ねる。
 
-対象は、いずれも小規模なWebプロダクト（大規模スケールは想定しない）。現在、要件に応じて選べる3つの検証済みスタックがある。
+対象は、いずれも小規模なWebプロダクト（大規模スケールは想定しない）。**各要素は独立して採用可否を判断する**。ログイン・バックエンドAPI等、プロダクトに不要な要素はその節ごと採用しない。必要な要素のみ、以下の標準構成に従って導入する。
 
-| | スタックA（examination） | スタックB（Electric-Chair-Arena） | スタックC（shock-lab） |
+## 選定の考え方
+
+まず「ログインが必要か」「バックエンドAPIが必要か」の2軸で考え、以下から採用する構成の組み合わせを選ぶ。
+
+| ログイン | バックエンドAPI | 採用する構成 |
+|---|---|---|
+| 必要（閲覧自体を保護） | 任意 | 「2. ログイン」のサイト全体保護構成（`serverless-static-site-pattern.md`）。別オリジンのバックエンドAPIが必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照 |
+| 不要（誰でも閲覧可） | 必要（API呼び出し単位で認証） | 「2. ログイン」のAPI単位保護構成（`lambda-api-firebase-auth-pattern.md`） |
+| 不要 | 必要（認証不要な公開API） | 「3. バックエンドAPI」の`nextjs-static-lambda-pattern.md`構成 |
+| 不要 | 不要 | バックエンド・認証系の節はいずれも採用しない。「1. フロントエンド」＋「4. ホスティング」（GitHub Pages直接デプロイ）のみで完結する |
+
+以下、要素ごとに標準構成を示す。
+
+## 1. フロントエンド（全プロジェクトで採用）
+
+3つの実装パターンがある。複数ページ構成か、TypeScript前提の単一パッケージか、他要素（バックエンドAPI）とモノレポで組み合わせるかで選ぶ。
+
+| パターン | 技術 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|---|
-| ログイン | 必要（Google OAuth、家族・チーム等の限定公開） | 不要（不特定多数への公開可） | 不要（不特定多数への公開可） |
-| バックエンドAPI | あり（Lambda@Edge） | あり（Lambda + DynamoDB） | 無し（完全にクライアント内で完結） |
-| フロントエンド | React 19 + Vite、ページごとに独立ビルド | Next.js、npm workspacesモノレポ | React 19 + Vite + TypeScript、単一パッケージ |
-| ホスティング | S3 + CloudFront + Cognito + Lambda@Edge | GitHub Pages | GitHub Pages |
-| 詳細 | 本ドキュメントの以下「スタック一覧」・`docs/serverless-static-site-pattern.md` | `docs/nextjs-static-lambda-pattern.md` | `docs/client-only-vite-spa-pattern.md` |
+| ページごとに独立ビルド | React 19 + Vite + Tailwind CSS v4 + daisyUI 5 | `docs/vite-react-app-template.md` | examination |
+| 単一パッケージ・TypeScript | React 19 + Vite + TypeScript、CSSフレームワーク不使用、Zustand状態管理 | `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」 | shock-lab |
+| Next.jsモノレポ | Next.js（App Router、`output: 'export'`静的書き出し）+ Tailwind CSS v4、npm workspaces | `docs/nextjs-static-lambda-pattern.md` | Electric-Chair-Arena |
 
-迷ったら「ログインが必要か」「バックエンドAPIが必要か」で選ぶ。ログイン不要ならスタックB・Cを検討し、さらにバックエンドAPIも不要（ブラウザ内で完結するツール・シミュレータ等）ならスタックCの方がインフラ構成・運用コストともに最も軽量。
+横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント等のsymlink共有は`docs/shared-ui-components.md`、共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照（いずれもプロダクトに応じて任意採用）。
 
-## スタックA一覧（examination、ログインあり）
+テスト・lint: vitest + Testing Library（フロントエンド）、oxlint（lint）。詳細は各フロントエンドパターンのドキュメントを参照。
 
-| レイヤー | 技術 | 詳細ドキュメント |
-|---|---|---|
-| フロントエンド | React 19 + Vite + Tailwind CSS v4 + daisyUI 5、ページごとに独立ビルドするアプリ構成 | `docs/vite-react-app-template.md` |
-| フロントエンド共通コンポーネント | ナビゲーション・PWA関連コンポーネント等をsymlinkで共有 | `docs/shared-ui-components.md` |
-| フロントエンド共通規約 | 共通フォント、トップページ必須表示項目（バージョン・更新日時） | `docs/frontend-ui-conventions.md` |
-| テスト | vitest + Testing Library（フロントエンド）、oxlint（lint） | `docs/vite-react-app-template.md` |
-| PWA | 初期ローディング表示、Service Workerの更新反映パターン、ホーム画面アイコンの生成手順 | `docs/pwa-initial-loading-indicator.md`、`docs/service-worker-update-pattern.md`、`docs/pwa-icon-generation-pattern.md` |
-| インフラ・認証（サイト全体をログイン必須にする場合） | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` |
-| インフラ・認証（API単位で認証する場合） | GitHub Pages等の静的ホスティング + Firebase Authentication（Google SSO）+ API Gateway + Lambda + DynamoDB、OSLS（Serverless Framework v3互換のOSS） | `docs/lambda-api-firebase-auth-pattern.md` |
-| 認証まわりの個別パターン | ログインCSRF対策、別オリジンAPIへの短命トークン認証、日次レート制限 | `docs/oauth-csrf-nonce-pattern.md`、`docs/short-lived-bearer-token-pattern.md`、`docs/daily-rate-limit-pattern.md` |
-| バックエンド実装上の罠 | Node.js `https.request`のレスポンスボディはBufferのまま集めてから一度だけデコードする（マルチバイト文字のチャンク境界文字化け対策） | `docs/https-response-buffer-encoding-pattern.md` |
-| データ同期 | 静的コンテンツをDynamoDB等へ冪等に同期する決定的ID、ユーザー生成コンテンツとのID体系の使い分け | `docs/deterministic-seed-id-pattern.md` |
-| LLM API連携 | dual-format JSON応答の同時生成、緩いJSON出力のパース救済 | `docs/llm-dual-format-response-pattern.md` |
-| 運用（サンドボックス環境） | 実認証情報の無いエージェントサンドボックスから、GitHub Actions経由で本番データを安全に調査・修正する（dry-run/apply切り替え） | `docs/sandboxed-agent-production-data-pattern.md` |
-| CI/CD | reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release） | `docs/cicd-pipeline-specification.md` |
-| コミット規約 | Conventional Commits（commitlint） | リポジトリルート`commitlint.config.cjs`、`.claude/skills/git-conventions` |
-| 開発フロー | Issue駆動、Git運用、コードレビュー観点等（Claude Code向け） | リポジトリルート`CLAUDE.md`、`.claude/skills/` |
+## 2. ログイン（認証）: 必要な場合のみ採用
 
-## スタックB一覧（Electric-Chair-Arena、ログイン不要）
+ログイン不要なプロダクトは本節を採用しない。必要な場合、「閲覧自体を保護する（サイト全体ログイン必須）」か「API呼び出し単位で保護する（フロントは誰でも閲覧可）」かで標準構成が分かれる。
 
-| レイヤー | 技術 | 詳細ドキュメント |
-|---|---|---|
-| フロントエンド | Next.js（App Router、`output: 'export'`静的書き出し）+ Tailwind CSS v4、npm workspacesモノレポ構成 | `docs/nextjs-static-lambda-pattern.md` |
-| ホスティング | GitHub Pages（`actions/upload-pages-artifact` + `actions/deploy-pages`によるネイティブデプロイ） | `docs/nextjs-static-lambda-pattern.md` |
-| バックエンド | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）でデプロイ | `docs/nextjs-static-lambda-pattern.md` |
-| テスト | vitest + Testing Library（ユニット）、Playwright + monocart-reporter（E2E・カバレッジ） | `docs/nextjs-static-lambda-pattern.md`、`docs/cicd-pipeline-specification.md` |
-| CI/CD | reusable-ci.yml（lint/test/e2e/build/自動マージ）。semantic-release運用は必須ではない | `docs/cicd-pipeline-specification.md`、`docs/nextjs-static-lambda-pattern.md` |
-| コミット規約・開発フロー | スタックAと共通（Conventional Commits、Issue駆動） | リポジトリルート`commitlint.config.cjs`・`CLAUDE.md`、`.claude/skills/` |
+| 保護単位 | 標準構成 | 詳細ドキュメント | 検証済みプロダクト |
+|---|---|---|---|
+| サイト全体（閲覧自体に認証を要求） | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` | examination |
+| API単位（フロントは誰でも閲覧可） | Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | `docs/lambda-api-firebase-auth-pattern.md` | uchi-stock |
 
-## スタックC一覧（shock-lab、ログイン不要・バックエンドAPI不要）
+認証まわりの個別パターン（採用した保護単位に応じて任意で組み合わせる）: ログインCSRF対策（`docs/oauth-csrf-nonce-pattern.md`）、別オリジンAPIへの短命トークン認証（`docs/short-lived-bearer-token-pattern.md`）、日次利用回数の上限（`docs/daily-rate-limit-pattern.md`）。
 
-| レイヤー | 技術 | 詳細ドキュメント |
-|---|---|---|
-| フロントエンド | React 19 + Vite + **TypeScript**、単一`frontend/`パッケージ。daisyUI/Tailwind不使用 | `docs/client-only-vite-spa-pattern.md` |
-| 状態管理 | Zustand | `docs/client-only-vite-spa-pattern.md` |
-| テスト | vitest + Testing Library（Canvas等のモック手法・クリップボードテストの落とし穴を含む）、oxlint（lint） | `docs/client-only-vite-spa-pattern.md` |
-| インフラ | GitHub Pagesのプロジェクトページへ直接デプロイ（S3/CloudFront/認証基盤不要、バックエンドAPIも無し） | `docs/client-only-vite-spa-pattern.md` |
-| PWA | 初期ローディング表示、Service Workerの更新反映パターン（サブパス配信時の注意点あり） | `docs/pwa-initial-loading-indicator.md`、`docs/service-worker-update-pattern.md`、`docs/client-only-vite-spa-pattern.md` |
-| CI/CD | reusable-ci.yml + reusable-cd.yml（GitHub Pagesデプロイ向け構成例） | `docs/cicd-pipeline-specification.md`、`docs/client-only-vite-spa-pattern.md` |
-| コミット規約・開発フロー | スタックAと共通 | 上表参照 |
+## 3. バックエンドAPI: 必要な場合のみ採用
 
-## 新規プロジェクトの立ち上げ手順（最短ルート、スタックA）
+バックエンドAPIが不要なプロダクトは本節を採用せず、フロントエンドのみで完結させる（後述「4. ホスティング」でGitHub Pagesへ直接デプロイする）。
 
-以下はスタックA（examination、ログインあり）向けの手順。スタックB（Electric-Chair-Arena、ログイン不要・バックエンドAPIあり）を選ぶ場合は、手順1・6は共通、手順2〜5を`docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意・npm workspacesの構成・`deploy-github-pages`/`deploy-serverless`複合actionを使ったCI/CD呼び出し）へ読み替える。スタックC（shock-lab、ログイン不要・バックエンドAPIも不要）を選ぶ場合は、手順1・6は共通、手順2〜5を`docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」の内容へ読み替える。
+必要な場合、「2. ログイン」と一体で構築するか、ログイン不要の公開APIとして単独で構築するかで標準構成が分かれる。
 
-1. **リポジトリ作成・dev-standardsの取り込み**
+| 前提 | 標準構成 |
+|---|---|
+| サイト全体ログインと一体（別オリジンAPI） | 「2. ログイン」の`serverless-static-site-pattern.md`「別オリジンのバックエンドAPIが必要な場合」＋`docs/short-lived-bearer-token-pattern.md` |
+| API単位認証と一体 | 「2. ログイン」の`lambda-api-firebase-auth-pattern.md`（Firebase Authentication + API Gateway + Lambda(OSLS) + DynamoDB） |
+| ログイン不要（誰でも呼び出し可） | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）。詳細は`docs/nextjs-static-lambda-pattern.md` |
+
+バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）: Node.js `https.request`のレスポンスボディ文字化け対策（`docs/https-response-buffer-encoding-pattern.md`）、LLM APIのdual-format JSON応答（`docs/llm-dual-format-response-pattern.md`）、静的コンテンツのDynamoDB冪等同期（`docs/deterministic-seed-id-pattern.md`）、実認証情報の無いサンドボックスからの本番データ調査・修正（`docs/sandboxed-agent-production-data-pattern.md`）。
+
+## 4. ホスティング
+
+| 条件 | 標準構成 |
+|---|---|
+| ログイン必須でサイト全体を保護する場合 | S3 + CloudFront（`docs/serverless-static-site-pattern.md`の一部） |
+| それ以外（ログイン不要、またはAPI単位認証で完結する場合） | GitHub Pages。`.github/actions/deploy-github-pages`複合action、またはNext.jsモノレポ構成では`actions/upload-pages-artifact`＋`actions/deploy-pages`によるネイティブデプロイ（`docs/nextjs-static-lambda-pattern.md`） |
+
+## 5. PWA: 必要な場合のみ採用
+
+初期ローディング表示、Service Workerのキャッシュ更新・反映パターン、ホーム画面アイコンの生成手順は`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`・`docs/pwa-icon-generation-pattern.md`を参照。
+
+## 6. CI/CD（全プロジェクトで採用）
+
+reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release）。詳細な入力・仕様は`docs/cicd-pipeline-specification.md`を参照。
+
+## 7. コミット規約・開発フロー（全プロジェクトで採用）
+
+コミット規約（Conventional Commits、commitlint）はリポジトリルート`commitlint.config.cjs`・`.claude/skills/git-conventions`を参照。開発フロー（Issue駆動、Git運用、コードレビュー観点等、Claude Code向け）はリポジトリルート`CLAUDE.md`・`.claude/skills/`を参照。
+
+## 新規プロジェクトの立ち上げ手順（最短ルート）
+
+1. **リポジトリ作成・dev-standardsの取り込み**（共通）
 
    ```sh
    git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-standards
@@ -70,27 +86,30 @@
 
    `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（README.md「利用方法」参照）。
 
-2. **フロントエンドアプリの雛形を用意**
+2. **「1. フロントエンド」からパターンを選び雛形を用意**
 
-   - スタックA（ページごとに独立ビルド、daisyUI/Tailwind）: `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す
-   - スタックC（TypeScript、単一パッケージ、CSSフレームワーク無し）: `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿ってゼロから構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）
+   - ページごと独立ビルド（daisyUI/Tailwind）: `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す
+   - 単一パッケージ・TypeScript（CSSフレームワーク無し）: `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿ってゼロから構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）
+   - Next.jsモノレポ: `docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意、npm workspacesの構成）に沿って構築する
 
-3. **横断的UIコンポーネント・PWAパターンの適用**
+3. **横断的UIコンポーネント・PWAパターンの適用**（「1. フロントエンド」共通規約・「5. PWA」が必要な場合のみ）
 
-   ナビゲーション・共有ボタン・共通フォント・初期ローディング表示・Service Worker更新通知等が必要なら、`sync-manifest.local.json`へエントリを追加し`node dev-standards/scripts/bootstrap.js`を再実行する（`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`参照）。スタックC（TypeScriptプロジェクト）へ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
+   `sync-manifest.local.json`へエントリを追加し`node dev-standards/scripts/bootstrap.js`を再実行する（`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`参照）。TypeScriptプロジェクト（単一パッケージパターン）へ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
 
-4. **ログイン・バックエンドAPIが必要な場合はインフラ構成を導入**（スタックAのみ。スタックCはこの手順自体が不要）
+4. **「2. ログイン」が必要な場合、保護単位に応じて構成を導入**（不要なら本手順自体をスキップ）
 
-   どちらの認証モデルが適するかで構成を選ぶ。
+   - サイト全体をログイン必須にする場合: `docs/serverless-static-site-pattern.md`に沿って`auth-stack`（Cognito）・`site-stack`（S3+CloudFront+Lambda@Edge）を構築する。別バックエンドAPI（LINE bot・外部AI連携等）が必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照し、`docs/short-lived-bearer-token-pattern.md`で接続する
+   - フロントエンドは誰でも閲覧でき、API呼び出し単位で認証する場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
 
-   - **サイト全体をログイン必須にする**（閲覧自体に認証を要求する）場合: `docs/serverless-static-site-pattern.md`に沿って`auth-stack`（Cognito）・`site-stack`（S3+CloudFront+Lambda@Edge）を構築する。別バックエンドAPI（LINE bot・外部AI連携等）が必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照し、`docs/short-lived-bearer-token-pattern.md`で接続する
-   - **フロントエンドは誰でも閲覧でき、API呼び出し単位で認証する**場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
+5. **「3. バックエンドAPI」が必要な場合、前提に応じて構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
-5. **CI/CDの有効化**
+   ログイン不要の公開APIとして単独で必要な場合は`docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。
 
-   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`packages`入力（ページごとに独立ビルドする構成の場合）・`enable_release`（semantic-release運用する場合）等、プロダクトに応じた入力を選ぶ。スタックCのデプロイ（GitHub Pages）構成例は`docs/client-only-vite-spa-pattern.md`「CI/CDの構成例」参照。
+6. **「6. CI/CD」を有効化**
 
-6. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
+   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`packages`入力（ページごとに独立ビルドする構成の場合）・`enable_release`（semantic-release運用する場合）等、プロダクトに応じた入力を選ぶ。GitHub Pagesへのデプロイ構成例は`docs/client-only-vite-spa-pattern.md`「CI/CDの構成例」参照。
+
+7. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
 
 ## この索引に無いもの
 

@@ -2,7 +2,7 @@
 
 shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）で検証済みの、**認証・バックエンドAPIを一切持たない、完全にブラウザ内で完結する小規模SPA**の標準構成をまとめる。ログイン不要・データ永続化不要（あってもURLパラメータ化やlocalStorageで足りる）なツール・シミュレータ・電卓系プロダクトの立ち上げに使う。
 
-examination由来の構成（スタックA、`docs/serverless-static-site-pattern.md`、Cognito認証＋S3/CloudFront配信）・Electric-Chair-Arena由来の構成（スタックB、`docs/nextjs-static-lambda-pattern.md`、Next.js＋Lambda＋DynamoDB）とは異なる3つ目のスタック（スタックC）。3スタックの使い分けは`docs/standard-tech-stack.md`「スタック一覧」を参照。
+examination由来の構成（サイト全体ログイン必須、`docs/serverless-static-site-pattern.md`、Cognito認証＋S3/CloudFront配信）・Electric-Chair-Arena由来の構成（ログイン不要・バックエンドAPIあり、`docs/nextjs-static-lambda-pattern.md`、Next.js＋Lambda＋DynamoDB）とは異なる、ログイン・バックエンドAPIいずれも不要な構成。要素ごとの使い分けは`docs/standard-tech-stack.md`を参照。
 
 ## アーキテクチャ
 
