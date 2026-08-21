@@ -9,7 +9,7 @@
 | レイヤー | 技術 |
 |---|---|
 | フロントエンド | Next.js（App Router）+ Tailwind CSS v4。`output: 'export'`で静的サイトとして書き出す（サーバーサイド機能・API Routesは使わない） |
-| フロントエンドのモノレポ構成 | npm workspaces（ルート直下に単一の`package-lock.json`）でfrontend/backendを1リポジトリにまとめる。examinationの「ページごとに独立ビルド」（`docs/vite-react-app-template.md`）とは異なるアプローチ |
+| フロントエンドのモノレポ構成 | npm workspaces（ルート直下に単一の`package-lock.json`）でfrontend/backendを1リポジトリにまとめる |
 | フロントエンドのデプロイ | GitHub Pages。専用ブランチへのpublish（`peaceiris/actions-gh-pages`）ではなく、GitHub Actionsネイティブのpages機能（`actions/upload-pages-artifact` + `actions/deploy-pages`）を`.github/actions/deploy-github-pages`複合actionで呼び出す |
 | バックエンド | AWS Lambda + API Gateway（HTTP API）+ DynamoDB |
 | バックエンドのIaC・デプロイ | OSLS（`osls`パッケージ）。Serverless Framework本家ではない。`.github/actions/deploy-serverless`複合actionで呼び出せる |
