@@ -12,7 +12,7 @@
 |---|---|---|
 | 必要（閲覧自体を保護） | 任意 | 「2. ログイン」のサイト全体保護構成（`serverless-static-site-pattern.md`）。別オリジンのバックエンドAPIが必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照 |
 | 不要（誰でも閲覧可） | 必要（API呼び出し単位で認証） | 「2. ログイン」のAPI単位保護構成（`lambda-api-firebase-auth-pattern.md`または`serverless-api-dynamodb-pattern.md`） |
-| 不要 | 必要（認証不要な公開API） | 「3. バックエンドAPI」の`nextjs-static-lambda-pattern.md`構成（REST APIのみ）または`serverless-spa-pattern.md`構成（WebSocketによるリアルタイム双方向通信も必要な場合） |
+| 不要 | 必要（認証不要な公開API） | 「3. バックエンドAPI」のログイン不要構成（OSLS + Lambda + API Gateway + DynamoDB。WebSocketが必要な場合は追加） |
 | 不要 | 不要 | バックエンド・認証系の節はいずれも採用しない。「1. フロントエンド」＋「4. ホスティング」（GitHub Pages直接デプロイ）のみで完結する |
 
 以下、要素ごとに標準構成を示す。
@@ -38,7 +38,7 @@
 
 | 保護単位 | 標準構成 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|---|
-| サイト全体（閲覧自体に認証を要求） | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` | examination |
+| サイト全体（閲覧自体に認証を要求） | S3 + CloudFront + Cognito(Google) + Lambda@Edge、OSLS（Serverless Framework v3互換の軽量フォーク） | `docs/serverless-static-site-pattern.md` | examination |
 | API単位（フロントは誰でも閲覧可、Firebase Authenticationを使う場合） | Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | `docs/lambda-api-firebase-auth-pattern.md` | uchi-stock |
 | API単位（フロントは誰でも閲覧可、Cognito/Firebaseを使わない場合） | Google OAuthのIDトークンをバックエンドで直接検証 + API Gateway + Lambda（単一関数、内部ルーティング）+ DynamoDB + AWS SAM | `docs/serverless-api-dynamodb-pattern.md` | Camp-Stock |
 
@@ -55,8 +55,7 @@
 | サイト全体ログインと一体（別オリジンAPI） | 「2. ログイン」の`serverless-static-site-pattern.md`「別オリジンのバックエンドAPIが必要な場合」＋`docs/short-lived-bearer-token-pattern.md` |
 | API単位認証と一体（Firebase Authentication） | 「2. ログイン」の`lambda-api-firebase-auth-pattern.md`（Firebase Authentication + API Gateway + Lambda(OSLS) + DynamoDB） |
 | API単位認証と一体（Google IDトークン直接検証） | 「2. ログイン」の`serverless-api-dynamodb-pattern.md`（API Gateway + Lambda + DynamoDB + AWS SAM、独自のバックエンドAPI業務ロジックを持つ場合向け） |
-| ログイン不要・REST APIのみ（誰でも呼び出し可） | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）。詳細は`docs/nextjs-static-lambda-pattern.md` |
-| ログイン不要・WebSocketによるリアルタイム双方向通信も必要 | Serverless Framework（osls）+ Lambda + DynamoDB + API Gateway REST/WebSocket。単一SPAフロントエンド（上記「1. フロントエンド」の単一SPAパターン）と一体で構築する。詳細は`docs/serverless-spa-pattern.md` |
+| ログイン不要（誰でも呼び出し可） | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）。WebSocketによるリアルタイム双方向通信も必要な場合は、同じOSLSサービス内にAPI Gateway WebSocket APIを追加する（単一SPAフロントエンド「1. フロントエンド」の単一SPAパターンと組み合わせる場合の実例あり）。基本構成の詳細は`docs/nextjs-static-lambda-pattern.md`、WebSocket追加時の実装詳細は`docs/serverless-spa-pattern.md`を参照 |
 
 バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）: Node.js `https.request`のレスポンスボディ文字化け対策（`docs/https-response-buffer-encoding-pattern.md`）、LLM APIのdual-format JSON応答（`docs/llm-dual-format-response-pattern.md`）、静的コンテンツのDynamoDB冪等同期（`docs/deterministic-seed-id-pattern.md`）、実認証情報の無いサンドボックスからの本番データ調査・修正（`docs/sandboxed-agent-production-data-pattern.md`）。
 
@@ -110,7 +109,7 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 5. **「3. バックエンドAPI」が必要な場合、前提に応じて構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
-   ログイン不要の公開APIとして単独で必要な場合、REST APIのみなら`docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合は、`docs/serverless-spa-pattern.md`に沿って`backend/`にServerless Framework（osls）構成（`serverless.yml`・Lambdaハンドラー・DynamoDBテーブル）を構築する（フロントエンドは手順2の単一SPAパターンと組み合わせる）。
+   ログイン不要の公開APIとして単独で必要な場合は`docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合は、`docs/serverless-spa-pattern.md`のAPI Gateway WebSocket API追加方法（フロントエンドは手順2の単一SPAパターンと組み合わせる）も併せて参照する。
 
 6. **「6. CI/CD」を有効化**
 
