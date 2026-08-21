@@ -23,7 +23,7 @@
 
 | パターン | 技術 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|---|
-| ページごとに独立ビルド | React 19 + Vite + Tailwind CSS v4 + daisyUI 5 | `docs/vite-react-app-template.md` | examination |
+| ページごとに独立ビルド | React 19 + Vite + Bootstrap 5.3 | `docs/vite-react-app-template.md` | examination（ページ構成の由来。CSSは元々Tailwind CSS v4 + daisyUI 5だったが、標準構成をBootstrap 5.3へ変更した。examination自体への遡及適用は未実施） |
 | 単一パッケージ・TypeScript | React 19 + Vite + TypeScript、CSSフレームワーク不使用、Zustand状態管理 | `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」 | shock-lab |
 | Next.jsモノレポ | Next.js（App Router、`output: 'export'`静的書き出し）+ Tailwind CSS v4、npm workspaces | `docs/nextjs-static-lambda-pattern.md` | Electric-Chair-Arena |
 
@@ -88,7 +88,7 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 2. **「1. フロントエンド」からパターンを選び雛形を用意**
 
-   - ページごと独立ビルド（daisyUI/Tailwind）: `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す
+   - ページごと独立ビルド（Bootstrap）: `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す
    - 単一パッケージ・TypeScript（CSSフレームワーク無し）: `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿ってゼロから構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）
    - Next.jsモノレポ: `docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意、npm workspacesの構成）に沿って構築する
 
@@ -115,6 +115,6 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 上記に当てはまらない個別の技術判断（特定の外部API連携の設計、プロダクト固有のドメインロジック等）は、この標準スタックの対象外。プロダクトごとの`infra/README.md`・`CLAUDE.md`（プロジェクト固有ルール）に記載する。
 
-フロントエンドのUIフレームワーク・デザインシステムの選択（本ドキュメントのテンプレートはTailwind CSS v4 + daisyUI 5が前提だが、Bootstrap等の他フレームワークを使うプロダクトも存在する）も本ドキュメントの対象外。バックエンド・認証・CI/CDの各パターンはUIフレームワークの選択と独立しており、どの組み合わせでも適用できる。
+「ページごとに独立ビルド」パターンのCSSフレームワークはBootstrap 5.3を標準構成とする（`shared/ui/bootstrap-theme.css`によるダークモード対応込み）が、既存プロダクトの中にはこれと異なるUIフレームワーク・デザインシステムを使うものも存在する（examination・Next.jsモノレポパターン等はTailwind CSS v4、単一パッケージ・TypeScriptパターンはCSSフレームワーク不使用）。これらの個別事情への対応は本ドキュメントの対象外。バックエンド・認証・CI/CDの各パターンはUIフレームワークの選択と独立しており、どの組み合わせでも適用できる。
 
 新しいプロダクトで得られた知見が複数プロダクトへ再利用できると判断した場合は、既存ドキュメントへの追記または新規ドキュメント追加を検討し、本ドキュメントの一覧へ追加する。
