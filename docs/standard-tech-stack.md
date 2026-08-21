@@ -11,7 +11,7 @@
 | ログイン | バックエンドAPI | 採用する構成 |
 |---|---|---|
 | 必要（閲覧自体を保護） | 任意 | 「2. ログイン」のサイト全体保護構成（`serverless-static-site-pattern.md`）。別オリジンのバックエンドAPIが必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照 |
-| 不要（誰でも閲覧可） | 必要（API呼び出し単位で認証） | 「2. ログイン」のAPI単位保護構成（`lambda-api-firebase-auth-pattern.md`） |
+| 不要（誰でも閲覧可） | 必要（API呼び出し単位で認証） | 「2. ログイン」のAPI単位保護構成（`lambda-api-firebase-auth-pattern.md`または`serverless-api-dynamodb-pattern.md`） |
 | 不要 | 必要（認証不要な公開API） | 「3. バックエンドAPI」の`nextjs-static-lambda-pattern.md`構成（REST APIのみ）または`serverless-spa-pattern.md`構成（WebSocketによるリアルタイム双方向通信も必要な場合） |
 | 不要 | 不要 | バックエンド・認証系の節はいずれも採用しない。「1. フロントエンド」＋「4. ホスティング」（GitHub Pages直接デプロイ）のみで完結する |
 
@@ -39,7 +39,8 @@
 | 保護単位 | 標準構成 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|---|
 | サイト全体（閲覧自体に認証を要求） | S3 + CloudFront + Cognito(Google) + Lambda@Edge、Serverless Framework v3（OSS版） | `docs/serverless-static-site-pattern.md` | examination |
-| API単位（フロントは誰でも閲覧可） | Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | `docs/lambda-api-firebase-auth-pattern.md` | uchi-stock |
+| API単位（フロントは誰でも閲覧可、Firebase Authenticationを使う場合） | Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | `docs/lambda-api-firebase-auth-pattern.md` | uchi-stock |
+| API単位（フロントは誰でも閲覧可、Cognito/Firebaseを使わない場合） | Google OAuthのIDトークンをバックエンドで直接検証 + API Gateway + Lambda（単一関数、内部ルーティング）+ DynamoDB + AWS SAM | `docs/serverless-api-dynamodb-pattern.md` | Camp-Stock |
 
 認証まわりの個別パターン（採用した保護単位に応じて任意で組み合わせる）: ログインCSRF対策（`docs/oauth-csrf-nonce-pattern.md`）、別オリジンAPIへの短命トークン認証（`docs/short-lived-bearer-token-pattern.md`）、日次利用回数の上限（`docs/daily-rate-limit-pattern.md`）。
 
@@ -52,7 +53,8 @@
 | 前提 | 標準構成 |
 |---|---|
 | サイト全体ログインと一体（別オリジンAPI） | 「2. ログイン」の`serverless-static-site-pattern.md`「別オリジンのバックエンドAPIが必要な場合」＋`docs/short-lived-bearer-token-pattern.md` |
-| API単位認証と一体 | 「2. ログイン」の`lambda-api-firebase-auth-pattern.md`（Firebase Authentication + API Gateway + Lambda(OSLS) + DynamoDB） |
+| API単位認証と一体（Firebase Authentication） | 「2. ログイン」の`lambda-api-firebase-auth-pattern.md`（Firebase Authentication + API Gateway + Lambda(OSLS) + DynamoDB） |
+| API単位認証と一体（Google IDトークン直接検証） | 「2. ログイン」の`serverless-api-dynamodb-pattern.md`（API Gateway + Lambda + DynamoDB + AWS SAM、独自のバックエンドAPI業務ロジックを持つ場合向け） |
 | ログイン不要・REST APIのみ（誰でも呼び出し可） | AWS Lambda + API Gateway（HTTP API）+ DynamoDB、OSLS（Serverless Framework v3互換の軽量フォーク）。詳細は`docs/nextjs-static-lambda-pattern.md` |
 | ログイン不要・WebSocketによるリアルタイム双方向通信も必要 | Serverless Framework（osls）+ Lambda + DynamoDB + API Gateway REST/WebSocket。単一SPAフロントエンド（上記「1. フロントエンド」の単一SPAパターン）と一体で構築する。詳細は`docs/serverless-spa-pattern.md` |
 
@@ -102,7 +104,9 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 4. **「2. ログイン」が必要な場合、保護単位に応じて構成を導入**（不要なら本手順自体をスキップ）
 
    - サイト全体をログイン必須にする場合: `docs/serverless-static-site-pattern.md`に沿って`auth-stack`（Cognito）・`site-stack`（S3+CloudFront+Lambda@Edge）を構築する。別バックエンドAPI（LINE bot・外部AI連携等）が必要な場合は同ドキュメントの「別オリジンのバックエンドAPIが必要な場合」を参照し、`docs/short-lived-bearer-token-pattern.md`で接続する
-   - フロントエンドは誰でも閲覧でき、API呼び出し単位で認証する場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
+   - フロントエンドは誰でも閲覧でき、API呼び出し単位で認証する場合: どちらの構成にするか選ぶ（後から一方だけを別方式に差し替えるのは手戻りが大きいため、着手前に決める）
+     - Firebase Authenticationを使う場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
+     - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合: `docs/serverless-api-dynamodb-pattern.md`に沿って、API Gateway + Lambda + DynamoDB + AWS SAMの単一スタック構成を構築する。Google IDトークンをバックエンドで直接検証する
 
 5. **「3. バックエンドAPI」が必要な場合、前提に応じて構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
