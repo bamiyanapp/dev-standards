@@ -9,7 +9,7 @@ examination由来の構成（サイト全体ログイン必須、`docs/serverles
 - 単一`frontend/`パッケージ（React 19 + Vite + **TypeScript**）。`reusable-ci.yml`の`packages`入力で`[{"dir":"frontend","build":true}]`のように指定する（`docs/cicd-pipeline-specification.md`参照）
 - バックエンドAPI・認証基盤（Cognito等）は無し。データはすべてクライアント側（メモリ・URLクエリパラメータ・localStorage）で完結する
 - **GitHub Pagesのプロジェクトページ（`https://<owner>.github.io/<repo>/`）へ直接デプロイ**する。S3/CloudFront/Lambda@Edgeは不要。`.github/actions/deploy-github-pages`複合actionを`cd.yml`の`deploy` jobから呼び出す
-- daisyUI/Tailwindは前提としない（プレーンなCSS変数＋インラインstyleでも成立する）。既存の`templates/vite-react-app/`（daisyUI 5＋Tailwind v4前提）をそのまま流用せず、後述の設定を手動で構築する
+- Bootstrap等のCSSフレームワークは前提としない（プレーンなCSS変数＋インラインstyleでも成立する）。既存の`templates/vite-react-app/`（Bootstrap 5.3前提）をそのまま流用せず、後述の設定を手動で構築する
 
 ## GitHub Pagesデプロイの要点
 
