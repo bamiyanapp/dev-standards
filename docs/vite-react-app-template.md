@@ -1,6 +1,6 @@
 # 独立ビルドReactアプリのスキャフォールドテンプレート（`templates/vite-react-app/`）
 
-「ページごとに独立ビルドのReact（Vite）アプリ」という構成（examinationの`app/top`・`app/mock-interviews`等）を新規に増やす際の雛形。Vite・React 19・daisyUI 5・Tailwind v4・vitest・Testing Library・oxlintという同一のツール構成をゼロから手で再現する手間を省く。
+「ページごとに独立ビルドのReact（Vite）アプリ」という構成（examinationの`app/top`・`app/mock-interviews`等）を新規に増やす際の雛形。Vite・React 19・Bootstrap 5.3・vitest・Testing Library・oxlintという同一のツール構成をゼロから手で再現する手間を省く。ダークモード対応等のBootstrap向け共通テーマは`docs/shared-ui-components.md`の`shared/ui/bootstrap-theme.css`を別途組み合わせる。
 
 `examination#78`のように、MkDocs等の静的サイトの一部ページだけをReactアプリへ段階移行する構成、あるいは複数の独立ページを持つプロダクト全体を最初からこの構成で作る場合のどちらにも使える。
 

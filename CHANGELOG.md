@@ -1,3 +1,10 @@
+# [2.4.0](https://github.com/bamiyanapp/dev-standards/compare/v2.3.0...v2.4.0) (2026-08-21)
+
+
+### Features
+
+* **templates:** 独立ビルドReactアプリの雛形をTailwind+daisyUIからBootstrapへ変更 ([#273](https://github.com/bamiyanapp/dev-standards/issues/273)) ([d719672](https://github.com/bamiyanapp/dev-standards/commit/d7196724d8db8315ad51aaf08d04507b2484ee79))
+
 # [2.3.0](https://github.com/bamiyanapp/dev-standards/compare/v2.2.0...v2.3.0) (2026-08-16)
 
 
