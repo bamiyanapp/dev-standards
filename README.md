@@ -2,9 +2,39 @@
 
 複数リポジトリで共有する開発ルール・設定の共通化リポジトリ。
 
+## ドキュメント目次（`docs/`）
+
+新規プロジェクトを最短で始めたい場合は、まず[`docs/standard-tech-stack.md`](docs/standard-tech-stack.md)（索引・クイックスタート手順）を参照する。以下は`docs/`配下の全ドキュメント一覧。
+
+**新規ドキュメントを`docs/`へ追加した場合は、この一覧にも追記すること。**
+
+- 索引
+  - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
+- フロントエンド
+  - [`vite-react-app-template.md`](docs/vite-react-app-template.md): 独立ビルドReactアプリ（Vite）のスキャフォールドテンプレート
+  - [`shared-ui-components.md`](docs/shared-ui-components.md): 横断的UIコンポーネントのsymlink共有（`shared/ui/`・`shared/pwa/`）
+  - [`frontend-ui-conventions.md`](docs/frontend-ui-conventions.md): 共通フォント・トップページ必須表示項目等のUI規約
+  - [`pwa-initial-loading-indicator.md`](docs/pwa-initial-loading-indicator.md): PWA起動時の白画面対策
+  - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
+  - [`service-worker-update-pattern.md`](docs/service-worker-update-pattern.md): Service Workerのキャッシュ更新・反映パターン
+- インフラ・認証
+  - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md): S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成
+  - [`lambda-api-firebase-auth-pattern.md`](docs/lambda-api-firebase-auth-pattern.md): Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBのバックエンドAPI構成
+  - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）
+  - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理）
+  - [`short-lived-bearer-token-pattern.md`](docs/short-lived-bearer-token-pattern.md): 別オリジンバックエンドAPIへの短命Bearerトークン認証
+  - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
+- バックエンド実装パターン
+  - [`https-response-buffer-encoding-pattern.md`](docs/https-response-buffer-encoding-pattern.md): `https.request`のレスポンスボディ文字化け対策
+  - [`llm-dual-format-response-pattern.md`](docs/llm-dual-format-response-pattern.md): LLM APIのdual-format JSON応答・パース救済
+  - [`deterministic-seed-id-pattern.md`](docs/deterministic-seed-id-pattern.md): 静的コンテンツのDynamoDB冪等同期（決定的ID）
+  - [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
+- CI/CD・運用
+  - [`cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md): `reusable-ci.yml` / `reusable-cd.yml`の仕様
+  - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
+
 ## 含まれるもの
 
-- `docs/standard-tech-stack.md`: 新規プロジェクトを最短で始めるための標準技術スタック索引・クイックスタート手順。個々の技術要素の詳細は下記の各ドキュメント・雛形を参照
 - `CLAUDE.md`: Claude Codeの汎用開発ルール（ブランチ戦略・静的チェック・コードレビュー観点・コミット規約・完了条件など）
 - `.clinerules/`: Cline向けルールファイル（実体はすべてCLAUDE.md・skillsを参照するポインタ）
 - `.claude/skills/`: CLAUDE.mdから呼び出す共通Skill一式。新規Skillを追加した場合は本README・参照側リポジトリのシンボリックリンク双方を更新すること。
