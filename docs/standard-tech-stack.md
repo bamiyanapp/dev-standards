@@ -1,17 +1,18 @@
 # 標準技術スタック（新規プロジェクトのクイックスタート）
 
-新しいプロダクトを立ち上げる際、ゼロから技術選定・雛形作成をせずに最短で始められるよう、検証済みの構成を「標準スタック」としてまとめる。個々の要素は既にdev-standards配下に個別ドキュメント・雛形として存在するため、本ドキュメントはそれらを一望できる索引と、着手手順のチェックリストを兼ねる。
+新しいプロダクトを立ち上げる際、ゼロから技術選定・雛形作成をせずに最短で始められるよう、実プロダクトで検証済みの構成を「標準スタック」としてまとめる。個々の要素は既にdev-standards配下に個別ドキュメント・雛形として存在するため、本ドキュメントはそれらを一望できる索引と、着手手順のチェックリストを兼ねる。
 
-対象は、いずれも小規模なWebプロダクト（大規模スケールは想定しない）。現在、要件に応じて選べる2つの検証済みスタックがある。
+対象は、いずれも小規模なWebプロダクト（大規模スケールは想定しない）。現在、要件に応じて選べる3つの検証済みスタックがある。
 
-| | スタックA（examination） | スタックB（Electric-Chair-Arena） |
-|---|---|---|
-| ログイン | 必要（Google OAuth、家族・チーム等の限定公開） | 不要（不特定多数への公開可） |
-| フロントエンド | React 19 + Vite、ページごとに独立ビルド | Next.js、npm workspacesモノレポ |
-| ホスティング | S3 + CloudFront + Cognito + Lambda@Edge | GitHub Pages |
-| 詳細 | 本ドキュメントの以下「スタック一覧」・`docs/serverless-static-site-pattern.md` | `docs/nextjs-static-lambda-pattern.md` |
+| | スタックA（examination） | スタックB（Electric-Chair-Arena） | スタックC（shock-lab） |
+|---|---|---|---|
+| ログイン | 必要（Google OAuth、家族・チーム等の限定公開） | 不要（不特定多数への公開可） | 不要（不特定多数への公開可） |
+| バックエンドAPI | あり（Lambda@Edge） | あり（Lambda + DynamoDB） | 無し（完全にクライアント内で完結） |
+| フロントエンド | React 19 + Vite、ページごとに独立ビルド | Next.js、npm workspacesモノレポ | React 19 + Vite + TypeScript、単一パッケージ |
+| ホスティング | S3 + CloudFront + Cognito + Lambda@Edge | GitHub Pages | GitHub Pages |
+| 詳細 | 本ドキュメントの以下「スタック一覧」・`docs/serverless-static-site-pattern.md` | `docs/nextjs-static-lambda-pattern.md` | `docs/client-only-vite-spa-pattern.md` |
 
-迷ったら「ログインが必要か」で選ぶ。ログイン不要な小規模プロダクトはスタックBの方がインフラ構成・運用コストともに軽量。
+迷ったら「ログインが必要か」「バックエンドAPIが必要か」で選ぶ。ログイン不要ならスタックB・Cを検討し、さらにバックエンドAPIも不要（ブラウザ内で完結するツール・シミュレータ等）ならスタックCの方がインフラ構成・運用コストともに最も軽量。
 
 ## スタックA一覧（examination、ログインあり）
 
@@ -44,9 +45,21 @@
 | CI/CD | reusable-ci.yml（lint/test/e2e/build/自動マージ）。semantic-release運用は必須ではない | `docs/cicd-pipeline-specification.md`、`docs/nextjs-static-lambda-pattern.md` |
 | コミット規約・開発フロー | スタックAと共通（Conventional Commits、Issue駆動） | リポジトリルート`commitlint.config.cjs`・`CLAUDE.md`、`.claude/skills/` |
 
+## スタックC一覧（shock-lab、ログイン不要・バックエンドAPI不要）
+
+| レイヤー | 技術 | 詳細ドキュメント |
+|---|---|---|
+| フロントエンド | React 19 + Vite + **TypeScript**、単一`frontend/`パッケージ。daisyUI/Tailwind不使用 | `docs/client-only-vite-spa-pattern.md` |
+| 状態管理 | Zustand | `docs/client-only-vite-spa-pattern.md` |
+| テスト | vitest + Testing Library（Canvas等のモック手法・クリップボードテストの落とし穴を含む）、oxlint（lint） | `docs/client-only-vite-spa-pattern.md` |
+| インフラ | GitHub Pagesのプロジェクトページへ直接デプロイ（S3/CloudFront/認証基盤不要、バックエンドAPIも無し） | `docs/client-only-vite-spa-pattern.md` |
+| PWA | 初期ローディング表示、Service Workerの更新反映パターン（サブパス配信時の注意点あり） | `docs/pwa-initial-loading-indicator.md`、`docs/service-worker-update-pattern.md`、`docs/client-only-vite-spa-pattern.md` |
+| CI/CD | reusable-ci.yml + reusable-cd.yml（GitHub Pagesデプロイ向け構成例） | `docs/cicd-pipeline-specification.md`、`docs/client-only-vite-spa-pattern.md` |
+| コミット規約・開発フロー | スタックAと共通 | 上表参照 |
+
 ## 新規プロジェクトの立ち上げ手順（最短ルート、スタックA）
 
-以下はスタックA（examination、ログインあり）向けの手順。スタックB（ログイン不要）を選ぶ場合は、手順1・6は共通、手順2〜5を`docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意・npm workspacesの構成・`deploy-github-pages`/`deploy-serverless`複合actionを使ったCI/CD呼び出し）へ読み替える。
+以下はスタックA（examination、ログインあり）向けの手順。スタックB（Electric-Chair-Arena、ログイン不要・バックエンドAPIあり）を選ぶ場合は、手順1・6は共通、手順2〜5を`docs/nextjs-static-lambda-pattern.md`の内容（Next.jsアプリの用意・npm workspacesの構成・`deploy-github-pages`/`deploy-serverless`複合actionを使ったCI/CD呼び出し）へ読み替える。スタックC（shock-lab、ログイン不要・バックエンドAPIも不要）を選ぶ場合は、手順1・6は共通、手順2〜5を`docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」の内容へ読み替える。
 
 1. **リポジトリ作成・dev-standardsの取り込み**
 
@@ -57,15 +70,16 @@
 
    `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（README.md「利用方法」参照）。
 
-2. **フロントエンドアプリの雛形をコピー**（ページごとに独立ビルドする構成にする場合）
+2. **フロントエンドアプリの雛形を用意**
 
-   `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す。
+   - スタックA（ページごとに独立ビルド、daisyUI/Tailwind）: `docs/vite-react-app-template.md`の手順で`templates/vite-react-app/`をコピーし、プレースホルダを置換する。複数ページを持つ場合はページごとにこれを繰り返す
+   - スタックC（TypeScript、単一パッケージ、CSSフレームワーク無し）: `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿ってゼロから構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）
 
 3. **横断的UIコンポーネント・PWAパターンの適用**
 
-   ナビゲーション・共有ボタン・共通フォント・初期ローディング表示・Service Worker更新通知等が必要なら、`sync-manifest.local.json`へエントリを追加し`node dev-standards/scripts/bootstrap.js`を再実行する（`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`参照）。
+   ナビゲーション・共有ボタン・共通フォント・初期ローディング表示・Service Worker更新通知等が必要なら、`sync-manifest.local.json`へエントリを追加し`node dev-standards/scripts/bootstrap.js`を再実行する（`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`参照）。スタックC（TypeScriptプロジェクト）へ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
 
-4. **ログインが必要な場合はインフラ構成を導入**
+4. **ログイン・バックエンドAPIが必要な場合はインフラ構成を導入**（スタックAのみ。スタックCはこの手順自体が不要）
 
    どちらの認証モデルが適するかで構成を選ぶ。
 
@@ -74,7 +88,7 @@
 
 5. **CI/CDの有効化**
 
-   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`packages`入力（ページごとに独立ビルドする構成の場合）・`enable_release`（semantic-release運用する場合）等、プロダクトに応じた入力を選ぶ。
+   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`packages`入力（ページごとに独立ビルドする構成の場合）・`enable_release`（semantic-release運用する場合）等、プロダクトに応じた入力を選ぶ。スタックCのデプロイ（GitHub Pages）構成例は`docs/client-only-vite-spa-pattern.md`「CI/CDの構成例」参照。
 
 6. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
 
