@@ -20,7 +20,7 @@
 - インフラ・認証
   - [`static-hosting-pattern.md`](docs/static-hosting-pattern.md): S3 + CloudFrontによる静的サイト配信構成（標準ホスティング）
   - [`lambda-api-firebase-auth-pattern.md`](docs/lambda-api-firebase-auth-pattern.md): Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBのバックエンドAPI構成
-  - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証 + API Gateway/Lambda + DynamoDB + AWS SAMのバックエンドAPI構成
+  - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証の認証ロジック（デプロイツール自体はAWS SAMの実装例、標準はOSLS）
   - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
   - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
   - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）

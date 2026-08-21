@@ -23,18 +23,17 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 | 標準構成 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|
 | Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | `docs/lambda-api-firebase-auth-pattern.md` | uchi-stock |
-| Google OAuthのIDトークンをバックエンドで直接検証 + API Gateway + Lambda + DynamoDB + AWS SAM | `docs/serverless-api-dynamodb-pattern.md` | Camp-Stock |
+| Google OAuthのIDトークンをバックエンドで直接検証 + API Gateway + Lambda（OSLS）+ DynamoDB（「3. バックエンドAPI」の標準構成と組み合わせる） | 認証ロジックは`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」を参照（同ドキュメントの実装例自体はAWS SAMだが、認証ロジック自体はデプロイツールと独立している） | Camp-Stock |
 
 サイトの閲覧自体（トップページ含め）を非公開にしたい場合は標準構成の対象外。`docs/serverless-static-site-pattern.md`（Cognito + Lambda@Edgeによる全リクエスト認証ゲート）を個別に検討する。
 
 ## 3. バックエンドAPI: 必要な場合のみ採用
 
-バックエンドAPIが不要なプロダクトは本節を採用せず、フロントエンドのみで完結させる。標準構成は、フロントエンド配信を分離するかどうかで選ぶ（ログインの有無・方式とは独立に選べる。「2. ログイン」の各構成はどちらの基盤でも組み合わせられる）。
+バックエンドAPIが不要なプロダクトは本節を採用せず、フロントエンドのみで完結させる。標準構成はOSLS + Lambda + API Gateway + DynamoDBの1つ（ログインの有無・方式とは独立に使える。「2. ログイン」の各構成はどちらもこの基盤と組み合わせられる）。ホスティング（S3 + CloudFront、「4. ホスティング」）とは別スタックとしてデプロイする。
 
 | 標準構成 | 詳細ドキュメント |
 |---|---|
-| OSLS + Lambda + API Gateway + DynamoDB（REST）。WebSocketによるリアルタイム双方向通信が必要な場合は、同じOSLSサービス内にAPI Gateway WebSocket APIを追加する | 基本構成: `docs/nextjs-static-lambda-pattern.md`「全体構成」のバックエンド部分。WebSocket追加: `docs/serverless-spa-pattern.md`「バックエンド」。Firebase Authenticationとの組み合わせ実装例: `docs/lambda-api-firebase-auth-pattern.md` |
-| AWS SAM（フロントエンド配信も同一テンプレートで一体管理したい場合） | `docs/serverless-api-dynamodb-pattern.md`。Google IDトークン直接検証との組み合わせ実装例 |
+| OSLS + Lambda + API Gateway + DynamoDB（REST）。WebSocketによるリアルタイム双方向通信が必要な場合は、同じOSLSサービス内にAPI Gateway WebSocket APIを追加する | 基本構成: `docs/nextjs-static-lambda-pattern.md`「全体構成」のバックエンド部分。WebSocket追加: `docs/serverless-spa-pattern.md`「バックエンド」。Firebase Authenticationとの組み合わせ実装例: `docs/lambda-api-firebase-auth-pattern.md`。Google IDトークン直接検証との組み合わせ（認証ロジックのみ）: `docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」 |
 
 バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）: Node.js `https.request`のレスポンスボディ文字化け対策（`docs/https-response-buffer-encoding-pattern.md`）、LLM APIのdual-format JSON応答（`docs/llm-dual-format-response-pattern.md`）、静的コンテンツのDynamoDB冪等同期（`docs/deterministic-seed-id-pattern.md`）、実認証情報の無いサンドボックスからの本番データ調査・修正（`docs/sandboxed-agent-production-data-pattern.md`）、日次利用回数の上限（`docs/daily-rate-limit-pattern.md`）。
 
@@ -76,7 +75,7 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 4. **「2. ログイン」が必要な場合、標準構成を導入**（不要なら本手順自体をスキップ）
 
    - Firebase Authenticationを使う場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
-   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合: `docs/serverless-api-dynamodb-pattern.md`に沿って、API Gateway + Lambda + DynamoDB + AWS SAMの単一スタック構成を構築する。Google IDトークンをバックエンドで直接検証する
+   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合: 手順5の「3. バックエンドAPI」標準構成（OSLS）を構築した上で、`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」に沿ってGoogle IDトークンをバックエンドで直接検証するミドルウェアを追加する
 
 5. **「3. バックエンドAPI」が必要な場合、標準構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 

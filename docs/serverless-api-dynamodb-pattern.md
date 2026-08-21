@@ -1,8 +1,8 @@
 # サーバーレスAPI構成パターン（API Gateway + Lambda + DynamoDB + SAM）
 
-Cognitoを使わず、Google OAuthのIDトークンをバックエンドで直接検証する、より小規模なプロダクト向けの構成。Camp-Stock（[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)）で検証済み。
+**デプロイツール（AWS SAM）自体は標準索引（`docs/standard-tech-stack.md`）からは外れた構成。** 標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節のGoogle IDトークン直接検証ロジック自体はデプロイツールと独立**しており、OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効（`docs/standard-tech-stack.md`「2. ログイン」参照）。
 
-Cognito + Lambda@Edge + Serverless Frameworkの構成（`docs/serverless-static-site-pattern.md`）との使い分けは「新規プロジェクトの立ち上げ手順」（`docs/standard-tech-stack.md`）を参照。目安としては、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つプロダクトは本パターン、静的サイト＋外部AI連携等の薄いAPIで済むプロダクトはCognit構成、が選びやすい。
+Cognitoを使わず、Google OAuthのIDトークンをバックエンドで直接検証する、より小規模なプロダクト向けの構成。Camp-Stock（[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)）で検証済み。
 
 ## アーキテクチャ
 
