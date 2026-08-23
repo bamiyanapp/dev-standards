@@ -1,3 +1,10 @@
+## [2.4.1](https://github.com/bamiyanapp/dev-standards/compare/v2.4.0...v2.4.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **shared/pwa:** 認証セッション依存の同一オリジンAPIをキャッシュ対象から除外する ([#285](https://github.com/bamiyanapp/dev-standards/issues/285)) ([fc451f6](https://github.com/bamiyanapp/dev-standards/commit/fc451f6f7f8c56730f1092bf6d4922410c1ac61a)), closes [#284](https://github.com/bamiyanapp/dev-standards/issues/284)
+
 # [2.4.0](https://github.com/bamiyanapp/dev-standards/compare/v2.3.0...v2.4.0) (2026-08-21)
 
 
