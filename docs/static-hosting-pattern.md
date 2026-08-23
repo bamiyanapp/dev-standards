@@ -33,6 +33,19 @@ aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "
 
 `cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できるが、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離し、`workspaces`構成のCI/CD入力（`docs/cicd-pipeline-specification.md`参照）でそれぞれデプロイする。
 
+### semantic-release後のcheckoutタイミングに関する注意
+
+`deploy` jobは通常、semantic-releaseを実行する`cd` jobの完了を`needs`で待つ。この`deploy` job自身の`actions/checkout`ステップで`ref`を明示しない場合、デフォルトではワークフローをトリガーしたpush時点のコミット（`github.sha`）がチェックアウトされる。一方、semantic-releaseはそのpushの**後**に「chore(release): X.Y.Z」というバージョン更新コミットを作成・pushするため、`deploy` jobの`needs`はジョブの完了順序を保証するだけで、`Checkout`ステップが取得する内容までは新しくしない。
+
+`package.json`のversionをビルド時に埋め込んで画面表示するなど、リリース後の状態に依存するビルドを行う場合、この差分により表示バージョンが実際のリリースより常に1つ古くなる不具合が起こりうる（`uchi-stock/kingyo` issue #127で発生）。該当する場合は`deploy` jobの`Checkout`ステップに`ref: main`（デフォルトブランチ名）を明示し、semantic-releaseのバージョン更新コミット後の最新状態を取得し直すこと。
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v7
+  with:
+    ref: main
+```
+
 ## 必要なGitHub Secrets / Variablesの例
 
 | 名前 | 用途 |
