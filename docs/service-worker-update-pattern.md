@@ -28,6 +28,12 @@ self.SW_CONFIG = {
   precacheUrls: ["/", "/about/"],
   // Stale-While-Revalidateでキャッシュするバックエンド API のホスト名一覧
   apiHostnames: ["xxxxxxxxxx.execute-api.us-east-1.amazonaws.com"],
+  // （任意、既定[]）Cookie等の認証セッションに依存し、レスポンスがアカウントごとに
+  // 変わる同一オリジンAPIのパスprefix一覧。Cache StorageのキーはURLのみでCookieを
+  // 考慮しないため、通常のキャッシュ対象に含めると別アカウントへの切り替え後も
+  // 前のアカウントのレスポンスを返し続けてしまう（bamiyanapp/dev-standards#284）。
+  // 該当パスはキャッシュ対象から完全に除外し、常にネットワークへ直接流す
+  noCacheSameOriginPrefixes: ["/_"],
 };
 ```
 

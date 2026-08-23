@@ -196,6 +196,50 @@ test("fetch event routes a same-origin navigation through network-first into the
   assert.ok(sandbox.caches._stores.get("pwa-static-v1").has("https://example.test/education/"));
 });
 
+test("fetch event bypasses the cache entirely for same-origin paths matching noCacheSameOriginPrefixes", async () => {
+  let networkCallCount = 0;
+  const fetchImpl = async () => {
+    networkCallCount += 1;
+    return { ok: true, clone: () => ({ ok: true }) };
+  };
+  const { sandbox, listeners } = makeSandbox({
+    config: { cacheVersion: "v1", precacheUrls: [], apiHostnames: [], noCacheSameOriginPrefixes: ["/_"] },
+    fetchImpl,
+  });
+
+  let responded = false;
+  listeners.fetch({
+    request: { method: "GET", url: "https://example.test/_me", mode: "same-origin" },
+    respondWith: () => {
+      responded = true;
+    },
+  });
+
+  // event.respondWithが呼ばれない（ブラウザの通常のfetchに委ねる、SW側では何もしない）ことを検証する
+  assert.equal(responded, false);
+  assert.equal(networkCallCount, 0);
+  assert.equal(sandbox.caches._stores.has("pwa-static-v1"), false);
+});
+
+test("fetch event still applies stale-while-revalidate to same-origin paths not matching noCacheSameOriginPrefixes", async () => {
+  const fetchImpl = async () => ({ ok: true, clone: () => ({ ok: true }) });
+  const { sandbox, listeners } = makeSandbox({
+    config: { cacheVersion: "v1", precacheUrls: [], apiHostnames: [], noCacheSameOriginPrefixes: ["/_"] },
+    fetchImpl,
+  });
+
+  let respondedPromise;
+  listeners.fetch({
+    request: { method: "GET", url: "https://example.test/assets/app.js", mode: "same-origin" },
+    respondWith: (promise) => {
+      respondedPromise = promise;
+    },
+  });
+  await respondedPromise;
+
+  assert.ok(sandbox.caches._stores.get("pwa-static-v1").has("https://example.test/assets/app.js"));
+});
+
 test("fetch event ignores cross-origin requests to hosts not listed in apiHostnames", () => {
   const fetchImpl = async () => ({ ok: true, clone: () => ({ ok: true }) });
   const { listeners } = makeSandbox({
