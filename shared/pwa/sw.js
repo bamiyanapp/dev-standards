@@ -14,10 +14,18 @@
 //     precacheUrls: string[], // インストール時に先読みキャッシュするページ一覧
 //     apiHostnames: string[], // Stale-While-Revalidateでキャッシュするバックエンド
 //                             // APIのホスト名一覧（同一オリジンでない別ホストのAPI）
+//     noCacheSameOriginPrefixes: string[], // （任意、既定[]）Cookie等の認証セッションに
+//                             // 依存し、レスポンスがアカウントごとに変わる同一オリジンAPI
+//                             // のパスprefix一覧。Cache StorageのキーはURLのみでCookieを
+//                             // 考慮しないため、通常のStale-While-Revalidate対象に含めると
+//                             // 別アカウントへの切り替え後も前のアカウントのレスポンスを
+//                             // 返し続けてしまう。ここに列挙したprefixに一致する同一オリジン
+//                             // GETはキャッシュ対象から完全に除外し、常にネットワークへ
+//                             // 直接流す
 //   };
 importScripts("./sw-config.js");
 
-const { cacheVersion, precacheUrls, apiHostnames } = self.SW_CONFIG;
+const { cacheVersion, precacheUrls, apiHostnames, noCacheSameOriginPrefixes = [] } = self.SW_CONFIG;
 const STATIC_CACHE = `pwa-static-${cacheVersion}`;
 const API_CACHE = `pwa-api-${cacheVersion}`;
 const CURRENT_CACHES = [STATIC_CACHE, API_CACHE];
@@ -105,6 +113,13 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.origin === self.location.origin) {
+    // 認証セッション（Cookie）に依存し、アカウントごとにレスポンスが変わる同一オリジン
+    // APIはキャッシュ対象から除外する。event.respondWithを呼ばずreturnすることで、
+    // ブラウザの通常のfetch処理（キャッシュを介さない）に委ねる
+    if (noCacheSameOriginPrefixes.some((prefix) => url.pathname.startsWith(prefix))) {
+      return;
+    }
+
     // request.modeが"navigate"のリクエストはページ本体そのもの（URL直接入力・
     // リンククリック等によるフルページ遷移）を指す標準的な判定方法。それ以外の
     // 同一オリジンGET（ハッシュ付きJS/CSS等のサブリソース）はStale-While-Revalidateのまま
