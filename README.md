@@ -11,13 +11,13 @@
 | アプリ名 | アプリのリンク | Gitプロジェクトのリンク |
 |---|---|---|
 | karuta | [bamiyanapp.github.io/karuta](https://bamiyanapp.github.io/karuta/) | [bamiyanapp/karuta](https://github.com/bamiyanapp/karuta) |
-| Camp-Stock（キャンプ道具管理アプリ） | - †1 | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) |
+| Camp-Stock（キャンプ道具管理アプリ） | [d2mfi7ve53o8zl.cloudfront.net](https://d2mfi7ve53o8zl.cloudfront.net/) †1 | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) |
 | examination（小学校受験対策ナレッジベース） | [d3b80dryg4uis7.cloudfront.net](https://d3b80dryg4uis7.cloudfront.net/) †2 | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) |
 | uchi-stock（家庭用品在庫管理アプリ） | [bamiyanapp.github.io/uchi-stock](https://bamiyanapp.github.io/uchi-stock/) | [bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock) |
 | kingyo（金魚すくい体験アプリ） | [dmuxvf1bg8ldn.cloudfront.net](https://dmuxvf1bg8ldn.cloudfront.net/) †3 | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
 | Electric-Chair-Arena（電気イスゲームAI対戦） | [bamiyanapp.github.io/Electric-Chair-Arena](https://bamiyanapp.github.io/Electric-Chair-Arena/) | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) |
 
-†1: `cd.yml`実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的な確認だけでは固定URLを特定できない（実際の値はデプロイ完了時のJob Summaryに出力される）。加えてGoogle OAuthログインで保護された家族限定利用のため、一般公開の入り口として案内する性質のものでもない（以後のセッションが誤って再調査を繰り返さないよう明記する）
+†1: `cd.yml`実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的な確認だけでは固定URLを特定できない（`cd`ワークフロー実行ログ、`Deploy to AWS` jobのJob Summary出力から確認済み）。Google OAuthログインで保護された利用だが、ユーザー（プロダクト所有者）の判断により、他者に使われること・それに伴うクラウド利用費増加を許容し、参考情報として掲載する（メールアドレスの許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）
 †2: examinationも同様にCloudFront配信だが、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、こちらもGoogle OAuthログインで保護された家族限定利用のため、一般公開の入り口としてではなく参考情報として掲載する
 †3: kingyoも同様にCloudFormationのスタック出力から動的に取得する構成のためコードの静的確認だけでは特定できないが、`uchi-stock/kingyo`の`cd`ワークフロー実行ログ（`deploy` jobのJob Summary出力）から実際のドメインを確認済み。ログイン機構は無く全員共通ランキングを扱う仕様（issue #110）のため、examination・Camp-Stockとは異なり一般公開の入り口として案内して問題ない
 
