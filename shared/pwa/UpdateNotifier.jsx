@@ -7,7 +7,11 @@ import { useEffect, useState } from "react";
 // インストールではなく既存バージョンからの切り替わりの場合のみ）controllerchange
 // イベントを「更新」とみなし、再読み込みを促すバナーを表示する。入力中のフォーム等を
 // 妨げないよう、自動的な強制リロードはしない。詳細な経緯・キャッシュ戦略の全体像は
-// docs/service-worker-update-pattern.mdを参照
+// docs/service-worker-update-pattern.mdを参照。
+//
+// クラス名はBootstrap 5.3向け（docs/standard-tech-stack.mdの標準構成、issue #289）。
+// daisyUI構成のプロダクト（examination等）はこのファイルをsymlink共有せず、個別コピーで
+// daisyUIのクラス名に置き換えて管理する（docs/service-worker-update-pattern.md参照）
 export default function UpdateNotifier() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
@@ -29,8 +33,8 @@ export default function UpdateNotifier() {
   if (!updateAvailable) return null;
 
   return (
-    <div className="toast toast-bottom toast-center z-50">
-      <div className="alert alert-info">
+    <div className="position-fixed bottom-0 start-50 translate-middle-x mb-3" style={{ zIndex: 1080 }}>
+      <div className="alert alert-info d-flex align-items-center gap-2 shadow mb-0" role="alert">
         <span>新しいバージョンがあります</span>
         <button type="button" className="btn btn-sm btn-primary" onClick={() => window.location.reload()}>
           更新する
