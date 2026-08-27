@@ -71,7 +71,7 @@ export default function App() {
 }
 ```
 
-`UpdateNotifier.jsx`はdaisyUI（`toast`/`alert`/`btn`）のクラス名を使っている。daisyUIを使っていないプロダクトでは、そのままでもクラス名が無視されるだけで機能上は動作するが、見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意。調整が必要な場合はsymlink化を見送り、コピーして個別管理する）。
+`UpdateNotifier.jsx`は標準構成であるBootstrap 5.3（`alert`/`btn`等）のクラス名を使っている（issue #289）。Bootstrapを使っていないプロダクト（daisyUI構成のexamination等）では、そのままでもクラス名が無視されるだけで機能上は動作するが、見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意。調整が必要な場合はsymlink化を見送り、コピーして個別管理する。examinationはこの方針で個別コピーへ切り替え済み）。
 
 ## 既知の制約・注意点
 
