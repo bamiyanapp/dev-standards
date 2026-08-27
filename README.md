@@ -11,11 +11,15 @@
 | アプリ名 | アプリのリンク | Gitプロジェクトのリンク |
 |---|---|---|
 | karuta | [bamiyanapp.github.io/karuta](https://bamiyanapp.github.io/karuta/) | [bamiyanapp/karuta](https://github.com/bamiyanapp/karuta) |
-| Camp-Stock（キャンプ道具管理アプリ） | - | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) |
-| examination（小学校受験対策ナレッジベース） | [d3b80dryg4uis7.cloudfront.net](https://d3b80dryg4uis7.cloudfront.net/) | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) |
+| Camp-Stock（キャンプ道具管理アプリ） | - †1 | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) |
+| examination（小学校受験対策ナレッジベース） | [d3b80dryg4uis7.cloudfront.net](https://d3b80dryg4uis7.cloudfront.net/) †2 | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) |
 | uchi-stock（家庭用品在庫管理アプリ） | [bamiyanapp.github.io/uchi-stock](https://bamiyanapp.github.io/uchi-stock/) | [bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock) |
-| kingyo（金魚すくい体験アプリ） | - | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
-| Electric-Chair-Arena | [bamiyanapp.github.io/Electric-Chair-Arena](https://bamiyanapp.github.io/Electric-Chair-Arena/) | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) |
+| kingyo（金魚すくい体験アプリ） | - †3 | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
+| Electric-Chair-Arena（電気イスゲームAI対戦） | [bamiyanapp.github.io/Electric-Chair-Arena](https://bamiyanapp.github.io/Electric-Chair-Arena/) | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) |
+
+†1: `cd.yml`実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的な確認だけでは固定URLを特定できない（実際の値はデプロイ完了時のJob Summaryに出力される）。加えてGoogle OAuthログインで保護された家族限定利用のため、一般公開の入り口として案内する性質のものでもない（以後のセッションが誤って再調査を繰り返さないよう明記する）
+†2: examinationも同様にCloudFront配信だが、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、こちらもGoogle OAuthログインで保護された家族限定利用のため、一般公開の入り口としてではなく参考情報として掲載する
+†3: `cd.yml`に`reusable-cd.yml`（リリース検知）のみでデプロイジョブが無く、未デプロイ
 
 ## ドキュメント目次（`docs/`）
 
