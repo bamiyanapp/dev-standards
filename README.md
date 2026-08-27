@@ -14,7 +14,7 @@
 | Camp-Stock（キャンプ道具管理アプリ） | - | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) |
 | examination（小学校受験対策ナレッジベース） | [d3b80dryg4uis7.cloudfront.net](https://d3b80dryg4uis7.cloudfront.net/) | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) |
 | uchi-stock（家庭用品在庫管理アプリ） | [bamiyanapp.github.io/uchi-stock](https://bamiyanapp.github.io/uchi-stock/) | [bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock) |
-| kingyo（金魚すくい体験アプリ） | - | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
+| kingyo（金魚すくい体験アプリ） | [dmuxvf1bg8ldn.cloudfront.net](https://dmuxvf1bg8ldn.cloudfront.net/) | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
 | Electric-Chair-Arena | [bamiyanapp.github.io/Electric-Chair-Arena](https://bamiyanapp.github.io/Electric-Chair-Arena/) | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) |
 
 ## ドキュメント目次（`docs/`）
