@@ -2,6 +2,20 @@
 
 複数リポジトリで共有する開発ルール・設定の共通化リポジトリ。
 
+## アプリ一覧
+
+本リポジトリを参照している各アプリの一覧。参照方法・適用状況等の技術的な登録簿は[`docs/consumer-repositories.md`](docs/consumer-repositories.md)を参照する。
+
+**新しい参照側アプリが増えた場合は、この一覧にも追記すること。**
+
+| アプリ名 | アプリのリンク | Gitプロジェクトのリンク |
+|---|---|---|
+| karuta | - | [bamiyanapp/karuta](https://github.com/bamiyanapp/karuta) |
+| Camp-Stock（キャンプ道具管理アプリ） | - | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) |
+| examination（小学校受験対策ナレッジベース） | - | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) |
+| uchi-stock（家庭用品在庫管理アプリ） | - | [bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock) |
+| kingyo（金魚すくい体験アプリ） | - | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
+
 ## ドキュメント目次（`docs/`）
 
 新規プロジェクトを最短で始めたい場合は、まず[`docs/standard-tech-stack.md`](docs/standard-tech-stack.md)（索引・クイックスタート手順）を参照する。以下は`docs/`配下の全ドキュメント一覧。
