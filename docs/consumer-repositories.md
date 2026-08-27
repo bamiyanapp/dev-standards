@@ -13,8 +13,8 @@ dev-standardsを参照している既知のリポジトリの一覧。`docs/`配
 | [bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock) | submodule + reusable workflow | キャンプ道具管理アプリ |
 | [bamiyanapp/examination](https://github.com/bamiyanapp/examination) | submodule + reusable workflow | 家族向けナレッジベース（小学校受験対策）。`app/`配下の複数React（Vite）アプリ構成 |
 | [bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock) | submodule + `reusable-ci.yml`のみ（`cd.yml`は独自運用） | 家庭用品在庫管理アプリ。Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDB構成（`docs/lambda-api-firebase-auth-pattern.md`参照） |
-| [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) | submodule + reusable workflow | 金魚すくい体験アプリ。`bamiyanapp/uchi-stock`とは別リポジトリ（GitHub Org自体が`uchi-stock`）。ログイン不要のバックエンドAPI（OSLS + Lambda + API Gateway + DynamoDB）構成 |
-| [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) | submodule + reusable workflow | Next.js構成（`docs/standard-tech-stack.md`の標準フロントエンドとは異なる）。GitHub Pages配信＋OSLSのバックエンドAPI（`docs/nextjs-static-lambda-pattern.md`参照） |
+| [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) | submodule + reusable workflow | 金魚すくい体験アプリ。`bamiyanapp/uchi-stock`とは別リポジトリ（GitHub Org自体が`uchi-stock`）。ログイン不要のバックエンドAPI（OSLS + Lambda + API Gateway + DynamoDB）構成。`cd.yml`にS3 + CloudFrontへのデプロイjobがあり、公開URLはREADME.mdの「アプリ一覧」表を参照 |
+| [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) | submodule + reusable workflow（`deploy-github-pages`複合action使用） | 電気イスゲームAI対戦。Next.js静的エクスポート＋GitHub Pages配信＋OSLSのバックエンドAPI（Lambda、Gemini API連携）構成。`docs/standard-tech-stack.md`の標準フロントエンド（Vite+React+Bootstrap）とは異なりNext.jsを採用（`docs/nextjs-static-lambda-pattern.md`参照） |
 
 ## 一覧の更新
 
