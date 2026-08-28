@@ -124,6 +124,22 @@ Viteの`public/`ディレクトリ配下へsymlinkすることを想定してい
 
 Next.jsの`public/`ディレクトリもVite同様、ビルド時に加工されずそのままコピーされるため、同じ考え方でsymlinkできる。
 
+### `shared/sfx/success.mp3` / `shared/sfx/failure.mp3`
+
+操作の成功・失敗を通知する汎用的な効果音（`uchi-stock/kingyo`issue #144〜由来の「捕獲成功」「掬い失敗」の音を、プロダクト固有の演出を含まない部分として切り出したもの）。ゲーム・ツール系プロダクトで、何らかの操作の成否をフィードバックする場面に広く使える。`shock.mp3`（不正解・警告を強く印象付けるブザー音）に対し、こちらはより穏やかな「掬い損ねた」程度の一般的なミス演出向け。
+
+```jsx
+import successSoundUrl from './assets/sounds/success.mp3'
+import failureSoundUrl from './assets/sounds/failure.mp3'
+
+const playSuccessSound = usePlaySound(successSoundUrl)
+const playFailureSound = usePlaySound(failureSoundUrl)
+```
+
+（`usePlaySound`のようなHTMLAudioElement再生用フック自体は本ドキュメントの対象外。利用側で用意する）
+
+プロダクト固有の追加演出（例: kingyoの「ポイが破れる」効果音）は対象外で、各プロダクト側で個別に用意する。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -139,7 +155,9 @@ Next.jsの`public/`ディレクトリもVite同様、ビルド時に加工され
     { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
-    { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" }
+    { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
+    { "source": "shared/sfx/success.mp3", "target": "app/top/src/assets/sounds/success.mp3" },
+    { "source": "shared/sfx/failure.mp3", "target": "app/top/src/assets/sounds/failure.mp3" }
   ]
 }
 ```

@@ -31,7 +31,7 @@
   - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - フロントエンド
   - [`client-only-vite-spa-pattern.md`](docs/client-only-vite-spa-pattern.md): 単一パッケージReactアプリ（Vite + TypeScript + Bootstrap）構成
-  - [`shared-ui-components.md`](docs/shared-ui-components.md): 横断的UIコンポーネントのsymlink共有（`shared/ui/`・`shared/pwa/`）
+  - [`shared-ui-components.md`](docs/shared-ui-components.md): 横断的UIコンポーネントのsymlink共有（`shared/ui/`・`shared/pwa/`・`shared/sfx/`）
   - [`frontend-ui-conventions.md`](docs/frontend-ui-conventions.md): 共通フォント・トップページ必須表示項目等のUI規約
   - [`pwa-initial-loading-indicator.md`](docs/pwa-initial-loading-indicator.md): PWA起動時の白画面対策
   - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
