@@ -1,3 +1,10 @@
+# [2.5.0](https://github.com/bamiyanapp/dev-standards/compare/v2.4.1...v2.5.0) (2026-08-28)
+
+
+### Features
+
+* **shared/pwa:** UpdateNotifier.jsxのクラス名を標準構成のBootstrapへ書き換える ([#306](https://github.com/bamiyanapp/dev-standards/issues/306)) ([a1150da](https://github.com/bamiyanapp/dev-standards/commit/a1150da4c21c07c7e3596c8445dfefa3121b5dc9)), closes [#289](https://github.com/bamiyanapp/dev-standards/issues/289)
+
 ## [2.4.1](https://github.com/bamiyanapp/dev-standards/compare/v2.4.0...v2.4.1) (2026-08-23)
 
 
