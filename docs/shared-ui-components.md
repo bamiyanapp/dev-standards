@@ -1,6 +1,6 @@
-# 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`）
+# 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`, `shared/sfx/`）
 
-複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）と同様、`sync-manifest.local.json`経由でsymlink共有する（セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」参照、考え方は共通）。
+複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）と同様、`sync-manifest.local.json`経由でsymlink共有する（セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」参照、考え方は共通）。
 
 ## 提供するコンポーネント
 
@@ -112,7 +112,13 @@ export default defineConfig({
 });
 ```
 
-## `sync-manifest.local.json`への追加例
+### `shared/sfx/wadodon.mp3`
+
+太鼓のイントロ音（issue #786）。クイズ・ゲーム系プロダクトで「出題の合図」等に使える汎用的な効果音で、karuta（`bamiyanapp/karuta`）から切り出したもの。プロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("wadodon.mp3")`のように直接参照するだけでよい。
+
+Viteの`public/`ディレクトリ配下へsymlinkすることを想定している（`public/`配下はビルド時に加工されずそのままコピーされるため、`base`設定に関わらず相対パスでの参照が崩れない）。iOS Safari等の自動再生ポリシー対策（ユーザー操作の中で一度再生してから使い回す）が必要な場合は、karutaの`frontend/src/utils/audioUnlock.js`の実装を参考にする。
+
+### `sync-manifest.local.json`への追加例
 
 ```json
 {
@@ -124,7 +130,8 @@ export default defineConfig({
     { "source": "shared/ui/SpeculationRules.jsx", "target": "app/top/src/components/SpeculationRules.jsx" },
     { "source": "shared/pwa/BackendCacheWarmer.jsx", "target": "app/top/src/components/BackendCacheWarmer.jsx" },
     { "source": "shared/ui/ShareButton.jsx", "target": "app/top/src/components/ShareButton.jsx" },
-    { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" }
+    { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" },
+    { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" }
   ]
 }
 ```
