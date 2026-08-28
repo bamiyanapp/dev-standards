@@ -1,3 +1,13 @@
+# [2.6.0](https://github.com/bamiyanapp/dev-standards/compare/v2.5.1...v2.6.0) (2026-08-28)
+
+
+### Features
+
+* **shared/sfx:** Electric-Chair-Arenaの成功音をsuccess.mp3のバリエーションとして追加する ([#317](https://github.com/bamiyanapp/dev-standards/issues/317)) ([4c2c86c](https://github.com/bamiyanapp/dev-standards/commit/4c2c86cb183932f3aba267b580dbcff29b6c9bee)), closes [#316](https://github.com/bamiyanapp/dev-standards/issues/316)
+* **shared/sfx:** 成功・失敗の効果音を共通化する ([#313](https://github.com/bamiyanapp/dev-standards/issues/313)) ([457e19c](https://github.com/bamiyanapp/dev-standards/commit/457e19ca5abe541a32df745f96a30600bf3a2811)), closes [#311](https://github.com/bamiyanapp/dev-standards/issues/311)
+* **shared/sfx:** 決定音とショック音をshared/sfx/として共通化する ([#315](https://github.com/bamiyanapp/dev-standards/issues/315)) ([956bfd7](https://github.com/bamiyanapp/dev-standards/commit/956bfd700dac3c3fb83154603baf5cf79111dcce)), closes [#314](https://github.com/bamiyanapp/dev-standards/issues/314)
+* **shared:** 太鼓の効果音をshared/sfx/として共有アセット化する ([#312](https://github.com/bamiyanapp/dev-standards/issues/312)) ([5c6e073](https://github.com/bamiyanapp/dev-standards/commit/5c6e073d5a026c9bcab13c197e0e269d5a124b33))
+
 ## [2.5.1](https://github.com/bamiyanapp/dev-standards/compare/v2.5.0...v2.5.1) (2026-08-28)
 
 
