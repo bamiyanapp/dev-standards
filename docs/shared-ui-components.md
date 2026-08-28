@@ -140,6 +140,10 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 
 プロダクト固有の追加演出（例: kingyoの「ポイが破れる」効果音）は対象外で、各プロダクト側で個別に用意する。
 
+### `shared/sfx/success-2.mp3`
+
+`success.mp3`の別バリエーション（issue #316）。Electric-Chair-Arenaの「セーフ」演出音から切り出したもの。役割は`success.mp3`と同じ「操作の成功を通知する汎用音」だが、音自体が別物のため、片方へ統合せず選べるバリエーションとして追加した。プロダクトの雰囲気に合わせて`success.mp3`・`success-2.mp3`のどちらかを選ぶ。`failure.mp3`との組み合わせは利用側の判断に委ねる（`success-2.mp3`用の専用`failure`バリエーションは無い）。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -157,7 +161,8 @@ const playFailureSound = usePlaySound(failureSoundUrl)
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
     { "source": "shared/sfx/success.mp3", "target": "app/top/src/assets/sounds/success.mp3" },
-    { "source": "shared/sfx/failure.mp3", "target": "app/top/src/assets/sounds/failure.mp3" }
+    { "source": "shared/sfx/failure.mp3", "target": "app/top/src/assets/sounds/failure.mp3" },
+    { "source": "shared/sfx/success-2.mp3", "target": "app/top/public/success.mp3" }
   ]
 }
 ```
