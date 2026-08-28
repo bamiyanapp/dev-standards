@@ -515,11 +515,27 @@ jobs:
       # いる。参照側リポジトリのbackendコードでこの種の対象外にしたい
       # モジュールスコープの状態がある場合は、`--no-isolate`の適用自体を
       # 見直すこと。
+      #
+      # `--no-file-parallelism`（テストファイルを単一プロセスで逐次実行する）も
+      # 併用しているのは、`coverage_check_per_file`（issue #57）でファイル単位の
+      # カバレッジをゲートする構成において、関数カバレッジがテスト実行のたびに
+      # 異なる値になり（同一ソースを複数のワーカープロセスにまたがって計測する際の
+      # プロセス間マージに起因すると推測される）、実際には十分にテストされている
+      # 関数が偶発的に閾値未達と判定される現象を確認したため
+      # （bamiyanapp/Electric-Chair-Arena#253, dev-standards#307）。デフォルト設定
+      # （複数ワーカープロセスに分散）では同一テストスイートを繰り返し実行しても
+      # 毎回異なる関数集合が未カバー扱いになったが、`--no-file-parallelism`で
+      # 単一プロセス・単一V8インスタンスに固定したところ、3回連続で完全に同一の
+      # カバレッジ値が再現し決定的になることを確認した。上記の`--no-isolate`の
+      # コメントにある「`--no-file-parallelism`は本質的な解決にならず」は、
+      # モジュールレジストリのリセットによるカバレッジ集計崩れ（karuta#459）に
+      # 対しての話であり、本項目（プロセス間マージの非決定性）とは別の問題である
+      # 点に注意。実行時間は伸びるが、正確な計測を優先する。
       - name: Test (attempt 1/2)
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism
       - name: Wait before retrying the test run
         if: steps.test-1.outcome == 'failure'
         shell: bash
@@ -527,7 +543,7 @@ jobs:
       - name: Test (attempt 2/2, retry after a possible flaky failure)
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
