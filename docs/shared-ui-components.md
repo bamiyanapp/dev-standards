@@ -118,6 +118,12 @@ export default defineConfig({
 
 Viteの`public/`ディレクトリ配下へsymlinkすることを想定している（`public/`配下はビルド時に加工されずそのままコピーされるため、`base`設定に関わらず相対パスでの参照が崩れない）。iOS Safari等の自動再生ポリシー対策（ユーザー操作の中で一度再生してから使い回す）が必要な場合は、karutaの`frontend/src/utils/audioUnlock.js`の実装を参考にする。
 
+### `shared/sfx/click.mp3`・`shared/sfx/shock.mp3`
+
+決定/クリック音（`click.mp3`）と、不正解・失敗・警告を強く印象付けるブザー/アラート音（`shock.mp3`）（issue #314）。Electric-Chair-Arena（`bamiyanapp/Electric-Chair-Arena`）から切り出したもの。`click.mp3`は椅子選択・クイズの回答決定・メニュー選択等の「選択を確定した」汎用UIフィードバック音、`shock.mp3`はクイズの不正解演出・ゲームオーバー演出等の「失敗・警告」を印象付けたい場面で使える。いずれもプロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("click.mp3")`のように直接参照するだけでよい。
+
+Next.jsの`public/`ディレクトリもVite同様、ビルド時に加工されずそのままコピーされるため、同じ考え方でsymlinkできる。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -131,7 +137,9 @@ Viteの`public/`ディレクトリ配下へsymlinkすることを想定してい
     { "source": "shared/pwa/BackendCacheWarmer.jsx", "target": "app/top/src/components/BackendCacheWarmer.jsx" },
     { "source": "shared/ui/ShareButton.jsx", "target": "app/top/src/components/ShareButton.jsx" },
     { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" },
-    { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" }
+    { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
+    { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
+    { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" }
   ]
 }
 ```
