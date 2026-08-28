@@ -1,3 +1,10 @@
+## [2.5.1](https://github.com/bamiyanapp/dev-standards/compare/v2.5.0...v2.5.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **ci:** backend-testの関数カバレッジがワーカープロセス間で非決定的になる問題を修正する ([#308](https://github.com/bamiyanapp/dev-standards/issues/308)) ([8fd34be](https://github.com/bamiyanapp/dev-standards/commit/8fd34be27ccb57b76d2af7cbe298b0b956ae3100)), closes [bamiyanapp/Electric-Chair-Arena#253](https://github.com/bamiyanapp/Electric-Chair-Arena/issues/253)
+
 # [2.5.0](https://github.com/bamiyanapp/dev-standards/compare/v2.4.1...v2.5.0) (2026-08-28)
 
 
