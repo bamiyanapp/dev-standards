@@ -118,6 +118,22 @@ export default defineConfig({
 
 Viteの`public/`ディレクトリ配下へsymlinkすることを想定している（`public/`配下はビルド時に加工されずそのままコピーされるため、`base`設定に関わらず相対パスでの参照が崩れない）。iOS Safari等の自動再生ポリシー対策（ユーザー操作の中で一度再生してから使い回す）が必要な場合は、karutaの`frontend/src/utils/audioUnlock.js`の実装を参考にする。
 
+### `shared/sfx/success.mp3` / `shared/sfx/failure.mp3`
+
+操作の成功・失敗を通知する汎用的な効果音（`uchi-stock/kingyo`issue #144〜由来の「捕獲成功」「掬い失敗」の音を、プロダクト固有の演出を含まない部分として切り出したもの）。ゲーム・ツール系プロダクトで、何らかの操作の成否をフィードバックする場面に広く使える。
+
+```jsx
+import successSoundUrl from './assets/sounds/success.mp3'
+import failureSoundUrl from './assets/sounds/failure.mp3'
+
+const playSuccessSound = usePlaySound(successSoundUrl)
+const playFailureSound = usePlaySound(failureSoundUrl)
+```
+
+（`usePlaySound`のようなHTMLAudioElement再生用フック自体は本ドキュメントの対象外。利用側で用意する）
+
+プロダクト固有の追加演出（例: kingyoの「ポイが破れる」効果音）は対象外で、各プロダクト側で個別に用意する。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -131,7 +147,9 @@ Viteの`public/`ディレクトリ配下へsymlinkすることを想定してい
     { "source": "shared/pwa/BackendCacheWarmer.jsx", "target": "app/top/src/components/BackendCacheWarmer.jsx" },
     { "source": "shared/ui/ShareButton.jsx", "target": "app/top/src/components/ShareButton.jsx" },
     { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" },
-    { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" }
+    { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
+    { "source": "shared/sfx/success.mp3", "target": "app/top/src/assets/sounds/success.mp3" },
+    { "source": "shared/sfx/failure.mp3", "target": "app/top/src/assets/sounds/failure.mp3" }
   ]
 }
 ```
