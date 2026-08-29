@@ -17,6 +17,7 @@
 | kingyo（金魚すくい体験アプリ） | [dmuxvf1bg8ldn.cloudfront.net](https://dmuxvf1bg8ldn.cloudfront.net/) †3 | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) |
 | Electric-Chair-Arena（電気イスゲームAI対戦） | [bamiyanapp.github.io/Electric-Chair-Arena](https://bamiyanapp.github.io/Electric-Chair-Arena/) | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) |
 | hanko-master-kentei（ハンコ捺印の作法をテーマにした風刺Webアプリ） | [bamiyanapp.github.io/hanko-master-kentei](https://bamiyanapp.github.io/hanko-master-kentei/) | [bamiyanapp/hanko-master-kentei](https://github.com/bamiyanapp/hanko-master-kentei) |
+| shock-lab（車両サスペンション物理シミュレータ） | [bamiyanapp.github.io/shock-lab](https://bamiyanapp.github.io/shock-lab/) | [bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab) |
 
 †1: `cd.yml`実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的な確認だけでは固定URLを特定できない（`cd`ワークフロー実行ログ、`Deploy to AWS` jobのJob Summary出力から確認済み）。Google OAuthログインで保護された利用だが、ユーザー（プロダクト所有者）の判断により、他者に使われること・それに伴うクラウド利用費増加を許容し、参考情報として掲載する（メールアドレスの許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）
 †2: examinationも同様にCloudFront配信だが、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、こちらもGoogle OAuthログインで保護された家族限定利用のため、一般公開の入り口としてではなく参考情報として掲載する
