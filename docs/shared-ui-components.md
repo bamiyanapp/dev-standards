@@ -112,6 +112,38 @@ export default defineConfig({
 });
 ```
 
+### `shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`
+
+`docs/frontend-ui-conventions.md`「トップページの必須構成」（バージョン・更新日時の表示）を実装するための2つの関数。`getAppVersionDefine.js`はNode.js側（`vite.config.js`）で動く点が他の`shared/ui/`コンポーネントと異なる（ブラウザで動くReactコンポーネントではない）。
+
+`vite.config.js`:
+
+```js
+import getAppVersionDefine from "./getAppVersionDefine.js"; // symlink
+
+export default defineConfig({
+  define: {
+    ...getAppVersionDefine(new URL("../package.json", import.meta.url)),
+  },
+});
+```
+
+`package.json`のパスは呼び出し側で指定する（semantic-releaseがバージョンを更新するリポジトリルートの`package.json`か、アプリ自身の`package.json`かはプロダクトの構成による）。`getAppVersionDefine.js`は`vite.config.js`から直接importするNode.js側のファイルのため、他の`shared/ui/`コンポーネント（`src/components/`配下）とは異なり、`vite.config.js`と同じディレクトリへsymlinkすること。
+
+アプリ側のコンポーネント（表示位置・マークアップはプロダクトごとに異なるため、この部分は共有しない）:
+
+```jsx
+import formatBuildTime from "./formatBuildTime.js"; // symlink
+
+function AppHeader() {
+  return (
+    <p>
+      v{__APP_VERSION__} / 更新日時: {formatBuildTime(__APP_BUILD_TIME__)}
+    </p>
+  );
+}
+```
+
 ### `shared/sfx/wadodon.mp3`
 
 太鼓のイントロ音（issue #786）。クイズ・ゲーム系プロダクトで「出題の合図」等に使える汎用的な効果音で、karuta（`bamiyanapp/karuta`）から切り出したもの。プロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("wadodon.mp3")`のように直接参照するだけでよい。
@@ -157,6 +189,8 @@ const playFailureSound = usePlaySound(failureSoundUrl)
     { "source": "shared/pwa/BackendCacheWarmer.jsx", "target": "app/top/src/components/BackendCacheWarmer.jsx" },
     { "source": "shared/ui/ShareButton.jsx", "target": "app/top/src/components/ShareButton.jsx" },
     { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" },
+    { "source": "shared/ui/getAppVersionDefine.js", "target": "app/top/getAppVersionDefine.js" },
+    { "source": "shared/ui/formatBuildTime.js", "target": "app/top/src/components/formatBuildTime.js" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
