@@ -16,6 +16,7 @@ dev-standardsを参照している既知のリポジトリの一覧。`docs/`配
 | [uchi-stock/kingyo](https://github.com/uchi-stock/kingyo) | submodule + reusable workflow | 金魚すくい体験アプリ。`bamiyanapp/uchi-stock`とは別リポジトリ（GitHub Org自体が`uchi-stock`）。ログイン不要のバックエンドAPI（OSLS + Lambda + API Gateway + DynamoDB）構成。`cd.yml`にS3 + CloudFrontへのデプロイjobがあり、公開URLはREADME.mdの「アプリ一覧」表を参照 |
 | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) | submodule + reusable workflow（`deploy-github-pages`複合action使用） | 電気イスゲームAI対戦。Next.js静的エクスポート＋GitHub Pages配信＋OSLSのバックエンドAPI（Lambda、Gemini API連携）構成。`docs/standard-tech-stack.md`の標準フロントエンド（Vite+React+Bootstrap）とは異なりNext.jsを採用（`docs/nextjs-static-lambda-pattern.md`参照） |
 | [bamiyanapp/hanko-master-kentei](https://github.com/bamiyanapp/hanko-master-kentei) | submodule + `reusable-ci.yml` + 独自`cd.yml`（`deploy-github-pages`/`deploy-serverless`複合action使用） | ハンコ捺印の作法をテーマにした風刺Webアプリ。Next.js静的エクスポート＋GitHub Pages配信＋OSLSのバックエンドAPI構成。Electric-Chair-Arenaと同様、標準フロントエンド（Vite+React+Bootstrap）とは異なりNext.jsを採用 |
+| [bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab) | submodule + reusable workflow（`deploy-github-pages`複合action使用） | 車両サスペンション物理シミュレータ。認証・バックエンドAPIが一切不要な完全クライアントサイド構成（React 19 + Vite + TypeScript、単一`frontend/`パッケージ、GitHub Pagesのプロジェクトページへ直接デプロイ）。`docs/client-only-vite-spa-pattern.md`のベースとなったリポジトリ |
 
 ## 一覧の更新
 
