@@ -1,3 +1,11 @@
+## [2.6.1](https://github.com/bamiyanapp/dev-standards/compare/v2.6.0...v2.6.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **cd:** パブリックリポジトリ化に伴いCDのscheduleバッチをやめ即時deployへ戻す ([#331](https://github.com/bamiyanapp/dev-standards/issues/331)) ([0216853](https://github.com/bamiyanapp/dev-standards/commit/021685365a0de977914524448c20f932562ac177))
+* **ci:** per-fileカバレッジ判定の指標をtotal判定と独立して指定できるようにする ([#329](https://github.com/bamiyanapp/dev-standards/issues/329)) ([4cd4e57](https://github.com/bamiyanapp/dev-standards/commit/4cd4e579d18e46b02c8925943e21056ef0ca281a)), closes [#307](https://github.com/bamiyanapp/dev-standards/issues/307)
+
 # [2.6.0](https://github.com/bamiyanapp/dev-standards/compare/v2.5.1...v2.6.0) (2026-08-28)
 
 
