@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 
 // iOS PWA（ホーム画面から起動したスタンドアロン表示）はブラウザの自動的な

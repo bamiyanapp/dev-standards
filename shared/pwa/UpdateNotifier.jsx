@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 // Service Worker導入後、PWAとしてホーム画面に追加した状態では新しいバージョンに

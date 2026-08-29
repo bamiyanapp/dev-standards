@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 
 // どのページを最初に開いても、バックエンドの一覧取得APIをバックグラウンドで
