@@ -1,3 +1,10 @@
+## [2.6.3](https://github.com/bamiyanapp/dev-standards/compare/v2.6.2...v2.6.3) (2026-08-29)
+
+
+### Bug Fixes
+
+* **shared:** pwa配下のReactコンポーネントに"use client"を追加 ([#335](https://github.com/bamiyanapp/dev-standards/issues/335)) ([419344e](https://github.com/bamiyanapp/dev-standards/commit/419344eb2fedd7b873f610d8ba9d7d13ada07b1b)), closes [#334](https://github.com/bamiyanapp/dev-standards/issues/334)
+
 ## [2.6.2](https://github.com/bamiyanapp/dev-standards/compare/v2.6.1...v2.6.2) (2026-08-29)
 
 
