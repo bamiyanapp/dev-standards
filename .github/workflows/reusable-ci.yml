@@ -35,9 +35,10 @@ on:
         description: >-
           frontend_dir/backend_dirによる固定2パッケージ構成の代わりに、matrix構成でlint/test/buildする
           パッケージ一覧をJSON配列で指定する（例: '[{"dir":"frontend","build":true},{"dir":"backend"}]'）。
-          各要素は{dir, build, node_version, coverage_threshold, coverage_metrics, coverage_check_per_file}を
-          持つオブジェクトで、dir以外は省略可能（buildは省略時false、node_versionは省略時inputs.node_version、
-          coverage_threshold/coverage_metrics/coverage_check_per_fileは省略時それぞれ対応するinputs.*）。
+          各要素は{dir, build, node_version, coverage_threshold, coverage_metrics, coverage_check_per_file,
+          coverage_per_file_metrics}を持つオブジェクトで、dir以外は省略可能（buildは省略時false、
+          node_versionは省略時inputs.node_version、coverage_threshold/coverage_metrics/
+          coverage_check_per_file/coverage_per_file_metricsは省略時それぞれ対応するinputs.*）。
           lint（`npm run lint --if-present`）・test（`npm test --if-present`）は対応するnpm scriptsが
           package.jsonに存在しない場合は自動的にスキップする（テストランナー非依存。vitest直接呼び出しは行わない）。
           空文字列（既定）の場合は既存通りfrontend_dir/backend_dirの固定ジョブを使う（後方互換のためデフォルトは空）。
@@ -68,6 +69,17 @@ on:
           coverage_check_per_fileで上書きできる。
         type: boolean
         default: false
+      coverage_per_file_metrics:
+        description: >-
+          coverage_check_per_file有効時、ファイル単位の判定にのみ使う指標をカンマ区切りで指定する
+          （例: "lines,statements,branches"）。省略時（空文字列）はcoverage_metricsと同じ値を使う。
+          V8カバレッジのfunctions指標は、テストファイルを複数ワーカープロセスへ分散実行する構成で
+          プロセス間のカバレッジ集計に起因して非決定的になることがあり（issue #307）、呼び出し回数の
+          少ない小さな関数を含むファイルが実行のたびに偶発的に閾値未満と判定されうる。functionsを
+          per-file判定からのみ除外する、といった用途を想定。packagesのmatrix構成では各要素の
+          coverage_per_file_metricsで上書きできる。
+        type: string
+        default: ""
       e2e_coverage_threshold:
         description: >-
           frontend-e2e-testジョブのE2EテストJSカバレッジ閾値（%、0以下でゲート無効）。
@@ -440,6 +452,7 @@ jobs:
           threshold: ${{ inputs.coverage_threshold }}
           label: frontend
           metrics: ${{ inputs.coverage_metrics }}
+          per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
       - name: Build
         working-directory: ${{ inputs.frontend_dir }}
@@ -560,6 +573,7 @@ jobs:
           threshold: ${{ inputs.coverage_threshold }}
           label: backend
           metrics: ${{ inputs.coverage_metrics }}
+          per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
 
   package-test:
@@ -646,6 +660,7 @@ jobs:
           threshold: ${{ matrix.package.coverage_threshold || inputs.coverage_threshold }}
           label: ${{ matrix.package.dir }}
           metrics: ${{ matrix.package.coverage_metrics || inputs.coverage_metrics }}
+          per-file-metrics: ${{ matrix.package.coverage_per_file_metrics || inputs.coverage_per_file_metrics }}
           check-per-file: ${{ matrix.package.coverage_check_per_file || inputs.coverage_check_per_file }}
       - name: Build
         if: matrix.package.build == true

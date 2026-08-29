@@ -15,8 +15,18 @@ const METRICS = ["lines", "statements", "functions", "branches"];
 // total以外の各キー（ファイルパス）についても同じ指標・閾値で判定する。一部のファイルの
 // カバレッジが著しく低くても、他のファイルが高ければ全体平均で閾値をクリアしてしまう
 // 問題（issue #57）への対応
+// options.perFileMetrics: per-file判定（checkPerFile）でのみ使う指標。省略時はoptions.metrics
+// をそのまま使う（既存の後方互換動作）。V8カバレッジのfunctions指標は、複数ワーカープロセスに
+// テストファイルを分散して実行する場合、プロセス間のカバレッジ集計処理に起因して呼び出し回数の
+// 少ない小さな関数を含むファイルで値が非決定的になることがある（issue #307）。totalの平均値では
+// 誤差が均されて問題になりにくいが、checkPerFileはファイル単位の値をそのままゲートに使うため、
+// 実際には十分にテストされているファイルが実行のたびに偶発的に閾値未満と判定されうる。
+// perFileMetricsでfunctionsを除外するなど、per-file判定の指標セットをtotal判定と別に
+// 指定できるようにすることで、この非決定性の影響を受けやすい指標だけper-fileでは緩和できる
 function evaluateCoverage(summaryJson, threshold, label, options = {}) {
   const metrics = options.metrics && options.metrics.length > 0 ? options.metrics : METRICS;
+  const perFileMetrics =
+    options.perFileMetrics && options.perFileMetrics.length > 0 ? options.perFileMetrics : metrics;
   const total = summaryJson.total;
   const table = METRICS.reduce(
     (acc, metric) => acc + `| ${metric} | ${total[metric]?.pct ?? 0}% |\n`,
@@ -30,7 +40,7 @@ function evaluateCoverage(summaryJson, threshold, label, options = {}) {
   if (options.checkPerFile) {
     for (const [file, fileCoverage] of Object.entries(summaryJson)) {
       if (file === "total") continue;
-      const failed = metrics.filter((metric) => (fileCoverage[metric]?.pct ?? 0) < threshold);
+      const failed = perFileMetrics.filter((metric) => (fileCoverage[metric]?.pct ?? 0) < threshold);
       if (failed.length > 0) {
         failedFiles.push({
           file,
@@ -61,6 +71,11 @@ function main() {
         .map((metric) => metric.trim())
         .filter(Boolean)
     : undefined;
+  const perFileMetrics = process.env.PER_FILE_METRICS
+    ? process.env.PER_FILE_METRICS.split(",")
+        .map((metric) => metric.trim())
+        .filter(Boolean)
+    : undefined;
   const checkPerFile = process.env.CHECK_PER_FILE === "true";
 
   if (!fs.existsSync(summaryPath)) {
@@ -78,6 +93,7 @@ function main() {
   const summaryJson = JSON.parse(fs.readFileSync(summaryPath, "utf-8"));
   const { table, fileTable, failedMetrics, failedFiles } = evaluateCoverage(summaryJson, threshold, label, {
     metrics,
+    perFileMetrics,
     checkPerFile,
   });
 
