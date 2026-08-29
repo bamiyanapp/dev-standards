@@ -437,12 +437,14 @@ jobs:
       # 全指標・total平均のみでの判定にフォールバックしてしまう不具合が発生した
       # （bamiyanapp/karuta#459でcoverage_threshold: 80を有効化した際に発覚）。
       # action.ymlに入力を追加・変更した場合は、このrefの更新を絶対に忘れないこと。
+      # v2.6.1で、check-coverage-thresholdにper-file-metrics入力を追加した
+      # （issue #307）ため、その修正を含むタグへ更新した
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.7.0
+          ref: v2.6.1
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -563,7 +565,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.7.0
+          ref: v2.6.1
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: inputs.coverage_threshold > 0
@@ -650,7 +652,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.7.0
+          ref: v2.6.1
           path: .dev-standards-actions
       - name: Check coverage threshold
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -741,7 +743,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.7.0
+          ref: v2.6.1
           path: .dev-standards-actions
       - name: Show E2E coverage
         if: always()
