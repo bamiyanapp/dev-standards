@@ -1,3 +1,10 @@
+# [2.7.0](https://github.com/bamiyanapp/dev-standards/compare/v2.6.3...v2.7.0) (2026-08-29)
+
+
+### Features
+
+* **shared/ui:** トップページのバージョン・更新日時表示を共有ヘルパー化する ([#340](https://github.com/bamiyanapp/dev-standards/issues/340)) ([6d92190](https://github.com/bamiyanapp/dev-standards/commit/6d921903e4d0695be0e5d8917935d30093bc27ab)), closes [#338](https://github.com/bamiyanapp/dev-standards/issues/338)
+
 ## [2.6.3](https://github.com/bamiyanapp/dev-standards/compare/v2.6.2...v2.6.3) (2026-08-29)
 
 
