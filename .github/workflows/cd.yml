@@ -1,15 +1,15 @@
 name: CD
-run-name: CD (${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }})
+run-name: CD (${{ github.event_name == 'workflow_dispatch' && 'manual' || 'push' }})
 
-# issue bamiyanapp/dev-standards#187（CI/CD実行回数・実行時間削減バックログ）⑥:
-# mainへのmergeごとの即時deployをやめ、1日4回（UTC 0/6/12/18時）のscheduleへ
-# まとめる。GitHubのscheduleイベントはpushと同様にデフォルトブランチの
-# refs/heads/<default-branch>に対して実行され、release jobの
-# context.ref.replace("refs/heads/", "") によるbaseBranch取得もそのまま動作する。
+# issue #187（CI/CD実行回数・実行時間削減バックログ）⑥・#220により、mainへの
+# mergeごとの即時deployから1日4回（UTC 0/6/12/18時）のscheduleへ変更していたが、
+# この変更の動機（GitHub Actions無料枠消費の抑制）はプライベートリポジトリ固有の
+# 制約であり、dev-standardsは現在パブリックリポジトリのためActions無料枠の制限が
+# 無い。そのため即時deploy（pushトリガー）へ戻す（issue #330）。
 # workflow_dispatchは検証・緊急時の手動実行用。
 on:
-  schedule:
-    - cron: "0 */6 * * *"
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

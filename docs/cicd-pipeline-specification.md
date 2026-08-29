@@ -120,9 +120,9 @@ run-name: >-
 ```
 
 ## 2. CD ワークフロー (`reusable-cd.yml`)
-- **トリガー**: 参照側 `cd.yml` の `on` 設定に従う。`workflow_call`のためワークフロー自体に`on:`は持てず、呼び出し元（参照側の`cd.yml`）で以下いずれかの方式を選ぶ。
-  - **推奨: `schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり数十回のデプロイが発生しCI/CD実行回数の主要な無駄要因になる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する。dev-standards自身の`cd.yml`はこの方式を採用している（dogfooding）
-  - **従来方式: `base_branch`へのプッシュ**（Squash merge直後の`push`イベント）。mergeごとに即座にdeployしたいリポジトリ、または移行前の既存参照側リポジトリはこちらのまま運用してよい
+- **トリガー**: 参照側 `cd.yml` の `on` 設定に従う。`workflow_call`のためワークフロー自体に`on:`は持てず、呼び出し元（参照側の`cd.yml`）で以下いずれかの方式を、**リポジトリの公開/非公開に応じて**選ぶ。
+  - **`base_branch`へのプッシュ**（Squash merge直後の`push`イベント）。`base_branch`へのmergeごとに即座にdeployする。パブリックリポジトリはGitHub Actionsの無料枠に実行回数・実行時間の制限が無いため、デプロイ頻度を気にする必要が無く、こちらを既定として選んでよい。dev-standards自身は現在パブリックリポジトリのため、この方式を採用している（dogfooding、[bamiyanapp/dev-standards#330](https://github.com/bamiyanapp/dev-standards/issues/330)）
+  - **`schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。プライベートリポジトリではGitHub Actionsの無料枠（月間実行時間の上限）を消費するため、`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり数十回のデプロイが発生しCI/CD実行回数の主要な無駄要因になりうる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。無料枠消費を抑えたいプライベートリポジトリはこちらを検討する。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する
   - 検証・緊急deploy用に`workflow_dispatch`も併せて用意しておくと、scheduleを待たずに手動実行できる
 - **実行内容**:
   - `release`（`enable_release: true`（デフォルト）の場合のみ）: `base_branch` 上で直接 `semantic-release` を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付け・GitHub Release作成を行う
