@@ -29,6 +29,15 @@ inputs:
       一部のファイルのカバレッジが著しく低くても全体平均でクリアしてしまう問題に対応する
     required: false
     default: "false"
+  per-file-metrics:
+    description: >-
+      check-per-file有効時、ファイル単位の判定にのみ使う指標をカンマ区切りで指定する（例: "lines,statements,branches"）。
+      省略時はmetricsと同じ値を使う。V8カバレッジのfunctions指標は、テストファイルを複数ワーカー
+      プロセスへ分散実行する構成でプロセス間のカバレッジ集計に起因して非決定的になることがあり
+      （issue #307）、呼び出し回数の少ない小さな関数を含むファイルが実行のたびに偶発的に閾値未満と
+      判定されうる。functionsをper-file判定からのみ除外する、といった用途を想定
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -39,5 +48,6 @@ runs:
         THRESHOLD: ${{ inputs.threshold }}
         LABEL: ${{ inputs.label }}
         METRICS: ${{ inputs.metrics }}
+        PER_FILE_METRICS: ${{ inputs.per-file-metrics }}
         CHECK_PER_FILE: ${{ inputs.check-per-file }}
       run: node "${{ github.action_path }}/check-coverage.js"

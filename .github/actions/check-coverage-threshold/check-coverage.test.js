@@ -95,3 +95,41 @@ test("options.checkPerFile combined with options.metrics only gates the narrowed
   assert.equal(failedFiles.length, 1);
   assert.equal(failedFiles[0].file, "src/low-branches.js");
 });
+
+test("options.perFileMetrics defaults to options.metrics when omitted", () => {
+  const summary = {
+    total: { lines: { pct: 90 }, statements: { pct: 90 }, functions: { pct: 90 }, branches: { pct: 90 } },
+    "src/low-functions.js": { lines: { pct: 90 }, statements: { pct: 90 }, functions: { pct: 10 }, branches: { pct: 90 } },
+  };
+  const { failedFiles } = evaluateCoverage(summary, 80, "frontend", { checkPerFile: true });
+  assert.equal(failedFiles.length, 1);
+  assert.deepEqual(failedFiles[0].failedMetrics, ["functions"]);
+});
+
+test("options.perFileMetrics narrows per-file gating independently from the total-level options.metrics (issue #307)", () => {
+  // 全体平均（total）はfunctionsを含む全4指標で判定しつつ、ファイル単位（per-file）では
+  // V8カバレッジの非決定性の影響を受けやすいfunctionsのみ除外する、という組み合わせを想定
+  const summary = {
+    total: { lines: { pct: 90 }, statements: { pct: 90 }, functions: { pct: 90 }, branches: { pct: 90 } },
+    "src/flaky-functions.js": { lines: { pct: 90 }, statements: { pct: 90 }, functions: { pct: 60 }, branches: { pct: 90 } },
+    "src/low-lines.js": { lines: { pct: 60 }, statements: { pct: 90 }, functions: { pct: 90 }, branches: { pct: 90 } },
+  };
+  const { failedFiles } = evaluateCoverage(summary, 80, "frontend", {
+    checkPerFile: true,
+    perFileMetrics: ["lines", "statements", "branches"],
+  });
+  assert.equal(failedFiles.length, 1);
+  assert.equal(failedFiles[0].file, "src/low-lines.js");
+  assert.deepEqual(failedFiles[0].failedMetrics, ["lines"]);
+});
+
+test("options.perFileMetrics does not affect the total-level failedMetrics", () => {
+  const summary = {
+    total: { lines: { pct: 90 }, statements: { pct: 90 }, functions: { pct: 60 }, branches: { pct: 90 } },
+  };
+  const { failedMetrics } = evaluateCoverage(summary, 80, "frontend", {
+    checkPerFile: true,
+    perFileMetrics: ["lines"],
+  });
+  assert.deepEqual(failedMetrics, ["functions"]);
+});
