@@ -1,3 +1,10 @@
+## [2.6.2](https://github.com/bamiyanapp/dev-standards/compare/v2.6.1...v2.6.2) (2026-08-29)
+
+
+### Bug Fixes
+
+* **ci:** check-coverage-threshold自己参照のpinned tagをv2.6.1へ更新 ([#332](https://github.com/bamiyanapp/dev-standards/issues/332)) ([64fa089](https://github.com/bamiyanapp/dev-standards/commit/64fa0892b7230746550f41af1d357faea4e3ea24))
+
 ## [2.6.1](https://github.com/bamiyanapp/dev-standards/compare/v2.6.0...v2.6.1) (2026-08-29)
 
 
