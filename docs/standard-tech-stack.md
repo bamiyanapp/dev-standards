@@ -95,6 +95,6 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 上記に当てはまらない個別の技術判断（特定の外部API連携の設計、プロダクト固有のドメインロジック等）は、この標準スタックの対象外。プロダクトごとの`infra/README.md`・`CLAUDE.md`（プロジェクト固有ルール）に記載する。
 
-既存プロダクトの中には、上記標準構成と異なるフロントエンドフレームワーク（examinationの元々のTailwind CSS v4 + daisyUI 5構成、Electric-Chair-ArenaのNext.js構成）・ホスティング（GitHub Pages）・ログイン方式（サイト全体保護、`docs/serverless-static-site-pattern.md`）を使うものも存在する。これらへの遡及適用は本ドキュメントの対象外で、新規プロダクトの標準としてのみ上記構成を採用する。
+既存プロダクトの中には、上記標準構成と異なるフロントエンドフレームワーク（Electric-Chair-ArenaのNext.js構成）・ホスティング（GitHub Pages）・ログイン方式（サイト全体保護、`docs/serverless-static-site-pattern.md`）を使うものも存在する（examinationは元々Tailwind CSS v4 + daisyUI 5構成だったが、bamiyanapp/examination#308でBootstrap 5.3へ移行済み）。これらへの遡及適用は本ドキュメントの対象外で、新規プロダクトの標準としてのみ上記構成を採用する。
 
 新しいプロダクトで得られた知見が複数プロダクトへ再利用できると判断した場合は、既存ドキュメントへの追記または新規ドキュメント追加を検討し、本ドキュメントの一覧へ追加する。
