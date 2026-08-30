@@ -124,6 +124,23 @@ run-name: >-
   - **`base_branch`へのプッシュ**（Squash merge直後の`push`イベント）。`base_branch`へのmergeごとに即座にdeployする。パブリックリポジトリはGitHub Actionsの無料枠に実行回数・実行時間の制限が無いため、デプロイ頻度を気にする必要が無く、こちらを既定として選んでよい。dev-standards自身は現在パブリックリポジトリのため、この方式を採用している（dogfooding、[bamiyanapp/dev-standards#330](https://github.com/bamiyanapp/dev-standards/issues/330)）
   - **`schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。プライベートリポジトリではGitHub Actionsの無料枠（月間実行時間の上限）を消費するため、`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり数十回のデプロイが発生しCI/CD実行回数の主要な無駄要因になりうる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。無料枠消費を抑えたいプライベートリポジトリはこちらを検討する。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する
   - 検証・緊急deploy用に`workflow_dispatch`も併せて用意しておくと、scheduleを待たずに手動実行できる
+- **run-name**: 参照側`cd.yml`の`on:`同様、`workflow_call`先のこのワークフロー自体では設定できないため、呼び出し元（参照側の`cd.yml`）で指定する。既定のrun-name（ワークフロー名のみ、または`workflow_run`トリガー時はトリガー元のコミットSHA）はGitHub ActionsのRun一覧上で実行内容が分からず、特にスマートフォンのブラウザでActionsタブを確認する運用（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）では、どの変更に対応するCD実行かひと目で判別できない問題があった（[bamiyanapp/uchi-stock#337](https://github.com/bamiyanapp/uchi-stock/issues/337)）。`reusable-ci.yml`のCI側run-name規約（`CI (PR|push-to-main) <コミットメッセージ or PRタイトル>`）に倣い、トリガー方式に応じて以下のパターンを使う。
+  - `push`トリガー: `github.event.head_commit.message`が使える。dev-standards自身の`cd.yml`（dogfooding）はこのパターン
+    ```yaml
+    run-name: >-
+      CD (${{ github.event_name == 'workflow_dispatch' && 'manual' || 'push' }})
+      ${{ github.event.head_commit.message }}
+    ```
+  - `workflow_run`トリガー（CIの完了を待ってdeployする構成、参照側リポジトリの一般的な構成）: `github.event.workflow_run.head_sha`（コミットSHAのみ）ではなく`github.event.workflow_run.head_commit.message`（トリガー元のCI実行のコミットメッセージ）を使う
+    ```yaml
+    run-name: >-
+      CD (${{ github.event_name == 'workflow_dispatch' && 'manual' || 'auto' }})
+      ${{ github.event.workflow_run.head_commit.message }}
+    ```
+  - `schedule`トリガー: コミット単位の情報が無いため、トリガー種別のみを表示する（scheduleとworkflow_dispatchを区別できれば十分）
+    ```yaml
+    run-name: CD (${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }})
+    ```
 - **実行内容**:
   - `release`（`enable_release: true`（デフォルト）の場合のみ）: `base_branch` 上で直接 `semantic-release` を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付け・GitHub Release作成を行う
   - frontend/backend のビルド・デプロイ（GitHub Pages・AWS Lambda 等）はプロダクトごとに異なるため対象外。参照側リポジトリの `cd.yml` に `needs: release` かつ `if: success() && needs.release.outputs.new_release_published == 'true'` の条件でジョブを追加する

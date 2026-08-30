@@ -1,5 +1,11 @@
 name: CD
-run-name: CD (${{ github.event_name == 'workflow_dispatch' && 'manual' || 'push' }})
+# CIのrun-name規約（コミットメッセージを含める）に倣い、コミットSHAの羅列ではなく
+# 内容が分かる表示にする（issue #344、bamiyanapp/uchi-stock#337）。
+# workflow_dispatch時はhead_commitが存在せず空文字列になるが、
+# 「CD (manual)」の表示自体で判別可能なため許容する
+run-name: >-
+  CD (${{ github.event_name == 'workflow_dispatch' && 'manual' || 'push' }})
+  ${{ github.event.head_commit.message }}
 
 # issue #187（CI/CD実行回数・実行時間削減バックログ）⑥・#220により、mainへの
 # mergeごとの即時deployから1日4回（UTC 0/6/12/18時）のscheduleへ変更していたが、
