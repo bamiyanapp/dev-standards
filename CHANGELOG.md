@@ -1,3 +1,10 @@
+## [2.7.1](https://github.com/bamiyanapp/dev-standards/compare/v2.7.0...v2.7.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **ci:** backend-testのカバレッジ計測にNODE_OPTIONS=--no-flush-bytecodeを追加する ([#347](https://github.com/bamiyanapp/dev-standards/issues/347)) ([68b8bf2](https://github.com/bamiyanapp/dev-standards/commit/68b8bf21541dbc8b0602b6d0e58825b04290a708))
+
 # [2.7.0](https://github.com/bamiyanapp/dev-standards/compare/v2.6.3...v2.7.0) (2026-08-29)
 
 
