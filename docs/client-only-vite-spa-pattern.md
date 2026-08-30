@@ -64,6 +64,21 @@ export const useAppStore = create<AppState>((set) => ({
 
 ## テスト戦略
 
+### PlaywrightでのBootstrap CDN読み込み実画面検証（Claude Codeサンドボックス環境）
+
+Claude Codeのサンドボックス実行環境では、outbound HTTPSがポリシー適用のegressプロキシを経由する構成になっており、組織ポリシーにより`cdn.jsdelivr.net`等の一部CDNホストへの接続が拒否される（`CONNECT`が403で拒否される）ことがある。この状態でPlaywright等により`index.html`のBootstrap CDN `<link>`を含むページを実際にブラウザで開いても、CDNリクエストが失敗するだけでコンソールエラー以外の分かりやすい兆候が出ないため、「Bootstrapが読み込まれず素のHTML要素が描画されているだけ」の状態を「Bootstrapスタイルが適用された状態」と誤認しやすい。実際にこの誤認がexamination#309（family-create）で発生し、CDNが到達不能なままの状態を「スクリーンショットで見た目を確認済み」と誤って報告してしまった。
+
+同じポリシーでも`registry.npmjs.org`は多くの場合noProxy（直接到達可能）対象に含まれるため、視覚検証だけが目的であれば、検証対象と同じバージョンのBootstrapを`npm install bootstrap@<version>`で取得し、Playwrightの`page.route()`でCDNのURLパターンをインターセプトしてローカルの`dist/css/bootstrap.min.css`の内容を返すことで、実際のBootstrap CSSを使った検証ができる（本番のCDN到達性そのものはこの方法では検証できない点に注意。CDN到達性は既存プロダクト（`bamiyanapp/kingyo`等）での実績を根拠とする）。
+
+```js
+const bootstrapCss = fs.readFileSync("node_modules/bootstrap/dist/css/bootstrap.min.css", "utf-8");
+await page.route("**/bootstrap@5.3.8/dist/css/bootstrap.min.css", (route) =>
+  route.fulfill({ status: 200, contentType: "text/css", body: bootstrapCss })
+);
+```
+
+見た目の確認をPlaywrightで行う際は、必ずスクリーンショット取得前に対象CSSリクエストが実際に200で成功しているか（`page.on("response", ...)`等で）確認してから「確認済み」と報告する。
+
 ### Canvas・物理演算等、jsdomで再現できない描画のモック
 
 jsdomはCanvasの2Dコンテキストを提供しない。Matter.js等の物理演算エンジンやCanvas描画を行うコンポーネントは、上位のレイアウトテストではモックに差し替え、UI要素の存在・操作のみを検証する。
