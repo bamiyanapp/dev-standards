@@ -32,9 +32,13 @@ Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。ダー
 
 ### `shared/ui/NavigationOverlay.jsx`
 
-SPAクライアントサイドルーティングを導入しない全ページ遷移の設計で、リンククリックから実際の画面遷移までの間、読み込み中であることが分かるオーバーレイを表示する。プロダクト固有の値は無いが、利用側のCSSに以下のルールが必要（Tailwindのユーティリティだけでは表現できない状態遷移のため）。
+SPAクライアントサイドルーティングを導入しない全ページ遷移の設計で、リンククリックから実際の画面遷移までの間、読み込み中であることが分かるオーバーレイを表示する。プロダクト固有の値は無いが、利用側のCSSに、JSがclickイベントでvisibleクラスを付け外しする状態遷移を表現する以下のルールが必要（Bootstrapのユーティリティだけでは表現できないため）。
 
 ```css
+.nav-overlay {
+  display: none;
+}
+
 .nav-overlay.visible {
   display: flex;
 }
@@ -85,11 +89,12 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
   onChange={(e) => setValue(e.target.value)}
   onInput={(e) => resizeTextareaToFitContent(e.target)}
   ref={resizeTextareaToFitContent}
-  className="textarea resize-none overflow-hidden"
+  className="form-control"
+  style={{ resize: "none", overflow: "hidden" }}
 />
 ```
 
-`resize-none overflow-hidden`をtextarea自体のクラスに指定し、ブラウザ標準のリサイズハンドル・スクロールバーを出さないようにすること。
+`resize: "none"`・`overflow: "hidden"`をtextarea自体に指定し、ブラウザ標準のリサイズハンドル・スクロールバーを出さないようにすること（Bootstrapに`resize-none`等のユーティリティクラスは無いため、インラインスタイルで指定する）。
 
 ### `shared/ui/ShareButton.jsx`
 
