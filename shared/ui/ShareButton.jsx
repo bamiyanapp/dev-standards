@@ -38,24 +38,33 @@ export default function ShareButton({ label = "このページを共有", classN
       </button>
 
       {open && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="text-lg font-bold">{label}</h3>
-            <div className="my-4 flex justify-center">
-              <QRCodeSVG value={shareUrl} size={200} />
-            </div>
-            <p className="bg-base-200 rounded-box p-2 text-sm break-all select-all">{shareUrl}</p>
-            <div className="modal-action">
-              <button type="button" className="btn btn-sm" onClick={handleCopy}>
-                {copied ? "コピーしました" : "URLをコピー"}
-              </button>
-              <button type="button" className="btn btn-sm" onClick={() => setOpen(false)}>
-                閉じる
-              </button>
+        <>
+          <div className="modal d-block show" tabIndex="-1" role="dialog">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3 className="modal-title h5">{label}</h3>
+                  <button type="button" className="btn-close" aria-label="閉じる" onClick={() => setOpen(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="d-flex justify-content-center mb-3">
+                    <QRCodeSVG value={shareUrl} size={200} />
+                  </div>
+                  <p className="bg-body-secondary rounded p-2 small text-break user-select-all mb-0">{shareUrl}</p>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-sm btn-secondary" onClick={handleCopy}>
+                    {copied ? "コピーしました" : "URLをコピー"}
+                  </button>
+                  <button type="button" className="btn btn-sm btn-secondary" onClick={() => setOpen(false)}>
+                    閉じる
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <button type="button" className="modal-backdrop" aria-label="閉じる" onClick={() => setOpen(false)} />
-        </div>
+          <div className="modal-backdrop show" onClick={() => setOpen(false)} />
+        </>
       )}
     </>
   );
