@@ -7,8 +7,8 @@ import { useEffect } from "react";
 // 固まったように見える問題に対応する。
 //
 // 利用側のCSSに、JSがclickイベントでvisibleクラスを付け外しする状態遷移を
-// 表現する以下のルールが必要（Tailwindのユーティリティだけでは表現できないため）。
-//   .nav-overlay.visible { display: flex; }
+// 表現する以下のルールが必要（Bootstrapのユーティリティだけでは表現できないため）。
+//   .nav-overlay { display: none; } / .nav-overlay.visible { display: flex; }
 export default function NavigationOverlay() {
   useEffect(() => {
     function handleClick(event) {
@@ -25,10 +25,10 @@ export default function NavigationOverlay() {
   return (
     <div
       id="nav-overlay"
-      className="nav-overlay hidden fixed inset-0 z-50 items-center justify-center bg-base-100/80"
+      className="nav-overlay position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center"
       aria-hidden="true"
     >
-      <span className="loading loading-spinner loading-lg text-primary" />
+      <span className="spinner-border text-light" style={{ width: "3rem", height: "3rem" }} role="status" />
     </div>
   );
 }
