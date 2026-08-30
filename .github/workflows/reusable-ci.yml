@@ -547,29 +547,39 @@ jobs:
       # 対しての話であり、本項目（プロセス間マージの非決定性）とは別の問題である
       # 点に注意。実行時間は伸びるが、正確な計測を優先する。
       #
-      # `NODE_OPTIONS=--no-flush-bytecode`を追加しているのは、上記
-      # `--no-file-parallelism`（単一プロセス化）を適用してもなお
-      # dev-standards#307が実CI（Electric-Chair-Arena PR #258）で再発したため。
-      # 単一プロセスに固定した後の再調査で、`nash.js`の`hasConverged`・
-      # `computeRelativeRank`は直接・決定的に呼ぶテストが存在するにも関わらず
-      # 未カバー判定になることがあり、いずれも「呼び出し直後に長時間の重い計算
-      # （1000反復のfictitiousPlay等）を挟んでから二度と呼ばれない」小さな関数
-      # という共通点があった。V8はメモリ節約のため、しばらく呼ばれていない
-      # 関数のbytecodeを自動的に破棄（flush）し、次回呼び出し時に再コンパイル
-      # する（bytecode flushing）。この破棄・再コンパイルのタイミングはプロセスの
+      # `--no-flush-bytecode`を追加しているのは、上記`--no-file-parallelism`
+      # （単一プロセス化）を適用してもなおdev-standards#307が実CI
+      # （Electric-Chair-Arena PR #258）で再発したため。単一プロセスに固定した
+      # 後の再調査で、`nash.js`の`hasConverged`・`computeRelativeRank`は
+      # 直接・決定的に呼ぶテストが存在するにも関わらず未カバー判定になることが
+      # あり、いずれも「呼び出し直後に長時間の重い計算（1000反復の
+      # fictitiousPlay等）を挟んでから二度と呼ばれない」小さな関数という
+      # 共通点があった。V8はメモリ節約のため、しばらく呼ばれていない関数の
+      # bytecodeを自動的に破棄（flush）し、次回呼び出し時に再コンパイルする
+      # （bytecode flushing）。この破棄・再コンパイルのタイミングはプロセスの
       # メモリ圧・GCタイミングに依存するため、ローカル環境と共有CIランナーとで
       # 発生パターンが変わり得る。`--no-flush-bytecode`はこのV8の自動破棄自体を
       # 無効化し、一度呼ばれた関数のカバレッジ記録が計算の合間で失われることを
-      # 防ぐ狙い。まだ実CIでの再発有無を継続監視中の対策であり、これでも解消
-      # しない場合は次善策（該当関数のper-fileカバレッジゲート対象からの除外等）
-      # を検討すること。
+      # 防ぐ狙い。
+      #
+      # `NODE_OPTIONS`環境変数へ設定する形（PR #347）でリリースしたが、
+      # `--no-flush-bytecode`はNode.jsがNODE_OPTIONS経由での設定を許可しない
+      # V8フラグであり、`node: --no-flush-bytecode is not allowed in
+      # NODE_OPTIONS`（exit code 9）でテストが1件も実行されないままbackend-test
+      # 全体が即座に壊れることが実CI（Electric-Chair-Arena PR #269）で判明した
+      # （リリース前にローカル検証していなかったための見落とし）。同じフラグを
+      # NODE_OPTIONSではなく`node`本体への直接のCLI引数として渡す
+      # （`node --no-flush-bytecode <エントリファイル>`）ことで回避する。
+      # vitestのbinエントリファイルの実パスは`workspaces`入力の有無で階層が
+      # 変わる（npm workspacesではリポジトリルートのnode_modulesへhoistされる）
+      # ため、パスを直接組み立てず、`npx -c '...'`でnpxに`node_modules/.bin`を
+      # 含むPATH解決をさせたうえで`command -v vitest`から実パスを取得し、
+      # そのファイルへ直接`node --no-flush-bytecode`を適用する。
       - name: Test (attempt 1/2)
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.backend_dir }}
-        env:
-          NODE_OPTIONS: --no-flush-bytecode
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism
+        run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
       - name: Wait before retrying the test run
         if: steps.test-1.outcome == 'failure'
         shell: bash
@@ -577,9 +587,7 @@ jobs:
       - name: Test (attempt 2/2, retry after a possible flaky failure)
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
-        env:
-          NODE_OPTIONS: --no-flush-bytecode
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism
+        run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: Checkout dev-standards (for the local composite action)
         if: inputs.coverage_threshold > 0
@@ -588,8 +596,31 @@ jobs:
           repository: bamiyanapp/dev-standards
           ref: v2.6.1
           path: .dev-standards-actions
-      - name: Check coverage threshold
+      # 上記の各種対策（--no-isolate・--no-file-parallelism・
+      # --no-flush-bytecode）を講じてもなお、V8のカバレッジ計測が実行のたびに
+      # 変動する非決定性が実CIで解消しきらない場合に備え、Testステップと同様の
+      # attempt 1/2・2/2パターンを設ける（dev-standards#307）。テスト自体は
+      # 毎回全件成功しカバレッジ計測値だけが偶発的に振れる性質のため、
+      # カバレッジ判定が閾値未達だった場合はテストを再実行して計測をやり直し、
+      # 改めて判定する。
+      - name: Check coverage threshold (attempt 1/2)
+        id: coverage-check-1
         if: inputs.coverage_threshold > 0
+        continue-on-error: true
+        uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
+        with:
+          working-directory: ${{ inputs.backend_dir }}
+          threshold: ${{ inputs.coverage_threshold }}
+          label: backend
+          metrics: ${{ inputs.coverage_metrics }}
+          per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
+          check-per-file: ${{ inputs.coverage_check_per_file }}
+      - name: Re-run backend tests before retrying the coverage threshold check
+        if: inputs.coverage_threshold > 0 && steps.coverage-check-1.outcome == 'failure'
+        working-directory: ${{ inputs.backend_dir }}
+        run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
+      - name: Check coverage threshold (attempt 2/2, retry after a possible flaky measurement)
+        if: inputs.coverage_threshold > 0 && steps.coverage-check-1.outcome == 'failure'
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
           working-directory: ${{ inputs.backend_dir }}
