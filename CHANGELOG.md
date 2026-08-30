@@ -1,3 +1,10 @@
+## [2.7.2](https://github.com/bamiyanapp/dev-standards/compare/v2.7.1...v2.7.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **shared/ui:** ShareButton.jsx・NavigationOverlay.jsxをBootstrap 5.3クラスへ統一 ([#349](https://github.com/bamiyanapp/dev-standards/issues/349)) ([f20a067](https://github.com/bamiyanapp/dev-standards/commit/f20a0672af6afeeaadc7d31db2e751161ea13a1a))
+
 ## [2.7.1](https://github.com/bamiyanapp/dev-standards/compare/v2.7.0...v2.7.1) (2026-08-30)
 
 
