@@ -1,3 +1,10 @@
+## [2.7.4](https://github.com/bamiyanapp/dev-standards/compare/v2.7.3...v2.7.4) (2026-09-03)
+
+
+### Bug Fixes
+
+* **cd:** releaseジョブがmainへの直接push成功を正しく検知するよう修正 ([#363](https://github.com/bamiyanapp/dev-standards/issues/363)) ([a1b2cf9](https://github.com/bamiyanapp/dev-standards/commit/a1b2cf9731c1eb8be15aa2f220257377bc77be0b)), closes [#362](https://github.com/bamiyanapp/dev-standards/issues/362)
+
 ## [2.7.3](https://github.com/bamiyanapp/dev-standards/compare/v2.7.2...v2.7.3) (2026-08-30)
 
 
