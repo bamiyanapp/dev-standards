@@ -149,9 +149,18 @@ jobs:
 
       # semantic-releaseは新バージョンを発行する場合のみローカルにコミット・タグを
       # 作成するため、実行前後のコミットを比較してリリース有無を判定する。
-      # base_branchが保護されておらず直接pushが成功していた場合はこの時点で
-      # @semantic-release/githubのpublishまで完了済みのため、release_needs_pr=falseとし
-      # 後続のPRフォールバック処理をスキップする。
+      #
+      # release_needs_pr（PRフォールバックが必要か）の判定は、
+      # steps.semantic-release.outcomeだけに頼らず、実際にorigin/<base_branch>へ
+      # ローカルの変更コミットが反映済みかどうかを直接確認する。
+      # @semantic-release/gitのprepareステップ（コミット→base_branchへの直接push）
+      # 自体は成功していても、その後にsemantic-releaseコア本体が行うgit notesの
+      # push（`refs/notes/semantic-release-<version>`）が対象リポジトリのpush rule等で
+      # 拒否されると、npx semantic-release全体がexit 1で終了し
+      # steps.semantic-release.outcomeは'failure'になる。この場合、実際には
+      # コミット本体は既にbase_branchへ反映済みのため、従来の「outcome=failureなら
+      # 常にPRフォールバックが必要」という判定では、差分ゼロのブランチからPRを
+      # 作ろうとして422 "No commits between..."で失敗していた（dev-standards#362）。
       #
       # タグ名の取得に`git tag --points-at HEAD`を使わないのは、base_branchが
       # 保護されている場合、@semantic-release/gitのprepareステップは「コミット→
@@ -161,8 +170,8 @@ jobs:
       # 処理）自体が一度も実行されないため、git tagで探しても何も見つからない。
       # 一方@semantic-release/npmのprepareはこのpush処理より前に完了しており、
       # package.jsonには新バージョンが既に書き込まれているため、これを信頼できる
-      # 取得元として使う（base_branchが保護されておらず直接pushが成功した場合も
-      # package.jsonの内容は同一のため、この方法はどちらのケースでも正しく動作する）。
+      # 取得元として使う（直接pushが成功した場合も内容は同一のため、どちらの
+      # ケースでも正しく動作する）。
       - name: Check if a release was prepared locally
         id: check-release
         run: |
@@ -177,11 +186,35 @@ jobs:
             echo "tag=" >> "$GITHUB_OUTPUT"
             echo "version=" >> "$GITHUB_OUTPUT"
           fi
-          if [ "${{ steps.semantic-release.outcome }}" = "failure" ]; then
+
+          git fetch origin "${{ github.ref_name }}"
+          REMOTE_SHA=$(git rev-parse "origin/${{ github.ref_name }}")
+          if [ "$AFTER_SHA" = "$REMOTE_SHA" ] && [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
+            # ローカルのコミットは既にorigin側へ反映済み（直接pushが実際には
+            # 成功している）。PRフォールバックは不要だが、semantic-releaseコア
+            # 本体によるタグ作成・@semantic-release/githubのRelease作成は
+            # 実行されていないため、後続のタグ付け専用ステップで行う。
+            echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
+            echo "release_pushed_directly=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.semantic-release.outcome }}" = "failure" ]; then
             echo "release_needs_pr=true" >> "$GITHUB_OUTPUT"
+            echo "release_pushed_directly=false" >> "$GITHUB_OUTPUT"
           else
             echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
+            echo "release_pushed_directly=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # 直接pushが実際には成功していたケース（release_pushed_directly）向けに、
+      # semantic-releaseコア本体が実行できなかったタグ作成のみを行う
+      # （@semantic-release/githubによるRelease作成分は後続の
+      # 「Create GitHub Release」ステップが共通で担う）。
+      - name: Tag the directly-pushed release commit
+        if: steps.check-release.outputs.release_pushed_directly == 'true'
+        env:
+          TAG: ${{ steps.check-release.outputs.tag }}
+        run: |
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"
 
       # ローカルに作成済みのバージョン更新コミットを新しいブランチへpushする
       # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。
@@ -274,9 +307,10 @@ jobs:
           git tag -f "$TAG" "$MERGE_SHA"
           git push origin "refs/tags/$TAG" --force
 
-      # @semantic-release/githubのpublishステップはpush失敗により実行されないため、
-      # GitHub Releaseを別途作成する。リリースノートはsemantic-releaseが既に更新した
-      # CHANGELOG.mdの該当バージョン節から抽出する。
+      # @semantic-release/githubのpublishステップはpush失敗（PRフォールバック・
+      # 直接push成功後のgit notes push失敗のいずれの経路でも）により実行されない
+      # ため、GitHub Releaseを別途作成する。リリースノートはsemantic-releaseが
+      # 既に更新したCHANGELOG.mdの該当バージョン節から抽出する。
       #
       # createではなくedit優先のupsertにしているのは、同名タグのReleaseが既に
       # 存在するケースが実際に発生したため（過去に何らかの経緯でgit tagの実体が
@@ -286,7 +320,7 @@ jobs:
       # HTTP 422で失敗するため、まずeditを試し、対象が存在しない通常ケースでは
       # editが失敗するのでcreateにフォールバックする。
       - name: Create GitHub Release
-        if: steps.check-release.outputs.release_needs_pr == 'true'
+        if: steps.check-release.outputs.release_needs_pr == 'true' || steps.check-release.outputs.release_pushed_directly == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.check-release.outputs.tag }}
