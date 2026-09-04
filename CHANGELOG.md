@@ -1,3 +1,10 @@
+## [2.7.5](https://github.com/bamiyanapp/dev-standards/compare/v2.7.4...v2.7.5) (2026-09-04)
+
+
+### Bug Fixes
+
+* **cd:** 直接push成功時の不要なタグ再作成ステップを削除 ([#365](https://github.com/bamiyanapp/dev-standards/issues/365)) ([b74eed0](https://github.com/bamiyanapp/dev-standards/commit/b74eed07fa8cffd77d120f2bc3822d153f962536)), closes [#362](https://github.com/bamiyanapp/dev-standards/issues/362)
+
 ## [2.7.4](https://github.com/bamiyanapp/dev-standards/compare/v2.7.3...v2.7.4) (2026-09-03)
 
 
