@@ -191,9 +191,13 @@ jobs:
           REMOTE_SHA=$(git rev-parse "origin/${{ github.ref_name }}")
           if [ "$AFTER_SHA" = "$REMOTE_SHA" ] && [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
             # ローカルのコミットは既にorigin側へ反映済み（直接pushが実際には
-            # 成功している）。PRフォールバックは不要だが、semantic-releaseコア
-            # 本体によるタグ作成・@semantic-release/githubのRelease作成は
-            # 実行されていないため、後続のタグ付け専用ステップで行う。
+            # 成功している）。この場合、semantic-releaseコア本体はコミット→
+            # push→タグ作成→タグpush→notes push、という順で処理しており、
+            # notes pushより前の工程であるタグの作成・pushまでは完了済み
+            # （dev-standards#362のコメント参照）。そのためPRフォールバックも
+            # 追加のタグ作成も不要で、実行されていないのは
+            # @semantic-release/githubによるRelease作成のみ
+            # （後続の「Create GitHub Release」ステップで行う）。
             echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
             echo "release_pushed_directly=true" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.semantic-release.outcome }}" = "failure" ]; then
@@ -203,18 +207,6 @@ jobs:
             echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
             echo "release_pushed_directly=false" >> "$GITHUB_OUTPUT"
           fi
-
-      # 直接pushが実際には成功していたケース（release_pushed_directly）向けに、
-      # semantic-releaseコア本体が実行できなかったタグ作成のみを行う
-      # （@semantic-release/githubによるRelease作成分は後続の
-      # 「Create GitHub Release」ステップが共通で担う）。
-      - name: Tag the directly-pushed release commit
-        if: steps.check-release.outputs.release_pushed_directly == 'true'
-        env:
-          TAG: ${{ steps.check-release.outputs.tag }}
-        run: |
-          git tag "$TAG"
-          git push origin "refs/tags/$TAG"
 
       # ローカルに作成済みのバージョン更新コミットを新しいブランチへpushする
       # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。
