@@ -165,6 +165,15 @@ on:
     secrets:
       BOT_TOKEN:
         required: false
+      E2E_SECRETS_JSON:
+        description: >-
+          frontend-e2e-testジョブのnpm run test:e2eへ渡す、参照側リポジトリ固有のsecretsを
+          {"KEY1":"value1","KEY2":"value2"}形式のJSON文字列で指定する（省略可）。
+          docs/client-only-vite-spa-pattern.mdの「E2Eはモックを作らず実際のAPIへ直結する」
+          原則を、ログイン等の対話的な同意画面を伴うE2Eでも維持できるよう、事前に取得した
+          実アクセストークン等をブラウザへ注入する用途を想定している。キー名は
+          reusable-ci.yml側では一切関知しない
+        required: false
 
 # 同一ref（同一ブランチ・同一PR）で新しいpushが発生した場合、古いCI実行を
 # キャンセルする（issue #187「CI/CD実行回数・実行時間削減バックログ」②）。
@@ -774,6 +783,24 @@ jobs:
       - name: Build
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run build
+      # 参照側リポジトリ固有のsecrets（ログイン等の対話的な同意画面を伴うE2Eで、事前に
+      # 取得した実アクセストークン等をテストへ渡す用途を想定）を$GITHUB_ENVへ展開する
+      # （issue #371）。JSON全体を1つのsecretとして登録するだけでは個々の値がログの
+      # マスク対象にならないため、値ごとに::add-mask::で個別に登録してから書き出す
+      - name: Load E2E secrets
+        if: env.E2E_SECRETS_JSON != ''
+        env:
+          E2E_SECRETS_JSON: ${{ secrets.E2E_SECRETS_JSON }}
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("fs");
+            const entries = Object.entries(JSON.parse(process.env.E2E_SECRETS_JSON));
+            for (const [key, value] of entries) {
+              console.log(`::add-mask::${value}`);
+              fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+            }
+          '
       - name: Run E2E tests
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run test:e2e
