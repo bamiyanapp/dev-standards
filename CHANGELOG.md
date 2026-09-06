@@ -1,3 +1,10 @@
+# [2.8.0](https://github.com/bamiyanapp/dev-standards/compare/v2.7.5...v2.8.0) (2026-09-06)
+
+
+### Features
+
+* **shared:** フロントエンドError Boundary＋サーバーサイドロギングを共有化する ([#370](https://github.com/bamiyanapp/dev-standards/issues/370)) ([fadf6d8](https://github.com/bamiyanapp/dev-standards/commit/fadf6d87997b23ae613a110dd4bc1c73ec7ec2d4))
+
 ## [2.7.5](https://github.com/bamiyanapp/dev-standards/compare/v2.7.4...v2.7.5) (2026-09-04)
 
 
