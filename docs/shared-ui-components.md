@@ -181,6 +181,16 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 
 `success.mp3`の別バリエーション（issue #316）。Electric-Chair-Arenaの「セーフ」演出音から切り出したもの。役割は`success.mp3`と同じ「操作の成功を通知する汎用音」だが、音自体が別物のため、片方へ統合せず選べるバリエーションとして追加した。プロダクトの雰囲気に合わせて`success.mp3`・`success-2.mp3`のどちらかを選ぶ。`failure.mp3`との組み合わせは利用側の判断に委ねる（`success-2.mp3`用の専用`failure`バリエーションは無い）。
 
+### `shared/ui/ErrorBoundary.jsx`
+
+レンダリング中の未捕捉例外で画面が真っ白なまま操作不能になる事象への対策となるReact Error Boundary。`reportUrl`（任意）propを渡すと、捕捉した例外情報をサーバーサイドのログへ残すエンドポイントへfire-and-forgetで送信する（対になる`shared/lambda/clientErrorReporting.js`と合わせ、詳細は`docs/client-error-reporting-pattern.md`参照）。
+
+```jsx
+<ErrorBoundary reportUrl={`${API_BASE_URL}/report-client-error`}>
+  <App />
+</ErrorBoundary>
+```
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -196,6 +206,7 @@ const playFailureSound = usePlaySound(failureSoundUrl)
     { "source": "shared/ui/resizeTextareaToFitContent.js", "target": "app/top/src/components/resizeTextareaToFitContent.js" },
     { "source": "shared/ui/getAppVersionDefine.js", "target": "app/top/getAppVersionDefine.js" },
     { "source": "shared/ui/formatBuildTime.js", "target": "app/top/src/components/formatBuildTime.js" },
+    { "source": "shared/ui/ErrorBoundary.jsx", "target": "app/top/src/components/ErrorBoundary.jsx" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
