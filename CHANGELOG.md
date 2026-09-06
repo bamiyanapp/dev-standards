@@ -1,3 +1,10 @@
+# [2.9.0](https://github.com/bamiyanapp/dev-standards/compare/v2.8.0...v2.9.0) (2026-09-06)
+
+
+### Features
+
+* **ci:** frontend-e2e-testジョブへ参照側リポジトリ固有のsecretsを渡せるようにする ([#372](https://github.com/bamiyanapp/dev-standards/issues/372)) ([6301883](https://github.com/bamiyanapp/dev-standards/commit/6301883764fb7291db898cf7f5a8e4f1ed9ae2cd))
+
 # [2.8.0](https://github.com/bamiyanapp/dev-standards/compare/v2.7.5...v2.8.0) (2026-09-06)
 
 
