@@ -45,6 +45,7 @@
   - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
   - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
   - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
+  - [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
   - [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md): フロントエンドError Boundary＋サーバーサイドロギング（`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
   - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md): S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成（標準索引からは除外、サイト全体ログイン保護が必要な場合の追加パターン）
   - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理。`serverless-static-site-pattern.md`向け）
