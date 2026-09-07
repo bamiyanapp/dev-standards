@@ -1,3 +1,10 @@
+# [2.10.0](https://github.com/bamiyanapp/dev-standards/compare/v2.9.0...v2.10.0) (2026-09-07)
+
+
+### Features
+
+* **shared:** 運用監視（サイレント障害検知）のLINE通知共有コードを追加する ([#376](https://github.com/bamiyanapp/dev-standards/issues/376)) ([7ef7c09](https://github.com/bamiyanapp/dev-standards/commit/7ef7c09bcf1fd3c5730313fa9dcf6dfbcebc4022))
+
 # [2.9.0](https://github.com/bamiyanapp/dev-standards/compare/v2.8.0...v2.9.0) (2026-09-06)
 
 
