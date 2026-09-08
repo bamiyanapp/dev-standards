@@ -1,3 +1,10 @@
+## [2.10.1](https://github.com/bamiyanapp/dev-standards/compare/v2.10.0...v2.10.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ui:** bootstrap-theme.cssの共通フォントがbody要素に反映されない不具合を修正 ([#380](https://github.com/bamiyanapp/dev-standards/issues/380)) ([c213d51](https://github.com/bamiyanapp/dev-standards/commit/c213d51566dbfecd99c211829f6caf19dd226cbc)), closes [#root](https://github.com/bamiyanapp/dev-standards/issues/root)
+
 # [2.10.0](https://github.com/bamiyanapp/dev-standards/compare/v2.9.0...v2.10.0) (2026-09-07)
 
 
