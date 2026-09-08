@@ -15,13 +15,21 @@
    - 「M PLUS Rounded 1c」フォント（docs/frontend-ui-conventions.md）をGoogle Fonts等
      経由で利用側が読み込んでいること。common-theme.css側でfont-familyの指定のみ行う
    - ダークモードの切り替え自体（data-bs-theme属性の付与・トグルUI）は利用側アプリの
-     責務であり、本ファイルはCSS側の追従のみを担う */
+     責務であり、本ファイルはCSS側の追従のみを担う
+
+   注意: common-theme.cssは共通フォントを`:root, #root`へのfont-family指定として
+   提供するが、Bootstrap本体（bootstrap.min.css）は`body { font-family:
+   var(--bs-body-font-family); }`のようにbody要素へ直接font-familyを指定して
+   いるため、:root からの継承では上書きされない。本ファイルでは
+   `--bs-body-font-family`（Bootstrap 5.3のCSSカスタムプロパティ）を直接
+   再定義することで、実際にbodyへ反映されるようにしている（issue #379） */
 
 @import "./common-theme.css";
 
 :root {
   --app-bg: #ffffff;
   --app-fg: #213547;
+  --bs-body-font-family: 'M PLUS Rounded 1c', sans-serif;
 }
 
 [data-bs-theme="dark"] {
