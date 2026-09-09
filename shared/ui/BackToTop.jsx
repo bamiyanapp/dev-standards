@@ -2,8 +2,8 @@
 // 他ページへ戻る手段を提供する。トップページのパスとラベルはpropsで受け取る
 export default function BackToTop({ href = "/", label = "← トップに戻る" }) {
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-3">
-      <a href={href} className="link link-hover text-sm text-base-content/70 hover:text-base-content">
+    <div className="container pt-3" style={{ maxWidth: "42rem" }}>
+      <a href={href} className="link-secondary link-underline-opacity-0 link-underline-opacity-100-hover small">
         {label}
       </a>
     </div>
