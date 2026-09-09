@@ -1,3 +1,10 @@
+# [2.11.0](https://github.com/bamiyanapp/dev-standards/compare/v2.10.1...v2.11.0) (2026-09-09)
+
+
+### Features
+
+* **pwa:** ServiceWorkerRegistration.jsxをbasePath配下配信に対応させる ([#382](https://github.com/bamiyanapp/dev-standards/issues/382)) ([64b4f45](https://github.com/bamiyanapp/dev-standards/commit/64b4f45d49eff8c34890aadb93bbab29829e77bf))
+
 ## [2.10.1](https://github.com/bamiyanapp/dev-standards/compare/v2.10.0...v2.10.1) (2026-09-08)
 
 
