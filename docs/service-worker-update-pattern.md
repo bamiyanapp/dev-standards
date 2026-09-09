@@ -5,7 +5,7 @@ Service Workerでオフライン対応・表示高速化のキャッシュを導
 ## 提供するファイル
 
 - `shared/pwa/sw.js`: Service Worker本体。ナビゲーション（ページ本体）はNetwork First、それ以外の同一オリジンサブリソース・設定済みAPIホストへのGETはStale-While-Revalidateで扱う。プロダクト固有の値は一切持たない
-- `shared/pwa/ServiceWorkerRegistration.jsx`: `/sw.js`を登録するReactコンポーネント。iOS PWAでの更新チェック遅延に対応するため、フォアグラウンド復帰時・5分おきに`registration.update()`を呼ぶ
+- `shared/pwa/ServiceWorkerRegistration.jsx`: `sw.js`を登録するReactコンポーネント（`swUrl`未指定時は`/sw.js`）。iOS PWAでの更新チェック遅延に対応するため、フォアグラウンド復帰時・5分おきに`registration.update()`を呼ぶ
 - `shared/pwa/UpdateNotifier.jsx`: 新バージョン検知（`controllerchange`イベント）時に再読み込みを促すバナーを表示するReactコンポーネント
 
 3ファイルともプロダクト固有の値を持たないため、そのままsymlinkで共有できる。
@@ -72,6 +72,19 @@ export default function App() {
 ```
 
 `UpdateNotifier.jsx`は標準構成であるBootstrap 5.3（`alert`/`btn`等）のクラス名を使っている（issue #289）。Bootstrapを使っていないプロダクト（daisyUI構成のexamination等）では、そのままでもクラス名が無視されるだけで機能上は動作するが、見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意。調整が必要な場合はsymlink化を見送り、コピーして個別管理する。examinationはこの方針で個別コピーへ切り替え済み）。
+
+## GitHub Pages等、basePath配下へ配信する場合
+
+`ServiceWorkerRegistration.jsx`は既定で`navigator.serviceWorker.register("/sw.js")`とサイトルート絶対パスを登録する。GitHub Pagesのプロジェクトページ（例: `https://<user>.github.io/<repo>/`）のように、サイトルート以外のbasePath配下へ配信するプロダクトでは、実際に配信される`sw.js`のパスと一致せず404になりService Worker自体が登録されない（`bamiyanapp/hanko-master-kentei`のissue #214で発見）。
+
+このようなプロダクトは`swUrl`propへ実際のパスを渡す。
+
+```jsx
+// Viteの場合、import.meta.env.BASE_URL（vite.config.tsのbase設定と連動）を使う
+<ServiceWorkerRegistration swUrl={`${import.meta.env.BASE_URL}sw.js`} />
+```
+
+`swUrl`省略時は従来どおり`/sw.js`のままのため、サイトルート配信の既存プロダクトへの影響はない。
 
 ## 既知の制約・注意点
 

@@ -13,14 +13,16 @@ const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 // サイトルートが配信する/sw.jsを登録する（詳細はdocs/service-worker-update-pattern.md）。
 // 複数の独立ビルドアプリで同一サイトを構成する場合、各アプリはこのコンポーネントを
-// dev-standards側からsymlinkして複製する（sync-manifest.local.json参照）
-export default function ServiceWorkerRegistration() {
+// dev-standards側からsymlinkして複製する（sync-manifest.local.json参照）。
+// GitHub Pagesのプロジェクトページ等、サイトルート以外のbasePath配下（例: /app-name/）へ
+// 配信するプロダクトは、swUrlへ実際に配信されるsw.jsの絶対パスを渡す（issue #346）。
+export default function ServiceWorkerRegistration({ swUrl = "/sw.js" } = {}) {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
     let registration;
     navigator.serviceWorker
-      .register("/sw.js")
+      .register(swUrl)
       .then((reg) => {
         registration = reg;
       })
@@ -43,7 +45,7 @@ export default function ServiceWorkerRegistration() {
       document.removeEventListener("visibilitychange", checkForUpdate);
       clearInterval(intervalId);
     };
-  }, []);
+  }, [swUrl]);
 
   return null;
 }
