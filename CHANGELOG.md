@@ -1,3 +1,10 @@
+## [2.11.1](https://github.com/bamiyanapp/dev-standards/compare/v2.11.0...v2.11.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **shared-ui:** BackToTop.jsxをdaisyUIからBootstrap 5.3クラスへ統一する ([#384](https://github.com/bamiyanapp/dev-standards/issues/384)) ([c23595c](https://github.com/bamiyanapp/dev-standards/commit/c23595c000a0929300b8e38557d7691bd1bd105f)), closes [#351](https://github.com/bamiyanapp/dev-standards/issues/351)
+
 # [2.11.0](https://github.com/bamiyanapp/dev-standards/compare/v2.10.1...v2.11.0) (2026-09-09)
 
 
