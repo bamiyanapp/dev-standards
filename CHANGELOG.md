@@ -1,3 +1,10 @@
+# [2.12.0](https://github.com/bamiyanapp/dev-standards/compare/v2.11.2...v2.12.0) (2026-09-10)
+
+
+### Features
+
+* **client-error-reporting:** フロントエンドエラーを運用監視LINE Botへも通知できるようにする ([#390](https://github.com/bamiyanapp/dev-standards/issues/390)) ([d187ca3](https://github.com/bamiyanapp/dev-standards/commit/d187ca3aa83c5a32870d55f0810035912501c8c1)), closes [#387](https://github.com/bamiyanapp/dev-standards/issues/387)
+
 ## [2.11.2](https://github.com/bamiyanapp/dev-standards/compare/v2.11.1...v2.11.2) (2026-09-10)
 
 
