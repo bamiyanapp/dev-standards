@@ -62,6 +62,43 @@ reportClientError:
 
 `buildClientErrorLogPayload(body)`は、`message`が無い（≒不正な入力）場合は`null`を返す。呼び出し側はこの場合400を返すこと。認証の無い公開エンドポイントを想定しているため、内容の真偽は検証できない前提で、各フィールドに長さ上限（`message`: 500文字、`stack`/`componentStack`: 4000文字、`url`: 500文字）を設け、悪意ある大量送信でログの容量・コストが膨らむのを防いでいる。
 
+## LINEへの通知（任意、`docs/ops-monitoring-pattern.md`との連携）
+
+スマホオンリー環境ではCloudWatch Logsを都度確認しに行くのが難しいため、CloudWatch Logsへの記録に加えて、`shared/lambda/opsAlertNotifier.js`が使う運用監視専用LINE Bot（全プロダクト共通の1チャンネル）へも同じ例外情報を通知したい場合、`buildClientErrorAlertMessage`と`sendOpsAlert`を組み合わせて使う（dev-standards issue #387）。
+
+```js
+const { buildClientErrorLogPayload, buildClientErrorAlertMessage } = require("./clientErrorReporting.js"); // symlink先
+const { sendOpsAlert } = require("./opsAlertNotifier.js"); // symlink先
+
+exports.reportClientError = async (event) => {
+  const allowedOrigin = resolveAllowedOrigin(event);
+  try {
+    const body = JSON.parse(event.body);
+    const payload = buildClientErrorLogPayload(body);
+    if (!payload) {
+      return badRequest(allowedOrigin, "Invalid input");
+    }
+
+    console.error("[ClientError]", payload);
+
+    // fire-and-forget: LINE通知の失敗がAPIレスポンスを妨げてはならない
+    sendOpsAlert({
+      message: buildClientErrorAlertMessage({ appName: "karuta", message: payload.message, url: payload.url }),
+      channelAccessToken: process.env.OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN,
+      userId: process.env.OPS_ALERT_LINE_USER_ID,
+    }).catch(() => {});
+
+    return jsonResponse(allowedOrigin, 200, { message: "Error reported successfully" });
+  } catch (error) {
+    return serverError(allowedOrigin, error);
+  }
+};
+```
+
+`appName`はプロダクトごとの固定文字列を渡す（`buildOpsAlertMessage`と同じく、1つのLINE Botに複数プロダクトからの通知が届くため、どのアプリのエラーかを区別するために必須）。通知先の`OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN`・`OPS_ALERT_LINE_USER_ID`は`docs/ops-monitoring-pattern.md`「運用監視専用LINE Botについて」と同じ値（同じLINE Bot・同じセッション）を使い、プロダクトごとに新しいLINE Botを用意する必要はない。
+
+フロントエンドの同一バグが多数のユーザーで同時多発すると、この方式では通知件数もそれに比例して増える（`dailyRateLimit.js`等でアプリ単位の1日あたり件数を絞ることもできるが、そこまでの頻度対策が必要かは呼び出し側の判断に委ねる。本パターン自体は組み込むかどうかを含め呼び出し側の任意選択とする）。
+
 ## `sync-manifest.local.json`への追加例
 
 ```json

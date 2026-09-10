@@ -43,4 +43,24 @@ function buildClientErrorLogPayload(body) {
   };
 }
 
-module.exports = { CLIENT_ERROR_FIELD_MAX_LENGTHS, truncateClientErrorField, buildClientErrorLogPayload };
+// CloudWatch Logsへの記録に加え、opsAlertNotifier.jsが使う運用監視専用LINE Botへも
+// 同じセッション（チャンネル）で通知したい場合向けの、通知文組み立て用の純粋関数
+// （dev-standards issue #387由来。karuta issue #1110の開発共通化にあたり、複数プロダクト
+// からの通知が同じLINE Botに届くことを踏まえ、buildOpsAlertMessageと同様にappNameで
+// どのアプリのエラーかを区別できる形式にしている）。送信自体はopsAlertNotifier.jsの
+// sendOpsAlertをそのまま再利用する想定で、このファイルはメッセージ組み立てのみを担う。
+// スマホオンリー環境ではCloudWatch Logsを都度確認しに行くことが難しいため、LINEへの
+// プッシュ通知で気づけるようにする用途を想定しているが、呼び出しは任意（呼び出し側の
+// Lambdaハンドラでbuildクライアントエラーログペイロードと合わせて使うかどうかを選べる）
+function buildClientErrorAlertMessage({ appName, message, url }) {
+  return ["【フロントエンドエラー】", `アプリ: ${appName}`, `内容: ${message}`, url ? `発生ページ: ${url}` : null]
+    .filter(Boolean)
+    .join("\n");
+}
+
+module.exports = {
+  CLIENT_ERROR_FIELD_MAX_LENGTHS,
+  truncateClientErrorField,
+  buildClientErrorLogPayload,
+  buildClientErrorAlertMessage,
+};
