@@ -1,3 +1,10 @@
+## [2.12.1](https://github.com/bamiyanapp/dev-standards/compare/v2.12.0...v2.12.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **ci:** 自己参照タグ更新フォローアップはfix型で行うことをSkillへ明記する ([#396](https://github.com/bamiyanapp/dev-standards/issues/396)) ([b7ba6ce](https://github.com/bamiyanapp/dev-standards/commit/b7ba6ce635aff797c5b2b12712fd4bbfc4eee2ed)), closes [#395](https://github.com/bamiyanapp/dev-standards/issues/395)
+
 # [2.12.0](https://github.com/bamiyanapp/dev-standards/compare/v2.11.2...v2.12.0) (2026-09-10)
 
 
