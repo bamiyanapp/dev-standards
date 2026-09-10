@@ -23,17 +23,41 @@ const { extractMermaidBlocks } = require("./extract-mermaid.js");
 // 想定していないため、余裕を持たせつつ確実に検知できる値としてtimeoutを設定する
 const RENDER_TIMEOUT_MS = 120_000;
 
+// mmdcの既定解像度（devicePixelRatio相当）は1倍のため、複雑な図では文字が潰れて
+// 読みにくくなる（bamiyanapp/dev-standards#388）。`-s`（puppeteerのscale factor）を
+// 上げることで、図の見た目の大きさ・レイアウトを変えずに出力PNGの物理ピクセル数のみを
+// 増やし、文字を鮮明にする
+const IMAGE_SCALE = 3;
+
+// GitHubモバイルアプリの画像ビューアは、画像の上下端にヘッダー・フッターのUIを
+// 重ねて表示するため、図の内容がPNGの端まで達していると一部が隠れて見切れる
+// （bamiyanapp/dev-standards#388）。mmdc自体には図の周囲に余白を追加するオプションが
+// 無いため、mmdcの出力後にImageMagickで白背景の余白を追加する。数値はIMAGE_SCALE
+// 適用後（＝実際の出力ピクセル数）を基準にしており、上下は特に隠れやすいため
+// 左右より広めに取る
+const HORIZONTAL_MARGIN_PX = 40 * IMAGE_SCALE;
+const VERTICAL_MARGIN_PX = 60 * IMAGE_SCALE;
+
 function renderBlock(mermaidSource, outputImagePath, actionDir) {
   const tmpMmdPath = `${outputImagePath}.mmd`;
+  const tmpRawPngPath = `${outputImagePath}.raw.png`;
   fs.writeFileSync(tmpMmdPath, mermaidSource, "utf-8");
   try {
     execFileSync(
       path.join(actionDir, "node_modules", ".bin", "mmdc"),
-      ["-i", tmpMmdPath, "-o", outputImagePath, "-p", path.join(actionDir, "puppeteer-config.json")],
+      ["-i", tmpMmdPath, "-o", tmpRawPngPath, "-s", String(IMAGE_SCALE), "-p", path.join(actionDir, "puppeteer-config.json")],
+      { stdio: "inherit", timeout: RENDER_TIMEOUT_MS }
+    );
+    execFileSync(
+      "convert",
+      [tmpRawPngPath, "-bordercolor", "white", "-border", `${HORIZONTAL_MARGIN_PX}x${VERTICAL_MARGIN_PX}`, outputImagePath],
       { stdio: "inherit", timeout: RENDER_TIMEOUT_MS }
     );
   } finally {
     fs.unlinkSync(tmpMmdPath);
+    if (fs.existsSync(tmpRawPngPath)) {
+      fs.unlinkSync(tmpRawPngPath);
+    }
   }
 }
 
@@ -69,4 +93,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { renderBlock, RENDER_TIMEOUT_MS };
+module.exports = { renderBlock, RENDER_TIMEOUT_MS, IMAGE_SCALE, HORIZONTAL_MARGIN_PX, VERTICAL_MARGIN_PX };

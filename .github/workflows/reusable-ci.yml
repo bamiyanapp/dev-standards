@@ -117,7 +117,7 @@ on:
         default: 0
       enable_mermaid_render:
         description: >-
-          mermaid_doc_pathsで指定したMarkdown中の```mermaid```ブロックをSVG画像として
+          mermaid_doc_pathsで指定したMarkdown中の```mermaid```ブロックをPNG画像として
           事前レンダリングし、専用ブランチへ公開してJob Summary・PRコメントへ埋め込む
           `render-mermaid-diagrams` jobを実行するかどうか（bamiyanapp/karuta#824）。
           GitHubのPR差分ビュー・API経由でのファイル取得等、mermaidがネイティブ
