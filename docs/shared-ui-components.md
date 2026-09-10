@@ -100,6 +100,8 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
 
 現在のページをQRコードで表示し、URLをワンタップコピーできるボタン＋モーダル。スマートフォンオンリーの利用環境での画面共有を想定。
 
+**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになるため、symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと（Camp-Stock `frontend/src/components/ShareButton.jsx`が実例、issue #393）。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントは、異なるフレームワークの消費者に同時対応できないという制約があるため、新規にこの種のコンポーネントを追加・変更する際は`docs/consumer-repositories.md`で全消費側のCSSフレームワークを確認すること。
+
 ```jsx
 <ShareButton label="このページを共有" />
 ```
