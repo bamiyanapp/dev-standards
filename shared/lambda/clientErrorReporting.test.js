@@ -6,6 +6,7 @@ const {
   CLIENT_ERROR_FIELD_MAX_LENGTHS,
   truncateClientErrorField,
   buildClientErrorLogPayload,
+  buildClientErrorAlertMessage,
 } = require("./clientErrorReporting.js");
 
 test("builds a payload with all fields when message is present", () => {
@@ -66,4 +67,23 @@ test("truncateClientErrorField returns undefined for non-string values", () => {
   assert.equal(truncateClientErrorField(123, 500), undefined);
   assert.equal(truncateClientErrorField(null, 500), undefined);
   assert.equal(truncateClientErrorField(undefined, 500), undefined);
+});
+
+test("buildClientErrorAlertMessage builds a LINE message including the app name (bamiyanapp/dev-standards#387)", () => {
+  const message = buildClientErrorAlertMessage({
+    appName: "karuta",
+    message: "テスト用の例外",
+    url: "https://example.com/",
+  });
+
+  assert.equal(
+    message,
+    ["【フロントエンドエラー】", "アプリ: karuta", "内容: テスト用の例外", "発生ページ: https://example.com/"].join("\n"),
+  );
+});
+
+test("buildClientErrorAlertMessage omits the URL line when url is not provided", () => {
+  const message = buildClientErrorAlertMessage({ appName: "karuta", message: "テスト用の例外" });
+
+  assert.equal(message, ["【フロントエンドエラー】", "アプリ: karuta", "内容: テスト用の例外"].join("\n"));
 });
