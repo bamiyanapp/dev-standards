@@ -1,3 +1,10 @@
+## [2.11.2](https://github.com/bamiyanapp/dev-standards/compare/v2.11.1...v2.11.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **render-mermaid-diagrams:** マーメイド図の画像が荒く見切れる問題を修正する ([#389](https://github.com/bamiyanapp/dev-standards/issues/389)) ([e2a9e10](https://github.com/bamiyanapp/dev-standards/commit/e2a9e101e7ab13cb59cd49fb66537168b32a363b)), closes [#388](https://github.com/bamiyanapp/dev-standards/issues/388)
+
 ## [2.11.1](https://github.com/bamiyanapp/dev-standards/compare/v2.11.0...v2.11.1) (2026-09-09)
 
 
