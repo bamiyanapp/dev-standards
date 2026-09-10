@@ -1238,14 +1238,15 @@ jobs:
           node-version: "24"
 
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）。
-      # v1.12.3で、render-mermaid-diagramsにCJKフォントインストールを追加した
-      # （issue bamiyanapp/karuta#849）ため、その修正を含むタグへ更新した
+      # v2.11.2で、render-mermaid-diagramsに解像度向上・余白追加（文字の潰れ・
+      # GitHubモバイルアプリでの見切れ対策）を追加した（dev-standards#388）ため、
+      # その修正を含むタグへ更新した
       - name: Checkout dev-standards (for the local composite action)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v1.12.3
+          ref: v2.11.2
           path: .dev-standards-actions
 
       - name: Render mermaid diagrams
