@@ -1,11 +1,11 @@
 name: "Render mermaid diagrams"
 description: >-
   markdown-pathsで指定したMarkdownファイル群から```mermaid```フェンスを抽出し、
-  @mermaid-js/mermaid-cli（mmdc）でSVG画像へ事前レンダリングする。GitHubのPR差分ビュー・
+  @mermaid-js/mermaid-cli（mmdc）でPNG画像へ事前レンダリングする。GitHubのPR差分ビュー・
   API経由でのファイル取得等、mermaidがネイティブレンダリングされない場面
   （bamiyanapp/karuta#824）向けの画像を生成するのが目的で、Markdown側のmermaidソース自体は
-  一切書き換えない。生成したSVGはoutput-dir配下に「<ファイル名>.svg」（1ファイルに複数の
-  mermaidブロックがある場合は「<ファイル名>-<連番>.svg」）として書き出され、
+  一切書き換えない。生成したPNGはoutput-dir配下に「<ファイル名>.png」（1ファイルに複数の
+  mermaidブロックがある場合は「<ファイル名>-<連番>.png」）として書き出され、
   一覧はoutput-dir/manifest.jsonに書き出される
 
 inputs:
@@ -21,10 +21,15 @@ runs:
   steps:
     # GitHub Actionsのubuntu-latestランナーには日本語（CJK）フォントが既定で
     # インストールされておらず、レンダリング結果（PNG）の日本語ラベルが文字化け
-    # （tofu表示、□の連続）する問題があった（bamiyanapp/karuta#849）
-    - name: Install Japanese (CJK) fonts for rendering
+    # （tofu表示、□の連続）する問題があった（bamiyanapp/karuta#849）。
+    # imagemagick（render-mermaid.jsの`convert`呼び出しで使用）は、GitHubモバイルアプリの
+    # 画像ビューアがヘッダー・フッターを画像の上下端に重ねて表示し図の一部が見切れる問題
+    # （bamiyanapp/dev-standards#388）への対策として、mmdcの出力後に余白を追加するために
+    # 使う。ランナーイメージのバージョンによりプリインストール状況が変わりうるため、
+    # 明示的にインストールして依存を固定する
+    - name: Install Japanese (CJK) fonts and ImageMagick for rendering
       shell: bash
-      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk imagemagick
     - name: Install mermaid-cli
       shell: bash
       working-directory: ${{ github.action_path }}
