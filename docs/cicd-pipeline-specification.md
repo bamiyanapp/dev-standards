@@ -54,6 +54,8 @@ graph TD
     あわせて、上記の各種対策を講じてもなおV8のカバレッジ計測が実行のたびに変動する非決定性が実CIで解消しきらない場合に備え、「Check coverage threshold」ステップにもTestステップと同様のattempt 1/2・2/2パターンを追加した。テスト自体は毎回全件成功しカバレッジ計測値だけが偶発的に振れる性質のため、1回目のカバレッジ判定が閾値未達だった場合はテストを再実行して計測をやり直し、改めて判定する。
   - `frontend-e2e-test`（任意、`enable_e2e_test: true` の場合のみ）: Playwright による E2E テスト
 
+    「Show E2E coverage」ステップは`coverage/coverage-summary.json`を読むが、これは参照側リポジトリのPlaywright設定が実際にその形式で出力する構成になっていることが前提であり、単に`enable_e2e_test: true`にしただけでは何も出力されず常にスキップされる。具体的な設定手順は`docs/e2e-coverage-pattern.md`（`monocart-reporter`の導入・`shared/e2e/coverageFixture.js`）を参照する。
+
     E2Eテストがスクリーンショットを撮影している場合（後述の呼び出し規約に従い`<frontend_dir>/e2e-screenshots/`へPNGを書き出している場合）、このjobは追加で次を行う（開発環境の制約「スマホオンリー」対応、[bamiyanapp/karuta#568](https://github.com/bamiyanapp/karuta/issues/568)）。
 
     1. `e2e-screenshots/*.png`の存在を確認する（無ければ以降のステップはスキップ）
