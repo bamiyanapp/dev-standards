@@ -8,6 +8,10 @@
 
 フロントエンド・ホスティングは全プロダクト共通の標準構成を使う。ログイン・バックエンドAPIはそれぞれ独立に要否を判断し、必要な場合のみ該当する節の標準構成を採用する（ログインの要否・方式は、バックエンドAPIの基盤選択に影響しない）。
 
+## 個人情報の扱い（全プロジェクト共通）
+
+「2. ログイン」の通り、フロントエンド自体は誰でも閲覧できる状態を前提とする。bamiyanapp配下のリポジトリも基本的に公開（Public）であるため、**フロントエンドが公開であることとリポジトリが公開であることは同じ前提の両面**として扱う。実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトは、コンテンツ・コード・コミット履歴・PR/Issue本文のいずれにも実在の個人情報を一切持ち込まない設計にする。個人単位のデータは実行時にAPI経由（認証済み）で取得する形にとどめ、リポジトリには置かない。詳細な原則・チェックリストは`docs/public-repo-no-pii-pattern.md`を参照。
+
 ## 1. フロントエンド（全プロジェクトで採用）
 
 React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳細は`docs/client-only-vite-spa-pattern.md`を参照。
@@ -90,6 +94,10 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
    `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`workspaces`（バックエンドと組み合わせる場合）・`enable_release`（semantic-release運用する場合）・`enable_e2e_test`（Playwright E2Eを行う場合）等、プロダクトに応じた入力を選ぶ。
 
 8. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
+
+## 個人情報を扱うプロダクトのための参考実装
+
+実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトの参考実装（データはDBに置きAPI経由で取得、コンテンツ・コミットへの個人情報混入を防ぐ具体的な仕組み）: `docs/public-repo-no-pii-pattern.md`。
 
 ## この索引に無いもの
 
