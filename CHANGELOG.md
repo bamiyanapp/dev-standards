@@ -1,3 +1,10 @@
+# [2.13.0](https://github.com/bamiyanapp/dev-standards/compare/v2.12.1...v2.13.0) (2026-09-12)
+
+
+### Features
+
+* **e2e:** E2Eカバレッジ収集の共有パターンを追加 ([#401](https://github.com/bamiyanapp/dev-standards/issues/401)) ([c662b92](https://github.com/bamiyanapp/dev-standards/commit/c662b92ca84b067c7db5e59d5f4a473aa67cf930)), closes [#400](https://github.com/bamiyanapp/dev-standards/issues/400)
+
 ## [2.12.1](https://github.com/bamiyanapp/dev-standards/compare/v2.12.0...v2.12.1) (2026-09-10)
 
 
