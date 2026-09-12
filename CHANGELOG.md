@@ -1,3 +1,10 @@
+# [2.14.0](https://github.com/bamiyanapp/dev-standards/compare/v2.13.0...v2.14.0) (2026-09-12)
+
+
+### Features
+
+* **e2e:** 自社発行セッショントークン方式のE2E認証バイパスを共有コード化 ([#405](https://github.com/bamiyanapp/dev-standards/issues/405)) ([13753a0](https://github.com/bamiyanapp/dev-standards/commit/13753a0489ed4167d875e76a6e48c963c5cdcf8d))
+
 # [2.13.0](https://github.com/bamiyanapp/dev-standards/compare/v2.12.1...v2.13.0) (2026-09-12)
 
 
