@@ -2,7 +2,9 @@
 
 **標準索引（`docs/standard-tech-stack.md`）からは外れた構成。** dev-standardsの標準では、ログインが必要な場合もフロントエンド自体は誰でも閲覧できるAPI単位認証（「2. ログイン」参照）とし、ホスティングはログイン要否によらずS3 + CloudFront（`docs/static-hosting-pattern.md`）に統一している。本ドキュメントは、サイトの閲覧自体をログイン必須にしたい（トップページ等を含め非公開にしたい）場合の構成として残す。
 
-ログインが必要な小規模な静的サイト（家族・チーム向けナレッジベース等、不特定多数への公開を想定しないもの）を、専用のバックエンドサーバーを持たずに構築するための構成。**OSLS**（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)。Serverless Framework v4のライセンス変更を受けて採用した、v3系のままオープンソースで開発が継続されているフォーク。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」参照）でAWSリソースをコードとして定義する。examinationの`infra/`（[examination#6](https://github.com/bamiyanapp/examination/issues/6)）から、プロダクト固有の業務ロジック（LINE bot・面接練習機能等）を除いた、他プロダクトでも再利用できるインフラ構成部分を切り出したもの。examinationは今後もこの構成を使い続けるため、実例としての価値を保持する目的で残している。
+ログインが必要な小規模な静的サイト（家族・チーム向けナレッジベース等、不特定多数への公開を想定しないもの）を、専用のバックエンドサーバーを持たずに構築するための構成。**OSLS**（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)。Serverless Framework v4のライセンス変更を受けて採用した、v3系のままオープンソースで開発が継続されているフォーク。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」参照）でAWSリソースをコードとして定義する。examinationの`infra/`（[examination#6](https://github.com/bamiyanapp/examination/issues/6)）から、プロダクト固有の業務ロジック（LINE bot・面接練習機能等）を除いた、他プロダクトでも再利用できるインフラ構成部分を切り出したもの。
+
+**examinationは[examination#437](https://github.com/bamiyanapp/examination/issues/437)で、下記「## 認証フロー」の手順1（サイト閲覧そのもののログイン必須化）を廃止し、フロントエンドは誰でも閲覧できるdev-standards統一標準（`docs/standard-tech-stack.md`「2. ログイン」）へ移行済み。`auth-stack`（Cognito）・`site-stack`のLambda@Edge自体は、ログインフロー（`/_login`・`/_callback`）や家族固有データを返す各APIのリクエスト単位認証（`/_me`等）の基盤として引き続き使われており、手順2〜4（コールバック・トークン検証・ログアウト）やCSRF対策・セッション自動延長等の個別設計判断は今もexaminationが実装例だが、「本パターン」の核である手順1（未認証時は静的コンテンツにも到達させない全リクエストゲート）はexaminationにはもう存在しない。サイト閲覧自体をログイン必須にしたい新規プロダクトは、このドキュメントの設計をそのまま採用しつつ、実装の参照先はexamination#437より前のコミット（`infra/site-stack/functions/checkAuth.js`のリダイレクト分岐がまだ残っていた時点）を確認すること。**
 
 コードそのものの共有（symlink化）ではなく、**インフラ構成・設計判断の共有**が目的。実際の完全な実装例はexaminationの`infra/site-stack/`を参照する。
 
@@ -95,4 +97,4 @@ S3バケット名・Cognitoドメインprefixは全AWSアカウント間・リ�
 
 ## 実例
 
-examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-stack/`・`bot-stack/`）が本パターンの完全な実装例。詳細は同リポジトリの`infra/README.md`を参照。
+examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-stack/`・`bot-stack/`）が、Cognito + Lambda@Edgeによるログインフロー・リクエスト単位認証部分の実装例（詳細は同リポジトリの`infra/README.md`を参照）。ただし前述の通りexamination#437以降、「サイト閲覧自体を全リクエストでゲートする」手順1は実装していないため、本パターンの完全な実装例としてはexamination#437より前のコミットを参照する必要がある。
