@@ -96,6 +96,14 @@ import { test, expect } from './coverageFixture.js'; // symlink
 
 `coverageFixture.js`が自動fixtureとして各テストの前後で`page.coverage.startJSCoverage()`/`startCSSCoverage()`・`stopJSCoverage()`/`stopCSSCoverage()`を呼び、収集結果を`monocart-reporter`の`addCoverageReport()`でグローバルレポートへ追加する。Chromiumプロジェクト（`playwright.config.js`の`projects[].name`が`'chromium'`）以外では、`page.coverage`のChrome DevTools Protocol APIが使えないため自動的に収集をスキップする（既存の`test`/`expect`と完全互換のため、既存のテストコード自体の変更は不要）。
 
+### `NODE_OPTIONS=--preserve-symlinks`が必要
+
+`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれるが、Node（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索するため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗する（`Error: Cannot find package '@playwright/test'`）。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する（`vite.config.js`の`resolve.preserveSymlinks`と同種の問題。`docs/shared-ui-components.md`参照）。
+
+```json
+{ "scripts": { "test:e2e": "NODE_OPTIONS=--preserve-symlinks playwright test" } }
+```
+
 ## 5. 動作確認
 
 ```sh
@@ -108,4 +116,4 @@ cat coverage/coverage-summary.json   # totalと各src/*.jsxファイルのpctが
 
 ## 実例
 
-uchi-stock（`bamiyanapp/uchi-stock`、issue #412）が本パターンの実装例。
+uchi-stock（`bamiyanapp/uchi-stock`、issue #412・PR #413）が本パターンの実装例。
