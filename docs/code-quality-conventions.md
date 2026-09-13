@@ -53,4 +53,4 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
 - `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
 - `.github/workflows/codeql.yml`（`reusable-codeql.yml`呼び出し、`push`/`pull_request`/週次`schedule`トリガー）
-- `textlint.config.cjs`（dev-standardsルート。dev-standards自身の`npm test`（`lint:text`）で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証。参照側リポジトリでは`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`経由での導入を`text-lint` jobとして提供する。参照側リポジトリでの実際の有効化は今後の課題）
+- `textlint.config.cjs`（dev-standardsルート。dev-standards自身も参照側リポジトリと同じ`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`（`text-lint` job）経由で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証する。CIの実行経路を一本化するため、`npm test`側の重複実行は行わない（`npm run lint:text`はローカルでの手動実行用に残す）。参照側リポジトリでの実際の有効化は今後の課題）
