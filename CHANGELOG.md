@@ -1,3 +1,10 @@
+## [2.17.2](https://github.com/bamiyanapp/dev-standards/compare/v2.17.1...v2.17.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* **ci:** textlintの実行経路をtext-lint jobへ一本化する ([#448](https://github.com/bamiyanapp/dev-standards/issues/448)) ([7310414](https://github.com/bamiyanapp/dev-standards/commit/73104145488dce0abec3415fc13539ce7c30b329)), closes [#447](https://github.com/bamiyanapp/dev-standards/issues/447)
+
 ## [2.17.1](https://github.com/bamiyanapp/dev-standards/compare/v2.17.0...v2.17.1) (2026-09-13)
 
 
