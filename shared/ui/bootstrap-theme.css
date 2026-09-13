@@ -24,17 +24,22 @@
    `--bs-body-font-family`（Bootstrap 5.3のCSSカスタムプロパティ）を直接
    再定義することで、実際にbodyへ反映されるようにしている（issue #379） */
 
-@import "./common-theme.css";
+@import url("./common-theme.css");
 
 :root {
-  --app-bg: #ffffff;
+  --app-bg: #fff;
   --app-fg: #213547;
   --bs-body-font-family: 'M PLUS Rounded 1c', sans-serif;
 }
 
+/* ダークモード: bg-light/bg-white/text-dark等はBootstrap 5.3のカラーモードに追従しない
+   静的ユーティリティのため、その参照元のCSS変数を直接再定義して連動させる */
 [data-bs-theme="dark"] {
   --app-bg: #121212;
   --app-fg: #e4e4e4;
+  --bs-light-rgb: 43, 43, 43;
+  --bs-dark-rgb: 228, 228, 228;
+  --bs-white-rgb: 30, 30, 30;
 }
 
 body {
@@ -50,14 +55,6 @@ body {
   width: 100%;
   margin: 0;
   padding: 0;
-}
-
-/* ダークモード: bg-light/bg-white/text-dark等はBootstrap 5.3のカラーモードに追従しない
-   静的ユーティリティのため、その参照元のCSS変数を直接再定義して連動させる */
-[data-bs-theme="dark"] {
-  --bs-light-rgb: 43, 43, 43;
-  --bs-dark-rgb: 228, 228, 228;
-  --bs-white-rgb: 30, 30, 30;
 }
 
 [data-bs-theme="dark"] .btn-dark {
