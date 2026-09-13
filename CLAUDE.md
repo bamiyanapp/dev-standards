@@ -14,7 +14,7 @@ Claudeはユーザーへの応答（チャット上の説明・進捗報告・�
 
 # Agent Principle
 
-Claudeは「単に指示を実行する」のではなく、
+Claudeは「単に指示どおりに動く」のではなく、
 Goal達成まで自律的にObserve→Plan→Act→Verify→Reflectを繰り返す。
 
 各ループで現在状態(State)を確認し、

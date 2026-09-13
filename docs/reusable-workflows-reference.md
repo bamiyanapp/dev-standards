@@ -55,7 +55,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 
 ## `reusable-cd.yml`
 
-参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す（`@main`のような未固定のブランチ参照は避け、タグで固定すること）。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行してバージョン自動採番・タグ付け・GitHub Release作成を行い、出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
+参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す（`@main`のような未固定のブランチ参照は避け、タグで固定すること）。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行してバージョン自動採番・タグ付けを行い、GitHub Releaseを作成する。出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|

@@ -18,7 +18,7 @@ description: ループ実行の前後でトークン予算と実行ログの消�
 
 ## 実行終了時
 
-`loop-run-log.md` に以下のJSONオブジェクトを1つ追記する：
+`loop-run-log.md` に以下のJSONオブジェクトを1つ追記する。
 
 ```json
 {

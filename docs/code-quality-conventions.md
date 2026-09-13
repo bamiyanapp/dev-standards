@@ -1,4 +1,4 @@
-# コード品質規約（lint・stylelint・CodeQL）
+# コード品質規約（lint・stylelint・CodeQL・textlint）
 
 `reusable-ci.yml`が提供するテストカバレッジ閾値（`coverage_threshold`・`e2e_coverage_threshold`）・コード重複検知（`duplication_threshold`）の開発共通標準の目標値は、`docs/cicd-pipeline-specification.md`・`docs/reusable-workflows-reference.md`側の各入力説明に明記されている（テストカバレッジ80%以上・重複率5%以下）。
 
@@ -28,12 +28,23 @@ CSSを直接記述するプロダクト（Bootstrap採用プロダクト等。Ta
 
 ## CodeQL
 
-ESLint・stylelintが構文・スタイルレベルの静的解析であるのに対し、CodeQLはデータフロー解析による**セキュリティ脆弱性・バグパターンの検知**を行う、性質の異なる静的解析。全プロダクトで導入を標準とする。
+ESLint・stylelintが構文・スタイルレベルの静的解析であるのに対し、CodeQLはデータフロー解析により**セキュリティ脆弱性・バグパターンを検知する**、性質の異なる静的解析。全プロダクトで導入を標準とする。
 
 - **導入方法**: `reusable-codeql.yml`を呼び出す（呼び出し方・入力パラメータ`languages`は`docs/reusable-workflows-reference.md`「`reusable-codeql.yml`」を参照）
 - **トリガー**: 参照側の`.github/workflows/codeql.yml`自体の`on:`に`push`（`base_branch`）・`pull_request`・`schedule`（週次等）を設定する。`schedule`はコード変更が無い期間もCodeQLのクエリセット自体の更新を検知するために推奨する
 - **権限**: 呼び出し元ジョブに`permissions: { security-events: write, actions: read, contents: read }`を明示する。省略するとリポジトリ既定の`GITHUB_TOKEN`権限（`security-events: write`を含まない）が上限になり、SARIFのGitHub Securityタブへのアップロードが失敗する
 - **マージゲートとの関係**: `reusable-ci.yml`の`merge` jobのゲートには関与しない（`docs/cicd-pipeline-specification.md`参照）。CodeQLを必須チェックにするかどうかは参照側リポジトリのブランチ保護設定（Required status checks）側の責務
+
+## textlint
+
+Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md`等）を持つプロダクトでは、`textlint`を導入する。
+
+- **共有設定**: `commitlint.config.cjs`・`stylelint.config.cjs`と同様、dev-standardsルートの`textlint.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み。プロダクト固有のカスタマイズは想定しない）
+- **ベース**: `textlint-rule-preset-ja-technical-writing`をベースとし、以下のルールを無効化する
+  - `sentence-length`・`no-doubled-joshi`・`max-ten`・`max-comma`: dev-standardsのドキュメントは、issue/PR番号や過去の経緯を伴う因果関係の説明を1文に埋め込む文体を意図的に採用しており（実測で1文最大555文字）、この文体では長い文・同じ助詞の複数回登場・読点/カンマの多用が常態化する。文分割を前提とするこれらのルールは、この文体そのものを否定してしまうため無効化する
+  - `no-mix-dearu-desumasu`: 本ルールは「です」「ます」で終わる文を実装上の判定根拠にしており、常体（「〜する。」等の辞書形終止）のみで書かれた文書では判定材料が無く、明示的な「である。」文をむしろ誤検知する。dev-standardsの各ドキュメントは全体を通じて常体で統一されているため無効化する
+- **lintスクリプト**: `textlint --config textlint.config.cjs "docs/*.md" README.md ...`のように、プロダクトのMarkdownドキュメントを対象に実行する。自動生成される`CHANGELOG.md`は`.textlintignore`で対象から除外する
+- **導入前の確認**: 上記の無効化理由は、いずれも「長い複文・常体で統一する」というdev-standardsの文体を前提にしている。プロダクト側のドキュメントがですます調中心、または短文中心の文体を採用している場合は、この共有設定をそのまま使わず、プロダクト側で個別に調整することを検討する
 
 ## 参考実装
 
@@ -42,3 +53,4 @@ ESLint・stylelintが構文・スタイルレベルの静的解析であるの�
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
 - `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
 - `.github/workflows/codeql.yml`（`reusable-codeql.yml`呼び出し、`push`/`pull_request`/週次`schedule`トリガー）
+- `textlint.config.cjs`（dev-standardsルート。本ドキュメント作成時点ではdev-standards自身の`npm test`（`lint:text`）で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証。参照側リポジトリへの導入は今後の課題）
