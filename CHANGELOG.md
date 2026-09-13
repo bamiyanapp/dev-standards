@@ -1,3 +1,10 @@
+# [2.15.0](https://github.com/bamiyanapp/dev-standards/compare/v2.14.1...v2.15.0) (2026-09-13)
+
+
+### Features
+
+* **stylelint:** 共有stylelint設定を新設し、shared/ui/*.cssを検証する ([#430](https://github.com/bamiyanapp/dev-standards/issues/430)) ([21c6106](https://github.com/bamiyanapp/dev-standards/commit/21c610632deb007bee27ac46a255f95ee793f389)), closes [#429](https://github.com/bamiyanapp/dev-standards/issues/429)
+
 ## [2.14.1](https://github.com/bamiyanapp/dev-standards/compare/v2.14.0...v2.14.1) (2026-09-13)
 
 
