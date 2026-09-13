@@ -1,6 +1,6 @@
 # コード品質規約（lint）
 
-`reusable-ci.yml`が提供するテストカバレッジ閾値（`coverage_threshold`・`e2e_coverage_threshold`）・コード重複検知（`duplication_threshold`）の開発共通標準の目標値は、`docs/cicd-pipeline-specification.md`・`README.md`側の各入力説明に明記されている（テストカバレッジ80%以上・重複率5%以下）。
+`reusable-ci.yml`が提供するテストカバレッジ閾値（`coverage_threshold`・`e2e_coverage_threshold`）・コード重複検知（`duplication_threshold`）の開発共通標準の目標値は、`docs/cicd-pipeline-specification.md`・`docs/reusable-workflows-reference.md`側の各入力説明に明記されている（テストカバレッジ80%以上・重複率5%以下）。
 
 本ドキュメントは、それらとは別に`reusable-ci.yml`の入力としては存在しない**lintルール自体**（ESLintを使うプロダクトの場合）について、karutaでの実運用を通じて調整済みの構成を、新規プロダクトが「まずはこれに従っておけばよい」基準としてまとめる。
 

@@ -66,7 +66,7 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
    node dev-standards/scripts/bootstrap.js
    ```
 
-   `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（README.md「利用方法」参照）。
+   `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（`docs/reusable-workflows-reference.md`「参照側リポジトリでの導入」参照）。
 
 2. **フロントエンドの雛形を用意**
 
