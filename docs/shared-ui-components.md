@@ -137,7 +137,7 @@ export default defineConfig({
 
 `package.json`のパスは呼び出し側で指定する（semantic-releaseがバージョンを更新するリポジトリルートの`package.json`か、アプリ自身の`package.json`かはプロダクトの構成による）。`getAppVersionDefine.js`は`vite.config.js`から直接importするNode.js側のファイルのため、他の`shared/ui/`コンポーネント（`src/components/`配下）とは異なり、`vite.config.js`と同じディレクトリへsymlinkすること。
 
-アプリ側のコンポーネント（表示位置・マークアップはプロダクトごとに異なるため、この部分は共有しない）:
+アプリ側のコンポーネントの実装例を以下に示す（表示位置・マークアップはプロダクトごとに異なるため、この部分は共有しない）。
 
 ```jsx
 import formatBuildTime from "./formatBuildTime.js"; // symlink

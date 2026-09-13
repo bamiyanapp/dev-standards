@@ -34,7 +34,7 @@ graph TD
   - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
   - `backend-test`: backend の Lint・Vitest テスト（カバレッジ集計付き）
   - `package-test`（`packages` 入力指定時、`frontend-test`/`backend-test` の代わりに実行）: 指定したパッケージ一覧を `strategy.matrix` で展開し、lint/test（`--if-present`）・任意のbuildを行う
-  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`check-coverage-threshold` 複合アクションで `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない。**`coverage_threshold`の開発共通標準の目標値は80%以上**（[bamiyanapp/dev-standards#425](https://github.com/bamiyanapp/dev-standards/issues/425)）。`e2e_coverage_threshold`（後述）・`duplication_threshold`と同種の方針で、新規に有効化するリポジトリは実測値が無い導入直後は`0`（ゲート無効・レポート表示のみ）から開始してよいが、実測後にその値のまま据え置いて固定化せず、テストケースを追加してカバレッジ自体を引き上げつつ段階的に閾値を80%へ近づけることを目指す。既存で低い閾値を運用しているリポジトリも、直ちに80%へ上げる必要は無いが、段階的な引き上げ方針を各リポジトリのIssueで管理する。
+  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`check-coverage-threshold` 複合アクションで `coverage/coverage-summary.json` を読み、Job Summaryへカバレッジ表を表示し、閾値未満の指標があった場合はジョブを失敗させる。閾値が0（既定）の場合はこのステップ自体を実行しない。**`coverage_threshold`の開発共通標準の目標値は80%以上**（[bamiyanapp/dev-standards#425](https://github.com/bamiyanapp/dev-standards/issues/425)）。`e2e_coverage_threshold`（後述）・`duplication_threshold`と同種の方針で、新規に有効化するリポジトリは実測値が無い導入直後は`0`（ゲート無効・レポート表示のみ）から開始してよいが、実測後にその値のまま据え置いて固定化せず、テストケースを追加してカバレッジ自体を引き上げつつ段階的に閾値を80%へ近づけることを目指す。既存で低い閾値を運用しているリポジトリも、直ちに80%へ上げる必要は無いが、段階的な引き上げ方針を各リポジトリのIssueで管理する。
 
     この複合アクションをどう参照するかについては、3段階の失敗を経て現在の実装に至っている（詳細は[bamiyanapp/karuta#583](https://github.com/bamiyanapp/karuta/issues/583)）。
     - **失敗1**: 当初は相対パス（`uses: ./.github/actions/check-coverage-threshold`）で参照していたが、**ステップレベルの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした対象）のチェックアウト内容に対して解決される**（reusable-ci.yml自身のrefには解決されない）ため、dev-standards自身のdogfooding CI（呼び出し元と定義元が同一リポジトリ）でしか正しく動作しない不具合だった。`coverage_threshold`が0（既定）のジョブでは該当ステップ自体が実行されないため潜在化していたが、常時実行される`frontend-e2e-test`の「Show E2E coverage」ステップで顕在化した
@@ -95,7 +95,7 @@ graph TD
 
     公開先は2段階（E2Eスクリーンショット報告機能と同じ構成）。`runs/<run_id>/`配下へは実行のたびに公開し、Job Summary・PRコメント（`pull_request`イベントのみ）へその場限りの確認用として埋め込む。加えて、`push`イベント（`base_branch`へのマージ後）のたびに`latest/`配下へ上書き公開し、こちらのURL（`https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>`）を対象Markdownファイル自身の```` ```mermaid ```` ブロック直後へ`![...](...)`として恒久的に埋め込んでおくことで、PRコメントというその場限りの確認手段だけでなく、ドキュメント本体を開いた際にも常に最新のレンダリング結果を確認できるようにする（最初の1回のみ手動で埋め込みが必要。以後は`latest/`側の画像内容が自動更新されるため、Markdown側の再編集は不要）。
 
-    `pull_request`イベントでは、`mermaid_doc_paths`で指定したファイルがそのPRで実際に変更されたかを判定し、変更が無ければレンダリング自体をスキップする（無関係なPRでの無駄なChromiumセットアップ・同じ画像コメントの繰り返しを避けるため）。判定できない場合（`push`イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを避けるため常に実行する側にフォールバックする。`merge` jobは他のテストjobと同様にこのjobの成功（またはスキップ）を待つ。
+    `pull_request`イベントでは、`mermaid_doc_paths`で指定したファイルがそのPRで実際に変更されたかを判定し、変更が無ければレンダリング自体をスキップする（無関係なPRでの無駄なChromiumセットアップ・同じ画像コメントの繰り返しを避けるため）。判定できない場合（`push`イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを避けるため常に実行する側にフォールバックする。`merge` jobは他のテストjobと同様にこのjobの成功（もしくはスキップ）を待つ。
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に `base_branch` へ自動マージ（Squash merge、作業ブランチ削除）する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されており、複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
@@ -121,7 +121,7 @@ graph TD
 
 ただし`infra_failure=true`となるのはNode.jsセットアップ自体が2回とも失敗した場合のみに限定している。`npm ci`（Install dependencies）自体の失敗は、Node.jsセットアップの成否とは独立した問題であり、GitHub側の一時的な障害ではなく参照側リポジトリのルート直下`package.json`/`package-lock.json`自体の不整合である可能性が高いため、`infra_failure=false`のまま`::error::`とする（かつては`npm ci`の失敗も一律`infra_failure=true`としていたが、`bamiyanapp/karuta#639`由来のロックファイル不整合がCI完了を待たない手動マージにより素通りし、CD側の`release` jobでのみ`npm ci`が失敗し続けるという事例が発生したため区別した）。この区別により、`npm ci`自体の不整合は`commitlint` jobを明確な失敗として扱えるようになるが、それでも「CI完了前にマージされてしまう」ケースまでは防げない。CI完了を待たないマージ自体を防ぐには、各参照側リポジトリのブランチ保護設定で`commitlint`（および他の必須ジョブ）を必須ステータスチェックとして指定する必要があり、これはこのワークフロー自体の責務ではない。
 
-参照側`ci.yml`は`pull_request`と`push`の両イベントで同じワークフロー（`CI`）を起動するため、GitHub Actionsの実行一覧では見た目がほぼ同じ「CI ...」の実行が2件（PRの実行とマージ後pushの実行）並ぶ。`run-name`にイベント種別を明示するラベルを含め、実行一覧だけでどちらか判別できるようにすることを推奨する。例:
+参照側`ci.yml`は`pull_request`と`push`の両イベントで同じワークフロー（`CI`）を起動するため、GitHub Actionsの実行一覧では見た目がほぼ同じ「CI ...」の実行が2件（PRの実行とマージ後pushの実行）並ぶ。`run-name`にイベント種別を明示するラベルを含め、実行一覧だけでどちらか判別できるようにすることを推奨する。以下に例を示す。
 
 ```yaml
 run-name: >-
@@ -132,7 +132,7 @@ run-name: >-
 ## 2. CD ワークフロー (`reusable-cd.yml`)
 - **トリガー**: 参照側 `cd.yml` の `on` 設定に従う。`workflow_call`のためワークフロー自体に`on:`は持てず、呼び出し元（参照側の`cd.yml`）で以下いずれかの方式を、**リポジトリの公開/非公開に応じて**選ぶ。
   - **`base_branch`へのプッシュ**（Squash merge直後の`push`イベント）。`base_branch`へのmergeごとに即座にdeployする。パブリックリポジトリはGitHub Actionsの無料枠に実行回数・実行時間の制限が無いため、デプロイ頻度を気にする必要が無く、こちらを既定として選んでよい。dev-standards自身は現在パブリックリポジトリのため、この方式を採用している（dogfooding、[bamiyanapp/dev-standards#330](https://github.com/bamiyanapp/dev-standards/issues/330)）
-  - **`schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。プライベートリポジトリではGitHub Actionsの無料枠（月間実行時間の上限）を消費するため、`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり数十回のデプロイが発生しCI/CD実行回数の主要な無駄要因になりうる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。無料枠消費を抑えたいプライベートリポジトリはこちらを検討する。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する
+  - **`schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。プライベートリポジトリではGitHub Actionsの無料枠（月間実行時間の上限）を消費するため、`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり多数のデプロイが発生しCI/CD実行回数の主要な無駄要因になりうる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。無料枠消費を抑えたいプライベートリポジトリはこちらを検討する。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する
   - 検証・緊急deploy用に`workflow_dispatch`も併せて用意しておくと、scheduleを待たずに手動実行できる
 - **run-name**: 参照側`cd.yml`の`on:`同様、`workflow_call`先のこのワークフロー自体では設定できないため、呼び出し元（参照側の`cd.yml`）で指定する。既定のrun-name（ワークフロー名のみ、または`workflow_run`トリガー時はトリガー元のコミットSHA）はGitHub ActionsのRun一覧上で実行内容が分からず、特にスマートフォンのブラウザでActionsタブを確認する運用（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）では、どの変更に対応するCD実行かひと目で判別できない問題があった（[bamiyanapp/uchi-stock#337](https://github.com/bamiyanapp/uchi-stock/issues/337)）。`reusable-ci.yml`のCI側run-name規約（`CI (PR|push-to-main) <コミットメッセージ or PRタイトル>`）に倣い、トリガー方式に応じて以下のパターンを使う。
   - `push`トリガー: `github.event.head_commit.message`が使える。dev-standards自身の`cd.yml`（dogfooding）はこのパターン
@@ -152,7 +152,7 @@ run-name: >-
     run-name: CD (${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }})
     ```
 - **実行内容**:
-  - `release`（`enable_release: true`（デフォルト）の場合のみ）: `base_branch` 上で直接 `semantic-release` を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付け・GitHub Release作成を行う
+  - `release`（`enable_release: true`（デフォルト）の場合のみ）: `base_branch` 上で直接 `semantic-release` を実行し、バージョン自動採番・`CHANGELOG.md` 更新・タグ付けを行い、GitHub Releaseを作成する
   - frontend/backend のビルド・デプロイ（GitHub Pages・AWS Lambda 等）はプロダクトごとに異なるため対象外。参照側リポジトリの `cd.yml` に `needs: release` かつ `if: success() && needs.release.outputs.new_release_published == 'true'` の条件でジョブを追加する
   - GitHub Pagesへのデプロイに限っては、`.github/actions/deploy-github-pages`（setup-node→npm ci→build→upload-pages-artifact→deploy-pages の定型パターンを共通化した複合action）を利用できる。呼び出し側の`cd.yml`は`environment: { name: github-pages }`・`permissions: { pages: write, id-token: write }`をjob単位で指定した上で、このactionを`with: working-directory / node-version / build-command / artifact-path`付きで呼び出す（`page-url`をoutputする）。参照側がnpm workspaces構成（[bamiyanapp/karuta#608](https://github.com/bamiyanapp/karuta/issues/608)）の場合は`workspaces: true`も併せて渡す。この場合`working-directory`はビルドコマンドの実行先ディレクトリのみを指し、依存インストール（`npm ci`）はリポジトリルートで行われる（`reusable-ci.yml`の同名inputと同じ意味）
   - Serverless Framework（osls等のCLIフォーク含む）を使ったAWSデプロイに限っては、`.github/actions/deploy-serverless`（setup-node→npm ci→デプロイコマンド実行の定型パターンを共通化した複合action）を利用できる。`with: working-directory / node-version / deploy-command / workspaces / aws-access-key-id / aws-secret-access-key`で呼び出す。npm workspaces構成かつ`package.individually: true`で多数のLambda関数を個別packagingする場合に発生し得る`EMFILE: too many open files`（[bamiyanapp/karuta#608](https://github.com/bamiyanapp/karuta/issues/608), [#663](https://github.com/bamiyanapp/karuta/issues/663)）対策として、デプロイコマンド実行前にファイルディスクリプタのソフトリミットをハードリミットまで引き上げる処理をデフォルトで行う（`raise-fd-limit: false`で無効化可能）。上記2つ以外のデプロイ先は現状対象外で、参照側の`cd.yml`に個別実装する

@@ -4,7 +4,7 @@ description: 開発をGoal達成まで進めるための基本ループ（Observ
 ---
 # Development Loop
 
-目的
+## 目的
 
 開発をGoal達成まで進める。
 

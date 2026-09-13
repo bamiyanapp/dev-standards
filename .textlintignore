@@ -1,0 +1,6 @@
+# semantic-releaseによる自動生成のため対象外（issue #433）
+CHANGELOG.md
+
+# Anthropicが提供する汎用skillテンプレートをそのまま採用しており、英語で記述されている。
+# 日本語文章向けのtextlintルールはそもそも対象外（issue #433）
+.claude/skills/planning-and-task-breakdown/SKILL.md

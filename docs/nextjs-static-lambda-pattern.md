@@ -60,7 +60,7 @@ const basePath = isGithubActions ? `/${repoName}` : '';
 
 Playwright + monocart-reporterによるE2E・カバレッジ収集、スクリーンショットのJob Summary/PRコメントへの報告は`reusable-ci.yml`の`frontend-e2e-test` job・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」の呼び出し規約に従う（Electric-Chair-Arena#187）。
 
-本構成固有の追加事項:
+本構成固有の追加事項は以下のとおり。
 
 - `output: 'export'`構成では`next start`が使えない（本番ビルドはプロダクションサーバーではなく静的ファイル一式のため）。PlaywrightのwebServerには静的書き出し成果物の配信ではなく`next dev`を直接指定する
 - E2EのbaseURLは前述のGitHub Pagesのbasepath算出ロジック（`next.config.mjs`と同じもの）を`playwright.config.mjs`側でも再現し、CI環境でも正しいURLへアクセスできるようにする
@@ -77,7 +77,7 @@ Playwright + monocart-reporterによるE2E・カバレッジ収集、スクリ�
 
 ## CI/CD呼び出し例
 
-`ci.yml`（`reusable-ci.yml`呼び出し）:
+`ci.yml`（`reusable-ci.yml`呼び出し）の例を以下に示す。
 
 ```yaml
 jobs:

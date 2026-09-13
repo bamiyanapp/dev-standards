@@ -10,8 +10,9 @@
     "lint": "commitlint --last --verbose",
     "lint:workflows": "node scripts/check-workflows.js",
     "lint:css": "stylelint --config stylelint.config.cjs \"shared/ui/*.css\"",
+    "lint:text": "textlint --config textlint.config.cjs \"docs/*.md\" README.md CLAUDE.md \".claude/skills/**/*.md\"",
     "pretest": "npm --prefix .github/actions/compare-e2e-screenshots ci",
-    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css"
+    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css && npm run lint:text"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1106.0",
@@ -27,6 +28,8 @@
     "actionlint": "^2.0.6",
     "semantic-release": "^25.0.2",
     "stylelint": "^17.15.0",
-    "stylelint-config-standard": "^40.0.0"
+    "stylelint-config-standard": "^40.0.0",
+    "textlint": "^15.8.0",
+    "textlint-rule-preset-ja-technical-writing": "^12.0.2"
   }
 }

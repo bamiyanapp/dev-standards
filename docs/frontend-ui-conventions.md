@@ -20,7 +20,7 @@
 
 ## 各プロダクトへの適用
 
-このドキュメントはdev-standards側での規約の明文化を行うものであり、共通フォント（`shared/ui/common-theme.css`等）・トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）は`docs/shared-ui-components.md`側で共有コードとして提供している。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。
+このドキュメントはdev-standards側での規約を明文化するものであり、共通フォント（`shared/ui/common-theme.css`等）・トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）は`docs/shared-ui-components.md`側で共有コードとして提供している。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。
 
 ### 適用状況
 

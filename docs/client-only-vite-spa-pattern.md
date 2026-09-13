@@ -81,7 +81,7 @@ await page.route("**/bootstrap@5.3.8/dist/css/bootstrap.min.css", (route) =>
 
 ### Canvas・物理演算等、jsdomで再現できない描画のモック
 
-jsdomはCanvasの2Dコンテキストを提供しない。Matter.js等の物理演算エンジンやCanvas描画を行うコンポーネントは、上位のレイアウトテストではモックに差し替え、UI要素の存在・操作のみを検証する。
+jsdomはCanvasの2Dコンテキストを提供しない。Matter.js等の物理演算エンジンやCanvas描画を伴うコンポーネントは、上位のレイアウトテストではモックに差し替え、UI要素の存在・操作のみを検証する。
 
 ```tsx
 vi.mock("./components/PhysicsCanvas", () => ({
