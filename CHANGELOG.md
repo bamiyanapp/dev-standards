@@ -1,3 +1,10 @@
+# [2.16.0](https://github.com/bamiyanapp/dev-standards/compare/v2.15.0...v2.16.0) (2026-09-13)
+
+
+### Features
+
+* **docs:** 開発共通へtextlintを導入し文書規約に反映する ([#434](https://github.com/bamiyanapp/dev-standards/issues/434)) ([86042ea](https://github.com/bamiyanapp/dev-standards/commit/86042ea839f16ae4e4849eb1f90ae56b4a94efb1))
+
 # [2.15.0](https://github.com/bamiyanapp/dev-standards/compare/v2.14.1...v2.15.0) (2026-09-13)
 
 
