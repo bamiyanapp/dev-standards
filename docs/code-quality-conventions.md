@@ -1,4 +1,4 @@
-# コード品質規約（lint・stylelint）
+# コード品質規約（lint・stylelint・CodeQL）
 
 `reusable-ci.yml`が提供するテストカバレッジ閾値（`coverage_threshold`・`e2e_coverage_threshold`）・コード重複検知（`duplication_threshold`）の開発共通標準の目標値は、`docs/cicd-pipeline-specification.md`・`docs/reusable-workflows-reference.md`側の各入力説明に明記されている（テストカバレッジ80%以上・重複率5%以下）。
 
@@ -26,9 +26,19 @@ CSSを直接記述するプロダクト（Bootstrap採用プロダクト等。Ta
 - **lintスクリプト**: `stylelint --config stylelint.config.cjs "src/**/*.css"`のように、プロダクトのCSSファイルを対象に実行する。ESLintと同様、警告を許容しない運用にする場合は`--max-warnings`相当（stylelintには専用オプションが無いため、`severity: "error"`で統一しwarnルールを持たない）
 - **dev-standards由来のsymlink（`bootstrap-theme.css`・`common-theme.css`等）は、参照側リポジトリでのlint対象から除外してよい**。これらはdev-standards側が実体を所有・lintしており（本ドキュメント作成時点で`shared/ui/*.css`に対し`npm test`内で実行）、参照側で指摘が出てもその場で修正できない（symlink先の実体を書き換えることになり、submodule経由の変更が必要なため）
 
+## CodeQL
+
+ESLint・stylelintが構文・スタイルレベルの静的解析であるのに対し、CodeQLはデータフロー解析による**セキュリティ脆弱性・バグパターンの検知**を行う、性質の異なる静的解析。全プロダクトで導入を標準とする。
+
+- **導入方法**: `reusable-codeql.yml`を呼び出す（呼び出し方・入力パラメータ`languages`は`docs/reusable-workflows-reference.md`「`reusable-codeql.yml`」を参照）
+- **トリガー**: 参照側の`.github/workflows/codeql.yml`自体の`on:`に`push`（`base_branch`）・`pull_request`・`schedule`（週次等）を設定する。`schedule`はコード変更が無い期間もCodeQLのクエリセット自体の更新を検知するために推奨する
+- **権限**: 呼び出し元ジョブに`permissions: { security-events: write, actions: read, contents: read }`を明示する。省略するとリポジトリ既定の`GITHUB_TOKEN`権限（`security-events: write`を含まない）が上限になり、SARIFのGitHub Securityタブへのアップロードが失敗する
+- **マージゲートとの関係**: `reusable-ci.yml`の`merge` jobのゲートには関与しない（`docs/cicd-pipeline-specification.md`参照）。CodeQLを必須チェックにするかどうかは参照側リポジトリのブランチ保護設定（Required status checks）側の責務
+
 ## 参考実装
 
 上記の値は、karutaの以下のファイルで実運用中（本ドキュメント作成時点）。
 
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
 - `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
+- `.github/workflows/codeql.yml`（`reusable-codeql.yml`呼び出し、`push`/`pull_request`/週次`schedule`トリガー）
