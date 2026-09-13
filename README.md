@@ -49,23 +49,16 @@
 - [`https-response-buffer-encoding-pattern.md`](docs/https-response-buffer-encoding-pattern.md): `https.request`のレスポンスボディ文字化け対策
 - [`llm-dual-format-response-pattern.md`](docs/llm-dual-format-response-pattern.md): LLM APIのdual-format JSON応答・パース救済
 - [`deterministic-seed-id-pattern.md`](docs/deterministic-seed-id-pattern.md): 静的コンテンツのDynamoDB冪等同期（決定的ID）
-- [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md):
-  日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
-- [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md):
-  運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot
-  （`shared/lambda/opsAlertNotifier.js`）
-- [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md):
-  フロントエンドError Boundary＋サーバーサイドロギング
-  （`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
+- [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
+- [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
+- [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md): フロントエンドError Boundary＋サーバーサイドロギング（`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
 
 ### CI/CD・運用
 
 - [`cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md): `reusable-ci.yml` / `reusable-cd.yml`の仕様
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
-- [`code-quality-conventions.md`](docs/code-quality-conventions.md):
-  lintルール規約（複雑度チェック・sonarjs等）
-- [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md):
-  実認証情報の無いサンドボックスからの本番データ調査・修正
+- [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
+- [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
 
 ## 参照側アプリ一覧
 
