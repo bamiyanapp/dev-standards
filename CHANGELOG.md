@@ -1,3 +1,10 @@
+## [2.17.3](https://github.com/bamiyanapp/dev-standards/compare/v2.17.2...v2.17.3) (2026-09-13)
+
+
+### Bug Fixes
+
+* **textlint:** .textlintignoreをsync-manifest.jsonのsymlink対象に追加する ([#451](https://github.com/bamiyanapp/dev-standards/issues/451)) ([c2f03a4](https://github.com/bamiyanapp/dev-standards/commit/c2f03a4bd73949a79c2d1a08bd9421454162a89e)), closes [#450](https://github.com/bamiyanapp/dev-standards/issues/450)
+
 ## [2.17.2](https://github.com/bamiyanapp/dev-standards/compare/v2.17.1...v2.17.2) (2026-09-13)
 
 
