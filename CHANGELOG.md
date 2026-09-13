@@ -1,3 +1,10 @@
+## [2.17.1](https://github.com/bamiyanapp/dev-standards/compare/v2.17.0...v2.17.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* **docs:** 行折り返し規約を撤回し、ソフト改行によるレンダリング不具合を修正する ([#445](https://github.com/bamiyanapp/dev-standards/issues/445)) ([7f9807c](https://github.com/bamiyanapp/dev-standards/commit/7f9807c47c43e90e10665e5fd0753f567846aabe)), closes [#444](https://github.com/bamiyanapp/dev-standards/issues/444)
+
 # [2.17.0](https://github.com/bamiyanapp/dev-standards/compare/v2.16.0...v2.17.0) (2026-09-13)
 
 
