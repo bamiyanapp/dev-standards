@@ -1,3 +1,10 @@
+## [2.14.1](https://github.com/bamiyanapp/dev-standards/compare/v2.14.0...v2.14.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* **ci:** concurrency.groupにinputs.frontend_dirを含め複数job呼び出しの衝突を防ぐ ([#420](https://github.com/bamiyanapp/dev-standards/issues/420)) ([9021528](https://github.com/bamiyanapp/dev-standards/commit/90215284cb489c5b5d30c4496402d2381963f912)), closes [#419](https://github.com/bamiyanapp/dev-standards/issues/419)
+
 # [2.14.0](https://github.com/bamiyanapp/dev-standards/compare/v2.13.0...v2.14.0) (2026-09-12)
 
 
