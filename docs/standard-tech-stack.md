@@ -39,7 +39,13 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 |---|---|
 | OSLS + Lambda + API Gateway + DynamoDB（REST）。WebSocketによるリアルタイム双方向通信が必要な場合は、同じOSLSサービス内にAPI Gateway WebSocket APIを追加する | 基本構成: `docs/nextjs-static-lambda-pattern.md`「全体構成」のバックエンド部分。WebSocket追加: `docs/serverless-spa-pattern.md`「バックエンド」。Firebase Authenticationとの組み合わせ実装例: `docs/lambda-api-firebase-auth-pattern.md`。Google IDトークン直接検証との組み合わせ（認証ロジックのみ）: `docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」 |
 
-バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）: Node.js `https.request`のレスポンスボディ文字化け対策（`docs/https-response-buffer-encoding-pattern.md`）、LLM APIのdual-format JSON応答（`docs/llm-dual-format-response-pattern.md`）、静的コンテンツのDynamoDB冪等同期（`docs/deterministic-seed-id-pattern.md`）、実認証情報の無いサンドボックスからの本番データ調査・修正（`docs/sandboxed-agent-production-data-pattern.md`）、日次利用回数の上限（`docs/daily-rate-limit-pattern.md`）。
+バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）は以下のとおり。
+
+- Node.js `https.request`のレスポンスボディ文字化け対策: `docs/https-response-buffer-encoding-pattern.md`
+- LLM APIのdual-format JSON応答: `docs/llm-dual-format-response-pattern.md`
+- 静的コンテンツのDynamoDB冪等同期: `docs/deterministic-seed-id-pattern.md`
+- 実認証情報の無いサンドボックスからの本番データ調査・修正: `docs/sandboxed-agent-production-data-pattern.md`
+- 日次利用回数の上限: `docs/daily-rate-limit-pattern.md`
 
 ## 4. ホスティング（全プロジェクトで採用）
 
