@@ -192,8 +192,19 @@ on:
 # `merge`ジョブ自体のconcurrency（`merge-queue-${{ github.repository }}`、
 # cancel-in-progress: false）は、PRをまたいだsquash merge同士の直列化が目的で
 # あり本設定とは別軸のため、両者は独立して機能する。
+#
+# `inputs.frontend_dir`を含めるのは、`frontend_dir`が単一値のみでE2E対象アプリを
+# 1つしか指定できないため、参照側リポジトリのci.ymlが「対象アプリ1つにつき1つの
+# 独立job」でこのworkflowを複数個呼び出すケース（examination#404「Playwright
+# E2E導入 詳細計画」）に対応するため。`frontend_dir`を含めないと、同一ref内の
+# 複数job呼び出しが全て同一groupに一致し、後から起動した方が「新しいpushによる
+# 古い実行のキャンセル」の対象と誤認され、実行開始前に強制キャンセルされてしまう
+# （dev-standards#419、examination#454のCI実行で実際に発生し発覚）。
+# `frontend_dir`を指定しない呼び出し（バックエンドのみの参照側リポジトリ等）では
+# 引き続き空文字列のまま一致するため、既存の「同一job・新しいpushで古い実行を
+# キャンセルする」動作に影響しない
 concurrency:
-  group: ci-${{ github.repository }}-${{ github.ref }}
+  group: ci-${{ github.repository }}-${{ github.ref }}-${{ inputs.frontend_dir }}
   cancel-in-progress: true
 
 jobs:
