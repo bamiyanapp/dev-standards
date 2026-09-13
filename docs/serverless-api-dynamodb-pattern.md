@@ -95,7 +95,7 @@ CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda�
 
 - **単体テスト**: `test/helpers/inMemoryRepositories.js`のin-memory repositoryへ差し替え、実DynamoDB・実Google認証を使わずにservices層を検証する
 - **E2Eテスト**: `backend/e2e/testServer.js`が、本番`handler.js`と同じ`createRouter`/`buildRoutes`/serviceファクトリ関数を再利用しつつ、in-memory repositoryと「実通信せず、JWTペイロードをbase64url decodeするだけ（署名検証なし）」のfake authenticatorに差し替えた、最小限の`http.createServer`ラッパー。このfake authenticatorはGoogle IDトークン・セッショントークンのいずれの形状も区別せず信頼するため、本番側の認証方式の切り替え（IDトークン直接検証→セッショントークン）に追随するコード変更は不要だった。Playwrightの`webServer`設定からこのテストサーバーを起動し、フロントエンドの`context.addCookies()`でE2E用のfakeセッショントークンをあらかじめセットすることで、実際のGoogle OAuthログインフロー・`POST /auth/session`交換を経由せずにE2Eテストを実行できる
-- 上記のfake authenticator・fakeセッショントークン組み立ては、このパターンを採用するプロダクト間で共通化できる（Camp-Stock固有のロジックを含まない）ため、`shared/e2e/fakeAuthenticator.js`（バックエンド側、`createFakeAuthenticator()`）・`shared/e2e/fakeSessionToken.js`（フロントエンド側、`createFakeSessionToken`/`loginAsE2EUser`）として`shared/e2e/screenshot.js`と同様にsymlinkで提供する（[bamiyanapp/dev-standards#404](https://github.com/bamiyanapp/dev-standards/issues/404)）。参照側リポジトリの`sync-manifest.local.json`へ以下を追加する。
+- 上記のfake authenticator・fakeセッショントークン組み立ては、このパターンを採用するプロダクト間で共通化できる（Camp-Stock固有のロジックを含まない）。そのため、`shared/e2e/fakeAuthenticator.js`（バックエンド側、`createFakeAuthenticator()`）・`shared/e2e/fakeSessionToken.js`（フロントエンド側、`createFakeSessionToken`/`loginAsE2EUser`）として切り出した。`shared/e2e/screenshot.js`と同様にsymlinkで提供する（[bamiyanapp/dev-standards#404](https://github.com/bamiyanapp/dev-standards/issues/404)）。参照側リポジトリの`sync-manifest.local.json`へ以下を追加する。
 
   ```json
   {
