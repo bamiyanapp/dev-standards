@@ -145,11 +145,31 @@ on:
           （リポジトリルート基準）。カンマまたは改行区切りで複数指定できる。
         type: string
         default: ""
+      enable_text_lint:
+        description: >-
+          Markdownドキュメント（docs/*.md・README.md等）の日本語文章に対し、
+          textlint（textlint-rule-preset-ja-technical-writing）を実行する`text-lint`
+          jobを実行するかどうか（bamiyanapp/dev-standards#436）。ESLint・stylelintが
+          コード向け、CodeQLがセキュリティ向けの静的解析であるのに対し、こちらは
+          Markdownドキュメントの文章品質（表記ゆれ・文体の不統一等）を検知する。
+          textlintの共有設定（textlint.config.cjs）はdev-standardsからsymlinkで
+          配布する（docs/code-quality-conventions.md参照）ため、参照側リポジトリは
+          このジョブの有効化とtext_lint_pathsの指定のみでよく、textlint自体の
+          devDependencies追加は不要（jobの中でnpx経由で取得する）。
+        type: boolean
+        default: false
+      text_lint_paths:
+        description: >-
+          enable_text_lint: trueの場合にlint対象とするMarkdownファイルのglobパターン
+          （リポジトリルート基準）。mermaid_doc_pathsと同様、カンマまたは改行区切りで
+          複数指定できる（例: "docs/*.md\nREADME.md\nCLAUDE.md\n.claude/skills/**/*.md"）。
+        type: string
+        default: ""
       skip_verification_on_push:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
           push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
-          `standards-check`・`duplication-check`をスキップし、`commitlint`・
+          `standards-check`・`duplication-check`・`text-lint`をスキップし、`commitlint`・
           `frontend-e2e-test`・`render-mermaid-diagrams`（有効な場合）のみ実行する
           （bamiyanapp/dev-standards#187「CI/CD実行回数・実行時間削減バックログ」③）。
           これらのジョブはPRの「base_branchと同期済みでないとマージ不可」
@@ -172,8 +192,9 @@ on:
           `package-lock.json`・`.github/workflows/**`の変更は共通変更とみなし、
           いずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）
           は対象外（常に全ジョブを実行する。パッケージ単位の変更検出は未対応）。
-          `standards-check`（symlink整合性チェック）は`frontend_dir`/`backend_dir`に
-          限定されないリポジトリ全体のチェックのため対象外（常に実行する）。
+          `standards-check`（symlink整合性チェック）・`text-lint`（Markdown文書チェック）は
+          いずれも`frontend_dir`/`backend_dir`に限定されないリポジトリ全体のチェックの
+          ため対象外（常に実行する）。
           変更検出自体が失敗した場合は安全側に倒し、全ジョブを実行する。
         type: boolean
         default: false
@@ -1197,6 +1218,56 @@ jobs:
             cat ./jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # ESLint・stylelintはコード（JS/CSS）向け、CodeQLはセキュリティ向けの静的解析であるのに
+  # 対し、Markdownドキュメント（docs/*.md等）の日本語文章そのものの品質（文体の不統一・
+  # 表記ゆれ等）を検知する仕組みが無かった（bamiyanapp/dev-standards#433・#436）。共有設定
+  # （textlint.config.cjs）はdev-standardsからsymlinkで配布するため、参照側リポジトリは
+  # このjobの有効化とtext_lint_pathsの指定のみでよく、textlint自体をdevDependenciesへ
+  # 追加する必要はない（npx経由でこのjob内に閉じて取得する。stylelintのような
+  # 参照側リポジトリ個別のnpm scripts追加が不要な、より共通化された導入方式）
+  text-lint:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_text_lint &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      # textlint.config.cjsはdev-standards submodule配下からのsymlink（sync-manifest.json）
+      # のため、参照側リポジトリではsubmoduleの取得が必須（dev-standards自身の
+      # dogfoodingではsubmoduleが存在しないため無害）
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Run textlint
+        run: |
+          mapfile -t targets < <(printf '%s' "${{ inputs.text_lint_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "text_lint_paths is empty; nothing to lint."
+            exit 0
+          fi
+          npx --yes -p textlint@15.8.0 -p textlint-rule-preset-ja-technical-writing@12.0.2 \
+            textlint --config textlint.config.cjs "${targets[@]}"
+
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され
   # 図として確認できない（bamiyanapp/karuta#824）。mermaid_doc_pathsで指定した
@@ -1360,7 +1431,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, render-mermaid-diagrams]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, text-lint, render-mermaid-diagrams]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -1382,6 +1453,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-e2e-test.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result)
     runs-on: ubuntu-latest
     permissions:
