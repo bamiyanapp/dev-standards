@@ -1,4 +1,4 @@
-# コード品質規約（lint）
+# コード品質規約（lint・stylelint）
 
 `reusable-ci.yml`が提供するテストカバレッジ閾値（`coverage_threshold`・`e2e_coverage_threshold`）・コード重複検知（`duplication_threshold`）の開発共通標準の目標値は、`docs/cicd-pipeline-specification.md`・`docs/reusable-workflows-reference.md`側の各入力説明に明記されている（テストカバレッジ80%以上・重複率5%以下）。
 
@@ -17,8 +17,18 @@ ESLintを使うプロダクト（`docs/client-only-vite-spa-pattern.md`が新規
 
 新規TypeScriptプロジェクトで`oxlint`を採用する場合も、上記と同等の複雑度検知の考え方（対応するルール・プラグインの有無）を導入時に確認する。
 
+## stylelint
+
+CSSを直接記述するプロダクト（Bootstrap採用プロダクト等。Tailwind CSS/daisyUI構成でユーティリティクラスのみを使い、独自CSSファイルをほぼ持たないプロダクトでは省略してよい）では、`stylelint`を導入する。
+
+- **共有設定**: `commitlint.config.cjs`と同様、dev-standardsルートの`stylelint.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み。プロダクト固有のカスタマイズは想定しない）
+- **ベース**: `stylelint-config-standard`をそのまま適用する
+- **lintスクリプト**: `stylelint --config stylelint.config.cjs "src/**/*.css"`のように、プロダクトのCSSファイルを対象に実行する。ESLintと同様、警告を許容しない運用にする場合は`--max-warnings`相当（stylelintには専用オプションが無いため、`severity: "error"`で統一しwarnルールを持たない）
+- **dev-standards由来のsymlink（`bootstrap-theme.css`・`common-theme.css`等）は、参照側リポジトリでのlint対象から除外してよい**。これらはdev-standards側が実体を所有・lintしており（本ドキュメント作成時点で`shared/ui/*.css`に対し`npm test`内で実行）、参照側で指摘が出てもその場で修正できない（symlink先の実体を書き換えることになり、submodule経由の変更が必要なため）
+
 ## 参考実装
 
 上記の値は、karutaの以下のファイルで実運用中（本ドキュメント作成時点）。
 
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
+- `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
