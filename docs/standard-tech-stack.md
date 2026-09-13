@@ -18,7 +18,7 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 
 横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は`docs/shared-ui-components.md`、共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照（いずれもプロダクトに応じて任意採用）。
 
-テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は`docs/client-only-vite-spa-pattern.md`を参照。
+テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は`docs/client-only-vite-spa-pattern.md`を参照。lint複雑度・テストカバレッジ閾値・コード重複検知の具体的な推奨値は`docs/code-quality-conventions.md`を参照。
 
 ## 2. ログイン（認証）: 必要な場合のみ採用
 
