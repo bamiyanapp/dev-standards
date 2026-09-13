@@ -6,6 +6,7 @@
     { "source": "commitlint.config.cjs", "target": "commitlint.config.cjs" },
     { "source": "stylelint.config.cjs", "target": "stylelint.config.cjs" },
     { "source": "textlint.config.cjs", "target": "textlint.config.cjs" },
+    { "source": ".textlintignore", "target": ".textlintignore" },
     { "source": ".clineignore", "target": ".clineignore" },
     { "source": ".claude/settings.json", "target": ".claude/settings.json" }
   ],
