@@ -29,7 +29,6 @@
 - [`client-only-vite-spa-pattern.md`](docs/client-only-vite-spa-pattern.md): 単一パッケージReactアプリ（Vite + TypeScript + Bootstrap）構成
 - [`shared-ui-components.md`](docs/shared-ui-components.md): 横断的UIコンポーネントのsymlink共有（`shared/ui/`・`shared/pwa/`・`shared/sfx/`）
 - [`frontend-ui-conventions.md`](docs/frontend-ui-conventions.md): 共通フォント・トップページの必須の表示項目等のUI規約
-- [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
 - [`pwa-initial-loading-indicator.md`](docs/pwa-initial-loading-indicator.md): PWA起動時の白画面対策
 - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
 - [`service-worker-update-pattern.md`](docs/service-worker-update-pattern.md): Service Workerのキャッシュ更新・反映パターン
@@ -41,9 +40,6 @@
 - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証の認証ロジック（デプロイツール自体はAWS SAMの実装例、標準はOSLS）
 - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
 - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
-- [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
-- [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
-- [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md): フロントエンドError Boundary＋サーバーサイドロギング（`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
 - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md): S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成（標準索引からは除外、サイト全体ログイン保護が必要な場合の追加パターン）
 - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理。`serverless-static-site-pattern.md`向け）
 - [`short-lived-bearer-token-pattern.md`](docs/short-lived-bearer-token-pattern.md): 別オリジンバックエンドAPIへの短命Bearerトークン認証（`serverless-static-site-pattern.md`向け）
@@ -53,12 +49,23 @@
 - [`https-response-buffer-encoding-pattern.md`](docs/https-response-buffer-encoding-pattern.md): `https.request`のレスポンスボディ文字化け対策
 - [`llm-dual-format-response-pattern.md`](docs/llm-dual-format-response-pattern.md): LLM APIのdual-format JSON応答・パース救済
 - [`deterministic-seed-id-pattern.md`](docs/deterministic-seed-id-pattern.md): 静的コンテンツのDynamoDB冪等同期（決定的ID）
-- [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
+- [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md):
+  日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
+- [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md):
+  運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot
+  （`shared/lambda/opsAlertNotifier.js`）
+- [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md):
+  フロントエンドError Boundary＋サーバーサイドロギング
+  （`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
 
 ### CI/CD・運用
 
 - [`cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md): `reusable-ci.yml` / `reusable-cd.yml`の仕様
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
+- [`code-quality-conventions.md`](docs/code-quality-conventions.md):
+  lintルール規約（複雑度チェック・sonarjs等）
+- [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md):
+  実認証情報の無いサンドボックスからの本番データ調査・修正
 
 ## 参照側アプリ一覧
 
