@@ -43,7 +43,7 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
 - **ベース**: `textlint-rule-preset-ja-technical-writing`をベースとし、以下のルールを無効化する
   - `sentence-length`・`no-doubled-joshi`・`max-ten`・`max-comma`: dev-standardsのドキュメントは、issue/PR番号や過去の経緯を伴う因果関係の説明を1文に埋め込む文体を意図的に採用しており（実測で1文最大555文字）、この文体では長い文・同じ助詞の複数回登場・読点/カンマの多用が常態化する。文分割を前提とするこれらのルールは、この文体そのものを否定してしまうため無効化する
   - `no-mix-dearu-desumasu`: 本ルールは「です」「ます」で終わる文を実装上の判定根拠にしており、常体（「〜する。」等の辞書形終止）のみで書かれた文書では判定材料が無く、明示的な「である。」文をむしろ誤検知する。dev-standardsの各ドキュメントは全体を通じて常体で統一されているため無効化する
-- **lintスクリプト**: `textlint --config textlint.config.cjs "docs/*.md" README.md ...`のように、プロダクトのMarkdownドキュメントを対象に実行する。自動生成される`CHANGELOG.md`は`.textlintignore`で対象から除外する
+- **CIへの組み込み**: stylelintのように参照側リポジトリのpackage.jsonへtextlint本体を追加する必要はない。`reusable-ci.yml`の`enable_text_lint: true`・`text_lint_paths`（`mermaid_doc_paths`と同形式のカンマ/改行区切りglob）を指定するだけで、`text-lint` jobがnpx経由でtextlint本体・presetを取得し実行する（詳細は`docs/reusable-workflows-reference.md`「`reusable-ci.yml`」・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）
 - **導入前の確認**: 上記の無効化理由は、いずれも「長い複文・常体で統一する」というdev-standardsの文体を前提にしている。プロダクト側のドキュメントがですます調中心、または短文中心の文体を採用している場合は、この共有設定をそのまま使わず、プロダクト側で個別に調整することを検討する
 
 ## 参考実装
@@ -53,4 +53,4 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
 - `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
 - `.github/workflows/codeql.yml`（`reusable-codeql.yml`呼び出し、`push`/`pull_request`/週次`schedule`トリガー）
-- `textlint.config.cjs`（dev-standardsルート。本ドキュメント作成時点ではdev-standards自身の`npm test`（`lint:text`）で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証。参照側リポジトリへの導入は今後の課題）
+- `textlint.config.cjs`（dev-standardsルート。dev-standards自身の`npm test`（`lint:text`）で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証。参照側リポジトリでは`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`経由での導入を`text-lint` jobとして提供する。参照側リポジトリでの実際の有効化は今後の課題）
