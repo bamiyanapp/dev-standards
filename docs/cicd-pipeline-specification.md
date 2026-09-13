@@ -34,7 +34,7 @@ graph TD
   - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
   - `backend-test`: backend の Lint・Vitest テスト（カバレッジ集計付き）
   - `package-test`（`packages` 入力指定時、`frontend-test`/`backend-test` の代わりに実行）: 指定したパッケージ一覧を `strategy.matrix` で展開し、lint/test（`--if-present`）・任意のbuildを行う
-  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`check-coverage-threshold` 複合アクションで `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない。
+  - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行し、`check-coverage-threshold` 複合アクションで `coverage/coverage-summary.json` を読み、Job Summaryへのカバレッジ表表示と閾値未満の指標があった場合のジョブ失敗を行う。閾値が0（既定）の場合はこのステップ自体を実行しない。**`coverage_threshold`の開発共通標準の目標値は80%以上**（[bamiyanapp/dev-standards#425](https://github.com/bamiyanapp/dev-standards/issues/425)）。`e2e_coverage_threshold`（後述）・`duplication_threshold`と同種の方針で、新規に有効化するリポジトリは実測値が無い導入直後は`0`（ゲート無効・レポート表示のみ）から開始してよいが、実測後にその値のまま据え置いて固定化せず、テストケースを追加してカバレッジ自体を引き上げつつ段階的に閾値を80%へ近づけることを目指す。既存で低い閾値を運用しているリポジトリも、直ちに80%へ上げる必要は無いが、段階的な引き上げ方針を各リポジトリのIssueで管理する。
 
     この複合アクションをどう参照するかについては、3段階の失敗を経て現在の実装に至っている（詳細は[bamiyanapp/karuta#583](https://github.com/bamiyanapp/karuta/issues/583)）。
     - **失敗1**: 当初は相対パス（`uses: ./.github/actions/check-coverage-threshold`）で参照していたが、**ステップレベルの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした対象）のチェックアウト内容に対して解決される**（reusable-ci.yml自身のrefには解決されない）ため、dev-standards自身のdogfooding CI（呼び出し元と定義元が同一リポジトリ）でしか正しく動作しない不具合だった。`coverage_threshold`が0（既定）のジョブでは該当ステップ自体が実行されないため潜在化していたが、常時実行される`frontend-e2e-test`の「Show E2E coverage」ステップで顕在化した
