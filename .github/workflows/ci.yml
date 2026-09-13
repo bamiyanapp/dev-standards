@@ -27,6 +27,10 @@ jobs:
       # issue bamiyanapp/karuta#824: dev-standards自身のArchitecture図もdogfoodingする
       enable_mermaid_render: true
       mermaid_doc_paths: "docs/cicd-pipeline-specification.md"
+      # issue #447: textlintの実行経路をtext-lint jobへ一本化する（従来はnpm test内の
+      # lint:textスクリプトのみで実行しており、このjobは常にskippedと表示され紛らわしかった）
+      enable_text_lint: true
+      text_lint_paths: "docs/*.md\nREADME.md\nCLAUDE.md\n.claude/skills/**/*.md"
     secrets:
       # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
       # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、

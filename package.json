@@ -12,7 +12,7 @@
     "lint:css": "stylelint --config stylelint.config.cjs \"shared/ui/*.css\"",
     "lint:text": "textlint --config textlint.config.cjs \"docs/*.md\" README.md CLAUDE.md \".claude/skills/**/*.md\"",
     "pretest": "npm --prefix .github/actions/compare-e2e-screenshots ci",
-    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css && npm run lint:text"
+    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1106.0",
