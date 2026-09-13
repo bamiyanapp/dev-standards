@@ -1,3 +1,10 @@
+# [2.17.0](https://github.com/bamiyanapp/dev-standards/compare/v2.16.0...v2.17.0) (2026-09-13)
+
+
+### Features
+
+* **ci:** reusable-ci.ymlへtextlintを組み込むtext-lint jobを追加する ([#437](https://github.com/bamiyanapp/dev-standards/issues/437)) ([83ac308](https://github.com/bamiyanapp/dev-standards/commit/83ac308c15bc5a1156fa7d35913d7310afd9cd40))
+
 # [2.16.0](https://github.com/bamiyanapp/dev-standards/compare/v2.15.0...v2.16.0) (2026-09-13)
 
 
