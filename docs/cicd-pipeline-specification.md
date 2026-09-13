@@ -104,7 +104,7 @@ graph TD
 
 **`enable_path_filtering`（任意、既定`false`）**: CI/CD実行回数・実行時間削減バックログ（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑤）の対応。`true`の場合、新規`detect-changes` jobが`dorny/paths-filter@v3`で`frontend_dir`/`backend_dir`配下の変更有無を検出し、`frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`をそれぞれ該当する変更が無い場合にスキップする。ルート直下の`package.json`・`package-lock.json`・`.github/workflows/**`の変更はfrontend/backend双方の「変更あり」とみなす（共通依存・ワークフロー自体の変更時に必要なチェックを取りこぼさないため）。`packages`入力使用時（package-testモード）はパッケージ単位の変更検出が未対応のため対象外とし、常に全jobを実行する。`standards-check`（`sync-manifest.json`に基づくリポジトリ全体のsymlink整合性チェック）は`frontend_dir`/`backend_dir`に限定されないため対象外とし常に実行する。`detect-changes` job自体の実行が失敗した場合（GitHub側の一時的な障害等）は安全側に倒し、frontend/backendとも「変更あり」として全jobを実行する。
 
-入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold` / `enable_mermaid_render` / `mermaid_doc_paths` / `skip_verification_on_push` / `enable_path_filtering`）は README.md を参照。これがこのワークフローの入力の全体である。semantic-releaseの実行に関する `enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` は `reusable-cd.yml` 側の入力であり、このワークフローには存在しない（[bamiyanapp/dev-standards#76](https://github.com/bamiyanapp/dev-standards/issues/76)でメジャーバージョンアップに伴い削除）。
+入力パラメータ（`frontend_dir` / `backend_dir` / `packages` / `coverage_threshold` / `node_version` / `workspaces` / `enable_e2e_test` / `enable_auto_merge` / `enable_duplication_check` / `duplication_threshold` / `enable_mermaid_render` / `mermaid_doc_paths` / `skip_verification_on_push` / `enable_path_filtering`）は docs/reusable-workflows-reference.md を参照。これがこのワークフローの入力の全体である。semantic-releaseの実行に関する `enable_release` / `semantic_release_node_version` / `base_branch` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config` は `reusable-cd.yml` 側の入力であり、このワークフローには存在しない（[bamiyanapp/dev-standards#76](https://github.com/bamiyanapp/dev-standards/issues/76)でメジャーバージョンアップに伴い削除）。
 
 ### `commitlint`が`pull_request`/`push`の両方で実行される理由
 
@@ -157,7 +157,7 @@ run-name: >-
   - GitHub Pagesへのデプロイに限っては、`.github/actions/deploy-github-pages`（setup-node→npm ci→build→upload-pages-artifact→deploy-pages の定型パターンを共通化した複合action）を利用できる。呼び出し側の`cd.yml`は`environment: { name: github-pages }`・`permissions: { pages: write, id-token: write }`をjob単位で指定した上で、このactionを`with: working-directory / node-version / build-command / artifact-path`付きで呼び出す（`page-url`をoutputする）。参照側がnpm workspaces構成（[bamiyanapp/karuta#608](https://github.com/bamiyanapp/karuta/issues/608)）の場合は`workspaces: true`も併せて渡す。この場合`working-directory`はビルドコマンドの実行先ディレクトリのみを指し、依存インストール（`npm ci`）はリポジトリルートで行われる（`reusable-ci.yml`の同名inputと同じ意味）
   - Serverless Framework（osls等のCLIフォーク含む）を使ったAWSデプロイに限っては、`.github/actions/deploy-serverless`（setup-node→npm ci→デプロイコマンド実行の定型パターンを共通化した複合action）を利用できる。`with: working-directory / node-version / deploy-command / workspaces / aws-access-key-id / aws-secret-access-key`で呼び出す。npm workspaces構成かつ`package.individually: true`で多数のLambda関数を個別packagingする場合に発生し得る`EMFILE: too many open files`（[bamiyanapp/karuta#608](https://github.com/bamiyanapp/karuta/issues/608), [#663](https://github.com/bamiyanapp/karuta/issues/663)）対策として、デプロイコマンド実行前にファイルディスクリプタのソフトリミットをハードリミットまで引き上げる処理をデフォルトで行う（`raise-fd-limit: false`で無効化可能）。上記2つ以外のデプロイ先は現状対象外で、参照側の`cd.yml`に個別実装する
 
-入力パラメータ（`enable_release` / `semantic_release_node_version` / `enable_shared_release_config` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は README.md を参照。
+入力パラメータ（`enable_release` / `semantic_release_node_version` / `enable_shared_release_config` / `enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`）は docs/reusable-workflows-reference.md を参照。
 
 semantic-release本体および一部プラグイン（`@semantic-release/npm`、`semantic-release`本体など）は、frontend/backendのビルド・テストに使うNode.jsのバージョン（多くの場合プロダクトのランタイムに合わせて20系などを指定）よりも新しいNode.jsを要求することがある。そのため`release` job内のsemantic-release実行専用に`semantic_release_node_version`（デフォルト`lts/*`）を別途用意している。
 
@@ -169,7 +169,7 @@ semantic-release本体および一部プラグイン（`@semantic-release/npm`�
   - CodeQLはコード変更が無い期間もクエリセット自体の更新を検知するため、`schedule`トリガーでの定期実行が公式に推奨されている。`schedule`トリガーは呼び出し元（参照側の`.github/workflows/codeql.yml`）の`on:`に設定する必要があり、`workflow_call`先のこのワークフロー自体では設定できない
   - `reusable-ci.yml`の`merge` job（squash merge実行）に組み込むと、CodeQLの実行時間がPRのマージ可否に直結してしまう。CodeQLを必須チェックにするかどうかは各参照側リポジトリのブランチ保護設定（Required status checks）側の責務とし、このワークフロー自体はマージ処理に関与しない
 
-入力パラメータ（`languages`）は README.md を参照。
+入力パラメータ（`languages`）は docs/reusable-workflows-reference.md を参照。
 
 ## 4. リリース運用
 - **リリース条件**: `release` job実行時点の `base_branch` を対象に `semantic-release` を実行した結果、前回リリース以降にリリース対象のコミット（`feat`/`fix` 等）が含まれる場合にのみバージョンが発行される。`schedule`トリガーの場合、直前の実行区間に複数のmergeが積み重なっていても、その時点の`base_branch`の最新状態を対象に1回だけ実行される（区間内の各commitを個別にリリースするわけではない）。
