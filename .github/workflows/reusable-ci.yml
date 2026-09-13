@@ -87,6 +87,14 @@ on:
           Playwright（monocart-reporter）が出力するE2E実行時のカバレッジであり、
           frontend-testジョブのユニットテストカバレッジ（coverage_threshold）とは
           独立している（issue #541・#576）。
+          **開発共通標準として目標値は80%以上**（bamiyanapp/dev-standards#422、
+          duplication_thresholdの5%以下目標と同種の方針）。新規に有効化する場合、
+          導入直後は実測値が無いため0（ゲート無効）から開始してよいが、実測後は
+          その値のまま据え置かない（低い状態を固定化してしまう。duplication_threshold
+          における bamiyanapp/examination#447 の教訓と同様）。テストケースを追加して
+          E2Eカバレッジ自体を引き上げつつ、段階的に閾値を80%へ近づける。既存で低い
+          閾値を運用している参照側リポジトリは、直ちに80%へ上げる必要は無いが、
+          段階的な引き上げ方針を各リポジトリのIssueで管理すること
         type: number
         default: 0
       e2e_coverage_metrics:
