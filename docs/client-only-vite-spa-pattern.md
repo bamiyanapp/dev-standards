@@ -32,7 +32,7 @@ shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）�
 
 `tsconfig.app.json`側で有効にしておくと良いオプション。
 
-- `noUnusedLocals` / `noUnusedParameters`: 未使用変数・引数を検知する（`oxlint`と役割が重複しない範囲の型レベルチェック）
+- `noUnusedLocals` / `noUnusedParameters`: 未使用変数・引数を検知する（ESLintの`@typescript-eslint/no-unused-vars`と役割が重複しない範囲の型レベルチェック）
 - `erasableSyntaxOnly`: TypeScript独自の実行時表現（enum等）を禁止し、型注釈が完全にコンパイル時に消去できることを強制する
 - `verbatimModuleSyntax` + `moduleDetection: "force"`: import/exportの扱いをESMに厳密化する
 - `moduleResolution: "bundler"`: Viteのモジュール解決に合わせる
@@ -123,18 +123,34 @@ expect(copiedText).toBe(expectedUrl);
 
 ## lint
 
-`oxlint`は設定ファイルが小さく高速。React Hooksのルール違反検知は明示的に有効化する。
+ESLintを標準とする（`docs/code-quality-conventions.md`「lint」参照）。`typescript-eslint`の推奨設定に、React Hooksのルール違反検知（`eslint-plugin-react-hooks`）・循環的複雑度（`complexity`ルール）・`eslint-plugin-sonarjs`・未使用変数の検知（`no-unused-vars`）を組み合わせる。
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```js
+// eslint.config.js
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import sonarjs from "eslint-plugin-sonarjs";
+
+export default tseslint.config(
+  { ignores: ["dist"] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended, sonarjs.configs.recommended],
+    files: ["**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks, "react-refresh": reactRefresh },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      complexity: ["error", 15],
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+    },
+  },
+);
 ```
+
+`lint`スクリプトは`eslint . --max-warnings 0`のように、警告を許容しない運用にする。
 
 ## CI/CDの構成例
 
@@ -177,7 +193,7 @@ jobs:
 ## 新規プロジェクトでの始め方
 
 1. `docs/standard-tech-stack.md`の手順1（dev-standards取り込み）を実施する
-2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行し、上記の`tsconfig`・`vite.config.ts`（`preserveSymlinks`は後で必要になったら追加）・`.oxlintrc.json`を整える。バックエンドと組み合わせる場合は上記「npm workspacesでバックエンドと組み合わせる場合」に沿ってworkspaces構成にする
+2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行し、上記の`tsconfig`・`vite.config.ts`（`preserveSymlinks`は後で必要になったら追加）・`eslint.config.js`を整える。バックエンドと組み合わせる場合は上記「npm workspacesでバックエンドと組み合わせる場合」に沿ってworkspaces構成にする
 3. `vitest`・`@testing-library/react`・`@testing-library/jest-dom`・`@testing-library/user-event`・`@vitest/coverage-v8`・`jsdom`を導入し、上記のテスト戦略に沿ってセットアップする
 4. 状態管理が必要なら`zustand`を導入し、上記のstore設計パターンに沿う
 5. 上記の「CI/CDの構成例」に沿って`.github/workflows/ci.yml`・`cd.yml`を用意する。ホスティングは`docs/static-hosting-pattern.md`に沿ってS3 + CloudFrontを構築する
