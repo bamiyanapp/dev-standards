@@ -41,7 +41,7 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
 
 - **共有設定**: `commitlint.config.cjs`・`stylelint.config.cjs`と同様、dev-standardsルートの`textlint.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み。プロダクト固有のカスタマイズは想定しない）
 - **ベース**: `textlint-rule-preset-ja-technical-writing`をベースとし、以下のとおり調整する
-  - `sentence-length`: 既定の上限100文字は、issue/PR番号や過去の経緯を伴う因果関係の説明を1文に埋め込むdev-standardsの文体を否定してしまうため厳しすぎる。一方で300文字を超える文は複数の因果関係・手順が1文に詰め込まれた冗長な文であることが多く、実際に読みにくい（issue #442で実測300文字超の13文を発見し、いずれも2〜4文への分割で明確に読みやすくなることを確認した）。そのため無効化はせず、上限を300文字に緩和し、真に冗長な文のみを検知する
+  - `sentence-length`: **最終的な必須目標はpreset既定値の100文字であり、緩和や恒久的な例外化はしない。** 既存ドキュメントには、issue/PR番号や過去の経緯を伴う因果関係の説明を1文に埋め込む冗長な文体が広く残っており、一度に100文字以内へ書き直すのは非現実的なため、issue #455で300→200→150→100の順に段階的に閾値を引き下げるラチェット方式を採用している。現在値は300（issue #442で実測300文字超の13文を発見し、いずれも2〜4文への分割で明確に読みやすくなることを確認した）で、あくまで途中経過であり最終的な着地点ではない
   - `no-doubled-joshi`・`max-ten`・`max-comma`: 上記の長い複文の文体では、1文中に同じ助詞が複数回登場する・読点/カンマが4つ以上になる文が常態化する。いずれも文分割を前提とするルールであり、`sentence-length`を無効化ではなく300文字までの複文を許容する方針にした以上、これらのルールも同じ理由で無効化する
   - `no-mix-dearu-desumasu`: 本ルールは「です」「ます」で終わる文を実装上の判定根拠にしており、常体（「〜する。」等の辞書形終止）のみで書かれた文書では判定材料が無く、明示的な「である。」文をむしろ誤検知する。dev-standardsの各ドキュメントは全体を通じて常体で統一されているため無効化する
 - **CIへの組み込み**: stylelintのように参照側リポジトリのpackage.jsonへtextlint本体を追加する必要はない。`reusable-ci.yml`の`enable_text_lint: true`・`text_lint_paths`（`mermaid_doc_paths`と同形式のカンマ/改行区切りglob）を指定するだけで、`text-lint` jobがnpx経由でtextlint本体・presetを取得し実行する（詳細は`docs/reusable-workflows-reference.md`「`reusable-ci.yml`」・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）
