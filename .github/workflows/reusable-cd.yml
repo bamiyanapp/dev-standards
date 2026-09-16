@@ -210,6 +210,11 @@ jobs:
 
       # ローカルに作成済みのバージョン更新コミットを新しいブランチへpushする
       # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。
+      # このブランチは本来PRマージ後に削除される使い捨てのものだが、過去の
+      # 失敗試行（マージ処理へ到達する前に本ステップ自体が失敗した場合等）で
+      # 同名ブランチが残っている可能性があるため、force無しの通常pushだと
+      # non-fast-forwardで拒否され続ける（dev-standards#481）。事前に削除して
+      # から作成し直すことで、残骸の有無によらず常に成功するようにする。
       - name: Push the prepared release commit to a new branch
         if: steps.check-release.outputs.release_needs_pr == 'true'
         id: push-release-branch
@@ -217,6 +222,7 @@ jobs:
           TAG: ${{ steps.check-release.outputs.tag }}
         run: |
           BRANCH="chore/release-${TAG}"
+          git push origin --delete "$BRANCH" || true
           git checkout -b "$BRANCH"
           git push origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
