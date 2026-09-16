@@ -1,3 +1,10 @@
+## [2.17.4](https://github.com/bamiyanapp/dev-standards/compare/v2.17.3...v2.17.4) (2026-09-16)
+
+
+### Bug Fixes
+
+* **cd:** releaseジョブのフォールバックが残骸ブランチ・PRで恒久的に失敗する問題を解消する ([#490](https://github.com/bamiyanapp/dev-standards/issues/490)) ([09c591a](https://github.com/bamiyanapp/dev-standards/commit/09c591ae846dea533b555ce8e3650631effd4c9a)), closes [#481](https://github.com/bamiyanapp/dev-standards/issues/481)
+
 ## [2.17.3](https://github.com/bamiyanapp/dev-standards/compare/v2.17.2...v2.17.3) (2026-09-13)
 
 
