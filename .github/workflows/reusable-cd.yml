@@ -210,6 +210,13 @@ jobs:
 
       # ローカルに作成済みのバージョン更新コミットを新しいブランチへpushする
       # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。
+      # force pushにしているのは、過去の失敗試行（例: このステップ以降の
+      # 「Create and merge the release pull request」等が失敗し、PRマージまで
+      # 到達しなかった場合）で同名ブランチが残骸としてリモートに残っていると、
+      # 通常のpushはnon-fast-forwardで拒否され、以後の全CD実行が同じ理由で
+      # 恒久的に失敗し続けるため（dev-standards#481で実際に発生）。このブランチは
+      # 常に「直前に作成した使い捨てのリリース用コミット」を指すべきであり、
+      # 過去の内容を保持する意味は無いためforce pushで安全に上書きする
       - name: Push the prepared release commit to a new branch
         if: steps.check-release.outputs.release_needs_pr == 'true'
         id: push-release-branch
@@ -218,7 +225,7 @@ jobs:
         run: |
           BRANCH="chore/release-${TAG}"
           git checkout -b "$BRANCH"
-          git push origin "$BRANCH"
+          git push --force origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       # 新しいブランチからbase_branchへのPRを作成し、API経由でsquash mergeする。
@@ -234,15 +241,38 @@ jobs:
             const tag = "${{ steps.check-release.outputs.tag }}";
             const baseBranch = context.ref.replace("refs/heads/", "");
 
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: branch,
-              base: baseBranch,
-              title: `chore(release): ${tag} [skip ci]`,
-              body: "semantic-releaseによる自動バージョン更新PRです。",
-            });
-            console.log(`Created release PR #${pr.number}`);
+            // 過去の試行でこのブランチへのPRマージ自体が失敗し、PRが
+            // オープンのまま残っている場合、createは「A pull request
+            // already exists」で422を返す。その場合は新規作成せず、
+            // 既存のPRを引き継いでmergeへ進む（dev-standards#481と同根の
+            // 残骸状態からの再試行を、こちらの経路でも失敗させないため）。
+            let pr;
+            try {
+              ({ data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: branch,
+                base: baseBranch,
+                title: `chore(release): ${tag} [skip ci]`,
+                body: "semantic-releaseによる自動バージョン更新PRです。",
+              }));
+              console.log(`Created release PR #${pr.number}`);
+            } catch (error) {
+              if (!error.message.includes("A pull request already exists")) {
+                throw error;
+              }
+              const { data: existingPrs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${branch}`,
+                state: "open",
+              });
+              if (existingPrs.length === 0) {
+                throw error;
+              }
+              pr = existingPrs[0];
+              console.log(`Reusing existing release PR #${pr.number}`);
+            }
 
             let mergeSha = "";
             // pushで作成したブランチ直後はGitHub側のmergeable判定が
