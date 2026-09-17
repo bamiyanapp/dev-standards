@@ -1,6 +1,6 @@
 # サーバーレスAPI構成パターン（API Gateway + Lambda + DynamoDB + SAM）
 
-**デプロイツール（AWS SAM）自体は標準索引（`docs/standard-tech-stack.md`）からは外れた構成。** 標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節の自社発行セッショントークン方式自体はデプロイツールと独立**しており、OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効（`docs/standard-tech-stack.md`「2. ログイン」参照）。
+**デプロイツール（AWS SAM）自体は標準索引（`docs/standard-tech-stack.md`）からは外れた構成**。標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節の自社発行セッショントークン方式自体はデプロイツールと独立**しており、OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効（`docs/standard-tech-stack.md`「2. ログイン」参照）。
 
 Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークンをバックエンドで検証し、以降はバックエンドが自社発行する長期セッショントークンで認証する、より小規模なプロダクト向けの構成。Camp-Stock（[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)）で検証済み。
 
@@ -87,7 +87,7 @@ CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda�
 
 - `sam build` → `sam deploy` → スタック出力（API・S3バケット名・CloudFront distribution ID等）取得 → フロントエンドビルド（`VITE_API_BASE_URL`にAPI出力を注入） → S3同期 → CloudFront invalidation、という順序
 - **キャッシュ制御の分離が必須**: `index.html`・Service Worker関連ファイル（`sw.js`等）は`--cache-control "no-cache"`、コンテンツハッシュ付きの`assets/*`は`--cache-control "public, max-age=31536000, immutable"`。分けないと、ブラウザにキャッシュされた古い`index.html`が削除済みの古いハッシュ付きアセットを参照し続ける
-- **submodule取得の見落としに注意**: `dev-standards/shared/`配下の実体へsymlinkしているコンポーネントを使っている場合、`ci.yml`側だけでなく、参照側リポジトリ自身の`cd.yml`の`Checkout`ステップにも個別に`submodules: true`が必要（`reusable-ci.yml`内のjobとは独立したチェックアウトのため、片方を直しても他方には及ばない。実際にこの見落としで`npm run build`が失敗する障害が発生した）
+- **submodule取得の見落としに注意**: `dev-standards/shared/`配下の実体へsymlinkしているコンポーネントを使っている場合、`ci.yml`側だけでなく、参照側リポジトリ自身の`cd.yml`の`Checkout`ステップにも個別に`submodules: true`が必要である（`reusable-ci.yml`内のjobとは独立したチェックアウトのため、片方を直しても他方には及ばない）。実際にこの見落としで`npm run build`が失敗する障害が発生した
 - **Secretsの値をAIが直接確認できない運用への対応**: `GOOGLE_OAUTH_CLIENT_ID`・`SESSION_SECRET`のようなSecretは、Claude Codeからは書き込み専用で値を読めない。デプロイジョブ内で形式チェック（`GOOGLE_OAUTH_CLIENT_ID`は正規表現、`SESSION_SECRET`は最小文字数）＋値のハッシュ（先頭数文字のみ）をJob Summaryへ出力し、「意図した値に更新されているか」をハッシュの一致・不一致で人間がスマートフォンから確認できるようにする（値そのものは露出させない）
 - **`SESSION_SECRET`の用意はAWS側の自動生成に頼らない**: セッショントークンの署名鍵は、AWSコンソールでのIAMポリシー変更を必要としない`GOOGLE_OAUTH_CLIENT_ID`と同じ運用（人間が一度だけGitHub Actions Secretsへ登録し、CIが`--parameter-overrides`で注入）にする。ランダムな値の生成自体はClaude Codeがサンドボックス内で行い（例: `openssl rand -hex 32`）、生成した値をチャットで人間へ渡して登録してもらう（値自体はGitHub Secretsにのみ保存され、リポジトリのコードやコミット履歴には残さない）
 
