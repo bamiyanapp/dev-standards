@@ -1,3 +1,10 @@
+## [2.18.1](https://github.com/bamiyanapp/dev-standards/compare/v2.18.0...v2.18.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **textlint:** Bold・括弧が文をまたぐことで生じる文分割の誤動作を修正する ([#497](https://github.com/bamiyanapp/dev-standards/issues/497)) ([e54cc99](https://github.com/bamiyanapp/dev-standards/commit/e54cc996fae2a1c8d5d74450bcdfe0265cf9bb74))
+
 # [2.18.0](https://github.com/bamiyanapp/dev-standards/compare/v2.17.4...v2.18.0) (2026-09-17)
 
 
