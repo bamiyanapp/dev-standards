@@ -168,7 +168,7 @@ jobs:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
 ```
 
-`node_version`は既定20だが、依存パッケージ（jsdom v30等）がNode.js組み込みの新しいAPIを要求する場合はエラーになる（例: jsdom v30は`webidl.util.markAsUncloneable`というNode.js 22以降のundiciで提供されるAPIに依存しており、Node.js 20では`TypeError: webidl.util.markAsUncloneable is not a function`でテストがクラッシュする）。依存パッケージの更新でCIが原因不明にcrashした場合、まずNode.jsバージョンとの相性を疑うこと。
+`node_version`は既定20だが、依存パッケージ（jsdom v30等）がNode.js組み込みの新しいAPIを要求する場合はエラーになる。例えばjsdom v30は`webidl.util.markAsUncloneable`というNode.js 22以降のundiciで提供されるAPIに依存しており、Node.js 20では`TypeError: webidl.util.markAsUncloneable is not a function`でテストがクラッシュする。依存パッケージの更新でCIが原因不明にcrashした場合、まずNode.jsバージョンとの相性を疑うこと。
 
 ## PWA・共有UIコンポーネント導入時の注意点
 

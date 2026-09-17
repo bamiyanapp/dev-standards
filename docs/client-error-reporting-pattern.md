@@ -64,7 +64,7 @@ reportClientError:
 
 ## LINEへの通知（任意、`docs/ops-monitoring-pattern.md`との連携）
 
-スマホオンリー環境ではCloudWatch Logsを都度確認しに行くのが難しいため、CloudWatch Logsへの記録に加えて、`shared/lambda/opsAlertNotifier.js`が使う運用監視専用LINE Bot（全プロダクト共通の1チャンネル）へも同じ例外情報を通知したい場合、`buildClientErrorAlertMessage`と`sendOpsAlert`を組み合わせて使う（dev-standards issue #387）。
+スマホオンリー環境ではCloudWatch Logsを都度確認しに行くのが難しい。そのため、CloudWatch Logsへの記録に加えて、`shared/lambda/opsAlertNotifier.js`が使う運用監視専用LINE Bot（全プロダクト共通の1チャンネル）へも同じ例外情報を通知したい場合は、`buildClientErrorAlertMessage`と`sendOpsAlert`を組み合わせて使う（dev-standards issue #387）。
 
 ```js
 const { buildClientErrorLogPayload, buildClientErrorAlertMessage } = require("./clientErrorReporting.js"); // symlink先
