@@ -54,4 +54,4 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
 - `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
 - `.github/workflows/codeql.yml`（`reusable-codeql.yml`呼び出し、`push`/`pull_request`/週次`schedule`トリガー）
-- `textlint.config.cjs`（dev-standardsルート。dev-standards自身も参照側リポジトリと同じ`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`（`text-lint` job）経由で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証する。CIの実行経路を一本化するため、`npm test`側の重複実行は行わない（`npm run lint:text`はローカルでの手動実行用に残す）。参照側リポジトリでの実際の有効化は今後の課題）
+- `textlint.config.cjs`（dev-standardsルート。dev-standards自身も参照側リポジトリと同じ`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`（`text-lint` job）経由で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証する。CIの実行経路を一本化するため、`npm test`側の重複実行は行わない（`npm run lint:text`はローカルでの手動実行用に残す）。参照側リポジトリでの実際の有効化例: karuta issue #1179・[PR #1180](https://github.com/bamiyanapp/karuta/pull/1180)で同じ`enable_text_lint`・`text_lint_paths`を導入済み）
