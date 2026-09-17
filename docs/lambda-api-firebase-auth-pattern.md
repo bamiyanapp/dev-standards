@@ -14,6 +14,17 @@ GitHub Pages等の静的ホスティングで配信するSPAに対し、専用�
 
 専用の認証プロキシ・セッションCookie管理を持たないため、`docs/serverless-static-site-pattern.md`のような2スタック分割・循環依存の解消手順は不要。バックエンドAPIは単一のServerless serviceとして構築できる。
 
+## PWA（ホーム画面追加）でのセッション永続化（iOS Safari ITP対策）
+
+Firebase Authenticationはセッション状態をIndexedDBへ永続化する。しかしホーム画面に追加したPWA（standalone表示）は、iOS SafariのITP（Intelligent Tracking Prevention）により、一定期間操作が無いとIndexedDB・localStorage等のスクリプト書き込み可能なストレージが消去されることがある。これに巻き込まれ、ログインセッションが意図せず切れる（uchi-stock issue #326）。
+
+フロントエンドの初期化時に以下の対策を組み合わせる。
+
+- `setPersistence(auth, browserLocalPersistence)`を明示的に呼び、Firebase Authのセッション永続化方式を確実に`local`にする
+- `navigator.storage.persist()`でブラウザに永続ストレージを要求し、上記の自動消去対象になりにくくする（Safari 15.2+でサポート）。未対応環境ではAPI自体が存在しないため、呼び出し前に`navigator.storage?.persist`の存在チェックを行うフィーチャー検出が必須。付与されるかはブラウザの裁量であり確実な保証ではない
+
+いずれもiOS Safariの内部実装に依存する挙動のため、サンドボックス環境やデスクトップブラウザでは再現・検証できず、実機（ホーム画面に追加したPWA、日を跨いだ放置後の起動）での確認が必要になる。
+
 ## ユーザー識別ロジック（優先順位）
 
 バックエンドの各ハンドラーは、以下の優先順位でユーザーIDを特定する。
