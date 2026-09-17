@@ -46,7 +46,7 @@ CloudFrontの`viewer-request`イベント（キャッシュヒット時も含め
 
 ## 動的エンドポイントはキャッシュ対象から除外する
 
-CloudFrontの`DefaultCacheBehavior`（`Managed-CachingOptimized`等）はキャッシュキーにcrawlクエリ文字列・Cookieを含まずURLパスのみで判定するのが一般的なため、ログインコールバックや管理API等「リクエストのたびに結果が変わる」動的パスにそのまま適用すると、あるリクエストへの応答（リダイレクト・一時的なエラー）が別のリクエストにそのまま返ってしまう事故が起きる（例: ログイン後に「invalid state」が誰がログインしてもTTLが切れるまで表示され続ける）。
+CloudFrontの`DefaultCacheBehavior`（`Managed-CachingOptimized`等）はキャッシュキーにcrawlクエリ文字列・Cookieを含まずURLパスのみで判定するのが一般的である。ログインコールバックや管理API等「リクエストのたびに結果が変わる」動的パスにそのまま適用すると、あるリクエストへの応答（リダイレクト・一時的なエラー）が別のリクエストにそのまま返ってしまう事故が起きる（例: ログイン後に「invalid state」が誰がログインしてもTTLが切れるまで表示され続ける）。
 
 Lambda@Edgeが処理する動的パス（コールバック・ログアウト・管理API等）には、個別に`CachingDisabled`（AWSマネージドポリシー）の`CacheBehaviors`を追加し、Lambda@Edge関数もそれぞれのパスへ関連付ける。1つのLambda関数を複数のキャッシュビヘイビアへ関連付ける場合は`@silvermine/serverless-plugin-cloudfront-lambda-edge`（`lambdaAtEdge`を配列で指定）が使える。
 
