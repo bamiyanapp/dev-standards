@@ -1,6 +1,6 @@
 # Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBによるバックエンドAPIパターン
 
-GitHub Pages等の静的ホスティングで配信するSPAに対し、専用の認証プロキシ層（`docs/serverless-static-site-pattern.md`のLambda@Edge構成）を持たず、フロントエンドが直接IdP（Firebase Authentication）のID Tokenを取得し、バックエンドAPI側でその都度検証する構成。uchi-stock（[bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock)）から、プロダクト固有の業務ロジック（在庫管理等）を除いた、他プロダクトでも再利用できるバックエンドAPI・認証・CI/CDの構成部分を切り出したもの。
+GitHub Pages等の静的ホスティングで配信するSPAに対し、専用の認証プロキシ層（`docs/serverless-static-site-pattern.md`のLambda@Edge構成）を持たない構成。フロントエンドが直接IdP（Firebase Authentication）のID Tokenを取得し、バックエンドAPI側でその都度検証する。uchi-stock（[bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock)）から、プロダクト固有の業務ロジック（在庫管理等）を除いた、他プロダクトでも再利用できるバックエンドAPI・認証・CI/CDの構成部分を切り出したもの。
 
 対象は、家族・チーム等の限定的な範囲で使う小規模なWebプロダクト（`docs/standard-tech-stack.md`と同様）。**フロントエンドの配信方式・UIフレームワークは対象外**（uchi-stockはGitHub Pages配信・Bootstrap構成だが、これらは他プロダクトのReact/Vite/daisyUI構成と独立に選択できる）。ログインなしで使えるアプリ、あるいは`docs/serverless-static-site-pattern.md`のようにサイト全体をログイン必須にしたい場合は、そちらのCognito + Lambda@Edge構成を検討すること。本パターンは「フロントエンド自体は誰でも閲覧でき、API呼び出し単位で認証する」構成に向く。
 
@@ -42,9 +42,9 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 
 ## デプロイ運用（`reusable-cd.yml`を使わない場合）
 
-`reusable-cd.yml`は「`base_branch`→`release_branch`の同期・`release_branch`上でのリリース」を前提とした構成だが、semantic-releaseを`base_branch`（`main`）に対して直接実行する運用（`.releaserc.cjs`の`branches: ["main"]`）を選ぶプロダクトでは前提が一致しない。この場合`cd.yml`はプロダクト固有のワークフローとして自前で維持し、`reusable-ci.yml`のみを利用する。
+`reusable-cd.yml`は「`base_branch`→`release_branch`の同期・`release_branch`上でのリリース」を前提とした構成である。semantic-releaseを`base_branch`（`main`）に対して直接実行する運用（`.releaserc.cjs`の`branches: ["main"]`）を選ぶプロダクトでは前提が一致しない。この場合`cd.yml`はプロダクト固有のワークフローとして自前で維持し、`reusable-ci.yml`のみを利用する。
 
-- semantic-releaseの実行・CHANGELOG生成・GitHub Pagesへのフロントエンドデプロイ（`docs/cicd-pipeline-specification.md`の`deploy-github-pages`複合action）・Lambdaへのバックエンドデプロイ（`osls deploy`）を、それぞれ独立したjobとして`cd.yml`に定義する
+- semantic-releaseの実行・CHANGELOG生成をする。GitHub Pagesへのフロントエンドデプロイ（`docs/cicd-pipeline-specification.md`の`deploy-github-pages`複合action）・Lambdaへのバックエンドデプロイ（`osls deploy`）も、それぞれ独立したjobとして`cd.yml`に定義する
 - Lambdaデプロイ前にDynamoDBの破壊的変更チェック・バックアップを行う運用にする場合、`FORCE_DEPLOY`のような手動フラグで例外的に強行できるようにしておくと、意図した破壊的変更（テーブル構造の変更等）まで機械的にブロックしてしまう事故を避けられる
 
 ## 必要なGitHub Secretsの例
