@@ -1,8 +1,8 @@
 # E2Eテストのカバレッジ収集パターン（`monocart-reporter`）
 
-`reusable-ci.yml`の`frontend-e2e-test`ジョブは「Show E2E coverage」ステップで`<frontend_dir>/coverage/coverage-summary.json`（frontend-testのユニットテストカバレッジと同じ形式・パス）を読み、Job Summaryへの表示・`e2e_coverage_threshold`によるゲートを行う（README.md「入力パラメータ」参照）。
+`reusable-ci.yml`の`frontend-e2e-test`ジョブは「Show E2E coverage」ステップで`<frontend_dir>/coverage/coverage-summary.json`（frontend-testのユニットテストカバレッジと同じ形式・パス）を読む。読み取った値を使い、Job Summaryへの表示・`e2e_coverage_threshold`によるゲートを行う（README.md「入力パラメータ」参照）。
 
-この仕組みは「Playwright側でその形式のファイルを実際に出力する」構成が各プロダクトで組まれていることが前提だが、単に`enable_e2e_test: true`にしただけでは何も出力されず、「coverage/coverage-summary.json が見つからないため、カバレッジ表示をスキップします」というメッセージだけがJob Summaryに残り、E2Eカバレッジが恒常的に算出できない状態に陥る（複数プロダクトで同じ症状が確認されている）。本ドキュメントは、この出力を実際に行うための具体的な設定手順を示す。
+この仕組みは「Playwright側でその形式のファイルを実際に出力する」構成が各プロダクトで組まれていることが前提である。単に`enable_e2e_test: true`にしただけでは何も出力されず、「coverage/coverage-summary.json が見つからないため、カバレッジ表示をスキップします」というメッセージだけがJob Summaryに残る。この状態ではE2Eカバレッジが恒常的に算出できない（複数プロダクトで同じ症状が確認されている）。本ドキュメントは、この出力を実際に行うための具体的な設定手順を示す。
 
 ## 全体像
 
@@ -98,7 +98,7 @@ import { test, expect } from './coverageFixture.js'; // symlink
 
 ### `NODE_OPTIONS=--preserve-symlinks`が必要
 
-`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれるが、Node（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索するため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗する（`Error: Cannot find package '@playwright/test'`）。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する（`vite.config.js`の`resolve.preserveSymlinks`と同種の問題。`docs/shared-ui-components.md`参照）。
+`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれる。しかしNode（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索するため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗する（`Error: Cannot find package '@playwright/test'`）。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する（`vite.config.js`の`resolve.preserveSymlinks`と同種の問題。`docs/shared-ui-components.md`参照）。
 
 ```json
 { "scripts": { "test:e2e": "NODE_OPTIONS=--preserve-symlinks playwright test" } }
