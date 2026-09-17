@@ -99,7 +99,7 @@ MyAppTokensTable:
       Enabled: true
 ```
 
-発行側（CloudFront Lambda@Edge）の実行ロールにこのテーブルへの`dynamodb:PutItem`権限を、検証側（バックエンドAPI Lambda）の実行ロールに`dynamodb:GetItem`権限を付与する（発行側と検証側は別スタック・別リージョンにまたがることが多いため、テーブル自体をどちらのスタックで定義するか・クロスリージョンアクセスが必要かは各プロダクトの構成に応じて検討する）。
+発行側（CloudFront Lambda@Edge）の実行ロールにこのテーブルへの`dynamodb:PutItem`権限を、検証側（バックエンドAPI Lambda）の実行ロールに`dynamodb:GetItem`権限を付与する。発行側と検証側は別スタック・別リージョンにまたがることが多いため、テーブル自体をどちらのスタックで定義するか・クロスリージョンアクセスが必要かは各プロダクトの構成に応じて検討する。
 
 ## 設計上の要点
 

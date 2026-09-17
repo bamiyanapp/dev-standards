@@ -16,7 +16,7 @@
 
 「M PLUS Rounded 1c」フォント自体（Google Fonts等からの読み込み）は利用側の既存の資産管理方針に従う。本ファイルは`font-family`の指定のみ行う。
 
-`.fade-in`/`.fade-out`は「要素をopacity: 0の状態でマウントしておき、その後任意のタイミングでクラスを付与・削除してtransitionさせる」という**トグル駆動**のユーティリティであり、トースト通知等、表示⇄非表示を繰り返す用途に向いている。「要素がDOMに挿入された瞬間に1回だけ自動再生したい」（起動時のオープニング演出等）というユースケースには、呼び出し側の状態管理（マウント直後はopacity: 0でレンダリングし、次のレンダリングでクラスを付与する等）が別途必要になり素直に使えないため、そのような用途には`@keyframes` + `animation`ベースの独自実装が適する（`uchi-stock/kingyo`の`.app-opening-fade-in`が実例。両者は解決する問題自体が異なるため、意図的に別実装のままとした。詳細は[uchi-stock/kingyo#140](https://github.com/uchi-stock/kingyo/issues/140)参照）。
+`.fade-in`/`.fade-out`は「要素をopacity: 0の状態でマウントしておき、その後任意のタイミングでクラスを付与・削除してtransitionさせる」という**トグル駆動**のユーティリティであり、トースト通知等、表示⇄非表示を繰り返す用途に向いている。「要素がDOMに挿入された瞬間に1回だけ自動再生したい」（起動時のオープニング演出等）というユースケースには、呼び出し側の状態管理（マウント直後はopacity: 0でレンダリングし、次のレンダリングでクラスを付与する等）が別途必要になり素直に使えない。そのような用途には`@keyframes` + `animation`ベースの独自実装が適する（`uchi-stock/kingyo`の`.app-opening-fade-in`が実例）。両者は解決する問題自体が異なるため、意図的に別実装のままとした。詳細は[uchi-stock/kingyo#140](https://github.com/uchi-stock/kingyo/issues/140)参照。
 
 ### `shared/ui/bootstrap-theme.css`
 
