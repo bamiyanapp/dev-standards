@@ -20,7 +20,7 @@ description: 新しい作業ブランチを作成する時、またはコミッ�
 ### subject
 
 - Conventional Commits 形式を厳守する。
-- 必ず1行（50文字以内）で記述する。
+- 必ず1行（100文字以内、`type(scope): `を含めた全体の文字数）で記述する。この上限は`commitlint.config.cjs`が使う`@commitlint/config-conventional`の`header-max-length`既定値であり、実際にCIで機械的に検証される（issue #492）。
 - 日本語で記述する。
   例: `feat(auth): 認証機能の追加`
 
