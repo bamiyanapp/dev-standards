@@ -1,3 +1,10 @@
+# [2.18.0](https://github.com/bamiyanapp/dev-standards/compare/v2.17.4...v2.18.0) (2026-09-17)
+
+
+### Features
+
+* **ci:** 複数reusable-ci.yml呼び出し向けにmerge-pr複合actionを新設する ([#495](https://github.com/bamiyanapp/dev-standards/issues/495)) ([5f0f35d](https://github.com/bamiyanapp/dev-standards/commit/5f0f35d06e738bea2e4b4c87361738ed1198a2ef)), closes [#421](https://github.com/bamiyanapp/dev-standards/issues/421)
+
 ## [2.17.4](https://github.com/bamiyanapp/dev-standards/compare/v2.17.3...v2.17.4) (2026-09-16)
 
 
