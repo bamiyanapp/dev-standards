@@ -84,4 +84,4 @@ function parseReply(rawText) {
 
 ## 実例
 
-examination `infra/bot-stack/functions/geminiConversation.js`の`buildSystemPrompt`/`parseDualReply`（パターン1・2）、`buildSummaryPrompt`/`parseReconciliationReply`（要約と構造化データの同時生成、パターン1の応用）。
+examination `infra/bot-stack/functions/geminiConversation.js`の`buildSystemPrompt`/`parseDualReply`（パターン1・2）が実例である。`buildSummaryPrompt`/`parseReconciliationReply`（要約と構造化データの同時生成、パターン1の応用）も参照。

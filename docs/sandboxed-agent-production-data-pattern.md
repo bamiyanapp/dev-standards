@@ -114,4 +114,4 @@ async function main() {
 
 ## 実例
 
-examination `.github/workflows/find-mojibake.yml`・`fix-mock-interview-summary-mojibake.yml`、`infra/bot-stack/scripts/find-mojibake.js`・`fix-mojibake.js`（[examination#182](https://github.com/bamiyanapp/examination/issues/182)）。
+examination `.github/workflows/find-mojibake.yml`・`fix-mock-interview-summary-mojibake.yml`が実例である。`infra/bot-stack/scripts/find-mojibake.js`・`fix-mojibake.js`（[examination#182](https://github.com/bamiyanapp/examination/issues/182)）も参照。

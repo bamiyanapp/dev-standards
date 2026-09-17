@@ -16,11 +16,11 @@
 - **バージョン**: `package.json`の`version`フィールドの値
 - **更新日時**: 現在デプロイされているバージョンの最終更新日時
 
-`version`はビルド時に埋め込む。Viteを使うプロダクトは`shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`（`docs/shared-ui-components.md`参照）を利用し、`package.json`の読み込み・`define`埋め込み・表示用の日時整形を個別実装せず共有する。更新日時の具体的な取得元（デプロイ日時・最終リリース日時・最終コミット日時等）は各プロダクトの実装に委ねるが、実際にデプロイされているバージョンの更新時点を正しく表すものとする（上記共有ヘルパーはビルド時刻を使う）。
+`version`はビルド時に埋め込む。Viteを使うプロダクトは`shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`（`docs/shared-ui-components.md`参照）を利用する。`package.json`の読み込み・`define`埋め込み・表示用の日時整形を個別実装せず共有する。更新日時の具体的な取得元（デプロイ日時・最終リリース日時・最終コミット日時等）は各プロダクトの実装に委ねるが、実際にデプロイされているバージョンの更新時点を正しく表すものとする（上記共有ヘルパーはビルド時刻を使う）。
 
 ## 各プロダクトへの適用
 
-このドキュメントはdev-standards側での規約を明文化するものであり、共通フォント（`shared/ui/common-theme.css`等）・トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）は`docs/shared-ui-components.md`側で共有コードとして提供している。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。
+このドキュメントはdev-standards側での規約を明文化するものである。共通フォント（`shared/ui/common-theme.css`等）・トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）は共有コードとして提供している。提供元は`docs/shared-ui-components.md`側である。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。
 
 ### 適用状況
 
