@@ -66,9 +66,9 @@ export const useAppStore = create<AppState>((set) => ({
 
 ### PlaywrightでのBootstrap CDN読み込み実画面検証（Claude Codeサンドボックス環境）
 
-Claude Codeのサンドボックス実行環境では、outbound HTTPSがポリシー適用のegressプロキシを経由する構成になっており、組織ポリシーにより`cdn.jsdelivr.net`等の一部CDNホストへの接続が拒否される（`CONNECT`が403で拒否される）ことがある。この状態でPlaywright等により`index.html`のBootstrap CDN `<link>`を含むページを実際にブラウザで開いても、CDNリクエストが失敗するだけでコンソールエラー以外の分かりやすい兆候が出ないため、「Bootstrapが読み込まれず素のHTML要素が描画されているだけ」の状態を「Bootstrapスタイルが適用された状態」と誤認しやすい。実際にこの誤認がexamination#309（family-create）で発生し、CDNが到達不能なままの状態を「スクリーンショットで見た目を確認済み」と誤って報告してしまった。
+Claude Codeのサンドボックス実行環境では、outbound HTTPSがポリシー適用のegressプロキシを経由する構成になっており、組織ポリシーにより`cdn.jsdelivr.net`等の一部CDNホストへの接続が拒否される（`CONNECT`が403で拒否される）ことがある。この状態でPlaywright等により`index.html`のBootstrap CDN `<link>`を含むページを実際にブラウザで開いても、CDNリクエストが失敗するだけでコンソールエラー以外の分かりやすい兆候が出ない。そのため「Bootstrapが読み込まれず素のHTML要素が描画されているだけ」の状態を「Bootstrapスタイルが適用された状態」と誤認しやすい。実際にこの誤認がexamination#309（family-create）で発生し、CDNが到達不能なままの状態を「スクリーンショットで見た目を確認済み」と誤って報告してしまった。
 
-同じポリシーでも`registry.npmjs.org`は多くの場合noProxy（直接到達可能）対象に含まれる。視覚検証だけが目的であれば、検証対象と同じバージョンのBootstrapを`npm install bootstrap@<version>`で取得し、Playwrightの`page.route()`でCDNのURLパターンをインターセプトしてローカルの`dist/css/bootstrap.min.css`の内容を返すことで、実際のBootstrap CSSを使った検証ができる。ただし本番のCDN到達性そのものはこの方法では検証できない点に注意する（CDN到達性は既存プロダクト（`bamiyanapp/kingyo`等）での実績を根拠とする）。
+同じポリシーでも`registry.npmjs.org`は多くの場合noProxy（直接到達可能）対象に含まれる。視覚検証だけが目的であれば、検証対象と同じバージョンのBootstrapを`npm install bootstrap@<version>`で取得する。Playwrightの`page.route()`でCDNのURLパターンをインターセプトしてローカルの`dist/css/bootstrap.min.css`の内容を返すことで、実際のBootstrap CSSを使った検証ができる。ただし本番のCDN到達性そのものはこの方法では検証できない点に注意する（CDN到達性は既存プロダクト（`bamiyanapp/kingyo`等）での実績を根拠とする）。
 
 ```js
 const bootstrapCss = fs.readFileSync("node_modules/bootstrap/dist/css/bootstrap.min.css", "utf-8");
@@ -93,7 +93,7 @@ Canvas内部のロジック自体（物理演算の計算式、座標変換等�
 
 ### カバレッジ閾値運用
 
-`coverage_threshold`（`reusable-ci.yml`の`packages`要素）を有効にする場合、`package.json`の`test`スクリプト自体がjson-summaryレポートを出力する必要がある（`packages`構成のCIは`npm test --if-present`をそのまま実行するのみで、`--coverage`オプションを付与しない）。
+`coverage_threshold`（`reusable-ci.yml`の`packages`要素）を有効にする場合、`package.json`の`test`スクリプト自体がjson-summaryレポートを出力する必要がある。`packages`構成のCIは`npm test --if-present`をそのまま実行するのみで、`--coverage`オプションを付与しない。
 
 ```json
 {
@@ -107,7 +107,7 @@ Canvas内部のロジック自体（物理演算の計算式、座標変換等�
 
 ### `userEvent`のClipboardスタブに関する落とし穴
 
-クリップボードコピー機能をテストする際、`navigator.clipboard`を`Object.defineProperty`で手動モックしても、`@testing-library/user-event`の`userEvent.setup()`が独自のClipboard実装（EventTargetベースの疑似実装）を後から設定するため、手動モックが上書きされて呼ばれない。
+クリップボードコピー機能をテストする際、`navigator.clipboard`を`Object.defineProperty`で手動モックしても効果が無いことがある。`@testing-library/user-event`の`userEvent.setup()`が独自のClipboard実装（EventTargetベースの疑似実装）を後から設定するため、手動モックが上書きされて呼ばれない。
 
 ```ts
 // ✗ 動かない: userEvent.setup()が後からnavigator.clipboardを上書きする
@@ -168,7 +168,7 @@ jobs:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
 ```
 
-`node_version`は既定20だが、依存パッケージ（jsdom v30等）がNode.js組み込みの新しいAPIを要求する場合はエラーになる。例えばjsdom v30は`webidl.util.markAsUncloneable`というNode.js 22以降のundiciで提供されるAPIに依存しており、Node.js 20では`TypeError: webidl.util.markAsUncloneable is not a function`でテストがクラッシュする。依存パッケージの更新でCIが原因不明にcrashした場合、まずNode.jsバージョンとの相性を疑うこと。
+`node_version`は既定20だが、依存パッケージ（jsdom v30等）がNode.js組み込みの新しいAPIを要求する場合はエラーになる。例えばjsdom v30は`webidl.util.markAsUncloneable`というNode.js 22以降のundiciで提供されるAPIに依存している。Node.js 20では`TypeError: webidl.util.markAsUncloneable is not a function`でテストがクラッシュする。依存パッケージの更新でCIが原因不明にcrashした場合、まずNode.jsバージョンとの相性を疑うこと。
 
 ## PWA・共有UIコンポーネント導入時の注意点
 
@@ -184,7 +184,7 @@ jobs:
 独自バックエンドAPI（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）が必要な場合、`frontend/`を単独パッケージではなくnpm workspacesの一部として構成する。
 
 - ルートpackage.jsonへ`workspaces: ["frontend", "backend"]`を追加する。ルート直下の`package-lock.json`1本で両ワークスペースの依存を一括管理する
-- `reusable-ci.yml`・`reusable-cd.yml`は`packages`入力ではなく`workspaces: true`入力を使う（`frontend_dir`/`backend_dir`が既定の`frontend`/`backend`のままなら追加指定不要。`docs/cicd-pipeline-specification.md`参照）
+- `reusable-ci.yml`・`reusable-cd.yml`は`packages`入力ではなく`workspaces: true`入力を使う（`frontend_dir`/`backend_dir`が既定の`frontend`/`backend`のままなら追加指定不要）。詳細は`docs/cicd-pipeline-specification.md`を参照
 - `.nvmrc`でNode.jsバージョンをバックエンドのLambdaランタイムと統一する（frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する）
 - ディレクトリ構成: `views/`＝画面単位のコンポーネント、`components/`＝画面内で再利用する部品、`hooks/`＝状態・副作用ロジック、`utils/`＝純関数。テストは実装と同じディレクトリに`*.test.tsx`/`*.test.ts`を併置する
 - **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。外部要因（バックエンドのコールドスタート等）に起因する既知のflakyへの対応は`docs/serverless-spa-pattern.md`「CI/CD連携」参照
