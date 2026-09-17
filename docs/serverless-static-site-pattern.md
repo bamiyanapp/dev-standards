@@ -46,7 +46,7 @@ CloudFrontの`viewer-request`イベント（キャッシュヒット時も含め
 
 ## 動的エンドポイントはキャッシュ対象から除外する
 
-CloudFrontの`DefaultCacheBehavior`（`Managed-CachingOptimized`等）はキャッシュキーにcrawlクエリ文字列・Cookieを含まずURLパスのみで判定するのが一般的である。ログインコールバックや管理API等「リクエストのたびに結果が変わる」動的パスにそのまま適用すると、あるリクエストへの応答（リダイレクト・一時的なエラー）が別のリクエストにそのまま返ってしまう事故が起きる（例: ログイン後に「invalid state」が誰がログインしてもTTLが切れるまで表示され続ける）。
+CloudFrontの`DefaultCacheBehavior`（`Managed-CachingOptimized`等）はキャッシュキーにcrawlクエリ文字列・Cookieを含まずURLパスのみで判定するのが一般的である。ログインコールバックや管理API等「リクエストのたびに結果が変わる」動的パスにそのまま適用すると事故が起きる。あるリクエストへの応答（リダイレクト・一時的なエラー）が別のリクエストにそのまま返ってしまう（例: ログイン後に「invalid state」が誰がログインしてもTTLが切れるまで表示され続ける）。
 
 Lambda@Edgeが処理する動的パス（コールバック・ログアウト・管理API等）には、個別に`CachingDisabled`（AWSマネージドポリシー）の`CacheBehaviors`を追加し、Lambda@Edge関数もそれぞれのパスへ関連付ける。1つのLambda関数を複数のキャッシュビヘイビアへ関連付ける場合は`@silvermine/serverless-plugin-cloudfront-lambda-edge`（`lambdaAtEdge`を配列で指定）が使える。
 
@@ -63,7 +63,7 @@ Lambda@Edgeが処理する動的パス（コールバック・ログアウト・
 
 音声対話・チャットボット連携等、重い処理やサードパーティAPI（LINE・Gemini等）との連携が必要な機能は、`site-stack`とは別のServerless serviceとして切り出し、API Gateway（HTTP API）+ Lambda + DynamoDBで構築する。
 
-- **Lambda Function URLではなくAPI Gateway（HTTP API）を使う**: 匿名アクセス（`AuthType: NONE`）のLambda Function URLがAWSアカウント側の制約で`403 Forbidden`を返すことがあり（原因不明、設定はすべて正しい状態でも解消しないケースがある）、実績のあるAPI Gateway経由の公開エンドポイントの方が信頼できる。HTTP APIのペイロード形式（payload format 2.0）はFunction URLと同一のため、ハンドラー側の実装に違いは無い
+- **Lambda Function URLではなくAPI Gateway（HTTP API）を使う**: 匿名アクセス（`AuthType: NONE`）のLambda Function URLがAWSアカウント側の制約で`403 Forbidden`を返すことがある。原因不明で、設定はすべて正しい状態でも解消しないケースがある。実績のあるAPI Gateway経由の公開エンドポイントの方が信頼できる。HTTP APIのペイロード形式（payload format 2.0）はFunction URLと同一のため、ハンドラー側の実装に違いは無い
 - **クロススタックでのDynamoDBアクセス**: 別Serverless serviceが所有するテーブルへは、CloudFormationの`Exports`が使えない（同一スタックではないため）ので、ARNを`Fn::Sub`で直接組み立てて最小権限を付与する。
 
   ```yaml
@@ -97,4 +97,4 @@ S3バケット名・Cognitoドメインprefixは全AWSアカウント間・リ�
 
 ## 実例
 
-examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-stack/`・`bot-stack/`）が、Cognito + Lambda@Edgeによるログインフロー・リクエスト単位認証部分の実装例（詳細は同リポジトリの`infra/README.md`を参照）。ただし前述の通りexamination#437以降、「サイト閲覧自体を全リクエストでゲートする」手順1は実装していないため、本パターンの完全な実装例としてはexamination#437より前のコミットを参照する必要がある。
+examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-stack/`・`bot-stack/`）が実装例である。Cognito + Lambda@Edgeによるログインフロー・リクエスト単位認証部分を含む（詳細は同リポジトリの`infra/README.md`を参照）。ただし前述の通りexamination#437以降、「サイト閲覧自体を全リクエストでゲートする」手順1は実装していないため、本パターンの完全な実装例としてはexamination#437より前のコミットを参照する必要がある。

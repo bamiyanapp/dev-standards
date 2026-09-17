@@ -64,7 +64,7 @@ reportClientError:
 
 ## LINEへの通知（任意、`docs/ops-monitoring-pattern.md`との連携）
 
-スマホオンリー環境ではCloudWatch Logsを都度確認しに行くのが難しい。そのため、CloudWatch Logsへの記録に加えて、`shared/lambda/opsAlertNotifier.js`が使う運用監視専用LINE Bot（全プロダクト共通の1チャンネル）へも同じ例外情報を通知したい場合は、`buildClientErrorAlertMessage`と`sendOpsAlert`を組み合わせて使う（dev-standards issue #387）。
+スマホオンリー環境ではCloudWatch Logsを都度確認しに行くのが難しい。そのため、CloudWatch Logsへの記録に加えて、`shared/lambda/opsAlertNotifier.js`が使う運用監視専用LINE Bot（全プロダクト共通の1チャンネル）へも同じ例外情報を通知したい場合を考える。`buildClientErrorAlertMessage`と`sendOpsAlert`を組み合わせて使う（dev-standards issue #387）。
 
 ```js
 const { buildClientErrorLogPayload, buildClientErrorAlertMessage } = require("./clientErrorReporting.js"); // symlink先
@@ -95,9 +95,9 @@ exports.reportClientError = async (event) => {
 };
 ```
 
-`appName`はプロダクトごとの固定文字列を渡す（`buildOpsAlertMessage`と同じく、1つのLINE Botに複数プロダクトからの通知が届くため、どのアプリのエラーかを区別するために必須）。通知先の`OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN`・`OPS_ALERT_LINE_USER_ID`は`docs/ops-monitoring-pattern.md`「運用監視専用LINE Botについて」と同じ値（同じLINE Bot・同じセッション）を使い、プロダクトごとに新しいLINE Botを用意する必要はない。
+`appName`はプロダクトごとの固定文字列を渡す（`buildOpsAlertMessage`と同じく、1つのLINE Botに複数プロダクトからの通知が届くため、どのアプリのエラーかを区別するために必須）。通知先の`OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN`・`OPS_ALERT_LINE_USER_ID`は`docs/ops-monitoring-pattern.md`「運用監視専用LINE Botについて」と同じ値（同じLINE Bot・同じセッション）を使う。プロダクトごとに新しいLINE Botを用意する必要はない。
 
-フロントエンドの同一バグが多数のユーザーで同時多発すると、この方式では通知件数もそれに比例して増える（`dailyRateLimit.js`等でアプリ単位の1日あたり件数を絞ることもできるが、そこまでの頻度対策が必要かは呼び出し側の判断に委ねる。本パターン自体は組み込むかどうかを含め呼び出し側の任意選択とする）。
+フロントエンドの同一バグが多数のユーザーで同時多発すると、この方式では通知件数もそれに比例して増える（`dailyRateLimit.js`等でアプリ単位の1日あたり件数を絞ることもできる）。そこまでの頻度対策が必要かは呼び出し側の判断に委ねる。本パターン自体は組み込むかどうかを含め呼び出し側の任意選択とする。
 
 ## `sync-manifest.local.json`への追加例
 

@@ -49,7 +49,7 @@ self.SW_CONFIG = {
 }
 ```
 
-`sw.js`をホストするページ（Service Workerを`/sw.js`として配信する1箇所）だけでなく、同一サイトを構成する複数の独立ビルドアプリそれぞれで`ServiceWorkerRegistration.jsx`・`UpdateNotifier.jsx`を使う場合は、アプリの数だけ`symlinks`エントリを追加する（`source`は同じでよい）。`sync-manifest.json`/`sync-manifest.local.json`は同一`source`を複数の`target`へ結びつけることを制限していない。
+`sw.js`をホストするページ（Service Workerを`/sw.js`として配信する1箇所）だけでなく、同一サイトを構成する複数の独立ビルドアプリそれぞれで`ServiceWorkerRegistration.jsx`・`UpdateNotifier.jsx`を使う場合を考える。アプリの数だけ`symlinks`エントリを追加する（`source`は同じでよい）。`sync-manifest.json`/`sync-manifest.local.json`は同一`source`を複数の`target`へ結びつけることを制限していない。
 
 `node dev-standards/scripts/bootstrap.js`を実行するとsymlinkが作成される。`reusable-ci.yml`の`enable_standards_check: true`を有効にしていれば、CIで`bootstrap.js --check`によりsymlinkの欠落・リンク切れを自動検知できる。
 
@@ -75,7 +75,7 @@ export default function App() {
 
 ## GitHub Pages等、basePath配下へ配信する場合
 
-`ServiceWorkerRegistration.jsx`は既定で`navigator.serviceWorker.register("/sw.js")`とサイトルート絶対パスを登録する。GitHub Pagesのプロジェクトページ（例: `https://<user>.github.io/<repo>/`）のように、サイトルート以外のbasePath配下へ配信するプロダクトでは、実際に配信される`sw.js`のパスと一致せず404になりService Worker自体が登録されない（`bamiyanapp/hanko-master-kentei`のissue #214で発見）。
+`ServiceWorkerRegistration.jsx`は既定で`navigator.serviceWorker.register("/sw.js")`とサイトルート絶対パスを登録する。GitHub Pagesのプロジェクトページ（例: `https://<user>.github.io/<repo>/`）のように、サイトルート以外のbasePath配下へ配信するプロダクトでは注意が必要である。実際に配信される`sw.js`のパスと一致せず404になりService Worker自体が登録されない（`bamiyanapp/hanko-master-kentei`のissue #214で発見）。
 
 このようなプロダクトは`swUrl`propへ実際のパスを渡す。
 

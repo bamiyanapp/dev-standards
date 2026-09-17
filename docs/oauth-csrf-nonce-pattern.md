@@ -1,15 +1,15 @@
 # OAuthログインのCSRF対策はCookieではなくサーバー側nonce管理にする
 
-CloudFront + Lambda@Edge（またはこれに類する構成）でCognito/Google等のOAuthログインを実装する際、ログインCSRF（第三者が発行させた認可コードをこのブラウザに横流しして紐付けさせる攻撃）を防ぐための`state`パラメータのnonce検証を、**Cookieではなくサーバー側（DynamoDB）で管理する**。examinationの`infra/site-stack/functions/checkAuth.js`（[examination#143](https://github.com/bamiyanapp/examination/issues/143)）で、Cookie方式の5回にわたる修正の末にたどり着いた設計。
+CloudFront + Lambda@Edge（またはこれに類する構成）でCognito/Google等のOAuthログインを実装する際、ログインCSRF（第三者が発行させた認可コードをこのブラウザに横流しして紐付けさせる攻撃）を防ぐ必要がある。そのための`state`パラメータのnonce検証を、**Cookieではなくサーバー側（DynamoDB）で管理する**。examinationの`infra/site-stack/functions/checkAuth.js`（[examination#143](https://github.com/bamiyanapp/examination/issues/143)）で、Cookie方式の5回にわたる修正の末にたどり着いた設計。
 
 ## 問題: なぜCookieでのCSRF対策はOAuthログインフローで壊れやすいか
 
 未認証時のログインリダイレクトでは、nonceを`state`パラメータに埋め込みCognito（IdP）から戻ってきた際に照合する。このnonceを素朴にCookie（例: `csrf_state`）へ保存して照合する実装は、以下の要因でブラウザ側のCookieの生存・一貫性に依存してしまい、「invalid state」エラーが再現性高く発生する。
 
-- **バックグラウンドリクエストによる上書き**: Service Workerのプリキャッシュ、Speculation Rules API（Chrome）による他ページのprefetch等、ユーザー操作を伴わない未認証状態のバックグラウンドリクエストが、ログイン試行中のものとは別のnonceで`csrf_state`Cookieを上書きしてしまう
+- **バックグラウンドリクエストによる上書き**: Service Workerのプリキャッシュ、Speculation Rules API（Chrome）による他ページのprefetch等、ユーザー操作を伴わない未認証状態のバックグラウンドリクエストが発生することがある。これらが、ログイン試行中のものとは別のnonceで`csrf_state`Cookieを上書きしてしまう
 - **ブラウザのCookieポリシーによる破棄**: 特にSafari等のITP（Intelligent Tracking Prevention）は、クロスサイトリダイレクト直後のCookieを破棄することがある。ログアウト直後の再ログイン（IdP・OAuthプロバイダのセッションが直前まで有効なため認証の往復が高速に完了する）はこのタイミングに該当しやすい
 
-examinationでは、CloudFrontキャッシュ説→`Sec-Fetch-Mode`ヘッダーでの判別→独自の`X-Precache-Request`ヘッダーでの判別→`Sec-Purpose`ヘッダーでの判別、という順に「バックグラウンドリクエストをどう見分けてCookie上書きを避けるか」を4回試みたが、いずれも一部のブラウザ・タイミングで再発した。**これらはいずれもCSRF検証をブラウザのCookieに依存させていること自体に起因する構造的な脆弱さ**であり、個別の見分け方を積み重ねても根本解決にならなかった。
+examinationでは「バックグラウンドリクエストをどう見分けてCookie上書きを避けるか」を4回試みた。CloudFrontキャッシュ説→`Sec-Fetch-Mode`ヘッダーでの判別→独自の`X-Precache-Request`ヘッダーでの判別→`Sec-Purpose`ヘッダーでの判別、という順である。いずれも一部のブラウザ・タイミングで再発した。**これらはいずれもCSRF検証をブラウザのCookieに依存させていること自体に起因する構造的な脆弱さ**であり、個別の見分け方を積み重ねても根本解決にならなかった。
 
 ## 解決: nonce自体をサーバー側（DynamoDB）で管理する
 

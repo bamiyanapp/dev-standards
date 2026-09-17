@@ -76,7 +76,7 @@ functions:
             origins: ${self:custom.allowedOrigins}
 ```
 
-- **`serverless-esbuild` + `package.individually: true`**: 関数ごとに実際に使うコードだけをesbuildでバンドルしてからzip化する。理由は速度だけでなく、npm workspaces（`install-strategy=nested`）構成で関数数が増えると、`node_modules`をそのまま個別zip化する素朴な方式では、CIランナーのファイルディスクリプタ上限（既定1024）を超えて`EMFILE: too many open files`でデプロイが失敗することがあるため（zipサイズ縮小・コールドスタート改善も副次効果）。ネイティブ依存や動的importのみのパッケージ（Chromiumバイナリ等）は`custom.esbuild.external`でバンドル対象から除外し、実体ファイルのまま含める
+- **`serverless-esbuild` + `package.individually: true`**: 関数ごとに実際に使うコードだけをesbuildでバンドルしてからzip化する。理由は速度だけではない。npm workspaces（`install-strategy=nested`）構成で関数数が増えると、`node_modules`をそのまま個別zip化する素朴な方式では問題が起きる。CIランナーのファイルディスクリプタ上限（既定1024）を超えて`EMFILE: too many open files`でデプロイが失敗することがある（zipサイズ縮小・コールドスタート改善も副次効果）。ネイティブ依存や動的importのみのパッケージ（Chromiumバイナリ等）は`custom.esbuild.external`でバンドル対象から除外し、実体ファイルのまま含める
 - **DynamoDBは`BillingMode: PAY_PER_REQUEST`を既定にする**（低トラフィックなプロダクトでキャパシティプランニングが不要）。一時的・自動失効させたいデータ（キャッシュ、無人ルーム等）は`TimeToLiveSpecification`でTTL属性を設定する。
 
   ```yaml
@@ -127,7 +127,7 @@ functions:
 
 ## デプロイ
 
-`.github/actions/deploy-serverless`複合action（[#147](https://github.com/bamiyanapp/dev-standards/issues/147)）を使う。`setup-node → npm ci → デプロイコマンド実行`の定型パターンに加え、npm workspaces + `package.individually: true`構成で起きがちな`EMFILE`対策（ファイルディスクリプタのソフトリミットをハードリミットまで引き上げる）をデフォルトで内蔵している。
+`.github/actions/deploy-serverless`複合action（[#147](https://github.com/bamiyanapp/dev-standards/issues/147)）を使う。`setup-node → npm ci → デプロイコマンド実行`の定型パターンに加え、`EMFILE`対策も持つ。npm workspaces + `package.individually: true`構成で起きがちなこの問題に対し、ファイルディスクリプタのソフトリミットをハードリミットまで引き上げる対策をデフォルトで内蔵している。
 
 ```yaml
 - uses: bamiyanapp/dev-standards/.github/actions/deploy-serverless@v2.3.0
