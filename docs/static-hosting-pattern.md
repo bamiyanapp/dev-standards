@@ -31,7 +31,7 @@ aws s3 sync dist/assets/ s3://<bucket-name>/assets/ --cache-control "public, max
 aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "/*"
 ```
 
-`cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できるが、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離し、`workspaces`構成のCI/CD入力（`docs/cicd-pipeline-specification.md`参照）でそれぞれデプロイする。
+`cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できる。ただし、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離し、`workspaces`構成のCI/CD入力（`docs/cicd-pipeline-specification.md`参照）でそれぞれデプロイする。
 
 ### semantic-release後のcheckoutタイミングに関する注意
 

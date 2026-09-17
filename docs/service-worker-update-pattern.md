@@ -49,7 +49,7 @@ self.SW_CONFIG = {
 }
 ```
 
-`sw.js`をホストするページ（Service Workerを`/sw.js`として配信する1箇所）だけでなく、同一サイトを構成する複数の独立ビルドアプリそれぞれで`ServiceWorkerRegistration.jsx`・`UpdateNotifier.jsx`を使う場合は、アプリの数だけ`symlinks`エントリを追加する（`source`は同じでよい。`sync-manifest.json`/`sync-manifest.local.json`は同一`source`を複数の`target`へ結びつけることを制限していない）。
+`sw.js`をホストするページ（Service Workerを`/sw.js`として配信する1箇所）だけでなく、同一サイトを構成する複数の独立ビルドアプリそれぞれで`ServiceWorkerRegistration.jsx`・`UpdateNotifier.jsx`を使う場合は、アプリの数だけ`symlinks`エントリを追加する（`source`は同じでよい）。`sync-manifest.json`/`sync-manifest.local.json`は同一`source`を複数の`target`へ結びつけることを制限していない。
 
 `node dev-standards/scripts/bootstrap.js`を実行するとsymlinkが作成される。`reusable-ci.yml`の`enable_standards_check: true`を有効にしていれば、CIで`bootstrap.js --check`によりsymlinkの欠落・リンク切れを自動検知できる。
 
@@ -71,7 +71,7 @@ export default function App() {
 }
 ```
 
-`UpdateNotifier.jsx`は標準構成であるBootstrap 5.3（`alert`/`btn`等）のクラス名を使っている（issue #289）。Bootstrapを使っていないプロダクト（daisyUI構成のexamination等）では、そのままでもクラス名が無視されるだけで機能上は動作するが、見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意。調整が必要な場合はsymlink化を見送り、コピーして個別管理する。examinationはこの方針で個別コピーへ切り替え済み）。
+`UpdateNotifier.jsx`は標準構成であるBootstrap 5.3（`alert`/`btn`等）のクラス名を使っている（issue #289）。Bootstrapを使っていないプロダクト（daisyUI構成のexamination等）では、そのままでもクラス名が無視されるだけで機能上は動作するが、見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意）。調整が必要な場合はsymlink化を見送り、コピーして個別管理する。examinationはこの方針で個別コピーへ切り替え済み。
 
 ## GitHub Pages等、basePath配下へ配信する場合
 
