@@ -1,6 +1,6 @@
 # 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`, `shared/sfx/`）
 
-複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）と同様、`sync-manifest.local.json`経由でsymlink共有する（セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」参照、考え方は共通）。
+複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）と同様、`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」を参照する（考え方は共通）。
 
 ## 提供するコンポーネント
 
@@ -20,7 +20,7 @@
 
 ### `shared/ui/bootstrap-theme.css`
 
-Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。ダークモード（`data-bs-theme="dark"`）対応・Bootstrapボタンコンポーネントのダークモード配色等、Bootstrap固有の部分を提供する。フレームワーク非依存の部分（共通フォント・フェードイン/アウト・ボタン押下時の触覚的フィードバック）は上記`common-theme.css`を`@import`しているため、**本ファイルを利用する場合は`common-theme.css`も同じディレクトリへ併せてsymlinkすること**（`@import`の相対パス解決に必要）。かるた札の意匠等プロダクト固有のスタイルは含まない。
+Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。ダークモード（`data-bs-theme="dark"`）対応・Bootstrapボタンコンポーネントのダークモード配色等、Bootstrap固有の部分を提供する。フレームワーク非依存の部分（共通フォント・フェードイン/アウト・ボタン押下時の触覚的フィードバック）は上記`common-theme.css`を`@import`している。このため**本ファイルを利用する場合は`common-theme.css`も同じディレクトリへ併せてsymlinkすること**（`@import`の相対パス解決に必要）。かるた札の意匠等プロダクト固有のスタイルは含まない。
 
 利用側でBootstrap 5.3本体（CDN・npmいずれでも可）を読み込み、以下のようにグローバルCSSへ`@import`する。
 
@@ -100,7 +100,7 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
 
 現在のページをQRコードで表示し、URLをワンタップコピーできるボタン＋モーダル。スマートフォンオンリーの利用環境での画面共有を想定。
 
-**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになるため、symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと（Camp-Stock `frontend/src/components/ShareButton.jsx`が実例、issue #393）。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントは、異なるフレームワークの消費者に同時対応できないという制約があるため、新規にこの種のコンポーネントを追加・変更する際は`docs/consumer-repositories.md`で全消費側のCSSフレームワークを確認すること。
+**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになる。symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと（Camp-Stock `frontend/src/components/ShareButton.jsx`が実例、issue #393）。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントは、異なるフレームワークの消費者に同時対応できないという制約があるため、新規にこの種のコンポーネントを追加・変更する際は`docs/consumer-repositories.md`で全消費側のCSSフレームワークを確認すること。
 
 ```jsx
 <ShareButton label="このページを共有" />
@@ -108,7 +108,7 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
 
 **依存関係**: `qrcode.react`を利用側の`package.json`へ追加する必要がある（dev-standards側では強制できない）。
 
-**Viteの`resolve.preserveSymlinks`が必須**: `ShareButton.jsx`のようにnpmパッケージをimportするコンポーネントをsymlink経由で共有する場合、Viteは既定でシンボリックリンクの実体パス（dev-standards配下）を起点に`node_modules`を探索するため、利用側にインストール済みの`qrcode.react`を見つけられずビルドエラーになる。利用側の`vite.config.js`へ以下を追加すること（PRECACHE等プロダクト固有値を持たないコンポーネント同士でも、npmパッケージに依存する共有コンポーネントを1つでも導入する場合はアプリ全体でこの設定が必要になる）。
+**Viteの`resolve.preserveSymlinks`が必須**: `ShareButton.jsx`のようにnpmパッケージをimportするコンポーネントをsymlink経由で共有する場合を考える。Viteは既定でシンボリックリンクの実体パス（dev-standards配下）を起点に`node_modules`を探索する。このため利用側にインストール済みの`qrcode.react`を見つけられずビルドエラーになる。利用側の`vite.config.js`へ以下を追加すること（PRECACHE等プロダクト固有値を持たないコンポーネント同士でも、npmパッケージに依存する共有コンポーネントを1つでも導入する場合はアプリ全体でこの設定が必要になる）。
 
 ```js
 export default defineConfig({
@@ -185,7 +185,7 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 
 ### `shared/ui/ErrorBoundary.jsx`
 
-レンダリング中の未捕捉例外で画面が真っ白なまま操作不能になる事象への対策となるReact Error Boundary。`reportUrl`（任意）propを渡すと、捕捉した例外情報をサーバーサイドのログへ残すエンドポイントへfire-and-forgetで送信する（対になる`shared/lambda/clientErrorReporting.js`と合わせ、詳細は`docs/client-error-reporting-pattern.md`参照）。
+レンダリング中の未捕捉例外で画面が真っ白なまま操作不能になる事象への対策となるReact Error Boundary。`reportUrl`（任意）propを渡すと、捕捉した例外情報をサーバーサイドのログへ残すエンドポイントへfire-and-forgetで送信する。対になる`shared/lambda/clientErrorReporting.js`と合わせ、詳細は`docs/client-error-reporting-pattern.md`を参照。
 
 ```jsx
 <ErrorBoundary reportUrl={`${API_BASE_URL}/report-client-error`}>
