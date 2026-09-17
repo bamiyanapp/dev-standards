@@ -7,6 +7,7 @@
     { "source": "stylelint.config.cjs", "target": "stylelint.config.cjs" },
     { "source": "textlint.config.cjs", "target": "textlint.config.cjs" },
     { "source": ".textlintignore", "target": ".textlintignore" },
+    { "source": "dependency-cruiser.config.cjs", "target": "dependency-cruiser.config.cjs" },
     { "source": ".clineignore", "target": ".clineignore" },
     { "source": ".claude/settings.json", "target": ".claude/settings.json" }
   ],
