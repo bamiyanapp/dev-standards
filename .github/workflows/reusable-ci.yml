@@ -1468,6 +1468,17 @@ jobs:
       # バージョン計算・タグ付け・GitHub Release作成はreusable-cd.ymlのreleaseジョブが
       # base_branchへのpush後に行う（詳細はreusable-cd.yml冒頭のコメントを参照）。
       # このジョブはPRのsquash mergeのみを担当する。
+      #
+      # 【重要】以下のsquash merge・ブランチ削除ロジックは
+      # .github/actions/merge-pr（issue #421）と意図的に重複している。
+      # merge-priは「1 job per app」構成で複数のreusable-ci.yml呼び出しを
+      # 独立して行う参照側リポジトリが、呼び出し側自前のgate jobから
+      # `uses: bamiyanapp/dev-standards/.github/actions/merge-pr@<tag>`
+      # という完全修飾形式（静的なタグ文字列）で直接呼び出すために提供している。
+      # このjob自体は自己参照（未リリースの新規ファイルを含むタグが
+      # 存在しない）の問題を避けるため、あえてこの複合actionを経由せず
+      # ロジックをインラインのまま保持している。ロジックを変更する場合は
+      # 両方に同じ修正を反映すること
       - name: Merge pull request
         id: merge-pr
         uses: actions/github-script@v9

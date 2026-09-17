@@ -1,0 +1,77 @@
+name: "Merge pull request (squash)"
+description: >-
+  現在のPRをsquash mergeし、作業ブランチを削除する複合アクション
+  （`reusable-ci.yml`の`merge` jobが内蔵する処理と同じロジック）。
+  `frontend_dir`がmatrix非対応でスカラー値のみのため、複数アプリ向けに
+  `reusable-ci.yml`を独立して複数回呼び出す構成（1 job per appパターン、
+  issue #421）を採る参照側リポジトリ向けに提供する。この構成では各呼び出しに
+  `enable_auto_merge: false`を指定し、全呼び出しの成否を`needs`で待つ
+  呼び出し側自前のgate jobから、このアクションを直接呼び出してマージする。
+
+inputs:
+  github-token:
+    description: >-
+      squash merge・ブランチ削除に使うトークン。base_branchへのpushで
+      CDワークフローがトリガーされる必要があるため、`secrets.GITHUB_TOKEN`
+      ではなく`secrets.BOT_TOKEN`を渡すことを推奨する
+      （`GITHUB_TOKEN`によるpushは新たなworkflow実行を作らないため）。
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Merge pull request
+      id: merge-pr
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const prNumber = context.payload.pull_request.number;
+          const branchName = context.payload.pull_request.head.ref;
+          console.log(`Attempting to merge PR #${prNumber}`);
+          let mergeSha = "";
+          // pushで作成したコミット直後はGitHub側のmergeable判定が
+          // 追いついていないことがあるため、短い間隔でリトライする
+          const maxAttempts = 5;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+              const { data } = await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: "squash"
+              });
+              mergeSha = data.sha;
+              core.setOutput("merge_sha", mergeSha);
+              console.log(`Successfully merged PR #${prNumber} as ${mergeSha}`);
+              break;
+            } catch (error) {
+              if (attempt === maxAttempts) {
+                console.error(`Failed to merge PR #${prNumber}:`, error.message);
+                throw error;
+              }
+              console.log(`Merge attempt ${attempt} failed (${error.message}), retrying...`);
+              await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
+            }
+          }
+
+          try {
+            console.log(`Attempting to delete branch: ${branchName}`);
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `heads/${branchName}`
+            });
+            console.log(`Successfully deleted branch: ${branchName}`);
+          } catch (error) {
+            if (error.status === 422 || error.message.includes("Reference does not exist")) {
+              console.log(`Branch ${branchName} already deleted or not found.`);
+            } else {
+              console.error(`Failed to delete branch ${branchName}:`, error.message);
+            }
+          }
+
+outputs:
+  merge-sha:
+    description: "squash merge後に生成されたコミットのSHA"
+    value: ${{ steps.merge-pr.outputs.merge_sha }}
