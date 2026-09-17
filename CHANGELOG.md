@@ -1,3 +1,10 @@
+# [2.19.0](https://github.com/bamiyanapp/dev-standards/compare/v2.18.1...v2.19.0) (2026-09-17)
+
+
+### Features
+
+* **ci:** アーキテクチャ違反検知（dependency-cruiser）を共通導入する ([#524](https://github.com/bamiyanapp/dev-standards/issues/524)) ([5551912](https://github.com/bamiyanapp/dev-standards/commit/55519120956f945ac21ac6f28ed2ab808ad81fe6)), closes [#523](https://github.com/bamiyanapp/dev-standards/issues/523)
+
 ## [2.18.1](https://github.com/bamiyanapp/dev-standards/compare/v2.18.0...v2.18.1) (2026-09-17)
 
 
