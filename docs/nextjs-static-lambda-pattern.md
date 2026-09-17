@@ -30,7 +30,7 @@
 
 ## なぜこの構成か
 
-- **GitHub Pagesネイティブ機能 vs 専用ブランチpublish**: 当初はビルド成果物を`gh-pages`ブランチへ`peaceiris/actions-gh-pages`でpushする方式だったが、GitHub Actionsネイティブのpages機能（`actions/upload-pages-artifact` + `actions/deploy-pages`）へ移行した（Electric-Chair-Arena#189）。専用ブランチが不要になり、デプロイ履歴がGitHubの「Environments」タブで確認できる。移行時、リポジトリのSettings > Pages > Sourceを「GitHub Actions」へ手動で切り替える一度限りの作業が必要（この切り替えが済むまでは`deploy-frontend` jobが失敗するが、`gh-pages`ブランチ上の既存公開内容はそのまま残るため実害はない）
+- **GitHub Pagesネイティブ機能 vs 専用ブランチpublish**: 当初はビルド成果物を`gh-pages`ブランチへ`peaceiris/actions-gh-pages`でpushする方式だった。その後、GitHub Actionsネイティブのpages機能（`actions/upload-pages-artifact` + `actions/deploy-pages`）へ移行した（Electric-Chair-Arena#189）。専用ブランチが不要になり、デプロイ履歴がGitHubの「Environments」タブで確認できる。移行時、リポジトリのSettings > Pages > Sourceを「GitHub Actions」へ手動で切り替える一度限りの作業が必要（この切り替えが済むまでは`deploy-frontend` jobが失敗するが、`gh-pages`ブランチ上の既存公開内容はそのまま残るため実害はない）
 - **OSLS vs Serverless Framework本家**: Serverless Framework本家はv4以降、ライセンス・利用形態（アカウント必須化・利用量に応じた課金）を変更した。OSLS（[oss-serverless/osls](https://github.com/oss-serverless/osls)）はv3互換のまま追従できるオープンな軽量フォークで、`serverless.yml`の構文（`frameworkVersion: '3'`）・CLIコマンド名（`serverless`/`sls`/`osls`のいずれでも起動可能）を変更せずに移行できる（Electric-Chair-Arena#201）
 - **npm workspacesモノレポ vs ページごとの独立ビルド**: examinationの「ページごとに独立したViteアプリ」は認証境界・独立デプロイ単位が明確な多ページ構成に向くが、Electric-Chair-Arenaのような単一SPA（1つのフロントエンド + 1つのバックエンドAPI）ではオーバーヘッドが大きい。frontend/backendそれぞれをworkspaceとして1つの`package-lock.json`で管理し、`reusable-ci.yml`/`reusable-cd.yml`の`workspaces: true`入力で依存インストールをリポジトリルートに寄せる
 
@@ -48,8 +48,8 @@ const basePath = isGithubActions ? `/${repoName}` : '';
 
 このbasePathに起因する罠が2つある。
 
-1. **静的アセットの404**: `output: 'export'`で書き出したページを`https://<owner>.github.io/<repo>/`配下でホストする場合、静的アセットへの絶対パス（`/`始まり）にbasePathが含まれていないとブラウザがファイルを読み込めず404になる。`next.config.mjs`の`basePath`/`assetPrefix`設定に加え、Next.jsのクライアントルーターが組み立てる内部URL（クエリのみの変更を含む）にも一貫してbasePathを反映させるため、`trailingSlash: true`も併せて設定する必要がある（`"/path"`へのリクエストに`"path/index.html"`を返す静的ホスティングのディレクトリindex解決と、Next.jsの書き出し形式を一致させるため）
-2. **PlaywrightのE2Eテストでのナビゲーション**: E2EのbaseURLをbasePath込み（例: `http://localhost:4173/<repo>/`）で設定した場合、`page.goto('/')`は**basePathを無視してoriginのルートへ遷移してしまう**（WHATWG URLの解決規則上、先頭が`/`の相対参照はbase URLのpath部分を丸ごと置き換えるため。`new URL('/', 'http://localhost:4173/repo/')`は`http://localhost:4173/`になる）。`page.goto('./')`（空の相対参照相当）を使うとbase URLのpathを保持したまま遷移できる。ローカル開発時は`GITHUB_ACTIONS`が未設定でbasePathが空文字のため、この問題はCI環境でしか再現しない点に注意（Electric-Chair-Arena#228で実際に全E2Eテストがこの原因でCI上でのみ失敗した）
+1. **静的アセットの404**: `output: 'export'`で書き出したページを`https://<owner>.github.io/<repo>/`配下でホストする場合、静的アセットへの絶対パス（`/`始まり）にbasePathが含まれていないとブラウザがファイルを読み込めず404になる。`next.config.mjs`の`basePath`/`assetPrefix`設定に加え、Next.jsのクライアントルーターが組み立てる内部URL（クエリのみの変更を含む）にも一貫してbasePathを反映させるため、`trailingSlash: true`も併せて設定する必要がある。これは`"/path"`へのリクエストに`"path/index.html"`を返す静的ホスティングのディレクトリindex解決と、Next.jsの書き出し形式を一致させるためである
+2. **PlaywrightのE2Eテストでのナビゲーション**: E2EのbaseURLをbasePath込み（例: `http://localhost:4173/<repo>/`）で設定した場合、`page.goto('/')`は**basePathを無視してoriginのルートへ遷移してしまう**（WHATWG URLの解決規則上、先頭が`/`の相対参照はbase URLのpath部分を丸ごと置き換えるため）。`new URL('/', 'http://localhost:4173/repo/')`は`http://localhost:4173/`になる。`page.goto('./')`（空の相対参照相当）を使うとbase URLのpathを保持したまま遷移できる。ローカル開発時は`GITHUB_ACTIONS`が未設定でbasePathが空文字のため、この問題はCI環境でしか再現しない点に注意（Electric-Chair-Arena#228で実際に全E2Eテストがこの原因でCI上でのみ失敗した）
 
 ## ローカル開発
 
@@ -58,7 +58,7 @@ const basePath = isGithubActions ? `/${repoName}` : '';
 
 ## E2Eテスト・カバレッジ
 
-Playwright + monocart-reporterによるE2E・カバレッジ収集、スクリーンショットのJob Summary/PRコメントへの報告は`reusable-ci.yml`の`frontend-e2e-test` job・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」の呼び出し規約に従う（Electric-Chair-Arena#187）。
+Playwright + monocart-reporterによるE2E・カバレッジ収集は、`reusable-ci.yml`の`frontend-e2e-test` jobの呼び出し規約に従う。スクリーンショットのJob Summary/PRコメントへの報告は`docs/cicd-pipeline-specification.md`「1. CIワークフロー」に従う（Electric-Chair-Arena#187）。
 
 本構成固有の追加事項は以下のとおり。
 

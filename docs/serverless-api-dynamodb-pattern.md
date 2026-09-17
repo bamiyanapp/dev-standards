@@ -59,11 +59,11 @@ CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda�
 
 **自社発行セッショントークンが標準**。Googleが発行するIDトークンは有効期限が約1時間でGoogle側の管理下にあり延長できないため、これをそのまま長期間（例: 30日）Cookieへ保持しても、失効後は毎回強制ログアウトになる（Camp-Stock issue #201で顕在化）。Google IDトークンの検証は初回ログイン時のみに限定し、以降のAPIリクエストはバックエンドが発行する長期セッショントークンで認証する。
 
-- フロントエンド: `@react-oauth/google`でGoogleのIDトークンを取得したら、まず`POST /auth/session`（`Authorization: Bearer <Google IDトークン>`）でバックエンド発行のセッショントークンへ交換し（`frontend/src/api/client.js`の`exchangeGoogleIdTokenForSession`）、それ以降の`fetch`は`Authorization: Bearer <セッショントークン>`を使う。ログイン処理（`AuthContext.jsx`の`login()`）はこの交換を待つため非同期になる
+- フロントエンド: `@react-oauth/google`でGoogleのIDトークンを取得したら、まず`POST /auth/session`（`Authorization: Bearer <Google IDトークン>`）でバックエンド発行のセッショントークンへ交換する（`frontend/src/api/client.js`の`exchangeGoogleIdTokenForSession`）。それ以降の`fetch`は`Authorization: Bearer <セッショントークン>`を使う。ログイン処理（`AuthContext.jsx`の`login()`）はこの交換を待つため非同期になる
 - バックエンド（初回ログイン、`POST /auth/session`のみ）: `google-auth-library`の`OAuth2Client.verifyIdToken({ idToken, audience: clientId })`でGoogle IDトークンを検証する（`backend/src/lib/googleAuth.js`の`verifyGoogleIdToken`）。`audience`にGoogle Cloud ConsoleのクライアントIDを指定することで、他のGoogleサービス向けに発行されたIDトークンを弾く。検証後、`backend/src/services/authService.js`がセッショントークン（HS256 JWT、`sub`にGoogleアカウントのユーザーIDを設定、有効期限は`AuthContext.jsx`のCookie保持期間と一致させる）を発行して返す
 - バックエンド（それ以外の全リクエスト）: `backend/src/lib/sessionToken.js`の`createSessionAuthenticator({ secret })`がセッショントークンを検証する（署名鍵`SESSION_SECRET`が一致しない・期限切れの場合は401）。Google APIへの通信は発生しない
 - `verifyGoogleIdToken`は`oAuth2Client`を、`createSessionAuthenticator`は`secret`をそれぞれDI可能にしており、テストでは実際にGoogle APIへ通信しないfakeや固定secretへ差し替える
-- **署名鍵（`SESSION_SECRET`）の用意**: AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による自動生成を検討したが、デプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らず、権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一し、AWS側のIAM権限追加を不要にする
+- **署名鍵（`SESSION_SECRET`）の用意**: AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による自動生成を検討した。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一し、AWS側のIAM権限追加を不要にする
 - Cookie自体（保持期間・Secure属性の付け方等）の設計は変わらない。**Cookieに保存する値がGoogle IDトークンからセッショントークンへ変わる点のみが変更点**であり、双方ともJWT形状（`header.payload.signature`）のため、E2Eテストのfake authenticator（下記「テストパターン」）はどちらの値が来ても区別せず動作する
 
 ## DynamoDBアクセスパターン
@@ -94,7 +94,7 @@ CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda�
 ## テストパターン
 
 - **単体テスト**: `test/helpers/inMemoryRepositories.js`のin-memory repositoryへ差し替え、実DynamoDB・実Google認証を使わずにservices層を検証する
-- **E2Eテスト**: `backend/e2e/testServer.js`が、本番`handler.js`と同じ`createRouter`/`buildRoutes`/serviceファクトリ関数を再利用しつつ、in-memory repositoryと「実通信せず、JWTペイロードをbase64url decodeするだけ（署名検証なし）」のfake authenticatorに差し替えた、最小限の`http.createServer`ラッパー。このfake authenticatorはGoogle IDトークン・セッショントークンのいずれの形状も区別せず信頼するため、本番側の認証方式の切り替え（IDトークン直接検証→セッショントークン）に追随するコード変更は不要だった。Playwrightの`webServer`設定からこのテストサーバーを起動し、フロントエンドの`context.addCookies()`でE2E用のfakeセッショントークンをあらかじめセットすることで、実際のGoogle OAuthログインフロー・`POST /auth/session`交換を経由せずにE2Eテストを実行できる
+- **E2Eテスト**: `backend/e2e/testServer.js`は、本番`handler.js`と同じ`createRouter`/`buildRoutes`/serviceファクトリ関数を再利用する最小限の`http.createServer`ラッパー。in-memory repositoryと「実通信せず、JWTペイロードをbase64url decodeするだけ（署名検証なし）」のfake authenticatorに差し替えている。このfake authenticatorはGoogle IDトークン・セッショントークンのいずれの形状も区別せず信頼するため、本番側の認証方式の切り替え（IDトークン直接検証→セッショントークン）に追随するコード変更は不要だった。Playwrightの`webServer`設定からこのテストサーバーを起動し、フロントエンドの`context.addCookies()`でE2E用のfakeセッショントークンをあらかじめセットすることで、実際のGoogle OAuthログインフロー・`POST /auth/session`交換を経由せずにE2Eテストを実行できる
 - 上記のfake authenticator・fakeセッショントークン組み立ては、このパターンを採用するプロダクト間で共通化できる（Camp-Stock固有のロジックを含まない）。そのため、`shared/e2e/fakeAuthenticator.js`（バックエンド側、`createFakeAuthenticator()`）・`shared/e2e/fakeSessionToken.js`（フロントエンド側、`createFakeSessionToken`/`loginAsE2EUser`）として切り出した。`shared/e2e/screenshot.js`と同様にsymlinkで提供する（[bamiyanapp/dev-standards#404](https://github.com/bamiyanapp/dev-standards/issues/404)）。参照側リポジトリの`sync-manifest.local.json`へ以下を追加する。
 
   ```json
