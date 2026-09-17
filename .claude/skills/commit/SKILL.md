@@ -13,3 +13,7 @@ description: コミットを作成する際の前提条件と必須項目を確�
 コミットメッセージ作成前に、git-conventions Skillを必ず実行する。
 
 bodyには必ず`設計:`・`影響:`・`テスト:`を含める。
+
+## 参照ドキュメント
+
+- `docs/public-repo-no-pii-pattern.md`: 公開リポジトリに個人情報を持ち込まないパターン
