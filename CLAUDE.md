@@ -87,6 +87,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - 人間による手動確認手順がある場合、スマホのみで実行可能か（「開発環境の制約（スマホオンリー）」参照）
 - PRのマージ・CI成功だけを根拠に完了・Issueクローズと判断していないか。特に複数リポジトリ・pinned tag参照を伴う変更（git-workflow Skill「複合action・pinned tagを伴う変更の展開確認」参照）は、実際にmain上で意図した効果が出ているかを再検証したか
 - 実在の個人情報を扱うプロダクトの場合、コミット対象・コミットメッセージ・PR/Issue本文に実在の個人情報がハードコードされていないか（`docs/public-repo-no-pii-pattern.md`参照。リポジトリは公開が前提であり、一度コミットした個人情報は事実上消せないため、コミット前に気づくことが唯一の対策）
+- `docs/`配下へ新規ドキュメントを追加した場合、「主要ドキュメント」索引への追記を忘れていないか
 
 # Skills (専門手順)
 
@@ -105,6 +106,54 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - **loop-triage**: 直近の変更・CIの失敗・Issue・会話内容をトリアージし、ループで処理可能な結果レポートを生成する
 - **loop-verifier**: ループが生成した変更を却下する前提で検証する独立エージェント（実装者と同じ役割では使用しない）
 - **minimal-fix**: 範囲が明確な問題（CIの失敗、レビュアーのコメント、タイポ等）に対する最小限のコード修正
+
+# 主要ドキュメント
+
+`docs/`配下の各ドキュメントは、CLAUDE.md・各Skillの本文中で文脈に応じて個別に参照される。特定のルールがどのドキュメントに書かれているかを横断的に調べたい場合は、以下の索引を使う。新規ドキュメントを`docs/`配下へ追加した場合、この索引への追記を忘れないこと（Reflectionのチェック項目も参照）。
+
+**CI/CD・品質基準**
+
+- `docs/cicd-pipeline-specification.md`: `reusable-ci.yml`/`reusable-cd.yml`が提供する共通CI/CDパイプラインの仕様
+- `docs/reusable-workflows-reference.md`: reusable workflowの導入手順・全入力パラメータのリファレンス
+- `docs/code-quality-conventions.md`: lint・stylelint・CodeQL・textlintの共通規約
+- `docs/e2e-coverage-pattern.md`: PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
+
+**標準技術スタック・フロントエンド共通**
+
+- `docs/standard-tech-stack.md`: 新規プロジェクトの標準構成索引・立ち上げ手順
+- `docs/client-only-vite-spa-pattern.md`: 単一パッケージReactアプリ構成（Vite + TypeScript + Bootstrap）
+- `docs/frontend-ui-conventions.md`: 共通フォント・トップページ必須構成等のUI規約
+- `docs/shared-ui-components.md`: 共有UIコンポーネント（`shared/ui/`・`shared/pwa/`・`shared/sfx/`）一覧
+- `docs/service-worker-update-pattern.md`: PWAキャッシュ更新パターン
+- `docs/pwa-initial-loading-indicator.md`: PWA起動時の白画面対策
+- `docs/pwa-icon-generation-pattern.md`: PWAアイコン生成手順とmanifest.json構成
+- `docs/client-error-reporting-pattern.md`: Error Boundary＋サーバーサイドロギング
+
+**認証・セキュリティパターン**
+
+- `docs/lambda-api-firebase-auth-pattern.md`: Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDB構成
+- `docs/serverless-api-dynamodb-pattern.md`: API Gateway + Lambda + DynamoDB + SAM構成（自社発行セッショントークン認証を含む）
+- `docs/serverless-static-site-pattern.md`: S3 + CloudFront + Cognito + Lambda@Edgeによる認証付き静的サイト配信
+- `docs/oauth-csrf-nonce-pattern.md`: OAuthログインのCSRF対策（サーバー側nonce管理）
+- `docs/short-lived-bearer-token-pattern.md`: 静的サイト→別オリジンバックエンドAPIの短命Bearerトークン認証
+
+**バックエンド・インフラパターン**
+
+- `docs/nextjs-static-lambda-pattern.md`: Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）
+- `docs/serverless-spa-pattern.md`: SPA + Serverless Framework独自バックエンドAPIパターン
+- `docs/static-hosting-pattern.md`: S3 + CloudFrontによる静的サイト配信パターン
+- `docs/https-response-buffer-encoding-pattern.md`: `https.request`のレスポンスボディ文字化け対策
+- `docs/llm-dual-format-response-pattern.md`: LLM APIのdual-format JSON応答生成
+- `docs/daily-rate-limit-pattern.md`: 日次利用回数の上限カウンタ
+- `docs/deterministic-seed-id-pattern.md`: 静的コンテンツをDynamoDB等へ冪等に同期するパターン
+- `docs/sandboxed-agent-production-data-pattern.md`: 実認証情報の無いサンドボックスからの本番データ調査・修正
+- `docs/ops-monitoring-pattern.md`: 運用監視（サイレント障害検知）パターン
+
+**個人情報・リポジトリ運用**
+
+- `docs/public-repo-no-pii-pattern.md`: 公開リポジトリに個人情報を持ち込まないパターン
+- `docs/repository-contents.md`: このリポジトリに含まれるものの一覧
+- `docs/consumer-repositories.md`: 参照側リポジトリ一覧
 
 # PR（MR）承認・マージ禁止
 
