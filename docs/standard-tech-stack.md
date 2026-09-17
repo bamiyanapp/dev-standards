@@ -16,7 +16,7 @@
 
 React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳細は`docs/client-only-vite-spa-pattern.md`を参照。
 
-横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は`docs/shared-ui-components.md`、共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照（いずれもプロダクトに応じて任意採用）。
+横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は`docs/shared-ui-components.md`を参照する。共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照する（いずれもプロダクトに応じて任意採用）。
 
 テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は`docs/client-only-vite-spa-pattern.md`を参照。lintルール（複雑度・sonarjs等）の具体的な推奨値は`docs/code-quality-conventions.md`、テストカバレッジ閾値・コード重複検知の目標値は`docs/cicd-pipeline-specification.md`を参照。
 
@@ -53,7 +53,7 @@ S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共�
 
 ## 5. PWA: 必要な場合のみ採用
 
-初期ローディング表示、Service Workerのキャッシュ更新・反映パターン、ホーム画面アイコンの生成手順は`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`・`docs/pwa-icon-generation-pattern.md`を参照。
+初期ローディング表示は`docs/pwa-initial-loading-indicator.md`を参照。Service Workerのキャッシュ更新・反映パターン、ホーム画面アイコンの生成手順は`docs/service-worker-update-pattern.md`・`docs/pwa-icon-generation-pattern.md`を参照。
 
 ## 6. CI/CD（全プロジェクトで採用）
 
@@ -80,16 +80,16 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 3. **横断的UIコンポーネント・PWAパターンの適用**（「1. フロントエンド」共通規約・「5. PWA」が必要な場合のみ）
 
-   `sync-manifest.local.json`へエントリを追加し`node dev-standards/scripts/bootstrap.js`を再実行する（`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`参照）。TypeScriptプロジェクトへ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
+   `sync-manifest.local.json`へエントリを追加する。`node dev-standards/scripts/bootstrap.js`を再実行する。参照先は`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`。TypeScriptプロジェクトへ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
 
 4. **「2. ログイン」が必要な場合、標準構成を導入**（不要なら本手順自体をスキップ）
 
    - Firebase Authenticationを使う場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
-   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合: 手順5の「3. バックエンドAPI」標準構成（OSLS）を構築した上で、`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」に沿ってGoogle IDトークンをバックエンドで直接検証するミドルウェアを追加する
+   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合を考える。手順5の「3. バックエンドAPI」標準構成（OSLS）を構築した上で、`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」に沿ってGoogle IDトークンをバックエンドで直接検証するミドルウェアを追加する
 
 5. **「3. バックエンドAPI」が必要な場合、標準構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
-   `docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合は、`docs/serverless-spa-pattern.md`のAPI Gateway WebSocket API追加方法も併せて参照する（フロントエンドはnpm workspaces構成にする。`docs/client-only-vite-spa-pattern.md`「npm workspacesでバックエンドと組み合わせる場合」参照）。
+   `docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合は、`docs/serverless-spa-pattern.md`のAPI Gateway WebSocket API追加方法も併せて参照する（フロントエンドはnpm workspaces構成にする）。詳細は`docs/client-only-vite-spa-pattern.md`「npm workspacesでバックエンドと組み合わせる場合」を参照。
 
 6. **「4. ホスティング」を構築**（共通）
 
@@ -109,6 +109,6 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 上記に当てはまらない個別の技術判断（特定の外部API連携の設計、プロダクト固有のドメインロジック等）は、この標準スタックの対象外。プロダクトごとの`infra/README.md`・`CLAUDE.md`（プロジェクト固有ルール）に記載する。
 
-既存プロダクトの中には、上記標準構成と異なるフロントエンドフレームワーク（Electric-Chair-ArenaのNext.js構成）・ホスティング（GitHub Pages）・ログイン方式（サイト全体保護、`docs/serverless-static-site-pattern.md`）を使うものも存在する。examinationは元々Tailwind CSS v4 + daisyUI 5構成だったが、bamiyanapp/examination#308でBootstrap 5.3へ移行済み。これらへの遡及適用は本ドキュメントの対象外で、新規プロダクトの標準としてのみ上記構成を採用する。
+既存プロダクトの中には、上記標準構成と異なるフロントエンドフレームワーク（Electric-Chair-ArenaのNext.js構成）・ホスティング（GitHub Pages）を使うものが存在する。ログイン方式（サイト全体保護、`docs/serverless-static-site-pattern.md`）が異なるものも存在する。examinationは元々Tailwind CSS v4 + daisyUI 5構成だったが、bamiyanapp/examination#308でBootstrap 5.3へ移行済み。これらへの遡及適用は本ドキュメントの対象外で、新規プロダクトの標準としてのみ上記構成を採用する。
 
 新しいプロダクトで得られた知見が複数プロダクトへ再利用できると判断した場合は、既存ドキュメントへの追記または新規ドキュメント追加を検討し、本ドキュメントの一覧へ追加する。
