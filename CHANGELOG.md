@@ -1,3 +1,10 @@
+## [2.19.1](https://github.com/bamiyanapp/dev-standards/compare/v2.19.0...v2.19.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **textlint:** README.mdのBold閉じ記号をピリオド前へ移動する ([#525](https://github.com/bamiyanapp/dev-standards/issues/525)) ([f3dff19](https://github.com/bamiyanapp/dev-standards/commit/f3dff19d9e9e6528d7cf3556c9d85d5b03ce356d)), closes [#478](https://github.com/bamiyanapp/dev-standards/issues/478)
+
 # [2.19.0](https://github.com/bamiyanapp/dev-standards/compare/v2.18.1...v2.19.0) (2026-09-17)
 
 
