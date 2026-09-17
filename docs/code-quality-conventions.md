@@ -1,4 +1,4 @@
-# コード品質規約（lint・stylelint・CodeQL・textlint）
+# コード品質規約（lint・stylelint・CodeQL・textlint・dependency-cruiser）
 
 `reusable-ci.yml`が提供するテストカバレッジ閾値（`coverage_threshold`・`e2e_coverage_threshold`）・コード重複検知（`duplication_threshold`）には、開発共通標準としての目標値がある（テストカバレッジ80%以上・重複率5%以下）。この目標値は`docs/cicd-pipeline-specification.md`・`docs/reusable-workflows-reference.md`側の各入力説明に明記されている。
 
@@ -46,6 +46,15 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
   - `no-mix-dearu-desumasu`: 本ルールは「です」「ます」で終わる文を実装上の判定根拠にしており、常体（「〜する。」等の辞書形終止）のみで書かれた文書では判定材料が無く、明示的な「である。」文をむしろ誤検知する。dev-standardsの各ドキュメントは全体を通じて常体で統一されているため無効化する
 - **CIへの組み込み**: stylelintのように参照側リポジトリのpackage.jsonへtextlint本体を追加する必要はない。`reusable-ci.yml`の`enable_text_lint: true`・`text_lint_paths`（`mermaid_doc_paths`と同形式のカンマ/改行区切りglob）を指定するだけでよい。`text-lint` jobがnpx経由でtextlint本体・presetを取得し実行する。詳細は`docs/reusable-workflows-reference.md`「`reusable-ci.yml`」・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」を参照
 - **導入前の確認**: 上記の調整・無効化理由は、いずれも「長い複文・常体で統一する」というdev-standardsの文体を前提にしている。プロダクト側のドキュメントがですます調中心、または短文中心の文体を採用している場合は、この共有設定をそのまま使わず、プロダクト側で個別に調整することを検討する
+
+## アーキテクチャ違反検知（dependency-cruiser）
+
+npm workspacesモノレポ（`frontend/`・`backend/`が同一リポジトリ）を採用するプロダクトでは、`dependency-cruiser`を導入する（issue #523）。
+
+- **共有設定**: `commitlint.config.cjs`・`stylelint.config.cjs`・`textlint.config.cjs`と同様の方式である。dev-standardsルートの`dependency-cruiser.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み）。プロダクト固有のカスタマイズは想定しない
+- **検知対象**: 循環依存と、`frontend/`↔`backend/`間の越境import（frontend側からbackend内部モジュールへの直接import等）の2種類
+- **単一パッケージ構成では該当しない**: frontend/backendの単一パッケージ構成（`docs/client-only-vite-spa-pattern.md`）では越境importルールの対象パスが存在せず、循環依存の検知のみが有効に働く
+- **CIへの組み込み**: `reusable-ci.yml`の`enable_architecture_check: true`を指定するだけでよい。`architecture-check` jobがnpx経由でdependency-cruiser本体を取得し実行するため、devDependenciesへの追加は不要。詳細は`docs/reusable-workflows-reference.md`「`reusable-ci.yml`」・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」を参照
 
 ## 参考実装
 

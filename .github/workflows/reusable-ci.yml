@@ -130,6 +130,19 @@ on:
           各リポジトリのIssueで管理すること
         type: number
         default: 0
+      enable_architecture_check:
+        description: >-
+          dependency-cruiserによるアーキテクチャ違反検知ジョブ（architecture-check）を
+          実行するかどうか（bamiyanapp/dev-standards#523）。循環依存と、npm workspaces
+          モノレポ（frontend/・backend/が同一リポジトリ）でのfrontend/backend越境import
+          （frontend側からbackend内部モジュールへの直接import等）を検知する。共有設定
+          （dependency-cruiser.config.cjs）はdev-standardsからsymlinkで配布するため
+          （docs/code-quality-conventions.md参照）、参照側リポジトリはこのジョブの
+          有効化のみでよく、dependency-cruiser自体のdevDependencies追加は不要
+          （jobの中でnpx経由で取得する）。frontend/backendの単一パッケージ構成では
+          越境importルールは該当パスが存在せず該当しない。
+        type: boolean
+        default: false
       enable_mermaid_render:
         description: >-
           mermaid_doc_pathsで指定したMarkdown中の```mermaid```ブロックをPNG画像として
@@ -169,7 +182,8 @@ on:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
           push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
-          `standards-check`・`duplication-check`・`text-lint`をスキップし、`commitlint`・
+          `standards-check`・`duplication-check`・`architecture-check`・`text-lint`を
+          スキップし、`commitlint`・
           `frontend-e2e-test`・`render-mermaid-diagrams`（有効な場合）のみ実行する
           （bamiyanapp/dev-standards#187「CI/CD実行回数・実行時間削減バックログ」③）。
           これらのジョブはPRの「base_branchと同期済みでないとマージ不可」
@@ -186,8 +200,9 @@ on:
       enable_path_filtering:
         description: >-
           trueの場合、`frontend_dir`/`backend_dir`配下の変更有無に応じて
-          `frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`を
-          選択的にスキップする（bamiyanapp/dev-standards#187「CI/CD実行回数・
+          `frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`・
+          `architecture-check`を選択的にスキップする（bamiyanapp/dev-standards#187
+          「CI/CD実行回数・
           実行時間削減バックログ」⑤）。ルート直下の`package.json`・
           `package-lock.json`・`.github/workflows/**`の変更は共通変更とみなし、
           いずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）
@@ -1218,6 +1233,63 @@ jobs:
             cat ./jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # ESLintのcomplexityルール・eslint-plugin-sonarjsが循環的複雑度、jscpdがコード重複を
+  # 検知するのに対し、モジュール間の依存方向（アーキテクチャ）違反を検知する仕組みが
+  # 無かった（bamiyanapp/dev-standards#523）。npm workspacesモノレポ（frontend_dir・
+  # backend_dirが同一リポジトリ）では、GitHub側の機構だけではfrontendからbackend内部
+  # モジュール（AWS SDK等）への相対importを物理的に禁止できず、AI駆動開発（差分単位でしか
+  # 見ない）では層違反がレビューをすり抜けて蓄積しやすい。dependency-cruiserで循環依存・
+  # frontend/backend越境importを機械的に検知する。共有ルール
+  # （dependency-cruiser.config.cjs）はdev-standardsからsymlinkで配布するため、
+  # 参照側リポジトリはこのジョブの有効化のみでよい
+  architecture-check:
+    needs: [commitlint, detect-changes]
+    if: |
+      always() &&
+      inputs.enable_architecture_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (!inputs.enable_path_filtering || inputs.packages != '' || needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.backend == 'true') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      # dependency-cruiser.config.cjsはdev-standards submodule配下からのsymlink
+      # （sync-manifest.json）のため、参照側リポジトリではsubmoduleの取得が必須
+      # （dev-standards自身のdogfoodingではsubmoduleが存在しないため無害）
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      # 越境import・循環依存の検知対象はfrontend_dir・backend_dirのうち実在するものに
+      # 限定する（単一パッケージ構成では一方のみ存在する。両方存在しない構成では
+      # 何もスキャンせず成功扱いにする）
+      - name: Run dependency-cruiser (architecture check)
+        run: |
+          targets=()
+          [ -d "${{ inputs.frontend_dir }}" ] && targets+=("${{ inputs.frontend_dir }}")
+          [ -d "${{ inputs.backend_dir }}" ] && targets+=("${{ inputs.backend_dir }}")
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "Neither ${{ inputs.frontend_dir }}/ nor ${{ inputs.backend_dir }}/ exists; nothing to check."
+            exit 0
+          fi
+          npx --yes dependency-cruiser@16 --config dependency-cruiser.config.cjs --output-type err "${targets[@]}"
+
   # ESLint・stylelintはコード（JS/CSS）向け、CodeQLはセキュリティ向けの静的解析であるのに
   # 対し、Markdownドキュメント（docs/*.md等）の日本語文章そのものの品質（文体の不統一・
   # 表記ゆれ等）を検知する仕組みが無かった（bamiyanapp/dev-standards#433・#436）。共有設定
@@ -1431,7 +1503,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, text-lint, render-mermaid-diagrams]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, architecture-check, text-lint, render-mermaid-diagrams]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -1453,6 +1525,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-e2e-test.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result)
     runs-on: ubuntu-latest
