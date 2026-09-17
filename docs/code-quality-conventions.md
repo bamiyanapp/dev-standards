@@ -12,7 +12,7 @@ ESLintを標準とする（新規TypeScriptプロジェクトを含む全プロ�
 
 - **循環的複雑度**: ESLint組み込みの`complexity`ルールを`error`重要度、しきい値`15`で有効化する
 - **`eslint-plugin-sonarjs`**: `recommended`ルールセットをそのまま適用する。認知的複雑度（cognitive complexity）等、`complexity`ルールでは検知できない観点を補う
-- **未使用変数**: `no-unused-vars`（TypeScriptプロジェクトでは`@typescript-eslint/no-unused-vars`）を`error`重要度で有効化する（フロントエンドではReactのコンポーネント名等、大文字始まりの識別子を除外する`varsIgnorePattern: '^[A-Z_]'`の付与を検討する）
+- **未使用変数**: `no-unused-vars`（TypeScriptプロジェクトでは`@typescript-eslint/no-unused-vars`）を`error`重要度で有効化する。フロントエンドではReactのコンポーネント名等、大文字始まりの識別子を除外する`varsIgnorePattern: '^[A-Z_]'`の付与を検討する
 - **lintスクリプト自体は`--max-warnings 0`で実行する**。`warn`重要度のルールを設定しても、この設定がなければ実質的に無視されてしまうため、警告を許容しない運用にはこの指定が必須
 
 **経緯**: 以前は新規TypeScriptフロントエンドプロジェクトに`oxlint`を案内していたが、フロントエンドのlintもESLintへ統一する方針に変更した（[bamiyanapp/dev-standards#483](https://github.com/bamiyanapp/dev-standards/issues/483)）。既に`oxlint`を導入済みのプロダクトは、移行の要否・時期をプロダクト側で判断してよい。
@@ -39,12 +39,12 @@ ESLint・stylelintが構文・スタイルレベルの静的解析であるの�
 
 Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md`等）を持つプロダクトでは、`textlint`を導入する。
 
-- **共有設定**: `commitlint.config.cjs`・`stylelint.config.cjs`と同様、dev-standardsルートの`textlint.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み。プロダクト固有のカスタマイズは想定しない）
+- **共有設定**: `commitlint.config.cjs`・`stylelint.config.cjs`と同様、dev-standardsルートの`textlint.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み）。プロダクト固有のカスタマイズは想定しない
 - **ベース**: `textlint-rule-preset-ja-technical-writing`をベースとし、以下のとおり調整する
   - `sentence-length`: **最終的な必須目標はpreset既定値の100文字であり、緩和や恒久的な例外化はしない。** 既存ドキュメントには、issue/PR番号や過去の経緯を伴う因果関係の説明を1文に埋め込む冗長な文体が広く残っている。一度に100文字以内へ書き直すのは非現実的なため、issue #455で300→200→150→100の順に段階的に閾値を引き下げるラチェット方式を採用している。現在値は200（issue #455のPhase 1でissue #456〜460により対象ファイルの文を分割し、300→200への引き下げを完了した）で、あくまで途中経過であり最終的な着地点ではない
   - `no-doubled-joshi`・`max-ten`・`max-comma`: 上記の長い複文の文体では、1文中に同じ助詞が複数回登場する・読点/カンマが4つ以上になる文が常態化する。いずれも文分割を前提とするルールであり、`sentence-length`を無効化ではなく200文字までの複文を許容する方針にした以上、これらのルールも同じ理由で無効化する
   - `no-mix-dearu-desumasu`: 本ルールは「です」「ます」で終わる文を実装上の判定根拠にしており、常体（「〜する。」等の辞書形終止）のみで書かれた文書では判定材料が無く、明示的な「である。」文をむしろ誤検知する。dev-standardsの各ドキュメントは全体を通じて常体で統一されているため無効化する
-- **CIへの組み込み**: stylelintのように参照側リポジトリのpackage.jsonへtextlint本体を追加する必要はない。`reusable-ci.yml`の`enable_text_lint: true`・`text_lint_paths`（`mermaid_doc_paths`と同形式のカンマ/改行区切りglob）を指定するだけでよい。`text-lint` jobがnpx経由でtextlint本体・presetを取得し実行する（詳細は`docs/reusable-workflows-reference.md`「`reusable-ci.yml`」・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）
+- **CIへの組み込み**: stylelintのように参照側リポジトリのpackage.jsonへtextlint本体を追加する必要はない。`reusable-ci.yml`の`enable_text_lint: true`・`text_lint_paths`（`mermaid_doc_paths`と同形式のカンマ/改行区切りglob）を指定するだけでよい。`text-lint` jobがnpx経由でtextlint本体・presetを取得し実行する。詳細は`docs/reusable-workflows-reference.md`「`reusable-ci.yml`」・`docs/cicd-pipeline-specification.md`「1. CIワークフロー」を参照
 - **導入前の確認**: 上記の調整・無効化理由は、いずれも「長い複文・常体で統一する」というdev-standardsの文体を前提にしている。プロダクト側のドキュメントがですます調中心、または短文中心の文体を採用している場合は、この共有設定をそのまま使わず、プロダクト側で個別に調整することを検討する
 
 ## 参考実装
@@ -54,4 +54,4 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
 - `frontend/eslint.config.js`・`backend/eslint.config.js`（複雑度・sonarjs・no-unused-vars）
 - `stylelint.config.cjs`（dev-standardsルート、symlink経由でkarutaへ導入。`shared/ui/*.css`はdev-standards自身の`npm test`で検証）
 - `.github/workflows/codeql.yml`（`reusable-codeql.yml`呼び出し、`push`/`pull_request`/週次`schedule`トリガー）
-- `textlint.config.cjs`（dev-standardsルート。dev-standards自身も参照側リポジトリと同じ`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`（`text-lint` job）経由で`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`を検証する。CIの実行経路を一本化するため、`npm test`側の重複実行は行わない（`npm run lint:text`はローカルでの手動実行用に残す）。参照側リポジトリでの実際の有効化例: karuta issue #1179・[PR #1180](https://github.com/bamiyanapp/karuta/pull/1180)で同じ`enable_text_lint`・`text_lint_paths`を導入済み）
+- `textlint.config.cjs`（dev-standardsルート）。dev-standards自身も参照側リポジトリと同じ`reusable-ci.yml`の`enable_text_lint`・`text_lint_paths`（`text-lint` job）経由で検証する。対象は`docs/*.md`・`README.md`・`CLAUDE.md`・`.claude/skills/**/*.md`。CIの実行経路を一本化するため、`npm test`側の重複実行は行わない（`npm run lint:text`はローカルでの手動実行用に残す）。参照側リポジトリでの実際の有効化例: karuta issue #1179・[PR #1180](https://github.com/bamiyanapp/karuta/pull/1180)で同じ`enable_text_lint`・`text_lint_paths`を導入済み）
