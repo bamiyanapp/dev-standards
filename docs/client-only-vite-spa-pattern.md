@@ -123,7 +123,7 @@ expect(copiedText).toBe(expectedUrl);
 
 ## lint
 
-ESLintを標準とする（`docs/code-quality-conventions.md`「lint」参照）。`typescript-eslint`の推奨設定に、React Hooksのルール違反検知（`eslint-plugin-react-hooks`）・循環的複雑度（`complexity`ルール）・`eslint-plugin-sonarjs`・未使用変数の検知（`no-unused-vars`）を組み合わせる。
+ESLintを標準とする（`docs/code-quality-conventions.md`「lint」参照）。`typescript-eslint`の推奨設定に、React Hooksのルール違反検知（`eslint-plugin-react-hooks`）・循環的複雑度（`complexity`ルール）・`eslint-plugin-sonarjs`・未使用変数の検知（`no-unused-vars`）を組み合わせる。ファイルサイズの検知（`max-lines`ルール）もあわせて組み合わせる。
 
 ```js
 // eslint.config.js
@@ -143,6 +143,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       complexity: ["error", 15],
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
     },

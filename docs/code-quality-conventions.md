@@ -13,6 +13,7 @@ ESLintを標準とする（新規TypeScriptプロジェクトを含む全プロ�
 - **循環的複雑度**: ESLint組み込みの`complexity`ルールを`error`重要度、しきい値`15`で有効化する
 - **`eslint-plugin-sonarjs`**: `recommended`ルールセットをそのまま適用する。認知的複雑度（cognitive complexity）等、`complexity`ルールでは検知できない観点を補う
 - **未使用変数**: `no-unused-vars`（TypeScriptプロジェクトでは`@typescript-eslint/no-unused-vars`）を`error`重要度で有効化する。フロントエンドではReactのコンポーネント名等、大文字始まりの識別子を除外する`varsIgnorePattern: '^[A-Z_]'`の付与を検討する
+- **ファイルサイズ**: ESLint組み込みの`max-lines`ルールを`error`重要度で有効化する（issue #530）。複雑度（`complexity`・cognitive complexity）は1関数の複雑さを検知するルールで、小さな関数・コンポーネントが大量に詰め込まれ肥大化した1ファイル自体は検知できないため、分割を促す別軸の観点として追加する。他プロダクトでの実測値に基づくラチェット値がまだ無いため、しきい値はESLint公式の既定値である`{ max: 300, skipBlankLines: true, skipComments: true }`（コメント・空行を除いた実効300行）を出発点とする
 - **lintスクリプト自体は`--max-warnings 0`で実行する**。`warn`重要度のルールを設定しても、この設定がなければ実質的に無視されてしまうため、警告を許容しない運用にはこの指定が必須
 
 **経緯**: 以前は新規TypeScriptフロントエンドプロジェクトに`oxlint`を案内していたが、フロントエンドのlintもESLintへ統一する方針に変更した（[bamiyanapp/dev-standards#483](https://github.com/bamiyanapp/dev-standards/issues/483)）。既に`oxlint`を導入済みのプロダクトは、移行の要否・時期をプロダクト側で判断してよい。
