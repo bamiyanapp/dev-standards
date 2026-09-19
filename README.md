@@ -27,6 +27,7 @@
 - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス
 - [`repository-contents.md`](docs/repository-contents.md): このリポジトリに含まれるファイル・ディレクトリの一覧
+- [`documentation-format-conventions.md`](docs/documentation-format-conventions.md): ドキュメントの表現形式（文章・表・mermaid図）の選び方
 
 ### フロントエンド
 
