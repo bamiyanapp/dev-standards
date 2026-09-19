@@ -15,10 +15,45 @@ examinationでは「バックグラウンドリクエストをどう見分けて
 
 Cookieを一切使わず、nonce自体の発行・検証・失効をサーバー側のDynamoDBテーブルで完結させる。
 
-1. 未認証時のログインリダイレクトで、ランダムなnonceを生成しDynamoDBへ`PutItem`する（TTL付き、短命でよい）。このnonceを`state`パラメータ（元のURIと合わせてBase64エンコード）に載せてIdPへリダイレクトする
-2. コールバック（`/_callback`等）で、`state`から取り出したnonceを`ConditionExpression`付き`DeleteItem`で検証と同時に削除する。「存在する・期限切れでない」を条件にすることで、有効期限内・未使用の一度きりの利用のみを許可する。存在しない・期限切れ・使用済み（リプレイ）のいずれの場合も一律で「invalid state」として扱う
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
 
-ブラウザのCookieの生存・上書きに一切依存しないため、上記のどの要因からも影響を受けない。
+```mermaid
+flowchart TD
+    A["🔓 未認証ユーザー"] --> B["ログインボタンクリック"]
+    B --> C["1️⃣ issueCsrfNonce<br/>ランダムnonce生成"]
+    C --> D["DynamoDB PutItem<br/>nonce保存<br/>TTL: 300秒"]
+    D --> E["2️⃣ state作成<br/>{uri, nonce}を<br/>Base64エンコード"]
+    E --> F["Cognito Hosted UIへ<br/>リダイレクト<br/>stateパラメータ付与"]
+    F --> G["Google認証"]
+    G --> H["Cognito コールバック<br/>認可コード返却"]
+    H --> I["3️⃣ コールバックハンドラ"]
+    I --> J["state解析<br/>nonceを抽出"]
+    J --> K["4️⃣ consumeCsrfNonce"]
+    K --> L["DynamoDB DeleteItem<br/>ConditionExpression付き"]
+    L --> M{"nonce存在 &<br/>期限内?"}
+    M -->|有効| N["✅ 検証成功<br/>トークン発行<br/>ログイン完了"]
+    M -->|なし/期限切れ/使用済み| O["❌ invalid state<br/>攻撃と見なす"]
+    N --> P["認証済みユーザー"]
+    O --> Q["ログイン失敗"]
+    
+    style A fill:#e3f2fd
+    style P fill:#c8e6c9
+    style Q fill:#ffcdd2
+    style M fill:#fff9c4
+```
+
+</details>
+
+フロー：
+
+1. ランダムなnonceを生成し、DynamoDB（TTL 5分）へ保存
+2. nonceをBase64エンコード済み`state`パラメータに埋め込んでIdPへリダイレクト
+3. IdP認証後のコールバックで`state`を解析してnonceを抽出
+4. `ConditionExpression`付き`DeleteItem`で検証と同時削除（存在・有効期限・未使用を確認）
+5. 有効なら認証完了、無効/期限切れ/使用済みなら「invalid state」として拒否
+
+Cookieに依存しないため、Service Worker・ITP・バックグラウンドリクエストの影響を受けない。
 
 ```js
 const CSRF_NONCES_TABLE = "my-app-csrf-nonces";

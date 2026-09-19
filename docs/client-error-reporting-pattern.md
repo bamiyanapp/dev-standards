@@ -1,6 +1,48 @@
 # フロントエンドエラーのError Boundary＋サーバーサイドロギング（`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
 
-レンダリング中の未捕捉例外でReactがツリー全体をアンマウントし、画面が真っ白なまま操作不能になる事象への対策（karuta issue #1106由来）。アプリ全体をError Boundaryで包み、例外発生時にリロードで復帰できるフォールバック画面を出す。加えて、開発環境の制約（スマホオンリー等）でブラウザのコンソール出力を事後に確認できない場合に備え、捕捉した例外をバックエンドAPI経由でサーバーサイドのログ（CloudWatch Logs等）にも残せるようにする（issue #1110由来）。
+レンダリング中の未捕捉例外でReactがツリー全体をアンマウントし、画面が真っ白なまま操作不能になる事象への対策（karuta issue #1106由来）。アプリ全体をError Boundaryで包み、例外発生時にリロードで復帰できるフォールバック画面を出す。加えて、スマホオンリー等の環境でブラウザコンソール確認が困難な場合に備え、バックエンドAPI経由でサーバーサイドログ（CloudWatch Logs等）にも残す（issue #1110由来）。
+
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart TD
+    A["⚛️ React レンダリング"] --> B{"例外発生"}
+    B -->|キャッチ| C["Error Boundary<br/>componentDidCatch"]
+    C --> D["📝 例外情報収集<br/>message・stack<br/>componentStack・url"]
+    D --> E{"reportUrl<br/>指定?"}
+    E -->|なし| F["console.error<br/>ローカル出力のみ"]
+    E -->|あり| G["🔄 fire-and-forget<br/>POSTリクエスト<br>/report-client-error"]
+    G --> H["バックエンド受信"]
+    H --> I["buildClientErrorLogPayload<br/>検証・切り詰め<br/>max: message=500,stack=4000"]
+    I --> J{"有効?"}
+    J -->|無効| K["❌ 400 Bad Request"]
+    J -->|有効| L["console.error<br/>CloudWatch Logs"]
+    L --> M{"LINE通知<br/>有効?"}
+    M -->|オプション| N["sendOpsAlert<br/>LINE Bot通知<br/>fire-and-forget"]
+    M -->|無効| O["✅ 完了"]
+    N --> O
+    K --> O
+    F --> P["🎯 ユーザーへ<br/>フォールバック画面<br/>リロードボタン表示"]
+    G --> P
+    style B fill:#ffcdd2
+    style C fill:#ffe0b2
+    style L fill:#c8e6c9
+    style P fill:#b3e5fc
+```
+
+</details>
+
+フロー：
+
+1. Reactレンダリング中の例外をError Boundaryが捕捉
+2. message・stack・componentStack・URLを収集（個人情報は除外）
+3. ユーザーへフォールバック画面（リロードボタン）を表示
+4. `reportUrl`指定時のみバックエンドAPI（`/report-client-error`）へ非同期送信
+5. バックエンド側で検証・切り詰め後、CloudWatch Logsへ記録
+6. 任意でLINE運用監視Botへも通知（`docs/ops-monitoring-pattern.md`）
+
+APIレスポンスが遅延してもフォールバック画面表示を妨げないようfire-and-forgetで送信。
 
 ## `shared/ui/ErrorBoundary.jsx`
 

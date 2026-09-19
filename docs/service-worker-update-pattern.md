@@ -10,9 +10,81 @@ Service Workerでオフライン対応・表示高速化のキャッシュを導
 
 3ファイルともプロダクト固有の値を持たないため、そのままsymlinkで共有できる。
 
-## なぜページ本体だけNetwork Firstにするのか
+## キャッシュ戦略（Network First vs Stale-While-Revalidate）
 
-Stale-While-Revalidateはキャッシュを即座に返しつつ裏側で必ず最新を取得してキャッシュを更新するため、一見「更新が永久に反映されない」状態にはならず、高速化との両立ができるように思える。しかしページ本体（HTMLナビゲーション）にまでこの方式を適用すると、表示は常に「1回前のデプロイ内容」になり続け、デプロイのたびに削除される古いハッシュ付きJS/CSSを参照したまま壊れて見えることがある。ページ本体はNetwork Firstにして常に最新のHTMLを取得し、そのHTMLが参照する新しいハッシュ付きJS/CSS（Stale-While-Revalidateでキャッシュ、内容が変われば別ファイル名になるため問題にならない）を後続で取得する構成にする。
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SW as Service Worker
+    participant Cache as Cache Storage
+    participant Network as Network
+
+    rect rgb(200, 230, 201)
+    Note over User,Network: 🔵 Navigation (HTML): Network First
+    User->>SW: GET /index.html
+    SW->>Network: ⬆️ Network優先
+    alt Network成功
+        Network->>SW: 最新HTML
+        SW->>Cache: キャッシュ更新
+        SW->>User: 最新HTML表示
+    else Network失敗/遅延
+        SW->>Cache: ⬇️ Fallback
+        Cache->>User: キャッシュHTML
+    end
+    end
+
+    rect rgb(255, 235, 210)
+    Note over User,Network: 🟢 Subresource (JS/CSS/API): Stale-While-Revalidate
+    User->>SW: GET /app.abc123.js
+    SW->>Cache: ✅ キャッシュある?
+    alt キャッシュ存在
+        Cache->>User: 🚀 即座に返す
+        SW-xNetwork: 裏で最新取得
+        Network->>Cache: 新しいなら更新
+    else キャッシュなし
+        SW->>Network: ⬇️ Network取得
+        Network->>Cache: キャッシュ保存
+        Network->>User: 返す
+    end
+    end
+
+    rect rgb(179, 229, 252)
+    Note over User,SW: 📱 更新検知と通知
+    SW-->>SW: cacheVersion変更<br/>activate時に旧キャッシュ破棄
+    SW-->>User: controllerchange<br/>イベント発火
+    User->>User: UpdateNotifier<br/>バナー表示<br/>再読込み促す
+    end
+
+    rect rgb(255, 205, 210)
+    Note over User,SW: 📲 iOS PWA遅延対策
+    User->>SW: foreground復帰
+    SW->>SW: registration.update()<br/>手動トリガー
+    SW->>SW: 5分おきポーリング
+    end
+```
+
+</details>
+
+戦略の分け方：
+
+1. **ナビゲーション（HTMLページ本体）: Network First**
+   - 常に最新HTML取得、ネットワーク失敗時のみキャッシュ fallback
+   - デプロイの新しいハッシュ付きJS/CSSを参照できる
+
+2. **サブリソース（JS/CSS/API）: Stale-While-Revalidate**
+   - キャッシュを即座に返し、裏側で更新
+   - ハッシュ付きJS/CSSは内容変更時に別ファイル名になるため安全
+
+3. **更新検知: controllerchange イベント**
+   - 新Service Worker有効化時に発火
+   - UpdateNotifierで再読込みバナー表示
+
+4. **iOS PWA対策**
+   - フォアグラウンド復帰時の更新確認
+   - 5分おきの定期ポーリング（Safari更新遅延対策）
 
 ## セットアップ手順
 
