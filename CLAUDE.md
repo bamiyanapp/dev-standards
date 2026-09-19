@@ -119,6 +119,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - `docs/reusable-workflows-reference.md`: reusable workflowの導入手順・全入力パラメータのリファレンス
 - `docs/code-quality-conventions.md`: lint・stylelint・CodeQL・textlintの共通規約
 - `docs/e2e-coverage-pattern.md`: PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
+- `docs/documentation-format-conventions.md`: ドキュメントの表現形式（文章・表・mermaid図）の選び方
 
 **標準技術スタック・フロントエンド共通**
 
