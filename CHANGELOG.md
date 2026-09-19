@@ -1,3 +1,10 @@
+# [2.25.0](https://github.com/bamiyanapp/dev-standards/compare/v2.24.0...v2.25.0) (2026-09-19)
+
+
+### Features
+
+* **lambda:** API Gateway RESTの共通CORSレスポンスヘルパーを共通化する ([#572](https://github.com/bamiyanapp/dev-standards/issues/572)) ([002479a](https://github.com/bamiyanapp/dev-standards/commit/002479a8536b9f1a5e55d71a2ef90c0a2ac34d72)), closes [#564](https://github.com/bamiyanapp/dev-standards/issues/564)
+
 # [2.24.0](https://github.com/bamiyanapp/dev-standards/compare/v2.23.0...v2.24.0) (2026-09-19)
 
 
