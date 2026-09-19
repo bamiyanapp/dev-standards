@@ -1,3 +1,10 @@
+# [2.21.0](https://github.com/bamiyanapp/dev-standards/compare/v2.20.0...v2.21.0) (2026-09-19)
+
+
+### Features
+
+* **docs:** 4ファイルへmermaid図を追加しlint:textの--rulesdir漏れを修正する ([#551](https://github.com/bamiyanapp/dev-standards/issues/551)) ([0af466c](https://github.com/bamiyanapp/dev-standards/commit/0af466cd71cf24b8858df9bba5d3afffc35d7c1f)), closes [#545](https://github.com/bamiyanapp/dev-standards/issues/545) [#546](https://github.com/bamiyanapp/dev-standards/issues/546) [#547](https://github.com/bamiyanapp/dev-standards/issues/547) [#548](https://github.com/bamiyanapp/dev-standards/issues/548) [#550](https://github.com/bamiyanapp/dev-standards/issues/550) [#549](https://github.com/bamiyanapp/dev-standards/issues/549)
+
 # [2.20.0](https://github.com/bamiyanapp/dev-standards/compare/v2.19.1...v2.20.0) (2026-09-19)
 
 
