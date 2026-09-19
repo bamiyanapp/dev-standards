@@ -38,7 +38,7 @@ flowchart TD
 
 </details>
 
-手順は以下の通り：
+手順は以下の通り。
 
 1. 既存の`site-stack`があれば、そのCloudFrontドメインを取得（無ければプレースホルダー）
 2. `auth-stack`をデプロイし、Cognitoの各種IDとシークレットを取得
@@ -87,7 +87,7 @@ sequenceDiagram
 
 </details>
 
-フロー概要：
+フロー概要。
 
 1. サイト初回アクセスで有効な`id_token` Cookieが無い場合、Cognito Hosted UIのログイン画面へリダイレクト
 2. Google認証後、Cognitoがコールバックで認可コードを返し、Lambda@Edgeがトークン（`id_token`・`refresh_token`）に交換してHttpOnly Cookieとして保存
