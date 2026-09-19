@@ -1,3 +1,10 @@
+# [2.22.0](https://github.com/bamiyanapp/dev-standards/compare/v2.21.1...v2.22.0) (2026-09-19)
+
+
+### Features
+
+* **docs:** ドキュメントの表現形式の選び方ガイドラインを追加する ([#558](https://github.com/bamiyanapp/dev-standards/issues/558)) ([c0d5f3d](https://github.com/bamiyanapp/dev-standards/commit/c0d5f3def9198310dfd081de6157c7dff2673409)), closes [#477](https://github.com/bamiyanapp/dev-standards/issues/477)
+
 ## [2.21.1](https://github.com/bamiyanapp/dev-standards/compare/v2.21.0...v2.21.1) (2026-09-19)
 
 
