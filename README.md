@@ -37,6 +37,7 @@
 - [`pwa-initial-loading-indicator.md`](docs/pwa-initial-loading-indicator.md): PWA起動時の白画面対策
 - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
 - [`service-worker-update-pattern.md`](docs/service-worker-update-pattern.md): Service Workerのキャッシュ更新・反映パターン
+- [`ios-safari-audio-unlock-pattern.md`](docs/ios-safari-audio-unlock-pattern.md): iOS Safari自動再生ポリシー対策（音声要素シングルトン解錠パターン）
 
 ### インフラ・認証
 
