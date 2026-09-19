@@ -151,6 +151,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - `docs/llm-dual-format-response-pattern.md`: LLM APIのdual-format JSON応答生成
 - `docs/daily-rate-limit-pattern.md`: 日次利用回数の上限カウンタ
 - `docs/deterministic-seed-id-pattern.md`: 静的コンテンツをDynamoDB等へ冪等に同期するパターン
+- `docs/dynamodb-safe-backfill-pattern.md`: DynamoDBの安全なバックフィル・移行スクリプトパターン
 - `docs/sandboxed-agent-production-data-pattern.md`: 実認証情報の無いサンドボックスからの本番データ調査・修正
 - `docs/ops-monitoring-pattern.md`: 運用監視（サイレント障害検知）パターン
 
