@@ -8,20 +8,16 @@ Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークン�
 
 1つのAWS SAMテンプレート（`infra/template.yaml`）で、API・データストア・フロントエンド配信をまとめて管理する。
 
-```
-Browser (React/Vite SPA)
-   │ 初回ログイン時のみ: POST /auth/session, Bearer <Google IDトークン>
-   │ 以降の全リクエスト: Bearer <セッショントークン>（バックエンド発行、HS256 JWT）
-   ▼
-API Gateway (HTTP API, ANY /{proxy+})
-   │
-   ▼
-Lambda（単一関数、内部ルーティング）
-   │
-   ▼
-DynamoDB（テーブルはドメインごとに複数）
+```mermaid
+flowchart TD
+    Browser[Browser<br/>React/Vite SPA]
+    Browser -->|"初回ログイン時のみ:<br/>POST /auth/session<br/>Bearer &lt;Google IDトークン&gt;"| APIGW
+    Browser -->|"以降の全リクエスト:<br/>Bearer &lt;セッショントークン&gt;<br/>バックエンド発行、HS256 JWT"| APIGW[API Gateway<br/>HTTP API, ANY /proxy+]
+    APIGW --> Lambda[Lambda<br/>単一関数、内部ルーティング]
+    Lambda --> DynamoDB[DynamoDB<br/>テーブルはドメインごとに複数]
 
-Browser ── CloudFront ── S3（フロントエンドビルド成果物）
+    Browser --> CloudFront[CloudFront]
+    CloudFront --> S3[S3<br/>フロントエンドビルド成果物]
 ```
 
 - API・フロントエンド配信を同一SAMスタックにまとめることで、`sam deploy`一発でバックエンド・フロントエンドホスティングの整合性（CORSのAllowOrigin等）を保てる
@@ -62,6 +58,31 @@ CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda�
 - フロントエンド: `@react-oauth/google`でGoogleのIDトークンを取得したら、まず`POST /auth/session`（`Authorization: Bearer <Google IDトークン>`）でバックエンド発行のセッショントークンへ交換する。この交換には`frontend/src/api/client.js`の`exchangeGoogleIdTokenForSession`を使う。それ以降の`fetch`は`Authorization: Bearer <セッショントークン>`を使う。ログイン処理（`AuthContext.jsx`の`login()`）はこの交換を待つため非同期になる
 - バックエンド（初回ログイン、`POST /auth/session`のみ）: `google-auth-library`の`OAuth2Client.verifyIdToken({ idToken, audience: clientId })`でGoogle IDトークンを検証する。この検証には`backend/src/lib/googleAuth.js`の`verifyGoogleIdToken`を使う。`audience`にGoogle Cloud ConsoleのクライアントIDを指定することで、他のGoogleサービス向けに発行されたIDトークンを弾く。検証後、`backend/src/services/authService.js`がセッショントークン（HS256 JWT、`sub`にGoogleアカウントのユーザーIDを設定、有効期限は`AuthContext.jsx`のCookie保持期間と一致させる）を発行して返す
 - バックエンド（それ以外の全リクエスト）: `backend/src/lib/sessionToken.js`の`createSessionAuthenticator({ secret })`がセッショントークンを検証する（署名鍵`SESSION_SECRET`が一致しない・期限切れの場合は401）。Google APIへの通信は発生しない
+
+<details>
+<summary>トークン交換フロー（mermaid図）</summary>
+
+```mermaid
+sequenceDiagram
+    participant Frontend as フロントエンド
+    participant Backend as バックエンド<br/>authService
+    participant Google as Google
+
+    Note over Frontend,Google: 初回ログイン
+    Frontend->>Google: Google IDトークンを取得
+    Frontend->>Backend: POST /auth/session<br/>Bearer &lt;Google IDトークン&gt;
+    Backend->>Google: verifyIdToken（audience検証）
+    Google-->>Backend: 検証結果
+    Backend->>Backend: セッショントークン（HS256 JWT）を発行
+    Backend-->>Frontend: セッショントークンを返す
+
+    Note over Frontend,Backend: 2回目以降の全リクエスト
+    Frontend->>Backend: 各APIリクエスト<br/>Bearer &lt;セッショントークン&gt;
+    Backend->>Backend: createSessionAuthenticatorで検証<br/>（Google APIへの通信は発生しない）
+    Backend-->>Frontend: レスポンス
+```
+
+</details>
 - `verifyGoogleIdToken`は`oAuth2Client`を、`createSessionAuthenticator`は`secret`をそれぞれDI可能にしており、テストでは実際にGoogle APIへ通信しないfakeや固定secretへ差し替える
 - **署名鍵（`SESSION_SECRET`）の用意**: AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による自動生成を検討した。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一し、AWS側のIAM権限追加を不要にする
 - Cookie自体（保持期間・Secure属性の付け方等）の設計は変わらない。**Cookieに保存する値がGoogle IDトークンからセッショントークンへ変わる点のみが変更点**であり、双方ともJWT形状（`header.payload.signature`）のため、E2Eテストのfake authenticator（下記「テストパターン」）はどちらの値が来ても区別せず動作する
