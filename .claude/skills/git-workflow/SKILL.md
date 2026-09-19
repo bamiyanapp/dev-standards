@@ -115,6 +115,27 @@ dev-standardsの複合action（`.github/actions/*`）は、参照側リポジト
 - **フォローアップコミットは必ず`fix(ci)`型を使う**。`chore`型では絶対にコミットしない。semantic-releaseは`chore`コミット単体では新しいリリース（新タグ）を発行しないため、`chore`型で自己参照タグを更新しても、その修正自体が永久にどのタグにも含まれない（bamiyanapp/dev-standards#395で実際に発生）。過去の同種フォローアップ#123・#128はいずれも`fix(ci)`型で正しくリリースをトリガーしていたにもかかわらず、後続の#391で誤って`chore(ci)`型を使い、issue #388の修正がv2.12.0時点でも一切反映されていなかった
 - 参照側リポジトリでのタグ更新・動作確認まで完了して初めて、元issueをクローズしてよい
 
+<details>
+<summary>pinned tag展開確認のロールアウト手順（mermaid図）</summary>
+
+```mermaid
+flowchart TD
+    Change[複合actionの実装を変更] --> PR[PRを作成]
+    PR --> Note[grep -n 'ref: v'で現在の<br/>自己参照タグを確認・明示]
+    Note --> Merge[PRマージ・新タグ発行]
+
+    Merge --> SelfRef[dev-standards自己参照タグの更新]
+    SelfRef --> FixCommit[fix ci 型でフォローアップコミット<br/>chore型は使わない]
+    FixCommit --> NewTag[新タグが発行される]
+
+    Merge --> ConsumerRepo[参照側リポジトリ karuta等の<br/>ci.yml のpinned tag更新]
+    NewTag --> ConsumerRepo
+    ConsumerRepo --> Verify[main上で実際に<br/>意図した効果が出ているか再検証]
+    Verify --> Close[元issueをクローズ]
+```
+
+</details>
+
 **PRがマージされた・CIが成功した、というだけでは「実際に修正が反映された」ことを意味しない**。このような複数段階のロールアウトが必要な変更では、Issueをクローズする前・完了報告をする前に、実際にmain上の挙動・生成物を再検証する（例: 生成されたファイルの形式・内容を実際に確認する、参照側リポジトリの`ci.yml`で実際に使われているタグを確認する等）。CIが緑であることや「マージできた」という報告だけを根拠に完了と判断してはならない。
 
 ## `.github/workflows/*`変更時の自動マージ失敗（BOT_TOKENのworkflowスコープ不足、履歴）
