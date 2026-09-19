@@ -131,6 +131,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - `docs/pwa-initial-loading-indicator.md`: PWA起動時の白画面対策
 - `docs/pwa-icon-generation-pattern.md`: PWAアイコン生成手順とmanifest.json構成
 - `docs/client-error-reporting-pattern.md`: Error Boundary＋サーバーサイドロギング
+- `docs/ios-safari-audio-unlock-pattern.md`: iOS Safari自動再生ポリシー対策（音声要素シングルトン解錠パターン）
 
 **認証・セキュリティパターン**
 
