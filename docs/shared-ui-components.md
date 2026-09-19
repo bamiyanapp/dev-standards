@@ -236,6 +236,27 @@ useValueChange(connectionStatus, (current, previous) => {
 
 `onChange`は副作用を伴わない同期的なstate更新のみを行うこと（レンダー中に呼ばれるため、fetch等の非同期処理やDOM操作は別途`useEffect`に書く）。`value`自体の導出ロジック（前回値への依存を含む複雑な分岐等）はこのhookの対象外とし、呼び出し側に委ねる。
 
+### `shared/hooks/useWakeLock.js`
+
+`active`がtrueの間、画面のスリープを防止するhook（issue #561）。karutaから切り出したもの。Wake Lock API未対応環境（iOS Safari等）でも例外を投げず何もしない（フィーチャー検出）。「開発環境の制約（スマホオンリー）」で述べているiOS Safari非対応APIへの対策の実装例。タブ非表示による自動解放後は、`visibilitychange`イベントで再取得する。
+
+```jsx
+useWakeLock(isPlayingQuiz);
+```
+
+```mermaid
+flowchart TD
+    A[activeがtrueに変化] --> B{Wake Lock API対応?}
+    B -->|"未対応（'wakeLock' in navigatorがfalse）"| C[何もしない]
+    B -->|対応| D[navigator.wakeLock.request 'screen']
+    D --> E[画面スリープを防止]
+    E --> F[タブが非表示になる]
+    F --> G[ブラウザが自動でロックを解放]
+    G --> H[releaseイベント発火、sentinelRefをクリア]
+    H --> I[visibilitychangeでタブが可視状態に戻る]
+    I --> D
+```
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -255,6 +276,7 @@ useValueChange(connectionStatus, (current, previous) => {
     { "source": "shared/hooks/useLocalStorageState.js", "target": "app/top/src/hooks/useLocalStorageState.js" },
     { "source": "shared/hooks/useSessionStorageState.js", "target": "app/top/src/hooks/useSessionStorageState.js" },
     { "source": "shared/hooks/useValueChange.js", "target": "app/top/src/hooks/useValueChange.js" },
+    { "source": "shared/hooks/useWakeLock.js", "target": "app/top/src/hooks/useWakeLock.js" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },

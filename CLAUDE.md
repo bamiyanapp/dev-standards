@@ -40,7 +40,7 @@ Claudeは設計・実装・PRのTest plan・完了報告のいずれにおいて
 - どうしても人間による確認が必要な場合は、その確認がスマートフォンから実行可能であることを設計時点で確認し、不可能な場合は設計自体を見直す
 - E2E等でスクリーンショットによる視覚的な確認が必要な場合、Playwright HTMLレポート（アーティファクトzip）はスマートフォンからの閲覧が事実上困難なため避ける。代わりに`reusable-ci.yml`のE2Eスクリーンショット報告機能（`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）を使い、Job Summary・PRコメントへ画像として直接埋め込む
 - Markdownドキュメントの1行が長すぎてスマートフォンでの閲覧（GitHubのdiffビュー・raw表示）が困難な場合、物理行を単純に折り返さない。日本語テキストの途中で改行すると、レンダリング時に改行位置へ不要な半角スペースが挿入されることを実機検証で確認している（issue #442）。読みにくさの実体は冗長な文（1文に複数の因果関係・手順を詰め込んでいる等）であることが多いため、文自体を短く分割・簡潔化して対処する
-- 検証端末はiPhone（iOS Safari）である。iOS SafariにはVibration API等、他のブラウザ・OSには存在するWeb APIが実装されていないことがある。そうしたAPIに依存する機能を設計・実装する際は、フィーチャー検出（`typeof`チェック等）を行い、非対応環境でも例外を投げず正常に動作すること（または対象外として設計上明示すること）を設計時点で考慮する
+- 検証端末はiPhone（iOS Safari）である。iOS SafariにはVibration API等、他のブラウザ・OSには存在するWeb APIが実装されていないことがある。そうしたAPIに依存する機能を設計・実装する際は、フィーチャー検出（`typeof`チェック等）を行い、非対応環境でも例外を投げず正常に動作すること（または対象外として設計上明示すること）を設計時点で考慮する。模範実装として`shared/hooks/useWakeLock.js`（`docs/shared-ui-components.md`参照）がある
 
 # Execution Loop
 
@@ -144,6 +144,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 
 - `docs/nextjs-static-lambda-pattern.md`: Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）
 - `docs/serverless-spa-pattern.md`: SPA + Serverless Framework独自バックエンドAPIパターン
+- `docs/websocket-client-reconnect-pattern.md`: WebSocketクライアントの再接続エンジン設計パターン
 - `docs/static-hosting-pattern.md`: S3 + CloudFrontによる静的サイト配信パターン
 - `docs/https-response-buffer-encoding-pattern.md`: `https.request`のレスポンスボディ文字化け対策
 - `docs/llm-dual-format-response-pattern.md`: LLM APIのdual-format JSON応答生成

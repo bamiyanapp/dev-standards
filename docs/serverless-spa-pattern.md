@@ -104,7 +104,7 @@ functions:
         AttributeName: ttl
         Enabled: true
   ```
-- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する
+- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分の共通ロジック（接続取得、GSIによるルーム内接続一覧Query、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパー）は`shared/lambda/webSocketBroadcast.js`（`docs/shared-ui-components.md`と同様の索引は無いため本ファイルから直接参照する）としてsymlink共有できる。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外で、フロントエンド側の設計知見は`docs/websocket-client-reconnect-pattern.md`を参照
 - **IAMは`provider.iam.role.statements`に必要最小限のアクションのみ列挙する**（`dynamodb:Scan/Query/GetItem/PutItem/UpdateItem`を用途ごとに区別する等）。他の関数を非同期起動する（`lambda:InvokeFunction`）等、循環参照が起きる権限は関数専用のIAMロールへ分離する
 - ハンドラーはフラット配置（`src/`を必ずしも作らない）でよい。REST用（`handler.js`）・WebSocket用（`xxxHandler.js`）・共通レスポンス生成（`httpResponse.js`）程度の粒度に分ける
 - 単体テストは**vitest + `aws-sdk-client-mock`**。
