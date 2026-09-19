@@ -35,6 +35,28 @@ function buildQuestionId(familySlug, category, question) {
 
 決定的IDのパターン（例: SHA-256ハッシュなら16進数文字列の固定長）が分かっていれば、「この行はシード由来か、ユーザー操作由来か」をID自体の形式から機械的に判定できる。
 
+<details>
+<summary>ID生成方式の選択フロー（mermaid図）</summary>
+
+```mermaid
+flowchart TD
+    Start[行を追加する] --> Origin{追加元}
+    Origin -->|シードスクリプト<br/>静的コンテンツの同期| Hash[内容からSHA-256<br/>ハッシュを計算]
+    Hash --> DetId[決定的ID<br/>16進数32文字]
+    DetId --> Put[PutItemで上書き<br/>再実行しても重複しない]
+
+    Origin -->|ユーザー操作<br/>フォーム送信・bot経由等| Random[時刻+ランダム値<br/>から生成]
+    Random --> RandId[ランダムID]
+    RandId --> Add[新規追加<br/>同じ内容でも複数回登録可]
+
+    Put --> Check{既存行の由来判定}
+    Add --> Check
+    Check -->|ID形式が32桁16進数| IsSeed[シード由来と判定]
+    Check -->|それ以外| IsUser[ユーザー操作由来と判定]
+```
+
+</details>
+
 ```js
 const DETERMINISTIC_ID_PATTERN = /^[0-9a-f]{32}$/;
 
