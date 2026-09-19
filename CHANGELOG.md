@@ -1,3 +1,10 @@
+## [2.21.1](https://github.com/bamiyanapp/dev-standards/compare/v2.21.0...v2.21.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **commitlint:** footer-max-line-lengthを無効化する ([#555](https://github.com/bamiyanapp/dev-standards/issues/555)) ([32a65c9](https://github.com/bamiyanapp/dev-standards/commit/32a65c928eb8cfd27ccb7a630822b6073c5e0436)), closes [#418](https://github.com/bamiyanapp/dev-standards/issues/418)
+
 # [2.21.0](https://github.com/bamiyanapp/dev-standards/compare/v2.20.0...v2.21.0) (2026-09-19)
 
 
