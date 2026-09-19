@@ -37,6 +37,15 @@ graph TD
   - 上記いずれのテストjobも、`coverage_threshold`（グローバルまたは `packages` 内の要素ごと）が0より大きい場合のみ「Check coverage threshold」ステップを実行する。このステップは `check-coverage-threshold` 複合アクションで `coverage/coverage-summary.json` を読み、Job Summaryへカバレッジ表を表示し、閾値未満の指標があった場合はジョブを失敗させる。閾値が0（既定）の場合はこのステップ自体を実行しない。**`coverage_threshold`の開発共通標準の目標値は80%以上**（[bamiyanapp/dev-standards#425](https://github.com/bamiyanapp/dev-standards/issues/425)）。`e2e_coverage_threshold`（後述）・`duplication_threshold`と同種の方針で、新規に有効化するリポジトリは実測値が無い導入直後は`0`（ゲート無効・レポート表示のみ）から開始してよい。ただし実測後にその値のまま据え置いて固定化せず、テストケースを追加してカバレッジ自体を引き上げつつ段階的に閾値を80%へ近づけることを目指す。既存で低い閾値を運用しているリポジトリも、直ちに80%へ上げる必要は無いが、段階的な引き上げ方針を各リポジトリのIssueで管理する。
 
     この複合アクションをどう参照するかについては、3段階の失敗を経て現在の実装に至っている（詳細は[bamiyanapp/karuta#583](https://github.com/bamiyanapp/karuta/issues/583)）。
+
+    | 試行 | 採用方式 | 発生した問題 | 教訓 |
+    |---|---|---|---|
+    | 失敗1 | 相対パス参照（`uses: ./.github/actions/...`） | 呼び出し元リポジトリのチェックアウト内容に解決され、参照側リポジトリでは動作しない | ステップレベルの`uses: ./path`は呼び出し元のチェックアウトに対して解決される |
+    | 失敗2 | 完全修飾パス＋動的ref（steps出力から`<ref>`を渡す） | `uses:`はsteps contextを参照できずstartup failureでCIが完全停止する | `uses:`は静的に解決可能な値でなければならない |
+    | 失敗3 | `actions/checkout`で`GITHUB_WORKFLOW_REF`からrefを導出 | 呼び出し元のトップレベルworkflow自身のrefを返すため、存在しないrefをcheckoutして失敗する | 動的な値の解決を避け、静的な固定値を使う |
+    | 現在の実装 | 固定タグ（例: `v1.6.1`）を`ref:`に直接指定 | （採用中） | dev-standardsの新リリースのたびに手動更新が必要になる |
+    | 失敗4 | 固定タグを長期間更新せず放置 | 新しい入力（`metrics`等）を古いaction.ymlが認識できず警告のみで無視され、判定が全指標平均へフォールバックする | action.ymlの入力追加時はrefの更新も同じ変更セットで行う |
+
     - **失敗1**: 当初は相対パス（`uses: ./.github/actions/check-coverage-threshold`）で参照していた。しかし**ステップレベルの`uses: ./path`は常に呼び出し元リポジトリ（このジョブでCheckoutした対象）のチェックアウト内容に対して解決される**（reusable-ci.yml自身のrefには解決されない）。そのため、dev-standards自身のdogfooding CI（呼び出し元と定義元が同一リポジトリ）でしか正しく動作しない不具合だった。`coverage_threshold`が0（既定）のジョブでは該当ステップ自体が実行されないため潜在化していたが、常時実行される`frontend-e2e-test`の「Show E2E coverage」ステップで顕在化した
     - **失敗2**: `uses: bamiyanapp/dev-standards/.github/actions/check-coverage-threshold@<ref>`という完全修飾（owner/repo/path@ref）形式に変更した。`<ref>`は直前のステップの出力（`steps.dev-standards-ref.outputs.ref`）から動的に渡す実装を一度リリースした。しかし、**`uses:`フィールドはsteps contextを参照できず、ジョブ計画時に静的に解決可能な値でなければならない**というGitHub Actionsの制約に反していた。その結果、該当ジョブが1つも作成されないまま即座に失敗し（startup failure）、失敗1よりも深刻な状態（CIが実質的に完全停止）を引き起こした
     - **失敗3**: 失敗2を受け、`actions/checkout@v7`（`with:`はsteps contextを問題なく参照できる）で「このワークフロー自身と同じref」のdev-standardsを`.dev-standards-actions/`へcheckoutする案に切り替えた。`uses:`は常に静的な相対パス文字列のみにする。しかし、そのrefを`GITHUB_WORKFLOW_REF`環境変数から導出する実装も誤りだった。**`GITHUB_WORKFLOW_REF`は、このreusable workflow自身のrefではなく、呼び出し元（karuta等）のトップレベルワークフロー自身のref（PRのマージref`refs/pull/<PR番号>/merge`等）を返す**。このため、dev-standardsに存在しないrefをcheckoutしようとして失敗した
@@ -66,6 +75,31 @@ graph TD
     6. 上記のチェックアウトに成功した場合、ローカル複合アクション`compare-e2e-screenshots`（後述）で新しいスクリーンショットと`latest/`の同名ファイルをピクセル単位で比較する。結果は`<frontend_dir>/screenshot-diff.json`へ`{name: "new"|"changed"|"unchanged"}`として書き出す
     7. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。手順6の`screenshot-diff.json`が存在する場合、`"unchanged"`と判定されたスクリーンショットは添付自体を省略し（[bamiyanapp/karuta#750](https://github.com/bamiyanapp/karuta/issues/750)）、末尾に省略件数を1行で示す。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）・`<name>.title.txt`（撮影したテストケース名）と`<frontend_dir>/e2e/spec-source-map.json`（検証対象ソースパスの宣言）の両方が用意されている場合を考える。かつ手順2で変更ファイル一覧が取得できている場合は、その宣言パスと変更ファイル一覧を突き合わせる。重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A）。グルーピング・宣言の単位をテストケース単位まで細かくした経緯は[bamiyanapp/karuta#651](https://github.com/bamiyanapp/karuta/issues/651)を参照。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
     8. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
+
+<details>
+<summary>E2Eスクリーンショット報告フロー（mermaid図）</summary>
+
+```mermaid
+flowchart TD
+    Start[1. e2e-screenshots/*.pngの存在確認] --> Exists{存在するか}
+    Exists -->|無い| Skip[以降のステップをスキップ]
+    Exists -->|ある| GetFiles[2. PRの変更ファイル一覧を取得<br/>continue-on-error]
+    GetFiles --> Publish[3. runs/run_id配下へPNGを公開<br/>continue-on-error]
+    Publish --> IsPush{pushイベントか}
+    IsPush -->|はい| PublishLatest[4. latest/配下へも上書き公開]
+    IsPush -->|いいえ| CheckoutBase[5. latest/配下をsparse-checkoutで取得<br/>continue-on-error]
+    PublishLatest --> BuildMd[7. Job Summary用Markdownを組み立て]
+    CheckoutBase --> CheckoutOk{取得成功}
+    CheckoutOk -->|成功| Diff[6. compare-e2e-screenshotsで<br/>ピクセル単位の差分比較]
+    CheckoutOk -->|失敗| NoBaseline[全件をベースライン無し<br/>＝新規扱いにフォールバック]
+    Diff --> BuildMd
+    NoBaseline --> BuildMd
+    BuildMd --> IsPR{pull_requestイベントか}
+    IsPR -->|はい| Comment[8. PRコメントとして投稿]
+    IsPR -->|いいえ| End[Job Summaryのみ]
+```
+
+</details>
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認でき、スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
 
@@ -139,6 +173,13 @@ run-name: >-
 
 ## 2. CD ワークフロー (`reusable-cd.yml`)
 - **トリガー**: 参照側 `cd.yml` の `on` 設定に従う。`workflow_call`のためワークフロー自体に`on:`は持てず、呼び出し元（参照側の`cd.yml`）で以下いずれかの方式を、**リポジトリの公開/非公開に応じて**選ぶ。
+
+  | トリガー方式 | 適用対象 | 特徴 |
+  |---|---|---|
+  | `push`（`base_branch`へのプッシュ） | パブリックリポジトリ | Squash merge直後に即座にdeployする。実行回数・実行時間の制限が無いため既定として選んでよい |
+  | `schedule`（定期実行） | プライベートリポジトリ | GitHub Actionsの無料枠消費を抑えるため、変更を蓄積してからまとめてdeployする |
+  | `workflow_dispatch` | 検証・緊急deploy用 | scheduleを待たずに手動実行できる。他方式と併用する |
+
   - **`base_branch`へのプッシュ**（Squash merge直後の`push`イベント）。`base_branch`へのmergeごとに即座にdeployする。パブリックリポジトリはGitHub Actionsの無料枠に実行回数・実行時間の制限が無いため、デプロイ頻度を気にする必要が無く、こちらを既定として選んでよい。dev-standards自身は現在パブリックリポジトリのため、この方式を採用している（dogfooding、[bamiyanapp/dev-standards#330](https://github.com/bamiyanapp/dev-standards/issues/330)）
   - **`schedule`による定期実行**（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)⑥）。プライベートリポジトリではGitHub Actionsの無料枠（月間実行時間の上限）を消費するため、`base_branch`へのmergeごとに即時deployすると、頻繁な開発では1日あたり多数のデプロイが発生しCI/CD実行回数の主要な無駄要因になりうる（issue #187の実測参照）。`cron: "0 */6 * * *"`（UTC 0/6/12/18時、1日4回）のように固定枠へまとめることで、`base_branch`への変更を蓄積してからまとめてdeployする。無料枠消費を抑えたいプライベートリポジトリはこちらを検討する。`release` jobは`workflow_call`経由で呼ばれるだけで、トリガーの種類（`push`/`schedule`/`workflow_dispatch`）自体には依存しないため、`reusable-cd.yml`自体の変更なしに呼び出し元の`on:`を変えるだけで移行できる。GitHubの`schedule`イベントは`push`と同様にデフォルトブランチの`refs/heads/<default-branch>`に対して実行されるため、`release` jobの`context.ref`を使った処理（後述のリリースPRの`baseBranch`算出等）もそのまま動作する
   - 検証・緊急deploy用に`workflow_dispatch`も併せて用意しておくと、scheduleを待たずに手動実行できる
@@ -187,6 +228,28 @@ semantic-release本体および一部プラグイン（`@semantic-release/npm`�
   3. CD ワークフローが起動する（`push`トリガーの場合はその都度、`schedule`トリガーの場合は次回のscheduled runで）。`release` job が `base_branch` 上で `semantic-release` を実行してバージョンを計算し、`CHANGELOG.md`・`package.json` 等をローカルにコミットする。`git tag` によるタグ作成は semantic-release コア本体がこのコミット・push の後工程で行うため、この時点ではまだ作成されていない。
   4. `base_branch` が「変更は必ずPR経由」のリポジトリルールで保護されている場合、上記コミットの `base_branch` への直接pushは拒否される（想定内の失敗として扱う）。この場合 `git push` 失敗によって `semantic-release` プロセス自体が異常終了するため、タグは一度も作成されない。そのためタグ名はコミット済みの `package.json` に書き込まれたバージョンから導出する（`v<package.jsonのversion>`）。`release` job はローカルに作成済みのコミットを新しいブランチへpushし、`base_branch` へのPRを作成してAPI経由でsquash mergeすることで、「PR経由の変更」としてリポジトリルールを満たしたうえで反映する。タグはこの方法で導出した名前でsquash後のコミットへ新規に打つ。GitHub Releaseは`CHANGELOG.md`の該当バージョン節から作成する（`@semantic-release/github`のpublishステップは`semantic-release`プロセスの異常終了により実行されないため）。
   5. リリースPRの作成は参照側リポジトリの通常のCIワークフローも起動する（`pull_request`イベントであるため）。`release` jobはCIの完了を待たずに即座にマージを試みるため、リリースPR自体に対する`merge` jobの自動マージ処理と競合しうるが、後勝ち（`release` job側が先にマージすることが多い）で無害に失敗するのみで実害はない。
+
+<details>
+<summary>リリース手順のフロー（mermaid図）</summary>
+
+```mermaid
+flowchart TD
+    PR[1. 通常どおりPRを作成] --> CI[2. CI成功後<br/>merge jobがsquash merge]
+    CI --> CD[3. CDワークフロー起動<br/>semantic-releaseがバージョン計算<br/>CHANGELOG.md・package.jsonをコミット]
+    CD --> Protected{4. base_branchが<br/>PR必須で保護されているか}
+
+    Protected -->|保護なし| DirectPush[base_branchへ直接push成功<br/>semantic-releaseがタグを作成]
+    DirectPush --> GHRelease[GitHub Releaseを作成]
+
+    Protected -->|保護あり| PushFail[直接push失敗<br/>semantic-releaseが異常終了]
+    PushFail --> DeriveTag[package.jsonのversionから<br/>タグ名を導出]
+    DeriveTag --> NewBranch[新しいブランチへpushし<br/>base_branchへのPRを作成]
+    NewBranch --> ApiMerge[5. API経由でsquash merge<br/>通常のCIも並行して起動]
+    ApiMerge --> TagPush[squash後のコミットへ<br/>導出したタグ名で新規に打つ]
+    TagPush --> GHRelease
+```
+
+</details>
 - **なぜ `base_branch` へのpush後に実行するのか（旧方式からの変更点）**: 以前は PR の作業ブランチ上でマージ前に `semantic-release` を実行する方式だった。しかし、`pull_request` イベントで GitHub Actions が自動設定する `GITHUB_REF`/`GITHUB_REF_NAME` は `refs/pull/<PR番号>/merge` に固定されている。ワークフローYAMLの `env:` では上書きできない（GitHub Actionsの予約変数のため）。そのため semantic-release のブランチ判定が常に `refs/pull/<PR番号>/merge` を見てしまい、「対象ブランチと一致しないため公開しない」と判定されて新バージョンが一切発行されない状態になっていた（各ジョブ自体は成功扱いになるため発覚しにくい）。`base_branch` への実際のpushイベント、または`base_branch`を対象とした`schedule`イベント上で実行すれば `GITHUB_REF` は素直に `refs/heads/<base_branch>` になる。この場合、この問題は起きない（`schedule`イベントもpushと同様にデフォルトブランチのrefで実行されるため）。ただし `base_branch` がPR必須のリポジトリルールで保護されている場合は上記4のフォールバックが必要になる。
 
 ## 5. ビルド時バージョン情報のアプリ内表示（任意）

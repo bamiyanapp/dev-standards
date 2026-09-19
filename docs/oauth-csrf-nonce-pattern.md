@@ -9,7 +9,16 @@ CloudFront + Lambda@Edge（またはこれに類する構成）でCognito/Google
 - **バックグラウンドリクエストによる上書き**: Service Workerのプリキャッシュ、Speculation Rules API（Chrome）による他ページのprefetch等、ユーザー操作を伴わない未認証状態のバックグラウンドリクエストが発生することがある。これらが、ログイン試行中のものとは別のnonceで`csrf_state`Cookieを上書きしてしまう
 - **ブラウザのCookieポリシーによる破棄**: 特にSafari等のITP（Intelligent Tracking Prevention）は、クロスサイトリダイレクト直後のCookieを破棄することがある。ログアウト直後の再ログイン（IdP・OAuthプロバイダのセッションが直前まで有効なため認証の往復が高速に完了する）はこのタイミングに該当しやすい
 
-examinationでは「バックグラウンドリクエストをどう見分けてCookie上書きを避けるか」を4回試みた。CloudFrontキャッシュ説→`Sec-Fetch-Mode`ヘッダーでの判別→独自の`X-Precache-Request`ヘッダーでの判別→`Sec-Purpose`ヘッダーでの判別、という順である。いずれも一部のブラウザ・タイミングで再発した。**これらはいずれもCSRF検証をブラウザのCookieに依存させていること自体に起因する構造的な脆弱さ**であり、個別の見分け方を積み重ねても根本解決にならなかった。
+examinationでは「バックグラウンドリクエストをどう見分けてCookie上書きを避けるか」を4回試みた。
+
+| 試行順 | 判別方法 | 結果 |
+|---|---|---|
+| 1 | CloudFrontキャッシュ説 | 一部のブラウザ・タイミングで再発 |
+| 2 | `Sec-Fetch-Mode`ヘッダーでの判別 | 一部のブラウザ・タイミングで再発 |
+| 3 | 独自の`X-Precache-Request`ヘッダーでの判別 | 一部のブラウザ・タイミングで再発 |
+| 4 | `Sec-Purpose`ヘッダーでの判別 | 一部のブラウザ・タイミングで再発 |
+
+**これらはいずれもCSRF検証をブラウザのCookieに依存させていること自体に起因する構造的な脆弱さ**であり、個別の見分け方を積み重ねても根本解決にならなかった。
 
 ## 解決: nonce自体をサーバー側（DynamoDB）で管理する
 
@@ -17,6 +26,36 @@ Cookieを一切使わず、nonce自体の発行・検証・失効をサーバー
 
 1. 未認証時のログインリダイレクトで、ランダムなnonceを生成しDynamoDBへ`PutItem`する（TTL付き、短命でよい）。このnonceを`state`パラメータ（元のURIと合わせてBase64エンコード）に載せてIdPへリダイレクトする
 2. コールバック（`/_callback`等）で、`state`から取り出したnonceを`ConditionExpression`付き`DeleteItem`で検証と同時に削除する。「存在する・期限切れでない」を条件にすることで、有効期限内・未使用の一度きりの利用のみを許可する。存在しない・期限切れ・使用済み（リプレイ）のいずれの場合も一律で「invalid state」として扱う
+
+<details>
+<summary>nonce発行〜検証フロー（mermaid図）</summary>
+
+```mermaid
+sequenceDiagram
+    participant Browser as ブラウザ
+    participant Edge as Lambda@Edge
+    participant DB as DynamoDB
+    participant IdP as IdP（Cognito等）
+
+    Browser->>Edge: 未認証でアクセス
+    Edge->>Edge: ランダムなnonceを生成
+    Edge->>DB: PutItem（nonce、TTL付き）
+    Edge->>Browser: stateパラメータ（nonce+元URI）を<br/>載せてIdPへリダイレクト
+    Browser->>IdP: 認可リクエスト（state付き）
+    IdP->>Browser: コールバックへリダイレクト（state付き）
+    Browser->>Edge: /_callback（state付き）
+    Edge->>Edge: stateからnonceを取り出す
+    Edge->>DB: DeleteItem（ConditionExpression:<br/>存在する・期限切れでない）
+    alt 条件を満たす
+        DB-->>Edge: 削除成功
+        Edge->>Browser: 認証成功
+    else 存在しない・期限切れ・使用済み
+        DB-->>Edge: 条件不成立エラー
+        Edge->>Browser: invalid state
+    end
+```
+
+</details>
 
 ブラウザのCookieの生存・上書きに一切依存しないため、上記のどの要因からも影響を受けない。
 
