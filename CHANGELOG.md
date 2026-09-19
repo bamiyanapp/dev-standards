@@ -1,3 +1,10 @@
+# [2.24.0](https://github.com/bamiyanapp/dev-standards/compare/v2.23.0...v2.24.0) (2026-09-19)
+
+
+### Features
+
+* karutaのWakeLockフック・WebSocket知見をdev-standardsへ共通化する ([#570](https://github.com/bamiyanapp/dev-standards/issues/570)) ([eaee589](https://github.com/bamiyanapp/dev-standards/commit/eaee589ab37474e7595c762d280a98f5cd268357)), closes [#561](https://github.com/bamiyanapp/dev-standards/issues/561) [#562](https://github.com/bamiyanapp/dev-standards/issues/562) [#563](https://github.com/bamiyanapp/dev-standards/issues/563)
+
 # [2.23.0](https://github.com/bamiyanapp/dev-standards/compare/v2.22.0...v2.23.0) (2026-09-19)
 
 
