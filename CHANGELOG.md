@@ -1,3 +1,10 @@
+# [2.20.0](https://github.com/bamiyanapp/dev-standards/compare/v2.19.1...v2.20.0) (2026-09-19)
+
+
+### Features
+
+* **textlint:** ドキュメントの行数超過を検知する独自ルールmax-linesを追加する ([#538](https://github.com/bamiyanapp/dev-standards/issues/538)) ([aa694f4](https://github.com/bamiyanapp/dev-standards/commit/aa694f47f3bfc57566d2aa192615f7e4993da5f8)), closes [#537](https://github.com/bamiyanapp/dev-standards/issues/537)
+
 ## [2.19.1](https://github.com/bamiyanapp/dev-standards/compare/v2.19.0...v2.19.1) (2026-09-17)
 
 
