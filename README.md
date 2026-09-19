@@ -6,6 +6,10 @@
 
 [`docs/standard-tech-stack.md`](docs/standard-tech-stack.md)（標準技術スタックの索引・立ち上げ手順）から始める。
 
+## AIが開発する際のルール
+
+[`CLAUDE.md`](CLAUDE.md)に、Claude Codeが常に守るべき恒久的なルール・制約（Issue駆動の原則、PR承認・マージ禁止等）と、各ドキュメント・Skillへの索引をまとめている。人間向けの本README、プロダクト固有の知識をまとめる`docs/`、特定作業の手順をまとめる[`.claude/skills/`](.claude/skills/)とは役割を分けている。
+
 ## dev-standardsの導入方法
 
 参照側リポジトリへの取り込み方（git submodule追加・`bootstrap.js`によるセットアップ）と、`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の全入力パラメータは[`docs/reusable-workflows-reference.md`](docs/reusable-workflows-reference.md)を参照。CI/CDパイプライン自体の仕様（各ジョブの実行内容・Architecture）は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)を参照。
