@@ -1,6 +1,6 @@
-# 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`, `shared/sfx/`）
+# 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`, `shared/sfx/`, `shared/hooks/`）
 
-複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）と同様、`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」を参照する（考え方は共通）。
+複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）・汎用Reactフック（`shared/hooks/`）と同様、`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」を参照する（考え方は共通）。
 
 ## 提供するコンポーネント
 
@@ -193,6 +193,35 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 </ErrorBoundary>
 ```
 
+### `shared/hooks/useLocalStorageState.js`
+
+`localStorage`とReact stateを双方向同期する汎用hook（issue #559）。karuta（`bamiyanapp/karuta`）から切り出したもの。キー名・値の型はすべて呼び出し側から注入され、プロダクト固有のロジックは含まない。`parse`/`format`関数（任意）を渡すと文字列以外の値も扱える。
+
+```jsx
+import { useLocalStorageState } from "./hooks/useLocalStorageState.js";
+
+const [volume, setVolume] = useLocalStorageState(
+  "myapp-volume",
+  1,
+  (v) => Number(v),
+  (v) => String(v)
+);
+```
+
+`parse`/`format`を省略すると素の文字列としてそのまま扱う。
+
+### `shared/hooks/useSessionStorageState.js`
+
+`sessionStorage`とReact stateをJSONシリアライズで双方向同期する汎用hook（issue #559）。karutaから切り出したもの。オブジェクト・配列等、JSONで表現できる値をそのまま渡せる。
+
+```jsx
+import { useSessionStorageState } from "./hooks/useSessionStorageState.js";
+
+const [answers, setAnswers] = useSessionStorageState("myapp-answers", []);
+```
+
+読み書きに失敗した場合（プライベートブラウジング等でのストレージアクセス不可を含む）は`defaultValue`にフォールバックする。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -209,6 +238,8 @@ const playFailureSound = usePlaySound(failureSoundUrl)
     { "source": "shared/ui/getAppVersionDefine.js", "target": "app/top/getAppVersionDefine.js" },
     { "source": "shared/ui/formatBuildTime.js", "target": "app/top/src/components/formatBuildTime.js" },
     { "source": "shared/ui/ErrorBoundary.jsx", "target": "app/top/src/components/ErrorBoundary.jsx" },
+    { "source": "shared/hooks/useLocalStorageState.js", "target": "app/top/src/hooks/useLocalStorageState.js" },
+    { "source": "shared/hooks/useSessionStorageState.js", "target": "app/top/src/hooks/useSessionStorageState.js" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
