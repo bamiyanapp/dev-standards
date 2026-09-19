@@ -222,6 +222,20 @@ const [answers, setAnswers] = useSessionStorageState("myapp-answers", []);
 
 読み書きに失敗した場合（プライベートブラウジング等でのストレージアクセス不可を含む）は`defaultValue`にフォールバックする。
 
+### `shared/hooks/useValueChange.js`
+
+「前回レンダー時の値と比較し、変わっていれば副作用の無いstate更新を同期的に行う」パターンの共通化hook（issue #560）。karutaから切り出したもの。`useEffect`内での無条件`setState`が`react-hooks/set-state-in-effect`ルールに抵触するのを避けるため、Reactが推奨する「レンダー中のstate調整」の代替手段にあたる。外部キーの変化・接続状態の監視等、値の変化検知一般に同型で繰り返し現れる。
+
+```jsx
+import { useValueChange } from "./hooks/useValueChange.js";
+
+useValueChange(connectionStatus, (current, previous) => {
+  setLastStatusChangeAt(Date.now());
+});
+```
+
+`onChange`は副作用を伴わない同期的なstate更新のみを行うこと（レンダー中に呼ばれるため、fetch等の非同期処理やDOM操作は別途`useEffect`に書く）。`value`自体の導出ロジック（前回値への依存を含む複雑な分岐等）はこのhookの対象外とし、呼び出し側に委ねる。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -240,6 +254,7 @@ const [answers, setAnswers] = useSessionStorageState("myapp-answers", []);
     { "source": "shared/ui/ErrorBoundary.jsx", "target": "app/top/src/components/ErrorBoundary.jsx" },
     { "source": "shared/hooks/useLocalStorageState.js", "target": "app/top/src/hooks/useLocalStorageState.js" },
     { "source": "shared/hooks/useSessionStorageState.js", "target": "app/top/src/hooks/useSessionStorageState.js" },
+    { "source": "shared/hooks/useValueChange.js", "target": "app/top/src/hooks/useValueChange.js" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
