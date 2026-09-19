@@ -8,6 +8,32 @@
 
 フロントエンド・ホスティングは全プロダクト共通の標準構成を使う。ログイン・バックエンドAPIはそれぞれ独立に要否を判断し、必要な場合のみ該当する節の標準構成を採用する（ログインの要否・方式は、バックエンドAPIの基盤選択に影響しない）。
 
+<details>
+<summary>技術要素の採用パターン（mermaid図）</summary>
+
+```mermaid
+graph TD
+    Start[新規プロジェクト] --> FE[1. フロントエンド<br/>全プロジェクト共通]
+    Start --> Host[4. ホスティング<br/>全プロジェクト共通]
+    Start --> CICD[6. CI/CD<br/>全プロジェクト共通]
+    Start --> LoginQ{2. ログインが<br/>必要か}
+    Start --> ApiQ{3. バックエンドAPIが<br/>必要か}
+    Start --> PwaQ{5. PWAが<br/>必要か}
+
+    LoginQ -->|不要| SkipLogin[本節を採用しない]
+    LoginQ -->|必要| LoginChoice[Firebase Authentication<br/>または<br/>Google IDトークン直接検証]
+
+    ApiQ -->|不要| SkipApi[フロントエンドのみで完結]
+    ApiQ -->|必要| ApiBase[OSLS + Lambda +<br/>API Gateway + DynamoDB]
+
+    LoginChoice -.独立に組み合わせ可能.-> ApiBase
+
+    PwaQ -->|不要| SkipPwa[本節を採用しない]
+    PwaQ -->|必要| PwaImpl[初期ローディング・<br/>Service Worker更新パターン]
+```
+
+</details>
+
 ## 個人情報の扱い（全プロジェクト共通）
 
 「2. ログイン」の通り、フロントエンド自体は誰でも閲覧できる状態を前提とする。bamiyanapp配下のリポジトリも基本的に公開（Public）であるため、**フロントエンドが公開であることとリポジトリが公開であることは同じ前提の両面**として扱う。実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトは、コンテンツ・コード・コミット履歴・PR/Issue本文のいずれにも実在の個人情報を一切持ち込まない設計にする。個人単位のデータは実行時にAPI経由（認証済み）で取得する形にとどめ、リポジトリには置かない。詳細な原則・チェックリストは`docs/public-repo-no-pii-pattern.md`を参照。
@@ -73,6 +99,8 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
    ```
 
    `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（`docs/reusable-workflows-reference.md`「参照側リポジトリでの導入」参照）。
+
+   GitHubリポジトリのSettings > General > Pull Requestsで「Automatically delete head branches」を有効化する。この設定が無効だと、マージ済みPRのブランチが削除されずに残り続け、後から大量の不要ブランチを手動整理する手間が生じる。この設定はClaude Codeの利用するプロキシ経由でのリポジトリ設定変更がブロックされているため、人間が直接設定する必要がある。
 
 2. **フロントエンドの雛形を用意**
 

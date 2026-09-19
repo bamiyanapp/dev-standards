@@ -2,6 +2,25 @@
 
 バックエンド以外の実行環境（自宅Raspberry Pi等）が完全に停止・クラッシュした場合、AWS側には一切ログもリクエストも残らないため、通常のエラーログ監視では気づけない（youtube-radar issue #122由来）。CloudWatch Alarmで「想定間隔以上、期待するリクエスト/イベントが発生していない」こと自体を異常として検知し、SNS経由でLambdaを起動、運用監視専用のLINE Bot（各プロダクトのユーザー向け通知Botとは別に、全プロダクト共通で1つ新規開設したもの）へ通知する。
 
+<details>
+<summary>CloudWatch→LINE通知フロー（mermaid図）</summary>
+
+```mermaid
+flowchart LR
+    subgraph 監視対象
+        Target[Raspberry Pi等の<br/>実行環境]
+    end
+    Target -->|定期的に呼び出し| Metric[CloudWatch<br/>メトリクス]
+    Metric --> Alarm{CloudWatch Alarm<br/>想定間隔以上<br/>呼び出しが無い}
+    Alarm -->|TreatMissingData:<br/>breaching| SNS[SNS Topic]
+    SNS --> Lambda[opsAlertLambda]
+    Lambda --> Build[buildOpsAlertMessage]
+    Build --> Send[sendOpsAlert]
+    Send --> LINE[運用監視専用<br/>LINE Bot]
+```
+
+</details>
+
 **このファイル自体はnpmパッケージを`require`しない**（symlink経由で共有する場合の制約は`docs/daily-rate-limit-pattern.md`参照）。SNSイベントのパース等、実際のLambdaハンドラの実装は呼び出し側に委ねる。
 
 ## 使い方

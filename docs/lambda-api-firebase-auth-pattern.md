@@ -35,6 +35,27 @@ Firebase Authenticationはセッション状態をIndexedDBへ永続化する。
 
 `FIREBASE_SERVICE_ACCOUNT`環境変数にサービスアカウントキーのJSON文字列を設定し、Lambda実行環境で`firebase-admin`を初期化する。
 
+<details>
+<summary>ユーザー識別ロジックのフロー（mermaid図）</summary>
+
+```mermaid
+flowchart TD
+    Start[リクエスト受信] --> HasToken{Authorization:<br/>Bearer トークンあり}
+    HasToken -->|あり| VerifyToken[firebase-adminで検証]
+    VerifyToken --> TokenValid{検証成功}
+    TokenValid -->|成功| UseUid[UIDを採用]
+    TokenValid -->|失敗| Reject[認証エラー]
+
+    HasToken -->|なし| HasTestHeader{x-user-id ヘッダー<br/>かつテストモード}
+    HasTestHeader -->|あり| UseTestId[固定ヘッダー値を<br/>認証なしで許可]
+
+    HasTestHeader -->|なし| AllowInsecure{ALLOW_INSECURE_USER_ID<br/>=true か}
+    AllowInsecure -->|有効| UseDevFallback[x-user-idを<br/>そのまま信頼]
+    AllowInsecure -->|無効| Reject
+```
+
+</details>
+
 ## OSLS（Open Serverless）の採用
 
 Serverless Framework（`serverless`パッケージ）はv4.0以降ライセンス体系が変更され、一定規模を超える商用利用に有料サブスクリプションが必要になった。v3系のままオープンソースで開発が継続されている後継/フォークプロジェクトである**OSLS**（npmパッケージ名`osls`、[oss-serverless/osls](https://github.com/oss-serverless/osls)）へ切り替えることで、このライセンス制約を回避する。
