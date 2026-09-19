@@ -29,6 +29,36 @@ CloudFrontのドメイン名（`*.cloudfront.net`）はディストリビュー�
 
 2回目以降の通常デプロイでは手順1で既に正しいドメインが取れているため、手順5は実行されない（差分が無く即座に完了する）。
 
+<details>
+<summary>2スタック循環依存解消のデプロイ手順（mermaid図）</summary>
+
+```mermaid
+sequenceDiagram
+    participant CD as デプロイスクリプト
+    participant Auth as auth-stack<br/>Cognito
+    participant Site as site-stack<br/>CloudFront
+
+    CD->>Site: 1. 既存site-stackの<br/>CloudFrontドメインを取得
+    alt 既存site-stackが無い
+        Site-->>CD: プレースホルダー
+    else 既存site-stackがある
+        Site-->>CD: 実際のドメイン
+    end
+    CD->>Auth: 2. 取得した値でauth-stackをデプロイ
+    Auth-->>CD: Cognito各種ID・シークレット
+    CD->>CD: 3. Lambda@Edge用設定ファイルを生成
+    CD->>Site: 4. site-stackをデプロイ
+    Site-->>CD: 実際のCloudFrontドメイン
+    CD->>CD: 手順1のドメインと実ドメインを比較
+    alt 初回ブートストラップ時のみ（差分あり）
+        CD->>Auth: 5. 実ドメインでauth-stackを再デプロイ<br/>Callback/Logout URLを確定
+    else 2回目以降（差分なし）
+        Note over CD: 手順5は実行されない
+    end
+```
+
+</details>
+
 ## 認証フロー（Lambda@Edge、`viewer-request`イベント）
 
 CloudFrontの`viewer-request`イベント（キャッシュヒット時も含め全リクエストで実行される）で動作するLambda@Edge関数が、静的サイトへの全アクセスをゲートする。
@@ -37,6 +67,39 @@ CloudFrontの`viewer-request`イベント（キャッシュヒット時も含め
 2. Googleでログインすると、Cognitoが認可コード付きでコールバックパス（例: `/_callback`）へリダイレクトしてくる。Lambdaが認可コードをトークン（`id_token`・`refresh_token`）に交換し、HttpOnly・Secure・SameSite=LaxのCookieとして保存した上で、元のパスへリダイレクトする
 3. 以降のリクエストは`id_token`Cookieの署名（Cognito JWKS）・有効期限・audience/issuerを検証し、さらに`email`クレームが許可リスト（DynamoDB）に登録されているかを確認する。登録されていればS3オリジンへ通す
 4. ログアウト用パスへアクセスすると、Cookieを失効させた上でCognito自体のセッションも切ってトップページへ戻す
+
+<details>
+<summary>認証フロー（mermaid図）</summary>
+
+```mermaid
+sequenceDiagram
+    participant Browser as ブラウザ
+    participant Edge as CloudFront<br/>Lambda@Edge
+    participant Cognito
+    participant S3
+
+    Browser->>Edge: リクエスト
+    alt id_token Cookieが無い/検証失敗
+        Edge->>Browser: Cognito Hosted UIへ<br/>リダイレクト（stateに元パス）
+        Browser->>Cognito: Googleでログイン
+        Cognito->>Browser: 認可コード付きで<br/>コールバックパスへリダイレクト
+        Browser->>Edge: コールバック（認可コード）
+        Edge->>Cognito: 認可コードをトークンに交換
+        Cognito-->>Edge: id_token・refresh_token
+        Edge->>Browser: HttpOnly/Secure Cookieを保存し<br/>元のパスへリダイレクト
+    else id_token Cookieが有効
+        Edge->>Edge: 署名・有効期限・audience/issuerを検証
+        Edge->>Edge: emailクレームが許可リストにあるか確認
+        Edge->>S3: 許可されていればS3オリジンへ通す
+        S3-->>Browser: レスポンス
+    end
+
+    Browser->>Edge: ログアウトパスへアクセス
+    Edge->>Cognito: Cookie失効・セッションを切る
+    Edge->>Browser: トップページへ戻す
+```
+
+</details>
 
 このフローに付随する個別の設計判断は、それぞれ独立したドキュメントに切り出してある。新規に実装する場合は必ず参照すること。
 

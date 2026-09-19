@@ -16,6 +16,34 @@ CloudFrontの`id_token`Cookie（Lambda@Edgeで検証）によるログインセ�
 
 トークン自体は「ログイン済み・許可済みユーザーであることの証明」以上の意味を持たない汎用的なものにし、特定機能名に縛られた名前を避ける（examinationでは`/_voice-token`という発行元エンドポイント名は音声機能由来だが、トークン自体はバックエンドAPI全般で使い回している）。
 
+<details>
+<summary>トークン発行〜検証フロー（mermaid図）</summary>
+
+```mermaid
+sequenceDiagram
+    participant Browser as ブラウザ
+    participant Edge as CloudFront<br/>Lambda@Edge（発行側）
+    participant DB as DynamoDB
+    participant API as バックエンドAPI<br/>Lambda（検証側）
+
+    Browser->>Edge: トークン発行リクエスト<br/>（id_token Cookie付き）
+    Edge->>Edge: Cognitoセッションを検証
+    Edge->>Edge: 許可リストのメールアドレスか確認
+    Edge->>Edge: ランダムな短命トークンを生成
+    Edge->>DB: PutItem（token、email、expiresAt）
+    Edge-->>Browser: トークンを返す
+
+    Browser->>API: Authorization: Bearer &lt;token&gt;<br/>（別オリジンへCORS越しにリクエスト）
+    API->>DB: GetItem（token）
+    DB-->>API: token情報
+    API->>API: 有効期限内か確認
+    API->>DB: GetItem（許可リストのemail）
+    DB-->>API: 許可状態
+    API-->>Browser: レスポンス
+```
+
+</details>
+
 ### 発行側（CloudFront Lambda@Edge）
 
 ```js
