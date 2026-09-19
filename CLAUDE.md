@@ -144,6 +144,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 
 - `docs/nextjs-static-lambda-pattern.md`: Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）
 - `docs/serverless-spa-pattern.md`: SPA + Serverless Framework独自バックエンドAPIパターン
+- `docs/websocket-client-reconnect-pattern.md`: WebSocketクライアントの再接続エンジン設計パターン
 - `docs/static-hosting-pattern.md`: S3 + CloudFrontによる静的サイト配信パターン
 - `docs/https-response-buffer-encoding-pattern.md`: `https.request`のレスポンスボディ文字化け対策
 - `docs/llm-dual-format-response-pattern.md`: LLM APIのdual-format JSON応答生成
