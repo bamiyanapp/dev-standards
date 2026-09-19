@@ -1,3 +1,10 @@
+# [2.23.0](https://github.com/bamiyanapp/dev-standards/compare/v2.22.0...v2.23.0) (2026-09-19)
+
+
+### Features
+
+* **hooks:** karutaの汎用Reactフックをshared/hooks/へ共通化する ([#569](https://github.com/bamiyanapp/dev-standards/issues/569)) ([73a44b9](https://github.com/bamiyanapp/dev-standards/commit/73a44b977ec4a327fa5464bde5e40df09621fbcf)), closes [#559](https://github.com/bamiyanapp/dev-standards/issues/559) [#560](https://github.com/bamiyanapp/dev-standards/issues/560)
+
 # [2.22.0](https://github.com/bamiyanapp/dev-standards/compare/v2.21.1...v2.22.0) (2026-09-19)
 
 
