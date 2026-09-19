@@ -100,6 +100,8 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
    `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（`docs/reusable-workflows-reference.md`「参照側リポジトリでの導入」参照）。
 
+   GitHubリポジトリのSettings > General > Pull Requestsで「Automatically delete head branches」を有効化する。この設定が無効だと、マージ済みPRのブランチが削除されずに残り続け、後から大量の不要ブランチを手動整理する手間が生じる。この設定はClaude Codeの利用するプロキシ経由でのリポジトリ設定変更がブロックされているため、人間が直接設定する必要がある。
+
 2. **フロントエンドの雛形を用意**
 
    `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿って構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）。
