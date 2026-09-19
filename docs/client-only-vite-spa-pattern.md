@@ -121,6 +121,45 @@ const copiedText = await navigator.clipboard.readText();
 expect(copiedText).toBe(expectedUrl);
 ```
 
+### Node.js 22+の`localStorage`グローバルがjsdomの実装を覆ってしまう落とし穴
+
+Node.js 22以降はフラグなしで`localStorage`グローバルを提供する。しかし`--localstorage-file`（ファイルへの永続化先）を指定しない場合、この組み込み`localStorage`は`getItem`/`setItem`が機能しない状態のまま、jsdomが提供する動作するはずの`localStorage`実装を上書きしてしまう。`localStorage`を使うコンポーネント・hookのテストが、値の永続化を検証する箇所で原因不明に失敗する場合はこれを疑う。
+
+`setupTests.js`（vitestの`setupFiles`）で、`setItem`が関数でない場合にのみメモリ実装を補完する。
+
+```js
+// Node 22+ がフラグなしの `localStorage` グローバルを提供するが、
+// `--localstorage-file` 未指定だと getItem/setItem が機能せず jsdom の実装を覆ってしまう。
+// テスト用にメモリ上で動作する localStorage を明示的に補完する。
+if (typeof globalThis.localStorage?.setItem !== 'function') {
+  class MemoryStorage {
+    constructor() {
+      this.store = new Map();
+    }
+    getItem(key) {
+      return this.store.has(key) ? this.store.get(key) : null;
+    }
+    setItem(key, value) {
+      this.store.set(key, String(value));
+    }
+    removeItem(key) {
+      this.store.delete(key);
+    }
+    clear() {
+      this.store.clear();
+    }
+  }
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: new MemoryStorage(),
+    configurable: true,
+  });
+}
+```
+
+jsdom v30とNode 20の非互換（前述の`node_version`節参照）とは別種だが同じ「Node.jsバージョンとjsdomの相互作用」に起因する既知の落とし穴のため、CIで`localStorage`関連のテストのみ不可解に失敗する場合は、まずNode.jsのバージョン・この補完コードの有無を確認する。
+
+なお、CI実行はローカルより遅くなることがあり、`waitFor`系のデフォルトタイムアウト（1000ms）では音声再生・アニメーション待ちを伴うテストがまれにタイムアウトすることがある。同じ`setupTests.js`で`@testing-library/react`の`configure({ asyncUtilTimeout: 3000 })`により底上げしておくと安定する。
+
 ## lint
 
 ESLintを標準とする（`docs/code-quality-conventions.md`「lint」参照）。`typescript-eslint`の推奨設定に、React Hooksのルール違反検知（`eslint-plugin-react-hooks`）・循環的複雑度（`complexity`ルール）・`eslint-plugin-sonarjs`・未使用変数の検知（`no-unused-vars`）を組み合わせる。ファイルサイズの検知（`max-lines`ルール）もあわせて組み合わせる。
