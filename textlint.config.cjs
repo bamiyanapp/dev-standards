@@ -35,5 +35,10 @@ module.exports = {
       // 数えられない実装上の制約により、常体オンリーの文書では機能しないため無効化する
       "no-mix-dearu-desumasu": false,
     },
+    // 独自ルール（textlint-rules/max-lines.js、issue #537）。--rulesdir textlint-rulesで
+    // 読み込む前提のため、このキーはtextlint-rules/配下のファイル名（拡張子無し）と一致させる。
+    // しきい値200は、dev-standards自身の現状最大ファイル（docs/cicd-pipeline-specification.md、
+    // 実効178行）に対しわずかな余裕を持たせたラチェット値
+    "max-lines": { max: 200 },
   },
 };

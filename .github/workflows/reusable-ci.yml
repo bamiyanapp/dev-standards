@@ -1306,9 +1306,9 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
-      # textlint.config.cjsはdev-standards submodule配下からのsymlink（sync-manifest.json）
-      # のため、参照側リポジトリではsubmoduleの取得が必須（dev-standards自身の
-      # dogfoodingではsubmoduleが存在しないため無害）
+      # textlint.config.cjs・textlint-rules/（独自ルール、issue #537）はdev-standards
+      # submodule配下からのsymlink（sync-manifest.json）のため、参照側リポジトリでは
+      # submoduleの取得が必須（dev-standards自身のdogfoodingではsubmoduleが存在しないため無害）
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -1338,7 +1338,7 @@ jobs:
             exit 0
           fi
           npx --yes -p textlint@15.8.0 -p textlint-rule-preset-ja-technical-writing@12.0.2 \
-            textlint --config textlint.config.cjs "${targets[@]}"
+            textlint --rulesdir textlint-rules --config textlint.config.cjs "${targets[@]}"
 
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され

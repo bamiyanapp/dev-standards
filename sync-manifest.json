@@ -12,7 +12,8 @@
     { "source": ".claude/settings.json", "target": ".claude/settings.json" }
   ],
   "symlinkAllInDir": [
-    { "source": ".claude/skills", "target": ".claude/skills" }
+    { "source": ".claude/skills", "target": ".claude/skills" },
+    { "source": "textlint-rules", "target": "textlint-rules" }
   ],
   "copies": [
     { "source": ".gitignore", "target": ".gitignore" }
