@@ -19,26 +19,83 @@
 
 ## なぜ2つのスタックに分けるか（循環依存の解消）
 
-CloudFrontのドメイン名（`*.cloudfront.net`）はディストリビューション作成後は不変だが、作成前には分からない。一方Cognito User Pool ClientのCallback URL / Logout URLには実際のCloudFrontドメインを含める必要があり（一致しないとCognitoが認可リクエストを拒否する）、この循環依存を1回のデプロイで解消できない。デプロイスクリプト（例: `cd.yml`）側で以下の順序を取る。
+CloudFrontのドメイン名（`*.cloudfront.net`）はディストリビューション作成後は不変だが、作成前には分からない。Cognito User Pool ClientのCallback URL / Logout URLには実際のCloudFrontドメインが必須であり、この循環依存を1回のデプロイでは解消できない。
 
-1. 既存の`site-stack`があれば、そのCloudFrontドメインを取得する（無ければプレースホルダー）
-2. その値で`auth-stack`をデプロイし、Cognitoの各種IDとシークレットを取得する
-3. 取得した値からLambda@Edge用の設定ファイル（gitには含めない）を生成する
-4. `site-stack`をデプロイし、実際のCloudFrontドメインを取得する
-5. 手順1で使ったドメインと実際のドメインが異なる場合（＝初回ブートストラップ時のみ）、実ドメインで`auth-stack`をもう一度デプロイし、Callback URL / Logout URLを確定させる
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
 
-2回目以降の通常デプロイでは手順1で既に正しいドメインが取れているため、手順5は実行されない（差分が無く即座に完了する）。
+```mermaid
+flowchart TD
+    A["🔄 デプロイ開始"] --> B["取得: CloudFrontドメイン<br/>初回の場合はプレースホルダー"]
+    B --> C["1️⃣ auth-stackをデプロイ<br/>Cognito IDを取得"]
+    C --> D["2️⃣ Lambda@Edge設定を生成"]
+    D --> E["3️⃣ site-stackをデプロイ<br/>実CloudFrontドメイン取得"]
+    E --> F{"ドメイン一致?"}
+    F -->|初回ブートストラップ| G["4️⃣ auth-stack再デプロイ<br/>Callback URLを確定"]
+    F -->|通常デプロイ| H["✅ 完了"]
+    G --> H
+```
+
+</details>
+
+手順は以下の通り：
+
+1. 既存の`site-stack`があれば、そのCloudFrontドメインを取得（無ければプレースホルダー）
+2. `auth-stack`をデプロイし、Cognitoの各種IDとシークレットを取得
+3. 取得した値からLambda@Edge用設定ファイルを生成
+4. `site-stack`をデプロイし、実CloudFrontドメインを取得
+5. 初回ブートストラップ時のみ、実ドメインで`auth-stack`をもう一度デプロイ
+
+通常デプロイでは手順4で既に正しいドメインが取れているため、手順5は実行されない。
 
 ## 認証フロー（Lambda@Edge、`viewer-request`イベント）
 
-CloudFrontの`viewer-request`イベント（キャッシュヒット時も含め全リクエストで実行される）で動作するLambda@Edge関数が、静的サイトへの全アクセスをゲートする。
+CloudFrontの`viewer-request`イベントで動作するLambda@Edge関数が、全アクセスをゲートする（キャッシュヒット時も含む）。
 
-1. リクエストに有効な`id_token`Cookieが無い/検証に失敗した場合、元のパスを`state`パラメータに乗せてCognito Hosted UIのログイン画面へリダイレクトする
-2. Googleでログインすると、Cognitoが認可コード付きでコールバックパス（例: `/_callback`）へリダイレクトしてくる。Lambdaが認可コードをトークン（`id_token`・`refresh_token`）に交換し、HttpOnly・Secure・SameSite=LaxのCookieとして保存した上で、元のパスへリダイレクトする
-3. 以降のリクエストは`id_token`Cookieの署名（Cognito JWKS）・有効期限・audience/issuerを検証し、さらに`email`クレームが許可リスト（DynamoDB）に登録されているかを確認する。登録されていればS3オリジンへ通す
-4. ログアウト用パスへアクセスすると、Cookieを失効させた上でCognito自体のセッションも切ってトップページへ戻す
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
 
-このフローに付随する個別の設計判断は、それぞれ独立したドキュメントに切り出してある。新規に実装する場合は必ず参照すること。
+```mermaid
+sequenceDiagram
+    actor User as ユーザー/ブラウザ
+    participant LE as Lambda@Edge
+    participant Cognito as Cognito Hosted UI
+    participant DDB as DynamoDB<br/>許可リスト
+    participant S3 as S3 Origin
+
+    User->>LE: 1️⃣ サイトアクセス
+    LE->>LE: id_token Cookie検証
+    alt Cookie無効/未検証
+        LE->>Cognito: ログイン画面へ<br/>リダイレクト
+        Cognito->>User: Google認証画面
+        User->>Cognito: Google認証
+        Cognito->>LE: 認可コード + callback
+        LE->>Cognito: トークン交換
+        Cognito->>LE: id_token+refresh_token
+        LE->>User: Cookie保存<br/>元パスへ戻す
+    end
+    LE->>DDB: 2️⃣ email確認
+    alt メールが許可リストに登録
+        LE->>S3: 3️⃣ サイト配信
+        S3->>User: コンテンツ表示
+    else 未登録
+        LE->>User: ❌ 403 Forbidden
+    end
+    User->>LE: 4️⃣ ログアウト
+    LE->>User: Cookie削除<br/>トップページへ
+```
+
+</details>
+
+フロー概要：
+
+1. サイト初回アクセスで有効な`id_token` Cookieが無い場合、Cognito Hosted UIのログイン画面へリダイレクト
+2. Google認証後、Cognitoがコールバックで認可コードを返し、Lambda@Edgeがトークン（`id_token`・`refresh_token`）に交換してHttpOnly Cookieとして保存
+3. `id_token`署名・有効期限・audience/issuerを検証し、`email`クレームがDynamoDBの許可リストに登録されているかを確認
+4. 登録済みならS3オリジンへ通す。未登録ならアクセス拒否
+5. ログアウト用パスはCookieを失効させ、Cognitoセッションも終了
+
+本フローの設計判断は各専門ドキュメントに分離してある。
 
 - **ログインCSRF対策**: `state`のnonce検証をCookieに依存させると、Service Worker等のバックグラウンドリクエストによる上書きやITP（Safari）によるCookie破棄で「invalid state」が再発する。nonce自体をDynamoDBでサーバー側管理する（`docs/oauth-csrf-nonce-pattern.md`）
 - **セッションの自動延長**: `id_token`失効後も`refresh_token`Cookieが有効な間は、Googleへの完全な再ログインを経ずにセッションを継続する（`grant_type=refresh_token`でのトークン再発行）

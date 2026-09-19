@@ -28,7 +28,53 @@ graph TD
 ![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification.png)
 
 ## 1. CI ワークフロー (`reusable-ci.yml`)
+
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
+
+<details>
+<summary>ワークフロー全体図（mermaid記法）</summary>
+
+```mermaid
+flowchart TD
+    A["🔀 PR or Push to base_branch"] --> B["commitlint"]
+    B --> C{"リポジトリ<br/>構成別"}
+    C -->|single-pkg| D["frontend-test"]
+    C -->|monorepo| E["frontend-test & backend-test<br/>並列実行"]
+    C -->|custom| F["package-test<br/>matrix展開"]
+    D --> G["frontend-e2e-test?<br/>enable_e2e_test"]
+    E --> G
+    F --> G
+    G -->|有効| H["E2E テスト<br/>スクリーンショット報告"]
+    G -->|無効| I["✓ テスト系完了"]
+    H --> I
+    I --> J["duplication-check?<br/>enable_duplication_check"]
+    J -->|有効| K["コード重複検知"]
+    J -->|無効| L["✓ 重複チェック完了"]
+    K --> L
+    L --> M["architecture-check?<br/>enable_architecture_check"]
+    M -->|有効| N["循環依存・越境import検知"]
+    M -->|無効| O["✓ アーキテクチャ検査完了"]
+    N --> O
+    O --> P["text-lint?<br/>enable_text_lint"]
+    P -->|有効| Q["Markdown文章品質チェック"]
+    P -->|無効| R["✓ テキストlint完了"]
+    Q --> R
+    R --> S["render-mermaid-diagrams?<br/>enable_mermaid_render"]
+    S -->|有効| T["Mermaid図レンダリング<br/>PR/Job Summary表示"]
+    S -->|無効| U["✓ Mermaid処理完了"]
+    T --> U
+    U --> V["merge job"]
+    V -->|全テスト成功| W["base_branchへ Squash merge"]
+    V -->|失敗| X["❌ CI失敗"]
+    W --> Y["🚀 CD ワークフロー実行"]
+    style A fill:#e1f5ff
+    style W fill:#c8e6c9
+    style Y fill:#fff9c4
+    style X fill:#ffcdd2
+```
+
+</details>
+
 - **実行内容**:
   - `commitlint`: コミットメッセージ（`pull_request`イベントではPRタイトル自体も含む。Squash merge時にmainへ残る唯一のコミットの件名になるため）が Conventional Commits 形式に従っているか検証
   - `frontend-test`: frontend の Lint・Vitest テスト（カバレッジ集計付き）・ビルド
