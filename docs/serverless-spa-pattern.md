@@ -159,6 +159,16 @@ functions:
 
 **実バックエンド直結のE2Eが外部要因（バックエンドのコールドスタート等）で既知のflakyになる場合**、キャッシュのウォームアップやCI側の自動リトライは一般に費用対効果が見合わないことが多い。該当箇所を`try/catch`で囲み、タイムアウト時に`test.skip(true, reason)`でそのテストのみskip扱いにする（テスト内容自体は60秒等の許容時間内に収まった実行では引き続き全て検証される）運用上の割り切りが有効な場合がある。
 
+## ドキュメント自動生成（`serverless.yml`駆動）
+
+`backend/serverless.yml`は環境変数・APIルート・DynamoDBテーブル定義等、プロダクトの構成情報を集約した単一の正（source of truth）である。これを手動でドキュメントへ転記すると、`serverless.yml`の変更に追従できず実態と乖離する（ドキュメントドリフト）。`serverless.yml`をパースしてMarkdownを自動生成し、`docs/generated/`へ出力する仕組みを設けると、この乖離を構造的に防げる。
+
+- **共通ローダー**: `js-yaml`の`CORE_SCHEMA`に、CloudFormation組み込み関数（`!GetAtt`・`!Sub`・`!Ref`等）のタグを`{ "Fn::<Tag>": <値> }`として素通しするだけの最小限のカスタムスキーマを追加してパースする（値の解決は行わない。静的なルート・テーブル定義の抽出が目的のため）。`${self:custom.xxx}`変数参照は`custom`セクションの実値へ解決する
+- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、環境変数一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等、用途ごとに必要な情報だけを抽出してMarkdownへ整形する。テーブル形式が向くもの（環境変数一覧等）、Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）は`docs/documentation-format-conventions.md`の基準で使い分ける
+- **出力先とワークフロー**: 生成先の`docs/generated/`配下に「手動編集禁止・再生成コマンドで上書きされる」旨を明記したREADMEを置く。`npm run docs:generate`のような単一コマンドで全生成スクリプトを実行できるようにし、`serverless.yml`を変更したPRではこのコマンドを実行してから生成物ごとコミットする運用にする
+
+コード自体はプロダクトごとに`serverless.yml`の構成（リソース名・関数名等）が異なるため、共通ローダー・生成スクリプトのsymlink共有はせず、このパターン記述と実装例の参照にとどめる。
+
 ## 実例
 
-karuta（`bamiyanapp/karuta`）の`frontend/`・`backend/serverless.yml`・`.github/workflows/ci.yml`・`cd.yml`が本パターンの完全な実装例。
+karuta（`bamiyanapp/karuta`）の`frontend/`・`backend/serverless.yml`・`.github/workflows/ci.yml`・`cd.yml`が本パターンの完全な実装例。ドキュメント自動生成は`scripts/docs/serverless-yaml.js`（共通ローダー）・`scripts/docs/generate-env-vars.js`等の各生成スクリプト・`docs/generated/`が実例。
