@@ -39,6 +39,7 @@ GitHubの公開リポジトリでは、個人情報を含むコミットを後�
 - `docs/standard-tech-stack.md`「2. ログイン」: フロントエンド公開＋API単位認証の標準構成
 - `docs/short-lived-bearer-token-pattern.md`: 個人情報を返すAPIをリクエスト単位で認証する具体的な実装パターン
 - `docs/serverless-static-site-pattern.md`: サイト閲覧自体を非公開にしたい場合の代替構成（本パターンの対象外としたい場合の選択肢）
+- `docs/public-repo-secrets-in-actions-pattern.md`: 同じ「公開リポジトリ前提」の秘密情報（認証情報・トークン等）版。GitHub Actionsのログ・Job Summaryへ秘密情報を出力しないための指針
 
 ## 実例
 
