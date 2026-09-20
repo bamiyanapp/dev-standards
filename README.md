@@ -64,9 +64,14 @@
 ### CI/CD・運用
 
 - [`cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md): `reusable-ci.yml` / `reusable-cd.yml`の仕様
+- [`e2e-coverage-pattern.md`](docs/e2e-coverage-pattern.md): PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
 - [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
 - [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
+
+### 個人情報・リポジトリ運用
+
+- [`public-repo-no-pii-pattern.md`](docs/public-repo-no-pii-pattern.md): 公開リポジトリに個人情報を持ち込まないパターン
 
 ## 参照側アプリ一覧
 
