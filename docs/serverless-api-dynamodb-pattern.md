@@ -72,14 +72,14 @@ sequenceDiagram
 
     Note over Frontend,Google: 初回ログイン
     Frontend->>Google: Google IDトークンを取得
-    Frontend->>Backend: POST /auth/session<br/>Bearer &lt;Google IDトークン&gt;
+    Frontend->>Backend: POST /auth/session<br/>Bearer（Google IDトークン）
     Backend->>Google: verifyIdToken（audience検証）
     Google-->>Backend: 検証結果
     Backend->>Backend: セッショントークン（HS256 JWT）を発行
     Backend-->>Frontend: セッショントークンを返す
 
     Note over Frontend,Backend: 2回目以降の全リクエスト
-    Frontend->>Backend: 各APIリクエスト<br/>Bearer &lt;セッショントークン&gt;
+    Frontend->>Backend: 各APIリクエスト<br/>Bearer（セッショントークン）
     Backend->>Backend: createSessionAuthenticatorで検証<br/>（Google APIへの通信は発生しない）
     Backend-->>Frontend: レスポンス
 ```
