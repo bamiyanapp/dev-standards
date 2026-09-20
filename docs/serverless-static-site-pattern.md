@@ -119,12 +119,7 @@ Lambda@Edgeが処理する動的パス（コールバック・ログアウト・
 
 ## キャッシュヘッダー戦略
 
-静的サイト配信の標準的な戦略として、ファイル種別ごとに異なる`Cache-Control`を明示的に付与する（S3はデフォルトでCache-Controlを付与しないため、明示しないとCloudFrontのDefaultTTLに委ねられ、更新後も古い内容が配信され続ける不具合の原因になる）。
-
-- ハッシュ付きJS/CSS等のビルド成果物: `public, max-age=31536000, immutable`（内容が変われば名前自体が変わるため長期不変キャッシュにしてよい）
-- それ以外（`index.html`・`favicon`等、内容が変わってもファイル名が変わらないもの）: `no-cache`（使用前に必ずオリジンへ再検証させる）
-
-デプロイのたびに`aws cloudfront create-invalidation --paths "/*"`でCloudFrontのエッジキャッシュを無効化する。ただしこれはユーザーのブラウザ本体のキャッシュまでは無効化しないため、PWA化する場合はService Workerの更新パターン（`docs/service-worker-update-pattern.md`）と合わせて設計する。
+`docs/static-hosting-pattern.md`「キャッシュヘッダー戦略」と同じ（ログイン要否に関わらずS3 + CloudFrontのキャッシュ戦略は共通のため、重複記載しない）。
 
 ## 別オリジンのバックエンドAPIが必要な場合
 

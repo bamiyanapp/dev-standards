@@ -32,6 +32,11 @@ jobs:
       # lint:textスクリプトのみで実行しており、このjobは常にskippedと表示され紛らわしかった）
       enable_text_lint: true
       text_lint_paths: "docs/*.md\nREADME.md\nCLAUDE.md\n.claude/skills/**/*.md"
+      # issue #586: CLAUDE.md・SKILL.md間の丸ごとコピペ重複（drift事故の原因）を検知する。
+      # 実測値（0.13%、意図的なコード例2種の重複のみ）に対し8倍程度の余裕を持たせる
+      enable_doc_duplication_check: true
+      doc_duplication_threshold: 1
+      doc_duplication_paths: "docs\nREADME.md\nCLAUDE.md\n.claude/skills"
     secrets:
       # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
       # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、

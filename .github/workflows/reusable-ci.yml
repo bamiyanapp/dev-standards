@@ -130,6 +130,39 @@ on:
           各リポジトリのIssueで管理すること
         type: number
         default: 0
+      enable_doc_duplication_check:
+        description: >-
+          jscpdによるMarkdownドキュメント重複検知ジョブ（doc-duplication-check）を
+          実行するかどうか（bamiyanapp/dev-standards#586）。duplication-check
+          （コード向け）とは別ジョブとし、doc_duplication_pathsで指定した
+          パスのみを対象にする。ドキュメント間の丸ごとコピペ（例:
+          CLAUDE.mdと各SKILL.mdで同じ禁止ルールを重複記載し、後から
+          文言がずれるドリフト事故）を検知する。ドキュメント本文中の
+          意味が同じでも言い回しが違う重複（パラフレーズ）までは
+          検知できない点に注意（トークン単位の厳密一致のみ判定する）。
+        type: boolean
+        default: false
+      doc_duplication_threshold:
+        description: >-
+          Markdownドキュメント重複率のしきい値（%、0以下でゲート無効・
+          レポート表示のみ）。jscpdの`--threshold`へ渡す。doc_duplication_pathsで
+          指定したパスをそのままjscpdへ渡すため、ドキュメント内の埋め込み
+          コードサンプル（```js等のフェンス）もjscpdの自動フォーマット判定に
+          より別フォーマットとして計上されうる。意図的に複数の完全な
+          コード例を並べるドキュメント（例: 基本形と拡張形の2例）がある場合は
+          その分の重複を許容できる閾値にすること。dev-standards自身では
+          実測値を踏まえ1%を設定している
+        type: number
+        default: 0
+      doc_duplication_paths:
+        description: >-
+          enable_doc_duplication_check: trueの場合に重複検知の対象とする
+          パス（リポジトリルート基準、ディレクトリまたはファイル）。
+          text_lint_paths等と異なりglobパターンではなくjscpdへそのまま
+          位置引数として渡すため、ディレクトリ指定を基本にする。カンマまたは
+          改行区切りで複数指定できる（例: "docs\nREADME.md\nCLAUDE.md\n.claude/skills"）
+        type: string
+        default: ""
       enable_architecture_check:
         description: >-
           dependency-cruiserによるアーキテクチャ違反検知ジョブ（architecture-check）を
@@ -182,7 +215,8 @@ on:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
           push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
-          `standards-check`・`duplication-check`・`architecture-check`・`text-lint`を
+          `standards-check`・`duplication-check`・`doc-duplication-check`・
+          `architecture-check`・`text-lint`を
           スキップし、`commitlint`・
           `frontend-e2e-test`・`render-mermaid-diagrams`（有効な場合）のみ実行する
           （bamiyanapp/dev-standards#187「CI/CD実行回数・実行時間削減バックログ」③）。
@@ -207,7 +241,8 @@ on:
           `package-lock.json`・`.github/workflows/**`の変更は共通変更とみなし、
           いずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）
           は対象外（常に全ジョブを実行する。パッケージ単位の変更検出は未対応）。
-          `standards-check`（symlink整合性チェック）・`text-lint`（Markdown文書チェック）は
+          `standards-check`（symlink整合性チェック）・`text-lint`（Markdown文書チェック）・
+          `doc-duplication-check`（Markdownドキュメント重複検知）は
           いずれも`frontend_dir`/`backend_dir`に限定されないリポジトリ全体のチェックの
           ため対象外（常に実行する）。
           変更検出自体が失敗した場合は安全側に倒し、全ジョブを実行する。
@@ -1233,6 +1268,66 @@ jobs:
             cat ./jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # duplication-check（コード向け）とは別に、Markdownドキュメント（docs/・CLAUDE.md・
+  # .claude/skills/等）の丸ごとコピペ重複を検知する（bamiyanapp/dev-standards#586）。
+  # CLAUDE.mdと各SKILL.mdで同じ禁止ルールを重複記載し、後から片方だけ更新されて
+  # 文言がずれる（drift）事故が実際に発生したことが動機。
+  #
+  # jscpdの`-f markdown`は、対象拡張子をmarkdownへ限定するのではなく、他フォーマット
+  # （yaml/python/javascript等）も含めリポジトリ全体を素通しで検知してしまう既知の
+  # 挙動が確認された（doc_duplication_pathsで対象パス自体を絞り込むことで対処し、
+  # `-f`によるフォーマット限定はduplication-check側と異なりあえて使わない）。
+  # doc_duplication_paths配下のMarkdown内に埋め込まれたコードサンプル（```js等の
+  # フェンス）はjscpdの自動判定により別フォーマットとして計上されるため、意図的に
+  # 複数の完全なコード例を並べているドキュメントがある場合はその分の重複が閾値に
+  # 乗る点に注意（doc_duplication_thresholdで許容する）。
+  doc-duplication-check:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_doc_duplication_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
+      # あるため、1回だけ自動リトライする
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Run jscpd (doc duplication check)
+        run: |
+          mapfile -t targets < <(printf '%s' "${{ inputs.doc_duplication_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "doc_duplication_paths is empty; nothing to check."
+            exit 0
+          fi
+          npx --yes jscpd@5 "${targets[@]}" \
+            -o ./jscpd-doc-report \
+            ${{ inputs.doc_duplication_threshold > 0 && format('-t {0}', inputs.doc_duplication_threshold) || '' }}
+      - name: Show doc duplication report in Job Summary
+        if: always()
+        run: |
+          if [ -f ./jscpd-doc-report/jscpd-report.md ]; then
+            cat ./jscpd-doc-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   # ESLintのcomplexityルール・eslint-plugin-sonarjsが循環的複雑度、jscpdがコード重複を
   # 検知するのに対し、モジュール間の依存方向（アーキテクチャ）違反を検知する仕組みが
   # 無かった（bamiyanapp/dev-standards#523）。npm workspacesモノレポ（frontend_dir・
@@ -1503,7 +1598,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, architecture-check, text-lint, render-mermaid-diagrams]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, render-mermaid-diagrams]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -1525,6 +1620,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-e2e-test.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.doc-duplication-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result)
