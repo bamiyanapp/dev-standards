@@ -1,3 +1,10 @@
+## [2.25.1](https://github.com/bamiyanapp/dev-standards/compare/v2.25.0...v2.25.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** mermaid_doc_paths登録漏れを解消し、再発防止のチェック項目を明記する ([#581](https://github.com/bamiyanapp/dev-standards/issues/581)) ([bc988fa](https://github.com/bamiyanapp/dev-standards/commit/bc988fa2d637b65fba77c8bb614e343fd491a3a7)), closes [#580](https://github.com/bamiyanapp/dev-standards/issues/580) [#582](https://github.com/bamiyanapp/dev-standards/issues/582)
+
 # [2.25.0](https://github.com/bamiyanapp/dev-standards/compare/v2.24.0...v2.25.0) (2026-09-19)
 
 
