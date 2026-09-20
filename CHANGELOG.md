@@ -1,3 +1,10 @@
+# [2.26.0](https://github.com/bamiyanapp/dev-standards/compare/v2.25.1...v2.26.0) (2026-09-20)
+
+
+### Features
+
+* **ci:** Markdownドキュメントの重複検知（doc-duplication-check）を追加する ([#587](https://github.com/bamiyanapp/dev-standards/issues/587)) ([c8cc8a7](https://github.com/bamiyanapp/dev-standards/commit/c8cc8a7f796733ff9b7f6aa44865ada1767768bf))
+
 ## [2.25.1](https://github.com/bamiyanapp/dev-standards/compare/v2.25.0...v2.25.1) (2026-09-20)
 
 
