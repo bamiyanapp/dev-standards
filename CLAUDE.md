@@ -29,6 +29,8 @@ SkillsまたはCLAUDE.mdへの反映を検討し、
 Reflectの結果は次のObserveに反映し、
 Goal達成までループを継続する。
 
+途中で新しい情報や失敗が判明した場合は、当初の計画に固執せず適応する。
+
 # 開発環境の制約（スマホオンリー）
 
 ユーザーはこの開発環境をスマートフォンのみで運用している。ローカル端末でのCLI操作（AWS CLI、`ssh`、`kubectl`等）やデスクトップ限定のGUI操作を前提とした「人間による手動確認・手動実行」の手順は、実行不可能または著しく非現実的である。
@@ -91,11 +93,12 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - 実在の個人情報を扱うプロダクトの場合、コミット対象・コミットメッセージ・PR/Issue本文に実在の個人情報がハードコードされていないか（`docs/public-repo-no-pii-pattern.md`参照）。リポジトリは公開が前提であり、一度コミットした個人情報は事実上消せないため、コミット前に気づくことが唯一の対策
 - `docs/`配下へ新規ドキュメントを追加した場合、「主要ドキュメント」索引への追記を忘れていないか
 - 新規にmermaid図を追加した場合、`mermaid_doc_paths`（`.github/workflows/ci.yml`）への登録・画像埋め込みリンクの追加を行ったか（`docs/documentation-format-conventions.md`「`enable_mermaid_render`との関係」参照）。開発環境がスマホオンリーのためPRレビューは差分ビュー経由になり、未登録のままだと図として確認できない
+- 対応するissueの本文にTODO・検討事項・懸念点の列挙がある場合、今回の対応でそれぞれ解消したかを1つずつ確認する。解消していない項目があれば、フォローアップissueとして切り出すか対応不要と判断した理由をissueに明記するかのいずれかを行ってからでなければ、元issueをクローズしない（一部だけ実装してTODOごとクローズしない）
 
 # Skills (専門手順)
 
 具体的な実行方法や手順は、以下のSkillに責務を委譲し、CLAUDE.mdには記述しない。
-タスク遂行にあたっては、以下のSkillを適宜呼び出して使用すること。
+タスク遂行にあたっては、以下のSkillを適宜呼び出して使用すること（`scripts/validate.js`が本節と`.claude/skills/`配下の実体とのドリフトを検知するため、Skillの追加・削除時は本節も必ず更新する）。
 
 - **planning-and-task-breakdown**: 仕様・要件が固まっているが規模が大きいタスクを、実装可能な単位に分解する。着手前にタスクが大きすぎると感じる場合に使用する
 - **development-loop**: 実装とテストの基本開発ループ
@@ -112,55 +115,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 
 # 主要ドキュメント
 
-`docs/`配下の各ドキュメントは、CLAUDE.md・各Skillの本文中で文脈に応じて個別に参照される。特定のルールがどのドキュメントに書かれているかを横断的に調べたい場合は、以下の索引を使う。新規ドキュメントを`docs/`配下へ追加した場合、この索引への追記を忘れないこと（Reflectionのチェック項目も参照）。
-
-**CI/CD・品質基準**
-
-- `docs/cicd-pipeline-specification.md`: `reusable-ci.yml`/`reusable-cd.yml`が提供する共通CI/CDパイプラインの仕様
-- `docs/reusable-workflows-reference.md`: reusable workflowの導入手順・全入力パラメータのリファレンス
-- `docs/code-quality-conventions.md`: lint・stylelint・CodeQL・textlintの共通規約
-- `docs/e2e-coverage-pattern.md`: PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
-- `docs/documentation-format-conventions.md`: ドキュメントの表現形式（文章・表・mermaid図）の選び方
-
-**標準技術スタック・フロントエンド共通**
-
-- `docs/standard-tech-stack.md`: 新規プロジェクトの標準構成索引・立ち上げ手順
-- `docs/client-only-vite-spa-pattern.md`: 単一パッケージReactアプリ構成（Vite + TypeScript + Bootstrap）
-- `docs/frontend-ui-conventions.md`: 共通フォント・トップページ必須構成等のUI規約
-- `docs/shared-ui-components.md`: 共有UIコンポーネント（`shared/ui/`・`shared/pwa/`・`shared/sfx/`）一覧
-- `docs/service-worker-update-pattern.md`: PWAキャッシュ更新パターン
-- `docs/pwa-initial-loading-indicator.md`: PWA起動時の白画面対策
-- `docs/pwa-icon-generation-pattern.md`: PWAアイコン生成手順とmanifest.json構成
-- `docs/client-error-reporting-pattern.md`: Error Boundary＋サーバーサイドロギング
-- `docs/ios-safari-audio-unlock-pattern.md`: iOS Safari自動再生ポリシー対策（音声要素シングルトン解錠パターン）
-
-**認証・セキュリティパターン**
-
-- `docs/lambda-api-firebase-auth-pattern.md`: Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDB構成
-- `docs/serverless-api-dynamodb-pattern.md`: API Gateway + Lambda + DynamoDB + SAM構成（自社発行セッショントークン認証を含む）
-- `docs/serverless-static-site-pattern.md`: S3 + CloudFront + Cognito + Lambda@Edgeによる認証付き静的サイト配信
-- `docs/oauth-csrf-nonce-pattern.md`: OAuthログインのCSRF対策（サーバー側nonce管理）
-- `docs/short-lived-bearer-token-pattern.md`: 静的サイト→別オリジンバックエンドAPIの短命Bearerトークン認証
-
-**バックエンド・インフラパターン**
-
-- `docs/nextjs-static-lambda-pattern.md`: Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）
-- `docs/serverless-spa-pattern.md`: SPA + Serverless Framework独自バックエンドAPIパターン
-- `docs/websocket-client-reconnect-pattern.md`: WebSocketクライアントの再接続エンジン設計パターン
-- `docs/static-hosting-pattern.md`: S3 + CloudFrontによる静的サイト配信パターン
-- `docs/https-response-buffer-encoding-pattern.md`: `https.request`のレスポンスボディ文字化け対策
-- `docs/llm-dual-format-response-pattern.md`: LLM APIのdual-format JSON応答生成
-- `docs/daily-rate-limit-pattern.md`: 日次利用回数の上限カウンタ
-- `docs/deterministic-seed-id-pattern.md`: 静的コンテンツをDynamoDB等へ冪等に同期するパターン
-- `docs/dynamodb-safe-backfill-pattern.md`: DynamoDBの安全なバックフィル・移行スクリプトパターン
-- `docs/sandboxed-agent-production-data-pattern.md`: 実認証情報の無いサンドボックスからの本番データ調査・修正
-- `docs/ops-monitoring-pattern.md`: 運用監視（サイレント障害検知）パターン
-
-**個人情報・リポジトリ運用**
-
-- `docs/public-repo-no-pii-pattern.md`: 公開リポジトリに個人情報を持ち込まないパターン
-- `docs/repository-contents.md`: このリポジトリに含まれるものの一覧
-- `docs/consumer-repositories.md`: 参照側リポジトリ一覧
+`docs/`配下の各ドキュメントは、CLAUDE.md・各Skillの本文中で文脈に応じて個別に参照される。特定のルールがどのドキュメントに書かれているかを横断的に調べたい場合は、[`README.md`](README.md)「ドキュメント目次」の索引を使う（本ドキュメントでは重複記載しない）。新規ドキュメントを`docs/`配下へ追加した場合、README.md側の索引への追記を忘れないこと（Reflectionのチェック項目も参照）。
 
 # PR（MR）承認・マージ禁止
 
@@ -181,13 +136,3 @@ PR作成後、CI状況やレビューコメントを監視するかどうかを`
 
 - ユーザーが当該PRについて明示的に「監視しなくていい」「放置していい」等と依頼した場合のみ監視しない
 - 既存PRの監視中にユーザーから停止を指示された場合は、直ちに`unsubscribe_pr_activity`を呼び監視を終了する
-
-# 最後に
-
-Claudeはタスクを直列の手順としてではなく、
-Goal達成のための反復ループとして扱う。
-
-途中で新しい情報や失敗が判明した場合は、
-当初の計画を固定せず、
-Observe→Plan→Act→Verify→Reflectを繰り返し、
-最適な手段へ適応する。
