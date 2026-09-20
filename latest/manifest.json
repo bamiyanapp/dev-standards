@@ -13,5 +13,75 @@
     "sourceFile": "docs/cicd-pipeline-specification.md",
     "index": 3,
     "fileName": "cicd-pipeline-specification-3.png"
+  },
+  {
+    "sourceFile": "docs/lambda-api-firebase-auth-pattern.md",
+    "index": 1,
+    "fileName": "lambda-api-firebase-auth-pattern.png"
+  },
+  {
+    "sourceFile": "docs/serverless-api-dynamodb-pattern.md",
+    "index": 1,
+    "fileName": "serverless-api-dynamodb-pattern-1.png"
+  },
+  {
+    "sourceFile": "docs/serverless-api-dynamodb-pattern.md",
+    "index": 2,
+    "fileName": "serverless-api-dynamodb-pattern-2.png"
+  },
+  {
+    "sourceFile": "docs/ios-safari-audio-unlock-pattern.md",
+    "index": 1,
+    "fileName": "ios-safari-audio-unlock-pattern.png"
+  },
+  {
+    "sourceFile": "docs/oauth-csrf-nonce-pattern.md",
+    "index": 1,
+    "fileName": "oauth-csrf-nonce-pattern.png"
+  },
+  {
+    "sourceFile": "docs/websocket-client-reconnect-pattern.md",
+    "index": 1,
+    "fileName": "websocket-client-reconnect-pattern.png"
+  },
+  {
+    "sourceFile": "docs/shared-ui-components.md",
+    "index": 1,
+    "fileName": "shared-ui-components.png"
+  },
+  {
+    "sourceFile": "docs/short-lived-bearer-token-pattern.md",
+    "index": 1,
+    "fileName": "short-lived-bearer-token-pattern.png"
+  },
+  {
+    "sourceFile": "docs/deterministic-seed-id-pattern.md",
+    "index": 1,
+    "fileName": "deterministic-seed-id-pattern.png"
+  },
+  {
+    "sourceFile": "docs/standard-tech-stack.md",
+    "index": 1,
+    "fileName": "standard-tech-stack.png"
+  },
+  {
+    "sourceFile": "docs/ops-monitoring-pattern.md",
+    "index": 1,
+    "fileName": "ops-monitoring-pattern.png"
+  },
+  {
+    "sourceFile": "docs/serverless-static-site-pattern.md",
+    "index": 1,
+    "fileName": "serverless-static-site-pattern-1.png"
+  },
+  {
+    "sourceFile": "docs/serverless-static-site-pattern.md",
+    "index": 2,
+    "fileName": "serverless-static-site-pattern-2.png"
+  },
+  {
+    "sourceFile": ".claude/skills/git-workflow/SKILL.md",
+    "index": 1,
+    "fileName": "SKILL.png"
   }
 ]
