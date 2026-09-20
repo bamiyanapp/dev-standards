@@ -34,6 +34,8 @@ graph TD
 
 </details>
 
+![技術要素の採用パターン (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack.png)
+
 ## 個人情報の扱い（全プロジェクト共通）
 
 「2. ログイン」の通り、フロントエンド自体は誰でも閲覧できる状態を前提とする。bamiyanapp配下のリポジトリも基本的に公開（Public）であるため、**フロントエンドが公開であることとリポジトリが公開であることは同じ前提の両面**として扱う。実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトは、コンテンツ・コード・コミット履歴・PR/Issue本文のいずれにも実在の個人情報を一切持ち込まない設計にする。個人単位のデータは実行時にAPI経由（認証済み）で取得する形にとどめ、リポジトリには置かない。詳細な原則・チェックリストは`docs/public-repo-no-pii-pattern.md`を参照。
