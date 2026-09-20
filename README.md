@@ -72,6 +72,7 @@
 ### 個人情報・リポジトリ運用
 
 - [`public-repo-no-pii-pattern.md`](docs/public-repo-no-pii-pattern.md): 公開リポジトリに個人情報を持ち込まないパターン
+- [`public-repo-secrets-in-actions-pattern.md`](docs/public-repo-secrets-in-actions-pattern.md): 公開リポジトリのGitHub Actions（ログ・Job Summary）で秘密情報を露出させないパターン
 
 ## 参照側アプリ一覧
 
