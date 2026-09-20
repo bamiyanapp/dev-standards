@@ -90,6 +90,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - PRのマージ・CI成功だけを根拠に完了・Issueクローズと判断していないか。特に複数リポジトリ・pinned tag参照を伴う変更（git-workflow Skill「複合action・pinned tagを伴う変更の展開確認」参照）は、実際にmain上で意図した効果が出ているかを再検証したか
 - 実在の個人情報を扱うプロダクトの場合、コミット対象・コミットメッセージ・PR/Issue本文に実在の個人情報がハードコードされていないか（`docs/public-repo-no-pii-pattern.md`参照）。リポジトリは公開が前提であり、一度コミットした個人情報は事実上消せないため、コミット前に気づくことが唯一の対策
 - `docs/`配下へ新規ドキュメントを追加した場合、「主要ドキュメント」索引への追記を忘れていないか
+- 新規にmermaid図を追加した場合、`mermaid_doc_paths`（`.github/workflows/ci.yml`）への登録・画像埋め込みリンクの追加を行ったか（`docs/documentation-format-conventions.md`「`enable_mermaid_render`との関係」参照）。開発環境がスマホオンリーのためPRレビューは差分ビュー経由になり、未登録のままだと図として確認できない
 
 # Skills (専門手順)
 
