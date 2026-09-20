@@ -20,6 +20,8 @@ flowchart TD
     CloudFront --> S3[S3<br/>フロントエンドビルド成果物]
 ```
 
+![アーキテクチャ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-1.png)
+
 - API・フロントエンド配信を同一SAMスタックにまとめることで、`sam deploy`一発でバックエンド・フロントエンドホスティングの整合性（CORSのAllowOrigin等）を保てる
 - DynamoDBテーブルは`PAY_PER_REQUEST`課金にし、小規模プロダクトでの容量プランニングを不要にする
 
@@ -70,19 +72,22 @@ sequenceDiagram
 
     Note over Frontend,Google: 初回ログイン
     Frontend->>Google: Google IDトークンを取得
-    Frontend->>Backend: POST /auth/session<br/>Bearer &lt;Google IDトークン&gt;
+    Frontend->>Backend: POST /auth/session<br/>Bearer（Google IDトークン）
     Backend->>Google: verifyIdToken（audience検証）
     Google-->>Backend: 検証結果
     Backend->>Backend: セッショントークン（HS256 JWT）を発行
     Backend-->>Frontend: セッショントークンを返す
 
     Note over Frontend,Backend: 2回目以降の全リクエスト
-    Frontend->>Backend: 各APIリクエスト<br/>Bearer &lt;セッショントークン&gt;
+    Frontend->>Backend: 各APIリクエスト<br/>Bearer（セッショントークン）
     Backend->>Backend: createSessionAuthenticatorで検証<br/>（Google APIへの通信は発生しない）
     Backend-->>Frontend: レスポンス
 ```
 
 </details>
+
+![トークン交換フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-2.png)
+
 - `verifyGoogleIdToken`は`oAuth2Client`を、`createSessionAuthenticator`は`secret`をそれぞれDI可能にしており、テストでは実際にGoogle APIへ通信しないfakeや固定secretへ差し替える
 - **署名鍵（`SESSION_SECRET`）の用意**: AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による自動生成を検討した。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一し、AWS側のIAM権限追加を不要にする
 - Cookie自体（保持期間・Secure属性の付け方等）の設計は変わらない。**Cookieに保存する値がGoogle IDトークンからセッショントークンへ変わる点のみが変更点**であり、双方ともJWT形状（`header.payload.signature`）のため、E2Eテストのfake authenticator（下記「テストパターン」）はどちらの値が来ても区別せず動作する

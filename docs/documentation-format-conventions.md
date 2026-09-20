@@ -24,6 +24,15 @@ Markdownドキュメントの内容を、文章・箇条書き・表・mermaid�
 - 分岐の無い単純な逐次手順
 - 既に十分読みやすい箇条書き
 
-## `enable_mermaid_render`との関係
+## `enable_mermaid_render`との関係（新規にmermaid図を追加する際は必ず確認する）
 
-新規にmermaid図を追加する際、そのファイルが`mermaid_doc_paths`（`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）の対象に含まれているか確認する。含まれていない場合、GitHubのMarkdownネイティブレンダリングでは表示されるが、PR差分ビュー・API経由でのファイル取得等ではコードのまま表示され図として確認できない。恒久的にPNG事前レンダリングを提供したい場合のみ`mermaid_doc_paths`へ追加する。単発の追加であれば、既存の`<details><summary>`タグで折りたたみ、mermaidのソースをそのまま埋め込むだけでも、GitHub上での通常閲覧では問題なく図として表示される。
+`mermaid_doc_paths`（`.github/workflows/ci.yml`。詳細は`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）に登録されていないファイルは、GitHubの通常のMarkdownビュー（ファイルをそのまま開いた場合）ではネイティブレンダリングされるが、**PR差分ビュー・GitHub API経由でのファイル取得等では図として表示されず、mermaid記法のテキストのまま表示される**（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。
+
+CLAUDE.md「開発環境の制約（スマホオンリー）」により、PRレビューはGitHubモバイルアプリのPR差分ビュー経由で行われる。登録漏れはそのまま「レビュー時に図が見えない」という実害に直結し、実際にissue #580で12ファイル・14箇所分の登録漏れが判明した。このため、**新規にmermaid図を追加したら、そのファイルを`mermaid_doc_paths`へ追加することを既定の作業とする**（「単発の追加だから省略してよい」という判断はしない）。
+
+具体的な手順は以下の2点。
+
+1. 対象ファイルを`mermaid_doc_paths`（`.github/workflows/ci.yml`）へ追加する
+2. `docs/cicd-pipeline-specification.md`の埋め込み例と同じ形式で、mermaidブロック直後（`<details>`で折りたたむ場合はその中）に`![...(rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/<ファイル名>[-<連番>].png)`を埋め込む。ファイル名は拡張子を除いた対象Markdownのbasename、1ファイルに複数のmermaidブロックがある場合は`-1`・`-2`のように連番を付ける（命名規則の詳細は`.github/actions/render-mermaid-diagrams/action.yml`のdescription参照）
+
+マージ後の初回レンダリングが完了するまで画像は表示されない（`docs-diagrams`ブランチの`latest/`は`push`イベントのたびに上書き公開されるため、埋め込み自体は最初の1回のみでよい）。

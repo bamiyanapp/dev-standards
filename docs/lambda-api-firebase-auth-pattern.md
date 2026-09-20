@@ -56,6 +56,8 @@ flowchart TD
 
 </details>
 
+![ユーザー識別ロジックのフロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/lambda-api-firebase-auth-pattern.png)
+
 ## OSLS（Open Serverless）の採用
 
 Serverless Framework（`serverless`パッケージ）はv4.0以降ライセンス体系が変更され、一定規模を超える商用利用に有料サブスクリプションが必要になった。v3系のままオープンソースで開発が継続されている後継/フォークプロジェクトである**OSLS**（npmパッケージ名`osls`、[oss-serverless/osls](https://github.com/oss-serverless/osls)）へ切り替えることで、このライセンス制約を回避する。

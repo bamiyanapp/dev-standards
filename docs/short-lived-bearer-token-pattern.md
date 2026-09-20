@@ -33,7 +33,7 @@ sequenceDiagram
     Edge->>DB: PutItem（token、email、expiresAt）
     Edge-->>Browser: トークンを返す
 
-    Browser->>API: Authorization: Bearer &lt;token&gt;<br/>（別オリジンへCORS越しにリクエスト）
+    Browser->>API: Authorization: Bearer（token）<br/>（別オリジンへCORS越しにリクエスト）
     API->>DB: GetItem（token）
     DB-->>API: token情報
     API->>API: 有効期限内か確認
@@ -43,6 +43,8 @@ sequenceDiagram
 ```
 
 </details>
+
+![トークン発行〜検証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/short-lived-bearer-token-pattern.png)
 
 ### 発行側（CloudFront Lambda@Edge）
 
