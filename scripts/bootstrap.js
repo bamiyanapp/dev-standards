@@ -134,9 +134,13 @@ function checkSymlinkAllInDirEntry(repoRoot, devStandardsDir, sourceRel, targetR
     ];
   }
 
+  // .claude/skills（配下がskill名ディレクトリ）・textlint-rules（配下が独自ルールの
+  // .jsファイル）の両方をsymlinkAllInDirで扱うため、ディレクトリ・ファイルどちらも
+  // 対象にする（issue #591、以前はディレクトリのみに絞り込んでいたためファイル単位の
+  // エントリ（textlint-rules）が常に空扱いになっていた）
   const names = fs
     .readdirSync(sourceDirAbsPath, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.isDirectory() || entry.isFile())
     .map((entry) => entry.name)
     .sort();
 

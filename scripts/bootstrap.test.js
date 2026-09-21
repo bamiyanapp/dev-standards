@@ -25,6 +25,10 @@ function makeFixture() {
   fs.mkdirSync(path.join(devStandardsDir, ".clinerules"), { recursive: true });
   fs.mkdirSync(path.join(devStandardsDir, ".claude", "skills", "skill-a"), { recursive: true });
   fs.mkdirSync(path.join(devStandardsDir, ".claude", "skills", "skill-b"), { recursive: true });
+  // textlint-rules（issue #537）はskillsと異なり配下がファイル単位（skill-a/skill-bの
+  // ようなディレクトリ単位ではない）のsymlinkAllInDirエントリで、issue #591の再発防止用
+  fs.mkdirSync(path.join(devStandardsDir, "textlint-rules"), { recursive: true });
+  fs.writeFileSync(path.join(devStandardsDir, "textlint-rules", "max-lines.js"), "module.exports = {};\n");
   fs.writeFileSync(path.join(devStandardsDir, ".clinerules", "01-rule.md"), "rule content\n");
   fs.writeFileSync(path.join(devStandardsDir, "commitlint.config.cjs"), "module.exports = {};\n");
   fs.writeFileSync(path.join(devStandardsDir, ".gitignore"), "node_modules\n");
@@ -35,7 +39,10 @@ function makeFixture() {
         { source: ".clinerules/01-rule.md", target: ".clinerules/01-rule.md" },
         { source: "commitlint.config.cjs", target: "commitlint.config.cjs" },
       ],
-      symlinkAllInDir: [{ source: ".claude/skills", target: ".claude/skills" }],
+      symlinkAllInDir: [
+        { source: ".claude/skills", target: ".claude/skills" },
+        { source: "textlint-rules", target: "textlint-rules" },
+      ],
       copies: [{ source: ".gitignore", target: ".gitignore" }],
     })
   );
@@ -53,6 +60,7 @@ test("computePlan reports missing symlinks and copies on a fresh repo", () => {
   assert.equal(byTarget["commitlint.config.cjs"].status, STATUS.MISSING);
   assert.equal(byTarget[path.join(".claude/skills", "skill-a")].status, STATUS.MISSING);
   assert.equal(byTarget[path.join(".claude/skills", "skill-b")].status, STATUS.MISSING);
+  assert.equal(byTarget[path.join("textlint-rules", "max-lines.js")].status, STATUS.MISSING);
   assert.equal(byTarget[".gitignore"].status, STATUS.MISSING);
   assert.equal(hasUnresolvedIssues(plan), true);
 });
@@ -71,6 +79,10 @@ test("applyPlan creates the missing symlinks and copy, and a second run is a cle
   assert.equal(
     fs.readlinkSync(path.join(repoRoot, ".claude", "skills", "skill-a")),
     path.join("..", "..", "dev-standards", ".claude", "skills", "skill-a")
+  );
+  assert.equal(
+    fs.readlinkSync(path.join(repoRoot, "textlint-rules", "max-lines.js")),
+    path.join("..", "dev-standards", "textlint-rules", "max-lines.js")
   );
   assert.equal(fs.readFileSync(path.join(repoRoot, ".gitignore"), "utf-8"), "node_modules\n");
 
