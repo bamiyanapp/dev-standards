@@ -35,10 +35,13 @@ module.exports = {
       // 数えられない実装上の制約により、常体オンリーの文書では機能しないため無効化する
       "no-mix-dearu-desumasu": false,
     },
-    // 独自ルール（textlint-rules/max-lines.js、issue #537）。--rulesdir textlint-rulesで
-    // 読み込む前提のため、このキーはtextlint-rules/配下のファイル名（拡張子無し）と一致させる。
-    // しきい値200は、dev-standards自身の現状最大ファイル（docs/cicd-pipeline-specification.md、
-    // 実効178行）に対しわずかな余裕を持たせたラチェット値
-    "max-lines": { max: 200 },
+    // 【max-lines（textlint-rules/max-lines.js、issue #537）をここに書いてはならない】
+    // --rulesdir経由でのみ解決できる独自ルールをこのrulesオブジェクトへ併記すると、
+    // 設定ファイル（--config）側のルール解決が「全キーを通常npmパッケージとして
+    // 解決しようとし、1つでも失敗すると設定ファイル全体のルールを無言で0件にする」
+    // という挙動により、preset-ja-technical-writing側が丸ごと機能しなくなる
+    // （issue #595、DEBUG=textlint:cliで実際に再現・確認済み）。max-lines自体は
+    // textlint-rules/max-lines.jsが既定値200を自前で持っているため、CLI側の
+    // --rulesdir textlint-rulesのみで（このファイルへの追記無しに）有効化される
   },
 };

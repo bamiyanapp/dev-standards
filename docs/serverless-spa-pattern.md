@@ -104,7 +104,7 @@ functions:
         AttributeName: ttl
         Enabled: true
   ```
-- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分の共通ロジック（接続取得、GSIによるルーム内接続一覧Query、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパー）は`shared/lambda/webSocketBroadcast.js`（`docs/shared-ui-components.md`と同様の索引は無いため本ファイルから直接参照する）としてsymlink共有できる。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外で、フロントエンド側の設計知見は`docs/websocket-client-reconnect-pattern.md`を参照
+- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分には共通ロジックがある。内容は、接続取得、GSIによるルーム内接続一覧Query、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパーである。これは`shared/lambda/webSocketBroadcast.js`としてsymlink共有できる（`docs/shared-ui-components.md`と同様の索引は無いため本ファイルから直接参照する）。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外で、フロントエンド側の設計知見は`docs/websocket-client-reconnect-pattern.md`を参照
 - **IAMは`provider.iam.role.statements`に必要最小限のアクションのみ列挙する**（`dynamodb:Scan/Query/GetItem/PutItem/UpdateItem`を用途ごとに区別する等）。他の関数を非同期起動する（`lambda:InvokeFunction`）等、循環参照が起きる権限は関数専用のIAMロールへ分離する
 - ハンドラーはフラット配置（`src/`を必ずしも作らない）でよい。REST用（`handler.js`）・WebSocket用（`xxxHandler.js`）・共通レスポンス生成程度の粒度に分ける。REST（HTTPプロキシ統合）ハンドラ向けの共通CORSレスポンス生成（`jsonResponse`/`badRequest`/`notFound`/`serverError`）は`shared/lambda/httpResponse.js`としてsymlink共有できる。API Gateway側でCORSを設定する構成（`docs/serverless-api-dynamodb-pattern.md`）ではなく、Lambda側でCORSヘッダーを付与する構成向け
 - 単体テストは**vitest + `aws-sdk-client-mock`**。
@@ -163,8 +163,8 @@ functions:
 
 `backend/serverless.yml`は環境変数・APIルート・DynamoDBテーブル定義等、プロダクトの構成情報を集約した単一の正（source of truth）である。これを手動でドキュメントへ転記すると、`serverless.yml`の変更に追従できず実態と乖離する（ドキュメントドリフト）。`serverless.yml`をパースしてMarkdownを自動生成し、`docs/generated/`へ出力する仕組みを設けると、この乖離を構造的に防げる。
 
-- **共通ローダー**: `js-yaml`の`CORE_SCHEMA`に、CloudFormation組み込み関数（`!GetAtt`・`!Sub`・`!Ref`等）のタグを`{ "Fn::<Tag>": <値> }`として素通しするだけの最小限のカスタムスキーマを追加してパースする（値の解決は行わない。静的なルート・テーブル定義の抽出が目的のため）。`${self:custom.xxx}`変数参照は`custom`セクションの実値へ解決する
-- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、環境変数一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等、用途ごとに必要な情報だけを抽出してMarkdownへ整形する。テーブル形式が向くもの（環境変数一覧等）、Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）は`docs/documentation-format-conventions.md`の基準で使い分ける
+- **共通ローダー**: `js-yaml`の`CORE_SCHEMA`に、CloudFormation組み込み関数（`!GetAtt`・`!Sub`・`!Ref`等）のタグを`{ "Fn::<Tag>": <値> }`として素通しするだけの最小限のカスタムスキーマを追加する。これを使ってパースする（値の解決は行わない。静的なルート・テーブル定義の抽出が目的のため）。`${self:custom.xxx}`変数参照は`custom`セクションの実値へ解決する
+- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、環境変数の一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等、用途ごとに必要な情報だけを抽出してMarkdownへ整形する。テーブル形式が向くもの（環境変数の一覧等）、Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）は`docs/documentation-format-conventions.md`の基準で使い分ける
 - **出力先とワークフロー**: 生成先の`docs/generated/`配下に「手動編集禁止・再生成コマンドで上書きされる」旨を明記したREADMEを置く。`npm run docs:generate`のような単一コマンドで全生成スクリプトを実行できるようにし、`serverless.yml`を変更したPRではこのコマンドを実行してから生成物ごとコミットする運用にする
 
 コード自体はプロダクトごとに`serverless.yml`の構成（リソース名・関数名等）が異なるため、共通ローダー・生成スクリプトのsymlink共有はせず、このパターン記述と実装例の参照にとどめる。

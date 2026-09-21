@@ -6,7 +6,7 @@
 
 ## 原則: Job Summary・ログは公開リポジトリでは公開ページである
 
-`docs/sandboxed-agent-production-data-pattern.md`は、スマホオンリー環境（ローカルCLI操作ができない）向けに「`workflow_dispatch`はGitHubのWeb/モバイルアプリから実行でき、結果はJob Summaryでその場から確認できる」という設計を積極的に推奨している。この設計自体は有効だが、**Job Summaryへ出力してよいのは非機密情報（調査結果・処理件数・成否等）に限る**。秘密情報を一度でもJob Summaryへ平文出力すると、その実行履歴が残っている限り誰でも閲覧できてしまう。
+`docs/sandboxed-agent-production-data-pattern.md`は、スマホオンリー環境（ローカルCLI操作ができない）向けの設計を積極的に推奨している。具体的には「`workflow_dispatch`はGitHubのWeb/モバイルアプリから実行でき、結果はJob Summaryでその場から確認できる」という設計である。この設計自体は有効だが、**Job Summaryへ出力してよいのは非機密情報（調査結果・処理件数・成否等）に限る**。秘密情報を一度でもJob Summaryへ平文出力すると、その実行履歴が残っている限り誰でも閲覧できてしまう。
 
 ## アンチパターン: 人間にコピー&ペーストさせるためJob Summaryへ平文表示する
 
@@ -43,7 +43,7 @@ bamiyanapp/examination#514。E2Eテスト専用Cognitoユーザーの`refresh_to
 
 ## `workflow_dispatch`＋Job Summaryパターン自体は禁止ではない
 
-`docs/sandboxed-agent-production-data-pattern.md`が提供する「調査・修正ロジックをコード化しGitHub Actions側に委ねる」設計自体は引き続き有効であり、非機密情報（DynamoDBの調査結果、処理件数、成否等）をJob Summaryへ出力すること自体に問題はない。**出力する値が秘密情報かどうかを都度判断し、秘密情報であれば本書の安全なパターンへ切り替える**、という使い分けが要点である。
+`docs/sandboxed-agent-production-data-pattern.md`が提供する「調査・修正ロジックをコード化しGitHub Actions側に委ねる」設計自体は引き続き有効である。非機密情報（DynamoDBの調査結果、処理件数、成否等）をJob Summaryへ出力すること自体に問題はない。**出力する値が秘密情報かどうかを都度判断し、秘密情報であれば本書の安全なパターンへ切り替える**、という使い分けが要点である。
 
 ## チェックリスト
 
