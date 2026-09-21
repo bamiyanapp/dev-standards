@@ -1,3 +1,10 @@
+## [2.26.2](https://github.com/bamiyanapp/dev-standards/compare/v2.26.1...v2.26.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* **textlint:** max-linesとpreset-ja-technical-writingの設定併記による機能不全を修正する ([#596](https://github.com/bamiyanapp/dev-standards/issues/596)) ([52b4e8e](https://github.com/bamiyanapp/dev-standards/commit/52b4e8e1f62c891a511d11239b79b01d3874a5a6))
+
 ## [2.26.1](https://github.com/bamiyanapp/dev-standards/compare/v2.26.0...v2.26.1) (2026-09-21)
 
 
