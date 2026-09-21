@@ -156,7 +156,7 @@ if (typeof globalThis.localStorage?.setItem !== 'function') {
 }
 ```
 
-jsdom v30とNode 20の非互換（前述の`node_version`節参照）とは別種だが同じ「Node.jsバージョンとjsdomの相互作用」に起因する既知の落とし穴のため、CIで`localStorage`関連のテストのみ不可解に失敗する場合は、まずNode.jsのバージョン・この補完コードの有無を確認する。
+jsdom v30とNode 20の非互換（前述の`node_version`節参照）とは別種だが、同じ「Node.jsバージョンとjsdomの相互作用」に起因する既知の落とし穴がある。CIで`localStorage`関連のテストのみ不可解に失敗する場合は、まずNode.jsのバージョン・この補完コードの有無を確認する。
 
 なお、CI実行はローカルより遅くなることがあり、`waitFor`系のデフォルトタイムアウト（1000ms）では音声再生・アニメーション待ちを伴うテストがまれにタイムアウトすることがある。同じ`setupTests.js`で`@testing-library/react`の`configure({ asyncUtilTimeout: 3000 })`により底上げしておくと安定する。
 

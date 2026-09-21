@@ -1,6 +1,6 @@
 # iOS Safari自動再生ポリシー対策（音声要素シングルトン解錠パターン）
 
-通知音・BGM・読み上げ等、音声を非同期文脈（`fetch`完了後のコールバック、WebSocket通知の受信等）で再生するあらゆるWebアプリに共通する、Safari（iOS/macOS）の自動再生ポリシーへの対策パターン。karuta（[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)）の`frontend/src/utils/audioUnlock.js`から、かるた固有の効果音管理部分（`QUIZ_SFX_*`・`playQuizSfx`系）を除いた汎用部分を文章化したもの。CLAUDE.md「開発環境の制約（スマホオンリー）」が名指しする「検証端末はiPhone（iOS Safari）」という制約に直結する知見。
+通知音・BGM・読み上げ等、音声を非同期文脈（`fetch`完了後のコールバック、WebSocket通知の受信等）で再生するあらゆるWebアプリに共通する、Safari（iOS/macOS）の自動再生ポリシーへの対策パターン。karuta（[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)）の`frontend/src/utils/audioUnlock.js`から、かるた固有の効果音の管理部分（`QUIZ_SFX_*`・`playQuizSfx`系）を除いた汎用部分を文章化したもの。CLAUDE.md「開発環境の制約（スマホオンリー）」が名指しする「検証端末はiPhone（iOS Safari）」という制約に直結する知見。
 
 ## 問題: 非同期文脈での`play()`がSafariにブロックされる
 
@@ -85,7 +85,7 @@ export function resetSharedAudioForTests() {
 }
 ```
 
-呼び出し側の使い方（トップページ等のクリックハンドラで解錠、別画面の非同期処理で再生）:
+以下は呼び出し側の使い方である（トップページ等のクリックハンドラで解錠、別画面の非同期処理で再生）。
 
 ```jsx
 function TopPageButton() {
