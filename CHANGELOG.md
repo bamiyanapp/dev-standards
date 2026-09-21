@@ -1,3 +1,10 @@
+## [2.26.1](https://github.com/bamiyanapp/dev-standards/compare/v2.26.0...v2.26.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **bootstrap:** symlinkAllInDirでファイル単位のエントリもsymlink対象にする ([#592](https://github.com/bamiyanapp/dev-standards/issues/592)) ([e911ea6](https://github.com/bamiyanapp/dev-standards/commit/e911ea6c825b435013b43658abb4ff3a1548f92b))
+
 # [2.26.0](https://github.com/bamiyanapp/dev-standards/compare/v2.25.1...v2.26.0) (2026-09-20)
 
 
