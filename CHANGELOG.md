@@ -1,3 +1,10 @@
+# [2.27.0](https://github.com/bamiyanapp/dev-standards/compare/v2.26.2...v2.27.0) (2026-09-24)
+
+
+### Features
+
+* **ci:** Markdownドキュメント間のリンク切れ検出jobを追加 ([#604](https://github.com/bamiyanapp/dev-standards/issues/604)) ([0169cbf](https://github.com/bamiyanapp/dev-standards/commit/0169cbf3c300e2f28f5f1d141198b3463703081d))
+
 ## [2.26.2](https://github.com/bamiyanapp/dev-standards/compare/v2.26.1...v2.26.2) (2026-09-21)
 
 
