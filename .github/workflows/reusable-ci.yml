@@ -211,12 +211,32 @@ on:
           複数指定できる（例: "docs/*.md\nREADME.md\nCLAUDE.md\n.claude/skills/**/*.md"）。
         type: string
         default: ""
+      enable_dead_link_check:
+        description: >-
+          Markdownドキュメント間の相対リンク（例: [xxx](docs/foo.md)）が実際に
+          存在するファイルを指しているかを検証する`dead-link-check` jobを
+          実行するかどうか（bamiyanapp/dev-standards#603）。ドキュメントの
+          リファクタリング・ファイル移動・リネームでリンク切れが発生しても、
+          text-lint（文体チェック）・doc-duplication-check（重複検知）では
+          検知できないため別ジョブとして提供する。markdown-link-checkを
+          npx経由で取得して使う（text-lintと同じ方式、devDependencies追加は
+          不要）。外部URL（http/https）は一時的な障害でCIが不安定になることを
+          避けるため検証対象から除外し、相対パスのリンクのみを検証する。
+        type: boolean
+        default: false
+      dead_link_check_paths:
+        description: >-
+          enable_dead_link_check: trueの場合に検証対象とするMarkdownファイルの
+          globパターン（リポジトリルート基準）。text_lint_pathsと同様、カンマ
+          または改行区切りで複数指定できる。
+        type: string
+        default: ""
       skip_verification_on_push:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
           push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
           `standards-check`・`duplication-check`・`doc-duplication-check`・
-          `architecture-check`・`text-lint`を
+          `architecture-check`・`text-lint`・`dead-link-check`を
           スキップし、`commitlint`・
           `frontend-e2e-test`・`render-mermaid-diagrams`（有効な場合）のみ実行する
           （bamiyanapp/dev-standards#187「CI/CD実行回数・実行時間削減バックログ」③）。
@@ -1435,6 +1455,73 @@ jobs:
           npx --yes -p textlint@15.8.0 -p textlint-rule-preset-ja-technical-writing@12.0.2 \
             textlint --rulesdir textlint-rules --config textlint.config.cjs "${targets[@]}"
 
+  # Markdownドキュメント間の相対リンク（例: [xxx](docs/foo.md)）が実際に存在する
+  # ファイルを指しているかを検証する仕組みが無く、ドキュメントのリファクタリング・
+  # ファイル移動・リネーム時にリンク切れが発生しても検知できなかった
+  # （bamiyanapp/dev-standards#603）。markdown-link-checkをnpx経由で取得して
+  # 使う（text-lintと同じ方式、devDependencies追加は不要）。外部URL
+  # （http/https）は一時的な障害でCIが不安定になることを避けるため検証対象から
+  # 除外し、相対パスのドキュメント内リンクの検証に限定する。
+  dead-link-check:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_dead_link_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Run markdown-link-check
+        shell: bash
+        run: |
+          mapfile -t patterns < <(printf '%s' "${{ inputs.dead_link_check_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+          if [ ${#patterns[@]} -eq 0 ]; then
+            echo "dead_link_check_paths is empty; nothing to check."
+            exit 0
+          fi
+          shopt -s globstar nullglob
+          files=()
+          for pattern in "${patterns[@]}"; do
+            for file in $pattern; do
+              [ -f "$file" ] && files+=("$file")
+            done
+          done
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No files matched dead_link_check_paths; nothing to check."
+            exit 0
+          fi
+          cat > /tmp/markdown-link-check-config.json <<'CONFIG'
+          {
+            "ignorePatterns": [
+              { "pattern": "^https?://" }
+            ]
+          }
+          CONFIG
+          status=0
+          for file in "${files[@]}"; do
+            echo "::group::$file"
+            npx --yes markdown-link-check@3 --config /tmp/markdown-link-check-config.json "$file" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され
   # 図として確認できない（bamiyanapp/karuta#824）。mermaid_doc_pathsで指定した
@@ -1598,7 +1685,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, render-mermaid-diagrams]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -1623,6 +1710,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.doc-duplication-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result)
     runs-on: ubuntu-latest
     permissions:
