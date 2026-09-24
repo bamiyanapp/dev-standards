@@ -1209,11 +1209,22 @@ jobs:
       !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # secretsコンテキストはstepのif:条件では参照できないため、job env経由で
+    # boolean化してから後段のif:で使う
+    env:
+      HAS_BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           submodules: true
+          # 安全に自動修復できたドリフトをPRブランチへpushし返すためBOT_TOKEN
+          # （未設定時はGITHUB_TOKEN）を使う。GITHUB_TOKENによるpushは新しい
+          # ワークフロー実行をトリガーしないため（issue #606）、BOT_TOKEN未設定の
+          # 場合は後段のpushステップで自動修復自体をスキップする
+          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || github.token }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
       - name: Use Node.js (attempt 1/2)
@@ -1231,8 +1242,54 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Check dev-standards symlinks / .gitignore drift
+      # scripts/bootstrap.jsの適用モード（--check無し）は、安全に自動修復できる
+      # 項目（missingなsymlink・missingなcopy・管理区間マーカー付きdriftedなcopy）
+      # のみを実際に修正し、それ以外（BLOCKED・マーカー無しのdriftedなcopy等、
+      # 人間の判断が必要なもの）はreport-onlyのまま残す設計になっている
+      # （issue #591で安全性が確立済み）。そのためこのステップを常に実行しても、
+      # 意図しない上書きは起きない
+      - name: Bootstrap dev-standards symlinks (auto-fix safely-resolvable drift)
+        run: node dev-standards/scripts/bootstrap.js || true
+      # git diff --quietは追跡対象ファイルの変更しか検知せず、bootstrap.jsが
+      # 新規作成するsymlink等の未追跡ファイルを見逃すため、git status --porcelain
+      # で未追跡・変更の両方を検知する
+      - name: Check whether the bootstrap step modified any files
+        id: drift
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      # 自動修復されたファイルが無い場合は、従来通り--checkで合否を判定する
+      # （安全に直せないdrift・BLOCKEDが残っていれば、ここで失敗する）
+      - name: Check dev-standards symlinks / .gitignore drift (no auto-fixable drift found)
+        if: steps.drift.outputs.changed == 'false'
         run: node dev-standards/scripts/bootstrap.js --check
+      # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
+      # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
+      # 失敗として扱う（人間・Renovateの再実行に委ねる）
+      - name: Push auto-fixed files back to the PR branch
+        if: steps.drift.outputs.changed == 'true' && github.event_name == 'pull_request' && env.HAS_BOT_TOKEN == 'true'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(ci): dev-standardsのsymlink/copyドリフトを自動修復する" -m "reusable-ci.ymlのstandards-checkジョブによる自動コミットです（issue #606）。"
+          git push origin "HEAD:$HEAD_REF"
+      # 自動修復が発生した回（変更をpushできた場合・BOT_TOKEN未設定等でpush自体を
+      # 試みなかった場合のいずれも）は、このjob自体を意図的に失敗させる。
+      # pushできた場合は、新しいコミットがpull_request: synchronizeイベントを
+      # 起動し、そちらの新しいCI実行で最初から検証をやり直す。同一実行内の
+      # 他jobの結果（古いコミットに対する検証結果）を使ってmerge jobが
+      # 誤ってマージしてしまう競合状態を避けるため、この実行では常に失敗させる
+      - name: Fail this run so a fresh CI run re-validates the auto-fixed commit
+        if: steps.drift.outputs.changed == 'true'
+        run: |
+          echo "::error::dev-standardsのsymlink/copyドリフトを自動修復しました。新しいコミットによる再検証に委ねるため、この実行は意図的に失敗させます。"
+          exit 1
 
   duplication-check:
     needs: [commitlint, detect-changes]
