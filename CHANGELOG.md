@@ -1,3 +1,10 @@
+# [2.28.0](https://github.com/bamiyanapp/dev-standards/compare/v2.27.0...v2.28.0) (2026-09-24)
+
+
+### Features
+
+* **ci:** standards-checkがdev-standardsのsymlink/copyドリフトを自動修復する ([#607](https://github.com/bamiyanapp/dev-standards/issues/607)) ([c95db83](https://github.com/bamiyanapp/dev-standards/commit/c95db8351264120ce229d8cd98a3e40e60957019)), closes [#606](https://github.com/bamiyanapp/dev-standards/issues/606)
+
 # [2.27.0](https://github.com/bamiyanapp/dev-standards/compare/v2.26.2...v2.27.0) (2026-09-24)
 
 
