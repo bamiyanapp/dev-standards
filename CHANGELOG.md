@@ -1,3 +1,10 @@
+## [2.28.2](https://github.com/bamiyanapp/dev-standards/compare/v2.28.1...v2.28.2) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ci:** standards-checkのcheckoutをBOT_TOKENの有効性に依存させない ([#617](https://github.com/bamiyanapp/dev-standards/issues/617)) ([25d7adf](https://github.com/bamiyanapp/dev-standards/commit/25d7adfbd6c2a6d863cf11d6c4c53f5eb663df78)), closes [#610](https://github.com/bamiyanapp/dev-standards/issues/610)
+
 ## [2.28.1](https://github.com/bamiyanapp/dev-standards/compare/v2.28.0...v2.28.1) (2026-09-25)
 
 
