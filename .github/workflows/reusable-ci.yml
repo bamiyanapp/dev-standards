@@ -1229,11 +1229,13 @@ jobs:
           # それ以外（push等）では空文字列になり、その場合はref省略時と同じ既定動作
           # （該当コミットそのものをcheckout）になるため問題ない
           ref: ${{ github.head_ref }}
-          # 安全に自動修復できたドリフトをPRブランチへpushし返すためBOT_TOKEN
-          # （未設定時はGITHUB_TOKEN）を使う。GITHUB_TOKENによるpushは新しい
-          # ワークフロー実行をトリガーしないため（issue #606）、BOT_TOKEN未設定の
-          # 場合は後段のpushステップで自動修復自体をスキップする
-          token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || github.token }}
+          # checkout自体はBOT_TOKENの有効性に依存させず、常に既定のGITHUB_TOKEN
+          # （job権限のcontents: writeを持つ）を使う。以前はBOT_TOKENが設定されて
+          # いれば無条件にそれを使っていたが、BOT_TOKENが「設定されているが実際には
+          # 無効（期限切れ等）」な場合にcheckout自体が失敗し、standards-check本来の
+          # 目的（ドリフト検知）まで丸ごと機能不全になっていた（issue #610）。
+          # BOT_TOKENは、新しいワークフロー実行をトリガーする必要がある自動修復の
+          # pushステップでのみ個別に使う
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
       - name: Use Node.js (attempt 1/2)
@@ -1277,27 +1279,40 @@ jobs:
         run: node dev-standards/scripts/bootstrap.js --check
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
       # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
-      # 失敗として扱う（人間・Renovateの再実行に委ねる）
+      # 失敗として扱う（人間・Renovateの再実行に委ねる）。BOT_TOKENが設定されて
+      # いても値自体が無効（期限切れ等）な場合はpush自体が失敗しうるため、
+      # continue-on-errorでjob全体を止めず、結果を後段の失敗メッセージへ反映する
+      # （issue #610）
       - name: Push auto-fixed files back to the PR branch
         if: steps.drift.outputs.changed == 'true' && github.event_name == 'pull_request' && env.HAS_BOT_TOKEN == 'true'
+        id: push
+        continue-on-error: true
         env:
           HEAD_REF: ${{ github.head_ref }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix(ci): dev-standardsのsymlink/copyドリフトを自動修復する" -m "reusable-ci.ymlのstandards-checkジョブによる自動コミットです（issue #606）。"
-          git push origin "HEAD:$HEAD_REF"
+          git push "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:$HEAD_REF"
       # 自動修復が発生した回（変更をpushできた場合・BOT_TOKEN未設定等でpush自体を
-      # 試みなかった場合のいずれも）は、このjob自体を意図的に失敗させる。
-      # pushできた場合は、新しいコミットがpull_request: synchronizeイベントを
-      # 起動し、そちらの新しいCI実行で最初から検証をやり直す。同一実行内の
-      # 他jobの結果（古いコミットに対する検証結果）を使ってmerge jobが
-      # 誤ってマージしてしまう競合状態を避けるため、この実行では常に失敗させる
+      # 試みなかった場合・BOT_TOKENが無効でpushに失敗した場合のいずれも）は、
+      # このjob自体を意図的に失敗させる。pushできた場合は、新しいコミットが
+      # pull_request: synchronizeイベントを起動し、そちらの新しいCI実行で最初から
+      # 検証をやり直す。同一実行内の他jobの結果（古いコミットに対する検証結果）を
+      # 使ってmerge jobが誤ってマージしてしまう競合状態を避けるため、この実行では
+      # 常に失敗させる
       - name: Fail this run so a fresh CI run re-validates the auto-fixed commit
         if: steps.drift.outputs.changed == 'true'
         run: |
-          echo "::error::dev-standardsのsymlink/copyドリフトを自動修復しました。新しいコミットによる再検証に委ねるため、この実行は意図的に失敗させます。"
+          if [ "${{ steps.push.outcome }}" = "failure" ]; then
+            echo "::error::dev-standardsのsymlink/copyドリフトを自動修復しましたが、PRブランチへのpushに失敗しました（BOT_TOKENが無効な可能性があります）。手動でのリベース・再実行が必要です。"
+          elif [ "${{ steps.push.outcome }}" != "success" ]; then
+            echo "::error::dev-standardsのsymlink/copyドリフトを自動修復しましたが、BOT_TOKEN未設定のためpushをスキップしました。手動でのリベース・再実行が必要です。"
+          else
+            echo "::error::dev-standardsのsymlink/copyドリフトを自動修復しました。新しいコミットによる再検証に委ねるため、この実行は意図的に失敗させます。"
+          fi
           exit 1
 
   duplication-check:
