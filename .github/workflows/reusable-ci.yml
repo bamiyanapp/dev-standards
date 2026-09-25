@@ -1220,6 +1220,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: true
+          # ref未指定だと、pull_requestイベントではactions/checkoutの既定動作により
+          # PRのHEADブランチではなく合成マージref（refs/pull/<N>/merge、base_branchと
+          # PR HEADをGitHub側で自動マージした一時的なコミット）をcheckoutしてしまう。
+          # 自動修復コミットをこの合成マージコミットの上に作ってPRブランチへpushすると、
+          # リモート側がfast-forwardと認識できず常に(fetch first)で拒否される
+          # （issue #613）。github.head_refはpull_requestイベントでのみ設定され、
+          # それ以外（push等）では空文字列になり、その場合はref省略時と同じ既定動作
+          # （該当コミットそのものをcheckout）になるため問題ない
+          ref: ${{ github.head_ref }}
           # 安全に自動修復できたドリフトをPRブランチへpushし返すためBOT_TOKEN
           # （未設定時はGITHUB_TOKEN）を使う。GITHUB_TOKENによるpushは新しい
           # ワークフロー実行をトリガーしないため（issue #606）、BOT_TOKEN未設定の
