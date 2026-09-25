@@ -1,3 +1,10 @@
+## [2.28.1](https://github.com/bamiyanapp/dev-standards/compare/v2.28.0...v2.28.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ci:** standards-checkがPRの合成マージrefではなくHEADブランチをcheckoutするよう修正 ([#614](https://github.com/bamiyanapp/dev-standards/issues/614)) ([c47497f](https://github.com/bamiyanapp/dev-standards/commit/c47497ffd8bf4ada388bd5cbef1d4c9eed19ec7a))
+
 # [2.28.0](https://github.com/bamiyanapp/dev-standards/compare/v2.27.0...v2.28.0) (2026-09-24)
 
 
