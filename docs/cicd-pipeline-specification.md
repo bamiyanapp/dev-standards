@@ -305,11 +305,14 @@ flowchart TD
   "extends": ["config:recommended"],
   "git-submodules": {
     "enabled": true
-  }
+  },
+  "rebaseWhen": "behind-base-branch"
 }
 ```
 
 `git-submodules` マネージャーは Renovate のデフォルトでは無効になっているため、明示的な有効化が必須。
+
+`rebaseWhen: "behind-base-branch"` は、複数の Renovate PR が同一の `package-lock.json` 等へ並行して変更をかけることによるコンフリクトを予防するための設定である。デフォルトの `rebaseWhen: "auto"` はコンフリクト検知後の受動的リベースのみである。npm workspaces構成等でロックファイルを複数パッケージ間で共有しているリポジトリでは、先にマージされた別PRの影響で後発PRのロックファイル差分が当たらなくなることがある（hanko-master-kentei#330）。mainの更新のたびに未マージPRを継続的にリベースさせることで、この種のコンフリクトの発生頻度を下げる。
 
 ## 2. Mend Renovate GitHub App のインストール
 
