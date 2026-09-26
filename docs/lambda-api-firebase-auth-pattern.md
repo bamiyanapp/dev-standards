@@ -1,8 +1,8 @@
 # Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBによるバックエンドAPIパターン
 
-GitHub Pages等の静的ホスティングで配信するSPAに対し、専用の認証プロキシ層（`docs/serverless-static-site-pattern.md`のLambda@Edge構成）を持たない構成。フロントエンドが直接IdP（Firebase Authentication）のID Tokenを取得し、バックエンドAPI側でその都度検証する。uchi-stock（[bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock)）から、プロダクト固有の業務ロジック（在庫管理等）を除いた、他プロダクトでも再利用できるバックエンドAPI・認証・CI/CDの構成部分を切り出したもの。
+GitHub Pages等の静的ホスティングで配信するSPAを対象とする。専用の認証プロキシ層（`docs/serverless-static-site-pattern.md`のLambda@Edge構成）を持たない構成である。フロントエンドが直接IdP（Firebase Authentication）のID Tokenを取得し、バックエンドAPI側でその都度検証する。uchi-stock（[bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock)）がベースである。そこからプロダクト固有の業務ロジック（在庫管理等）を除いた。他プロダクトでも再利用できるバックエンドAPI・認証・CI/CDの構成部分を切り出したものである。
 
-対象は、家族・チーム等の限定的な範囲で使う小規模なWebプロダクト（`docs/standard-tech-stack.md`と同様）。**フロントエンドの配信方式・UIフレームワークは対象外**（uchi-stockはGitHub Pages配信・Bootstrap構成だが、これらは他プロダクトのReact/Vite/daisyUI構成と独立に選択できる）。ログインなしで使えるアプリ、あるいは`docs/serverless-static-site-pattern.md`のようにサイト全体をログイン必須にしたい場合は、そちらのCognito + Lambda@Edge構成を検討すること。本パターンは「フロントエンド自体は誰でも閲覧でき、API呼び出し単位で認証する」構成に向く。
+対象は、家族・チーム等の限定的な範囲で使う小規模なWebプロダクト（`docs/standard-tech-stack.md`と同様）。**フロントエンドの配信方式・UIフレームワークは対象外**である。uchi-stockはGitHub Pages配信・Bootstrap構成だが、これらは他プロダクトのReact/Vite/daisyUI構成と独立に選択できる。ログインなしで使えるアプリの場合や、`docs/serverless-static-site-pattern.md`のようにサイト全体をログイン必須にしたい場合を考える。そちらのCognito + Lambda@Edge構成を検討すること。本パターンは「フロントエンド自体は誰でも閲覧でき、API呼び出し単位で認証する」構成に向く。
 
 ## 全体構成
 
@@ -16,14 +16,14 @@ GitHub Pages等の静的ホスティングで配信するSPAに対し、専用�
 
 ## PWA（ホーム画面追加）でのセッション永続化（iOS Safari ITP対策）
 
-Firebase Authenticationはセッション状態をIndexedDBへ永続化する。しかしホーム画面に追加したPWA（standalone表示）は、iOS SafariのITP（Intelligent Tracking Prevention）により、一定期間操作が無いとIndexedDB・localStorage等のスクリプト書き込み可能なストレージが消去されることがある。これに巻き込まれ、ログインセッションが意図せず切れる（uchi-stock issue #326）。
+Firebase Authenticationはセッション状態をIndexedDBへ永続化する。しかしホーム画面に追加したPWA（standalone表示）には注意点がある。iOS SafariのITP（Intelligent Tracking Prevention）により消去されることがある。一定期間操作が無いとIndexedDB・localStorage等のスクリプト書き込み可能なストレージが対象になる。これに巻き込まれ、ログインセッションが意図せず切れる（uchi-stock issue #326）。
 
 フロントエンドの初期化時に以下の対策を組み合わせる。
 
 - `setPersistence(auth, browserLocalPersistence)`を明示的に呼び、Firebase Authのセッション永続化方式を確実に`local`にする
 - `navigator.storage.persist()`でブラウザに永続ストレージを要求し、上記の自動消去対象になりにくくする（Safari 15.2+でサポート）。未対応環境ではAPI自体が存在しないため、呼び出し前に`navigator.storage?.persist`の存在チェックを行うフィーチャー検出が必須。付与されるかはブラウザの裁量であり確実な保証ではない
 
-いずれもiOS Safariの内部実装に依存する挙動のため、サンドボックス環境やデスクトップブラウザでは再現・検証できず、実機（ホーム画面に追加したPWA、日を跨いだ放置後の起動）での確認が必要になる。
+いずれもiOS Safariの内部実装に依存する挙動である。そのためサンドボックス環境やデスクトップブラウザでは再現・検証できず、実機（ホーム画面に追加したPWA、日を跨いだ放置後の起動）での確認が必要になる。
 
 ## ユーザー識別ロジック（優先順位）
 
@@ -60,26 +60,26 @@ flowchart TD
 
 ## OSLS（Open Serverless）の採用
 
-Serverless Framework（`serverless`パッケージ）はv4.0以降ライセンス体系が変更され、一定規模を超える商用利用に有料サブスクリプションが必要になった。v3系のままオープンソースで開発が継続されている後継/フォークプロジェクトである**OSLS**（npmパッケージ名`osls`、[oss-serverless/osls](https://github.com/oss-serverless/osls)）へ切り替えることで、このライセンス制約を回避する。
+Serverless Framework（`serverless`パッケージ）はv4.0以降ライセンス体系が変更され、一定規模を超える商用利用に有料サブスクリプションが必要になった。v3系のままオープンソースで開発が継続されている後継/フォークプロジェクトが**OSLS**である（npmパッケージ名`osls`）。パッケージ本体は[oss-serverless/osls](https://github.com/oss-serverless/osls)である。これへ切り替えることで、このライセンス制約を回避する。
 
-- `osls`パッケージは`serverless`・`sls`・`osls`の3つのbinエイリアスを提供する**v3の drop-in代替**のため、既存の`serverless.yml`（v3スキーマ）・`npx serverless ...`系の呼び出しは無変更のまま動作する
+- `osls`パッケージは`serverless`・`sls`・`osls`の3つのbinエイリアスを提供する**v3の drop-in代替**である。そのため既存の`serverless.yml`（v3スキーマ）・`npx serverless ...`系の呼び出しは無変更のまま動作する
 - `package.json`の`devDependencies`で`serverless`を`osls`（`^3.x`系、v3スキーマ互換）に置き換えるだけで移行できる
 - Serverless Framework v4への追従（ライセンス制約を受け入れる）が許容できないプロダクトでは、新規構築時から最初に`osls`を選択するとよい
 
 ## CIのNode.jsバージョンとLambdaランタイムを一致させる
 
-`reusable-ci.yml`の`node_version`（lint/testで使うNode.jsバージョン）と、Lambdaの`provider.runtime`（`serverless.yml`）は、意図的に同じメジャーバージョンへ揃える運用にする。
+`reusable-ci.yml`の`node_version`（lint/testで使うNode.jsバージョン）がある。これとLambdaの`provider.runtime`（`serverless.yml`）は、意図的に同じメジャーバージョンへ揃える運用にする。
 
-- CIで検証したNode.jsバージョンと実際のデプロイ先ランタイムが乖離すると、CIでは検知できないランタイム差異のリスクが生まれる（例: 新しいNode.jsバージョンでのみ利用可能なビルトインAPIを使ったコードが、CIでは通るのに実際のLambda実行環境では動かない）
+- CIで検証したNode.jsバージョンと実際のデプロイ先ランタイムが乖離すると、CIでは検知できないランタイム差異のリスクが生まれる。例えば、新しいNode.jsバージョンでのみ利用可能なビルトインAPIを使ったコードが、CIでは通るのに実際のLambda実行環境では動かないことがある
 - AWS Lambdaは定期的に古いランタイム（例: `nodejs18.x`）のサポートを終了する。依存パッケージ側が`engines.node`で新しいNode.jsバージョンを要求するようになった場合（`npm warn EBADENGINE`が出る）も含め、両者を同時に見直すタイミングの合図にする
-- 見直す際は、`ci.yml`の`node_version`と`serverless.yml`の`runtime`を同一PRで一緒に変更し、CIのfrontend-test/backend-testが新バージョンで成功することを確認してからマージする
+- 見直す際は、`ci.yml`の`node_version`と`serverless.yml`の`runtime`を同一PRで一緒に変更する。CIのfrontend-test/backend-testが新バージョンで成功することを確認してからマージする
 
 ## デプロイ運用（`reusable-cd.yml`を使わない場合）
 
 `reusable-cd.yml`は「`base_branch`→`release_branch`の同期・`release_branch`上でのリリース」を前提とした構成である。semantic-releaseを`base_branch`（`main`）に対して直接実行する運用（`.releaserc.cjs`の`branches: ["main"]`）を選ぶプロダクトでは前提が一致しない。この場合`cd.yml`はプロダクト固有のワークフローとして自前で維持し、`reusable-ci.yml`のみを利用する。
 
-- semantic-releaseの実行・CHANGELOG生成をする。GitHub Pagesへのフロントエンドデプロイ（`docs/cicd-pipeline-specification.md`の`deploy-github-pages`複合action）・Lambdaへのバックエンドデプロイ（`osls deploy`）も、それぞれ独立したjobとして`cd.yml`に定義する
-- Lambdaデプロイ前にDynamoDBの破壊的変更チェック・バックアップを行う運用にする場合、`FORCE_DEPLOY`のような手動フラグで例外的に強行できるようにしておくと、意図した破壊的変更（テーブル構造の変更等）まで機械的にブロックしてしまう事故を避けられる
+- semantic-releaseの実行・CHANGELOG生成をする。GitHub Pagesへのフロントエンドデプロイ（`docs/cicd-pipeline-specification.md`の`deploy-github-pages`複合action）がある。Lambdaへのバックエンドデプロイ（`osls deploy`）もある。それぞれ独立したjobとして`cd.yml`に定義する
+- Lambdaデプロイ前にDynamoDBの破壊的変更チェック・バックアップを行う運用にする場合を考える。`FORCE_DEPLOY`のような手動フラグで例外的に強行できるようにしておく。これにより、意図した破壊的変更（テーブル構造の変更等）まで機械的にブロックしてしまう事故を避けられる
 
 ## 必要なGitHub Secretsの例
 
@@ -91,4 +91,4 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 
 ## 実例
 
-uchi-stock（`bamiyanapp/uchi-stock`）の`backend/`（`handler.js`・`serverless.yml`）・`.github/workflows/cd.yml`が本パターンの実装例。
+uchi-stock（`bamiyanapp/uchi-stock`）の`backend/`（`handler.js`・`serverless.yml`）が本パターンの実装例である。`.github/workflows/cd.yml`も同様に実装例である。

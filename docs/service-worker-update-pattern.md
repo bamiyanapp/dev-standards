@@ -1,6 +1,6 @@
 # PWAキャッシュ更新パターン（`shared/pwa/`）
 
-Service Workerでオフライン対応・表示高速化のキャッシュを導入すると、「アプリを更新（デプロイ）したのに、PWA（特にホーム画面に追加したスタンドアロン表示）ではキャッシュされた古いコードが表示され続ける」問題が起きやすい。examinationリポジトリでこの問題に対応する中で得た、実運用で安定しているキャッシュ戦略・更新検知パターンを`shared/pwa/`配下へ切り出し、他のプロダクトでも再利用できるようにしている。
+Service Workerでオフライン対応・表示高速化のキャッシュを導入すると、ある問題が起きやすい。「アプリを更新（デプロイ）したのに、PWA（特にホーム画面に追加したスタンドアロン表示）ではキャッシュされた古いコードが表示され続ける」という問題である。examinationリポジトリでこの問題に対応する中で得た、実運用で安定しているキャッシュ戦略・更新検知パターンを`shared/pwa/`配下へ切り出し、他のプロダクトでも再利用できるようにしている。
 
 ## 提供するファイル
 
@@ -12,7 +12,7 @@ Service Workerでオフライン対応・表示高速化のキャッシュを導
 
 ## なぜページ本体だけNetwork Firstにするのか
 
-Stale-While-Revalidateはキャッシュを即座に返しつつ裏側で必ず最新を取得してキャッシュを更新するため、一見「更新が永久に反映されない」状態にはならず、高速化との両立ができるように思える。しかしページ本体（HTMLナビゲーション）にまでこの方式を適用すると、表示は常に「1回前のデプロイ内容」になり続け、デプロイのたびに削除される古いハッシュ付きJS/CSSを参照したまま壊れて見えることがある。ページ本体はNetwork Firstにして常に最新のHTMLを取得し、そのHTMLが参照する新しいハッシュ付きJS/CSS（Stale-While-Revalidateでキャッシュ、内容が変われば別ファイル名になるため問題にならない）を後続で取得する構成にする。
+Stale-While-Revalidateはキャッシュを即座に返しつつ裏側で必ず最新を取得してキャッシュを更新する。そのため一見「更新が永久に反映されない」状態にはならず、高速化との両立ができるように思える。しかしページ本体（HTMLナビゲーション）にまでこの方式を適用すると、表示は常に「1回前のデプロイ内容」になり続ける。デプロイのたびに削除される古いハッシュ付きJS/CSSを参照したまま壊れて見えることがある。ページ本体はNetwork Firstにして常に最新のHTMLを取得する。そのHTMLが参照する新しいハッシュ付きJS/CSSは後続で取得する構成にする（Stale-While-Revalidateでキャッシュし、内容が変われば別ファイル名になるため問題にならない）。
 
 ## セットアップ手順
 
@@ -37,7 +37,7 @@ self.SW_CONFIG = {
 };
 ```
 
-次に、参照側リポジトリのルートに`sync-manifest.local.json`を用意し、`shared/pwa/`配下のファイルをリポジトリ自身のディレクトリ構成に合わせてsymlink化する。`sync-manifest.json`（dev-standards本体側）は全参照側リポジトリで共通のパスのみを収録するため、プロダクト固有のディレクトリ構成（例: 独立ビルドの複数フロントエンドアプリを持つ構成）はこちらに書く（詳細は`README.md`「セットアップ」節参照）。
+次に、参照側リポジトリのルートに`sync-manifest.local.json`を用意し、`shared/pwa/`配下のファイルをリポジトリ自身のディレクトリ構成に合わせてsymlink化する。`sync-manifest.json`（dev-standards本体側）は全参照側リポジトリで共通のパスのみを収録する。そのため、プロダクト固有のディレクトリ構成（例: 独立ビルドの複数フロントエンドアプリを持つ構成）はこちらに書く（詳細は`README.md`「セットアップ」節参照）。
 
 ```json
 {
@@ -49,9 +49,9 @@ self.SW_CONFIG = {
 }
 ```
 
-`sw.js`をホストするページ（Service Workerを`/sw.js`として配信する1箇所）だけでなく、同一サイトを構成する複数の独立ビルドアプリそれぞれで`ServiceWorkerRegistration.jsx`・`UpdateNotifier.jsx`を使う場合を考える。アプリの数だけ`symlinks`エントリを追加する（`source`は同じでよい）。`sync-manifest.json`/`sync-manifest.local.json`は同一`source`を複数の`target`へ結びつけることを制限していない。
+`sw.js`をホストするページ（Service Workerを`/sw.js`として配信する1箇所）を考える。それだけでなく、同一サイトを構成する複数の独立ビルドアプリそれぞれで`ServiceWorkerRegistration.jsx`・`UpdateNotifier.jsx`を使う場合も考える。アプリの数だけ`symlinks`エントリを追加する（`source`は同じでよい）。`sync-manifest.json`/`sync-manifest.local.json`は同一`source`を複数の`target`へ結びつけることを制限していない。
 
-`node dev-standards/scripts/bootstrap.js`を実行するとsymlinkが作成される。`reusable-ci.yml`の`enable_standards_check: true`を有効にしていれば、CIで`bootstrap.js --check`によりsymlinkの欠落・リンク切れを自動検知できる。
+`node dev-standards/scripts/bootstrap.js`を実行するとsymlinkが作成される。`reusable-ci.yml`の`enable_standards_check: true`を有効にしておく。これによりCIで`bootstrap.js --check`がsymlinkの欠落・リンク切れを自動検知できる。
 
 ## 各コンポーネントの利用側での組み込み
 
@@ -71,11 +71,11 @@ export default function App() {
 }
 ```
 
-`UpdateNotifier.jsx`は標準構成であるBootstrap 5.3（`alert`/`btn`等）のクラス名を使っている（issue #289）。Bootstrapを使っていないプロダクト（daisyUI構成のexamination等）では、そのままでもクラス名が無視されるだけで機能上は動作するが、見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意）。調整が必要な場合はsymlink化を見送り、コピーして個別管理する。examinationはこの方針で個別コピーへ切り替え済み。
+`UpdateNotifier.jsx`は標準構成であるBootstrap 5.3（`alert`/`btn`等）のクラス名を使っている（issue #289）。Bootstrapを使っていないプロダクト（daisyUI構成のexamination等）では、そのままでもクラス名が無視されるだけで機能上は動作する。見た目を統一したい場合は自プロダクト側のスタイルに合わせて調整すること（このファイル自体はsymlinkのため直接編集できない点に注意）。調整が必要な場合はsymlink化を見送り、コピーして個別管理する。examinationはこの方針で個別コピーへ切り替え済み。
 
 ## GitHub Pages等、basePath配下へ配信する場合
 
-`ServiceWorkerRegistration.jsx`は既定で`navigator.serviceWorker.register("/sw.js")`とサイトルート絶対パスを登録する。GitHub Pagesのプロジェクトページ（例: `https://<user>.github.io/<repo>/`）のように、サイトルート以外のbasePath配下へ配信するプロダクトでは注意が必要である。実際に配信される`sw.js`のパスと一致せず404になりService Worker自体が登録されない（`bamiyanapp/hanko-master-kentei`のissue #214で発見）。
+`ServiceWorkerRegistration.jsx`は既定で`navigator.serviceWorker.register("/sw.js")`とサイトルート絶対パスを登録する。GitHub Pagesのプロジェクトページ（例: `https://<user>.github.io/<repo>/`）のような配信形態がある。サイトルート以外のbasePath配下へ配信するプロダクトでは注意が必要である。実際に配信される`sw.js`のパスと一致せず404になりService Worker自体が登録されない（`bamiyanapp/hanko-master-kentei`のissue #214で発見）。
 
 このようなプロダクトは`swUrl`propへ実際のパスを渡す。
 
@@ -90,4 +90,4 @@ export default function App() {
 
 - `importScripts`はクラシックスクリプトとしてのService Worker（`register("/sw.js")`、`{ type: "module" }`を指定しない場合）でのみ使える。モジュール形式のService Workerを使う場合は`import`文へ書き換える必要がある
 - `sw.js`・`sw-config.js`はVite等のビルドツールの`public/`ディレクトリ（処理されず素通しでコピーされる）に置くことを想定している。バンドラーの変換を経由させたい場合は別途検討が必要
-- `cacheVersion`は`sw-config.js`側の値であり、`sw.js`の内容自体（dev-standards側）を更新した場合でも、参照側リポジトリが独自に`cacheVersion`を上げない限り古いキャッシュは破棄されない。`sw.js`本体の戦略を変更した際は、更新履歴（`CHANGELOG.md`等）でその旨を明示し、参照側リポジトリでの`cacheVersion`更新を促すこと
+- `cacheVersion`は`sw-config.js`側の値である。`sw.js`の内容自体（dev-standards側）を更新した場合でも、参照側リポジトリが独自に`cacheVersion`を上げない限り古いキャッシュは破棄されない。`sw.js`本体の戦略を変更した際は、更新履歴（`CHANGELOG.md`等）でその旨を明示し、参照側リポジトリでの`cacheVersion`更新を促すこと
