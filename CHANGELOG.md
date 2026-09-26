@@ -1,3 +1,10 @@
+## [2.28.3](https://github.com/bamiyanapp/dev-standards/compare/v2.28.2...v2.28.3) (2026-09-26)
+
+
+### Bug Fixes
+
+* **cd:** release jobがbase_branch上の実際のリリースコミットSHAを出力する ([#628](https://github.com/bamiyanapp/dev-standards/issues/628)) ([815b549](https://github.com/bamiyanapp/dev-standards/commit/815b54976008fb3668a9285434d0558ba22cc78f)), closes [bamiyanapp/karuta#1274](https://github.com/bamiyanapp/karuta/issues/1274)
+
 ## [2.28.2](https://github.com/bamiyanapp/dev-standards/compare/v2.28.1...v2.28.2) (2026-09-25)
 
 
