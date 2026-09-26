@@ -1,8 +1,8 @@
 # サーバーレスAPI構成パターン（API Gateway + Lambda + DynamoDB + SAM）
 
-**デプロイツール（AWS SAM）自体は標準索引（`docs/standard-tech-stack.md`）からは外れた構成**。標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節の自社発行セッショントークン方式自体はデプロイツールと独立**しており、OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効（`docs/standard-tech-stack.md`「2. ログイン」参照）。
+**デプロイツール（AWS SAM）自体は標準索引（`docs/standard-tech-stack.md`）からは外れた構成**。標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節の自社発行セッショントークン方式自体はデプロイツールと独立**している。OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効である（`docs/standard-tech-stack.md`「2. ログイン」参照）。
 
-Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークンをバックエンドで検証し、以降はバックエンドが自社発行する長期セッショントークンで認証する、より小規模なプロダクト向けの構成。Camp-Stock（[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)）で検証済み。
+Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークンをバックエンドで検証する。以降はバックエンドが自社発行する長期セッショントークンで認証する、より小規模なプロダクト向けの構成である。Camp-Stock（[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)）で検証済み。
 
 ## アーキテクチャ
 
@@ -46,20 +46,20 @@ backend/src/
 ```
 
 - `handler.js`は`event`（API Gateway HTTP API, payload format 2.0）を受け取り`router.js`へ委譲する純粋な変換層。`router.handleRequest({ method, path, headers, body, query })`が実処理を行う
-- `router.js`は、マッチしたルートの`handler`を呼ぶ前に必ず`authenticate(headers)`（セッショントークン検証）を実行し、失敗時は401を返す（認証をルーティングより手前で一元化）。`route.skipAuth: true`のルート（`POST /auth/session`のみ）はこれをスキップし、ハンドラへ生の`headers`を渡す。`services/*`が投げるエラー（`ValidationError`/`NotFoundError`/`UnauthorizedError`/`ForbiddenError`、いずれも`statusCode`プロパティを持つ）を、ここでHTTPレスポンスへ変換する
-- `services/*`・`repositories/*`はコンストラクタ関数（`createXxxService(repository)`）でDIする設計にし、単体テストでは`repositories`をin-memory実装に差し替える（下記「テストパターン」参照）
+- `router.js`は、マッチしたルートの`handler`を呼ぶ前に必ず`authenticate(headers)`（セッショントークン検証）を実行する。失敗時は401を返す（認証をルーティングより手前で一元化）。`route.skipAuth: true`のルート（`POST /auth/session`のみ）はこれをスキップし、ハンドラへ生の`headers`を渡す。`services/*`が投げるエラーには`ValidationError`/`NotFoundError`/`UnauthorizedError`/`ForbiddenError`がある。これらはいずれも`statusCode`プロパティを持つ。これを、ここでHTTPレスポンスへ変換する
+- `services/*`・`repositories/*`はコンストラクタ関数（`createXxxService(repository)`）でDIする設計にする。単体テストでは`repositories`をin-memory実装に差し替える（下記「テストパターン」参照）
 
 ### CORSとOPTIONSプリフライト
 
-CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda側のレスポンスに`Access-Control-Allow-Origin`等は含めない。ただし`ANY /{proxy+}`ルートは`OPTIONS`メソッドにも一致してしまい、HTTP APIのCORS自動プリフライト応答（Lambda統合を経由しない仕組み）が働かず、プリフライトリクエストがLambdaまで転送される。`router.js`にOPTIONS用のルートは用意しないため、`handler.js`側で`method === "OPTIONS"`を最初に判定し204を返す。
+CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda側のレスポンスに`Access-Control-Allow-Origin`等は含めない。ただし`ANY /{proxy+}`ルートは`OPTIONS`メソッドにも一致してしまう。HTTP APIのCORS自動プリフライト応答（Lambda統合を経由しない仕組み）が働かず、プリフライトリクエストがLambdaまで転送される。`router.js`にOPTIONS用のルートは用意しないため、`handler.js`側で`method === "OPTIONS"`を最初に判定し204を返す。
 
 ## 認証パターン（Cognitoを使わない）
 
-**自社発行セッショントークンが標準**。Googleが発行するIDトークンは有効期限が約1時間でGoogle側の管理下にあり延長できないため、これをそのまま長期間（例: 30日）Cookieへ保持しても、失効後は毎回強制ログアウトになる（Camp-Stock issue #201で顕在化）。Google IDトークンの検証は初回ログイン時のみに限定し、以降のAPIリクエストはバックエンドが発行する長期セッショントークンで認証する。
+**自社発行セッショントークンが標準**。Googleが発行するIDトークンは有効期限が約1時間で、Google側の管理下にあり延長できない。これをそのまま長期間（例: 30日）Cookieへ保持しても、失効後は毎回強制ログアウトになる（Camp-Stock issue #201で顕在化）。Google IDトークンの検証は初回ログイン時のみに限定し、以降のAPIリクエストはバックエンドが発行する長期セッショントークンで認証する。
 
-- フロントエンド: `@react-oauth/google`でGoogleのIDトークンを取得したら、まず`POST /auth/session`（`Authorization: Bearer <Google IDトークン>`）でバックエンド発行のセッショントークンへ交換する。この交換には`frontend/src/api/client.js`の`exchangeGoogleIdTokenForSession`を使う。それ以降の`fetch`は`Authorization: Bearer <セッショントークン>`を使う。ログイン処理（`AuthContext.jsx`の`login()`）はこの交換を待つため非同期になる
-- バックエンド（初回ログイン、`POST /auth/session`のみ）: `google-auth-library`の`OAuth2Client.verifyIdToken({ idToken, audience: clientId })`でGoogle IDトークンを検証する。この検証には`backend/src/lib/googleAuth.js`の`verifyGoogleIdToken`を使う。`audience`にGoogle Cloud ConsoleのクライアントIDを指定することで、他のGoogleサービス向けに発行されたIDトークンを弾く。検証後、`backend/src/services/authService.js`がセッショントークン（HS256 JWT、`sub`にGoogleアカウントのユーザーIDを設定、有効期限は`AuthContext.jsx`のCookie保持期間と一致させる）を発行して返す
-- バックエンド（それ以外の全リクエスト）: `backend/src/lib/sessionToken.js`の`createSessionAuthenticator({ secret })`がセッショントークンを検証する（署名鍵`SESSION_SECRET`が一致しない・期限切れの場合は401）。Google APIへの通信は発生しない
+- フロントエンド: `@react-oauth/google`でGoogleのIDトークンを取得する。まず`POST /auth/session`（`Authorization: Bearer <Google IDトークン>`）でバックエンド発行のセッショントークンへ交換する。この交換には`frontend/src/api/client.js`の`exchangeGoogleIdTokenForSession`を使う。それ以降の`fetch`は`Authorization: Bearer <セッショントークン>`を使う。ログイン処理（`AuthContext.jsx`の`login()`）はこの交換を待つため非同期になる
+- バックエンド（初回ログイン、`POST /auth/session`のみ）: `google-auth-library`を使う。`OAuth2Client.verifyIdToken({ idToken, audience: clientId })`でこれを行う。これでGoogle IDトークンを検証する。この検証には`backend/src/lib/googleAuth.js`の`verifyGoogleIdToken`を使う。`audience`にGoogle Cloud ConsoleのクライアントIDを指定することで、他のGoogleサービス向けに発行されたIDトークンを弾く。検証後、`backend/src/services/authService.js`がセッショントークン（HS256 JWT、`sub`にGoogleアカウントのユーザーIDを設定）を発行する。有効期限は`AuthContext.jsx`のCookie保持期間と一致させて返す
+- バックエンド（それ以外の全リクエスト）: `backend/src/lib/sessionToken.js`の`createSessionAuthenticator({ secret })`を使う。これがセッショントークンを検証する。署名鍵`SESSION_SECRET`が一致しない・期限切れの場合は401を返す。Google APIへの通信は発生しない
 
 <details>
 <summary>トークン交換フロー（mermaid図）</summary>
@@ -88,40 +88,40 @@ sequenceDiagram
 
 ![トークン交換フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-2.png)
 
-- `verifyGoogleIdToken`は`oAuth2Client`を、`createSessionAuthenticator`は`secret`をそれぞれDI可能にしており、テストでは実際にGoogle APIへ通信しないfakeや固定secretへ差し替える
-- **署名鍵（`SESSION_SECRET`）の用意**: AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による自動生成を検討した。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一し、AWS側のIAM権限追加を不要にする
-- Cookie自体（保持期間・Secure属性の付け方等）の設計は変わらない。**Cookieに保存する値がGoogle IDトークンからセッショントークンへ変わる点のみが変更点**であり、双方ともJWT形状（`header.payload.signature`）のため、E2Eテストのfake authenticator（下記「テストパターン」）はどちらの値が来ても区別せず動作する
+- `verifyGoogleIdToken`は`oAuth2Client`を、`createSessionAuthenticator`は`secret`をそれぞれDI可能にしている。テストでは実際にGoogle APIへ通信しないfakeや固定secretへ差し替える
+- **署名鍵（`SESSION_SECRET`）の用意**: 自動生成を検討した。AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による方式である。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一する。これによりAWS側のIAM権限追加を不要にする
+- Cookie自体（保持期間・Secure属性の付け方等）の設計は変わらない。**Cookieに保存する値がGoogle IDトークンからセッショントークンへ変わる点のみが変更点**である。双方ともJWT形状（`header.payload.signature`）のため、E2Eテストのfake authenticator（下記「テストパターン」）はどちらの値が来ても区別せず動作する
 
 ## DynamoDBアクセスパターン
 
-- `repositories/*.js`はDynamoDB Document Client（`@aws-sdk/lib-dynamodb`）の薄いラッパー（`get`/`put`/`list`/`delete`程度のシンプルなインターフェース）
-- `services/*.js`はrepositoryのインターフェースにのみ依存し、AWS SDKを直接importしない。これにより単体テストでは`test/helpers/inMemoryRepositories.js`（`Map`ベースの同じインターフェース実装）に差し替えて、実DynamoDBへ一切アクセスせずにビジネスロジックを検証できる
+- `repositories/*.js`はDynamoDB Document Client（`@aws-sdk/lib-dynamodb`）の薄いラッパーである。`get`/`put`/`list`/`delete`程度のシンプルなインターフェースを持つ
+- `services/*.js`はrepositoryのインターフェースにのみ依存し、AWS SDKを直接importしない。これにより単体テストでは`test/helpers/inMemoryRepositories.js`（`Map`ベースの同じインターフェース実装）に差し替える。実DynamoDBへ一切アクセスせずにビジネスロジックを検証できる
 - SAMテンプレート側は`DynamoDBCrudPolicy`（AWS SAM組み込みポリシーテンプレート）でLambda実行ロールへ必要最小限のCRUD権限のみを付与する
 
 ## SAMテンプレートの要点
 
-- `Globals.Function.Environment.Variables`にテーブル名・`GOOGLE_CLIENT_ID`・`SESSION_SECRET`をまとめて定義し、各Lambda関数（本パターンでは単一）へ自動的に環境変数として渡す
-- `SESSION_SECRET`は`Parameters`に`NoEcho: true`の文字列パラメータ（例: `SessionSecret`）として定義する。`GoogleClientId`と同様に`sam deploy --parameter-overrides`で値を注入する（値の生成・登録手順は下記「CI/CDのデプロイ固有事項」参照）。`AWS::SecretsManager::Secret`の`GenerateSecretString`による自動生成は、デプロイ実行用IAMユーザーに`secretsmanager:GetRandomPassword`権限が無いと失敗するため、標準としては採用しない
+- `Globals.Function.Environment.Variables`にテーブル名・`GOOGLE_CLIENT_ID`・`SESSION_SECRET`をまとめて定義する。各Lambda関数（本パターンでは単一）へ自動的に環境変数として渡す
+- `SESSION_SECRET`は`Parameters`に`NoEcho: true`の文字列パラメータ（例: `SessionSecret`）として定義する。`GoogleClientId`と同様に`sam deploy --parameter-overrides`で値を注入する（値の生成・登録手順は下記「CI/CDのデプロイ固有事項」参照）。`AWS::SecretsManager::Secret`の`GenerateSecretString`による自動生成という方法もある。しかしデプロイ実行用IAMユーザーに`secretsmanager:GetRandomPassword`権限が無いと失敗する。そのため標準としては採用しない
 - フロントエンド配信（S3 + CloudFront）も同一テンプレートに含める
-  - S3バケットは`PublicAccessBlockConfiguration`で完全非公開にし、CloudFrontの**Origin Access Control**（OAC、Origin Access Identity の後継）経由でのみ読み取りを許可する
-  - SPAのクライアントサイドルーティング（`react-router-dom`の`BrowserRouter`）向けに、CloudFrontの`CustomErrorResponses`でS3の403/404を200の`index.html`へフォールバックさせる
+  - S3バケットは`PublicAccessBlockConfiguration`で完全非公開にする。CloudFrontの**Origin Access Control**（OAC、Origin Access Identity の後継）経由でのみ読み取りを許可する
+  - SPAのクライアントサイドルーティング（`react-router-dom`の`BrowserRouter`）向けの設定である。CloudFrontの`CustomErrorResponses`でS3の403/404を200の`index.html`へフォールバックさせる
 - `sam deploy --resolve-s3`で、SAMのデプロイ管理用S3バケットを自動作成・再利用させる（手動でのバケット管理が不要）
 
 ## CI/CDのデプロイ固有事項
 
-`docs/cicd-pipeline-specification.md`の`reusable-cd.yml`（semantic-releaseによるバージョニング）に続けて、参照側リポジトリ自身の`cd.yml`でプロダクト固有のデプロイジョブを実行する。
+`docs/cicd-pipeline-specification.md`の`reusable-cd.yml`（semantic-releaseによるバージョニング）に続ける。参照側リポジトリ自身の`cd.yml`でプロダクト固有のデプロイジョブを実行する。
 
 - `sam build` → `sam deploy` → スタック出力（API・S3バケット名・CloudFront distribution ID等）取得、という順序で進める
 - 続けてフロントエンドビルド（`VITE_API_BASE_URL`にAPI出力を注入） → S3同期 → CloudFront invalidation、という順序で行う
 - **キャッシュ制御の分離が必須**: `index.html`・Service Worker関連ファイル（`sw.js`等）は`--cache-control "no-cache"`にする。コンテンツハッシュ付きの`assets/*`は`--cache-control "public, max-age=31536000, immutable"`にする。分けないと、ブラウザにキャッシュされた古い`index.html`が削除済みの古いハッシュ付きアセットを参照し続ける
-- **submodule取得の見落としに注意**: `dev-standards/shared/`配下の実体へsymlinkしているコンポーネントを使っている場合に注意する。`ci.yml`側だけでなく、参照側リポジトリ自身の`cd.yml`の`Checkout`ステップにも個別に`submodules: true`が必要である（`reusable-ci.yml`内のjobとは独立したチェックアウトのため、片方を直しても他方には及ばない）。実際にこの見落としで`npm run build`が失敗する障害が発生した
-- **Secretsの値をAIが直接確認できない運用への対応**: `GOOGLE_OAUTH_CLIENT_ID`・`SESSION_SECRET`のようなSecretは、Claude Codeからは書き込み専用で値を読めない。デプロイジョブ内で形式チェック（`GOOGLE_OAUTH_CLIENT_ID`は正規表現、`SESSION_SECRET`は最小文字数）＋値のハッシュ（先頭数文字のみ）をJob Summaryへ出力する。「意図した値に更新されているか」をハッシュの一致・不一致で人間がスマートフォンから確認できるようにする（値そのものは露出させない）
-- **`SESSION_SECRET`の用意はAWS側の自動生成に頼らない**: セッショントークンの署名鍵は、AWSコンソールでのIAMポリシー変更を必要としない運用にする。`GOOGLE_OAUTH_CLIENT_ID`と同じ運用（人間が一度だけGitHub Actions Secretsへ登録し、CIが`--parameter-overrides`で注入）にする。ランダムな値の生成自体はClaude Codeがサンドボックス内で行い（例: `openssl rand -hex 32`）、生成した値をチャットで人間へ渡して登録してもらう（値自体はGitHub Secretsにのみ保存され、リポジトリのコードやコミット履歴には残さない）
+- **submodule取得の見落としに注意**: `dev-standards/shared/`配下の実体へsymlinkしているコンポーネントを使っている場合に注意する。`ci.yml`側だけでなく、参照側リポジトリ自身の`cd.yml`の`Checkout`ステップにも個別に`submodules: true`が必要である。`reusable-ci.yml`内のjobとは独立したチェックアウトのため、片方を直しても他方には及ばない。実際にこの見落としで`npm run build`が失敗する障害が発生した
+- **Secretsの値をAIが直接確認できない運用への対応**: `GOOGLE_OAUTH_CLIENT_ID`・`SESSION_SECRET`のようなSecretがある。これらはClaude Codeからは書き込み専用で値を読めない。デプロイジョブ内で形式チェック（`GOOGLE_OAUTH_CLIENT_ID`は正規表現、`SESSION_SECRET`は最小文字数）＋値のハッシュ（先頭数文字のみ）をJob Summaryへ出力する。「意図した値に更新されているか」をハッシュの一致・不一致で人間がスマートフォンから確認できるようにする（値そのものは露出させない）
+- **`SESSION_SECRET`の用意はAWS側の自動生成に頼らない**: セッショントークンの署名鍵は、AWSコンソールでのIAMポリシー変更を必要としない運用にする。`GOOGLE_OAUTH_CLIENT_ID`と同じ運用（人間が一度だけGitHub Actions Secretsへ登録し、CIが`--parameter-overrides`で注入）にする。ランダムな値の生成自体はClaude Codeがサンドボックス内で行う（例: `openssl rand -hex 32`）。生成した値をチャットで人間へ渡して登録してもらう（値自体はGitHub Secretsにのみ保存され、リポジトリのコードやコミット履歴には残さない）
 
 ## テストパターン
 
-- **単体テスト**: `test/helpers/inMemoryRepositories.js`のin-memory repositoryへ差し替え、実DynamoDB・実Google認証を使わずにservices層を検証する
-- **E2Eテスト**: `backend/e2e/testServer.js`は、本番`handler.js`と同じ`createRouter`/`buildRoutes`/serviceファクトリ関数を再利用する最小限の`http.createServer`ラッパー。in-memory repositoryと「実通信せず、JWTペイロードをbase64url decodeするだけ（署名検証なし）」のfake authenticatorに差し替えている。このfake authenticatorはGoogle IDトークン・セッショントークンのいずれの形状も区別せず信頼するため、本番側の認証方式の切り替え（IDトークン直接検証→セッショントークン）に追随するコード変更は不要だった。Playwrightの`webServer`設定からこのテストサーバーを起動する。フロントエンドの`context.addCookies()`でE2E用のfakeセッショントークンをあらかじめセットすることで、実際のGoogle OAuthログインフロー・`POST /auth/session`交換を経由せずにE2Eテストを実行できる
+- **単体テスト**: `test/helpers/inMemoryRepositories.js`のin-memory repositoryへ差し替える。実DynamoDB・実Google認証を使わずにservices層を検証する
+- **E2Eテスト**: `backend/e2e/testServer.js`がある。本番`handler.js`と同じ`createRouter`/`buildRoutes`/serviceファクトリ関数を再利用する。`http.createServer`による最小限のラッパーである。in-memory repositoryと「実通信せず、JWTペイロードをbase64url decodeするだけ（署名検証なし）」のfake authenticatorに差し替えている。このfake authenticatorはGoogle IDトークン・セッショントークンのいずれの形状も区別せず信頼する。そのため、本番側の認証方式の切り替え（IDトークン直接検証→セッショントークン）に追随するコード変更は不要だった。Playwrightの`webServer`設定からこのテストサーバーを起動する。フロントエンドの`context.addCookies()`でE2E用のfakeセッショントークンをあらかじめセットする。これにより、実際のGoogle OAuthログインフロー・`POST /auth/session`交換を経由せずにE2Eテストを実行できる
 - 上記のfake authenticator・fakeセッショントークン組み立ては、このパターンを採用するプロダクト間で共通化できる（Camp-Stock固有のロジックを含まない）。そのため、バックエンド側を`shared/e2e/fakeAuthenticator.js`（`createFakeAuthenticator()`）として切り出した。フロントエンド側は`shared/e2e/fakeSessionToken.js`（`createFakeSessionToken`/`loginAsE2EUser`）として切り出した。`shared/e2e/screenshot.js`と同様にsymlinkで提供する（[bamiyanapp/dev-standards#404](https://github.com/bamiyanapp/dev-standards/issues/404)）。参照側リポジトリの`sync-manifest.local.json`へ以下を追加する。
 
   ```json
@@ -133,7 +133,7 @@ sequenceDiagram
   }
   ```
 
-  `backend/e2e/testServer.js`は`createFakeAuthenticator()`をこのファイルからimportする。`frontend/e2e/auth.js`側のログイン用ヘルパーは`loginAsE2EUser`をそのままre-exportするか薄くラップし、実際にセッショントークン（またはGoogle IDトークン）を保持しているCookie名（プロダクトごとに異なる）を`cookieName`引数で渡す。
+  `backend/e2e/testServer.js`は`createFakeAuthenticator()`をこのファイルからimportする。`frontend/e2e/auth.js`側のログイン用ヘルパーは`loginAsE2EUser`をそのままre-exportするか薄くラップする。実際にセッショントークン（またはGoogle IDトークン）を保持しているCookie名（プロダクトごとに異なる）を`cookieName`引数で渡す。
 - 詳細な呼び出し規約（スクリーンショット報告等）は`docs/cicd-pipeline-specification.md`「CIワークフロー」を参照
 
 ## 参考実装
