@@ -12,7 +12,7 @@
 
 ## dev-standardsの導入方法
 
-参照側リポジトリへの取り込み方（git submodule追加・`bootstrap.js`によるセットアップ）と、`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の全入力パラメータは[`docs/reusable-workflows-reference.md`](docs/reusable-workflows-reference.md)を参照。CI/CDパイプライン自体の仕様（各ジョブの実行内容・Architecture）は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)を参照。
+参照側リポジトリへの取り込み方（git submodule追加・`bootstrap.js`によるセットアップ）を知りたい場合を考える。[`docs/reusable-workflows-reference.md`](docs/reusable-workflows-reference.md)を参照。`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の全入力パラメータも同ドキュメントを参照。CI/CDパイプライン自体の仕様（各ジョブの実行内容・Architecture）は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)を参照。
 
 ## このリポジトリの構成
 
@@ -42,14 +42,14 @@
 ### インフラ・認証
 
 - [`static-hosting-pattern.md`](docs/static-hosting-pattern.md): S3 + CloudFrontによる静的サイト配信構成（標準ホスティング）
-- [`lambda-api-firebase-auth-pattern.md`](docs/lambda-api-firebase-auth-pattern.md): Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBのバックエンドAPI構成
+- [`lambda-api-firebase-auth-pattern.md`](docs/lambda-api-firebase-auth-pattern.md)がある。Firebase Authenticationを使うバックエンドAPI構成である。API Gateway/Lambda(OSLS) + DynamoDBで構築する
 - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証の認証ロジック（デプロイツール自体はAWS SAMの実装例、標準はOSLS）
 - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
 - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
 - [`websocket-client-reconnect-pattern.md`](docs/websocket-client-reconnect-pattern.md): WebSocketクライアントの再接続エンジン設計パターン
-- [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md): S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成（標準索引からは除外、サイト全体ログイン保護が必要な場合の追加パターン）
+- [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md)がある。S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成である。標準索引からは除外している。サイト全体ログイン保護が必要な場合の追加パターンである
 - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理。`serverless-static-site-pattern.md`向け）
-- [`short-lived-bearer-token-pattern.md`](docs/short-lived-bearer-token-pattern.md): 別オリジンバックエンドAPIへの短命Bearerトークン認証（`serverless-static-site-pattern.md`向け）
+- [`short-lived-bearer-token-pattern.md`](docs/short-lived-bearer-token-pattern.md)がある。別オリジンバックエンドAPIへの短命Bearerトークン認証パターンである。`serverless-static-site-pattern.md`向けである
 
 ### バックエンド実装パターン
 
@@ -59,7 +59,7 @@
 - [`dynamodb-safe-backfill-pattern.md`](docs/dynamodb-safe-backfill-pattern.md): DynamoDBの安全なバックフィル・移行スクリプトパターン
 - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
 - [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
-- [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md): フロントエンドError Boundary＋サーバーサイドロギング（`shared/ui/ErrorBoundary.jsx`, `shared/lambda/clientErrorReporting.js`）
+- [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md)がある。フロントエンドError Boundary＋サーバーサイドロギング構成である。`shared/ui/ErrorBoundary.jsx`・`shared/lambda/clientErrorReporting.js`を使う
 
 ### CI/CD・運用
 
@@ -91,8 +91,8 @@
 | hanko-master-kentei（ハンコ捺印の作法をテーマにした風刺Webアプリ） | [bamiyanapp.github.io/hanko-master-kentei](https://bamiyanapp.github.io/hanko-master-kentei/) | [bamiyanapp/hanko-master-kentei](https://github.com/bamiyanapp/hanko-master-kentei) |
 | shock-lab（車両サスペンション物理シミュレータ） | [bamiyanapp.github.io/shock-lab](https://bamiyanapp.github.io/shock-lab/) | [bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab) |
 
-†1: `cd.yml`実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的な確認だけでは固定URLを特定できない（`cd`ワークフロー実行ログ、`Deploy to AWS` jobのJob Summary出力から確認済み）。Google OAuthログインで保護された利用である。ユーザー（プロダクト所有者）の判断により、他者に使われること・それに伴うクラウド利用費増加を許容し、参考情報として掲載する（メールアドレスの許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。
+†1: `cd.yml`実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成である。そのため、コードの静的な確認だけでは固定URLを特定できない。`cd`ワークフロー実行ログ、`Deploy to AWS` jobのJob Summary出力から確認済みである。Google OAuthログインで保護された利用である。ユーザー（プロダクト所有者）の判断により、他者に使われること・それに伴うクラウド利用費増加を許容する。参考情報として掲載する（メールアドレスの許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。
 
 †2: examinationも同様にCloudFront配信だが、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、こちらもGoogle OAuthログインで保護された家族限定利用のため、一般公開の入り口としてではなく参考情報として掲載する。
 
-†3: kingyoも同様にCloudFormationのスタック出力から動的に取得する構成のためコードの静的確認だけでは特定できないが、`uchi-stock/kingyo`の`cd`ワークフロー実行ログ（`deploy` jobのJob Summary出力）から実際のドメインを確認済み。ログイン機構は無く全員共通ランキングを扱う仕様（issue #110）のため、examination・Camp-Stockとは異なり一般公開の入り口として案内して問題ない。
+†3: kingyoも同様にCloudFormationのスタック出力から動的に取得する構成である。そのためコードの静的確認だけでは特定できない。`uchi-stock/kingyo`の`cd`ワークフロー実行ログ（`deploy` jobのJob Summary出力）から実際のドメインを確認済み。ログイン機構は無く全員共通ランキングを扱う仕様（issue #110）のため、examination・Camp-Stockとは異なり一般公開の入り口として案内して問題ない。

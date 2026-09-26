@@ -1,6 +1,6 @@
 # Node.jsのhttps.requestでレスポンスボディをBufferのまま集めてから一度だけデコードする
 
-Node.js標準の`https`モジュール（`https.request`）を生で使って外部APIを呼び出す際、レスポンスボディの蓄積方法を誤ると、マルチバイト文字（日本語等）がチャンク境界で分割されたときに文字化け（U+FFFD置換文字）を起こす。axios・node-fetch等のHTTPクライアントライブラリは内部で正しく処理しているため表面化しないが、依存を増やしたくない小規模なLambda関数等で`https`モジュールを直接使う場合に踏みやすい罠。examinationの`geminiConversation.js`（`postJson`）・`checkAuth.js`（`postForm`）の両方で実際に本番データの文字化けを引き起こしていた（[examination#182](https://github.com/bamiyanapp/examination/issues/182)）。
+Node.js標準の`https`モジュール（`https.request`）を生で使って外部APIを呼び出す際、レスポンスボディの蓄積方法を誤ることがある。マルチバイト文字（日本語等）がチャンク境界で分割されたときに文字化け（U+FFFD置換文字）を起こす。axios・node-fetch等のHTTPクライアントライブラリは内部で正しく処理しているため表面化しない。依存を増やしたくない小規模なLambda関数等で`https`モジュールを直接使う場合に踏みやすい罠である。examinationの`geminiConversation.js`（`postJson`）で実際に本番データの文字化けを引き起こしていた。`checkAuth.js`（`postForm`）でも同様の文字化けを引き起こしていた。詳細は[examination#182](https://github.com/bamiyanapp/examination/issues/182)を参照。
 
 ## 問題のあるコード
 
@@ -20,7 +20,7 @@ function postJson(hostname, path, headers, bodyObj) {
 }
 ```
 
-`data += chunk`は`chunk`（Buffer）を暗黙に文字列へ変換するが、この変換はチャンクごとに独立して行われる。UTF-8のマルチバイト文字（日本語は多くが3バイト）がTCP/TLSのパケット分割によってちょうどチャンク境界をまたいだ場合を考える。前半・後半それぞれのBufferが単独では不正なUTF-8シーケンスになり、`Buffer.toString("utf-8")`はデコードできないバイト列を1バイトずつU+FFFD（置換文字）に置き換えてしまう。レスポンスサイズが小さいテスト環境では再現しにくく、本番の実データでのみ低確率で発生するため気づきにくい。
+`data += chunk`は`chunk`（Buffer）を暗黙に文字列へ変換するが、この変換はチャンクごとに独立して行われる。UTF-8のマルチバイト文字（日本語は多くが3バイト）がTCP/TLSのパケット分割によってちょうどチャンク境界をまたいだ場合を考える。前半・後半それぞれのBufferが単独では不正なUTF-8シーケンスになる。`Buffer.toString("utf-8")`はデコードできないバイト列を1バイトずつU+FFFD（置換文字）に置き換えてしまう。レスポンスサイズが小さいテスト環境では再現しにくく、本番の実データでのみ低確率で発生するため気づきにくい。
 
 ## 正しい実装
 
@@ -56,4 +56,4 @@ function postJson(hostname, path, headers, bodyObj) {
 
 ## 適用範囲
 
-`https.request`/`http.request`を生で使い、レスポンスボディを文字列として扱うすべてのコードが対象（リクエストボディ側は`Buffer.byteLength`で正しく長さを計算していれば問題にならない）。`fetch`（Node.js 18+の標準実装）・axios・node-fetch等を使う場合、内部で同様の処理を正しく行っているためこの罠には当たらない。
+`https.request`/`http.request`を生で使い、レスポンスボディを文字列として扱うすべてのコードが対象である。リクエストボディ側は`Buffer.byteLength`で正しく長さを計算していれば問題にならない。`fetch`（Node.js 18+の標準実装）・axios・node-fetch等を使う場合、内部で同様の処理を正しく行っているためこの罠には当たらない。

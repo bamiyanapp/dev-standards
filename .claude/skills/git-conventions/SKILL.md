@@ -20,7 +20,7 @@ description: 新しい作業ブランチを作成する時、またはコミッ�
 ### subject
 
 - Conventional Commits 形式を厳守する。
-- 必ず1行（100文字以内、`type(scope): `を含めた全体の文字数）で記述する。この上限は`commitlint.config.cjs`が使う`@commitlint/config-conventional`の`header-max-length`既定値であり、実際にCIで機械的に検証される（issue #492）。
+- 必ず1行（100文字以内、`type(scope): `を含めた全体の文字数）で記述する。この上限は`commitlint.config.cjs`が使う`@commitlint/config-conventional`の`header-max-length`既定値である。実際にCIで機械的に検証される（issue #492）。
 - 日本語で記述する。
   例: `feat(auth): 認証機能の追加`
 
@@ -55,4 +55,4 @@ description: 新しい作業ブランチを作成する時、またはコミッ�
 - `影響:`
 - `テスト:`
 
-1つでも欠けている場合は、そのまま `git commit` を実行してはならない。本文を補ってから再度確認すること。「軽微な変更だから」「設定ファイルのみの変更だから」等を理由にbody自体を省略してはならない（該当項目が無い場合は本文中で `N/A` と書くことで対応する。bodyそのものを書かないことの言い訳にはならない）。
+1つでも欠けている場合は、そのまま `git commit` を実行してはならない。本文を補ってから再度確認すること。「軽微な変更だから」「設定ファイルのみの変更だから」等を理由にbody自体を省略してはならない。該当項目が無い場合は本文中で `N/A` と書くことで対応する。bodyそのものを書かないことの言い訳にはならない。

@@ -1,6 +1,6 @@
 # 運用監視（サイレント障害検知）パターン（`shared/lambda/opsAlertNotifier.js`）
 
-バックエンド以外の実行環境（自宅Raspberry Pi等）が完全に停止・クラッシュした場合、AWS側には一切ログもリクエストも残らないため、通常のエラーログ監視では気づけない（youtube-radar issue #122由来）。CloudWatch Alarmで「想定間隔以上、期待するリクエスト/イベントが発生していない」こと自体を異常として検知し、SNS経由でLambdaを起動、運用監視専用のLINE Bot（各プロダクトのユーザー向け通知Botとは別に、全プロダクト共通で1つ新規開設したもの）へ通知する。
+バックエンド以外の実行環境（自宅Raspberry Pi等）が完全に停止・クラッシュした場合を考える。AWS側には一切ログもリクエストも残らないため、通常のエラーログ監視では気づけない（youtube-radar issue #122由来）。CloudWatch Alarmで「想定間隔以上、期待するリクエスト/イベントが発生していない」こと自体を異常として検知する。SNS経由でLambdaを起動する。運用監視専用のLINE Bot（各プロダクトのユーザー向け通知Botとは別に、全プロダクト共通で1つ新規開設したもの）へ通知する。
 
 <details>
 <summary>CloudWatch→LINE通知フロー（mermaid図）</summary>
@@ -98,12 +98,12 @@ functions:
 
 各プロダクトが持つユーザー向け通知用のLINE公式アカウントとは別に、**運用監視専用のLINE公式アカウントを全プロダクト共通で1つ新規開設**する。LINE Developersコンソール（スマートフォンのブラウザから操作可能）から作成し、チャンネルアクセストークンと通知先のユーザーIDを取得する。
 
-GitHub Secrets自体はリポジトリ単位でしか登録できないため、共通化されるのはLINE公式アカウント（と、そこへ送るためのメッセージ組み立て・送信ロジック）のみである。各プロダクトは自身のリポジトリのGitHub Secretsへ、同じ値を`OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN`・`OPS_ALERT_LINE_USER_ID`として個別に登録する。
+GitHub Secrets自体はリポジトリ単位でしか登録できないため、共通化されるのはLINE公式アカウント（と、そこへ送るためのメッセージ組み立て・送信ロジック）のみである。各プロダクトは自身のリポジトリのGitHub Secretsへ登録する。同じ値を`OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN`・`OPS_ALERT_LINE_USER_ID`として個別に登録する。
 
 メッセージに`appName`を含めているのは、1つのLINE Botに複数プロダクトからの通知が届くため、どのアプリの異常かをひと目で区別できるようにするため。
 
 ## 設計上の要点
 
-- `buildOpsAlertMessage`はCloudWatch AlarmのSNSメッセージ（`AlarmName`・`NewStateValue`・`NewStateReason`）から通知文を組み立てる純粋関数、`sendOpsAlert`はLINE Messaging APIへの送信のみを行う。SNSイベント自体のパース（`event.Records`のループ等）はプロダクトごとのLambdaハンドラに委ねる
+- `buildOpsAlertMessage`は通知文を組み立てる純粋関数である。CloudWatch AlarmのSNSメッセージ（`AlarmName`・`NewStateValue`・`NewStateReason`）から組み立てる。`sendOpsAlert`はLINE Messaging APIへの送信のみを行う。SNSイベント自体のパース（`event.Records`のループ等）はプロダクトごとのLambdaハンドラに委ねる
 - 「異常発生（ALARM）」だけでなく「復旧（OK）」でも同じLambdaが呼ばれるため、`newState`をメッセージに含めることで復旧報告も兼ねる
-- CloudWatch Alarmの`Period`・`EvaluationPeriods`は、監視対象の正常な実行間隔のばらつきを考慮し、短すぎて誤検知しない値にする（cronの実行間隔そのものではなく、十分な余裕を持たせた値にする）
+- CloudWatch Alarmの`Period`・`EvaluationPeriods`は、監視対象の正常な実行間隔のばらつきを考慮する。短すぎて誤検知しない値にする（cronの実行間隔そのものではなく、十分な余裕を持たせた値にする）

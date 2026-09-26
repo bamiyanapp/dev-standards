@@ -1,6 +1,6 @@
 # 実認証情報の無いエージェントサンドボックスから、本番データを安全に調査・修正する
 
-Claude Code等のAIエージェントが動くサンドボックス環境には、意図的に実AWS認証情報等を持たせないことが多い（環境変数がプロキシ注入のプレースホルダーになっており、実際のAPI呼び出しは`UnrecognizedClientException`等で失敗する）。一方、GitHub Actionsのランナーはリポジトリのsecrets経由で実認証情報を持つ。この差を前提に、「調査・修正のロジックはコード化してリポジトリにコミットし、実行自体はGitHub Actions側に委ねる」運用パターンを確立する。examination（[examination#182](https://github.com/bamiyanapp/examination/issues/182)、本番DynamoDBデータの文字化け調査・修正）で確立した。
+Claude Code等のAIエージェントが動くサンドボックス環境には、意図的に実AWS認証情報等を持たせないことが多い。環境変数がプロキシ注入のプレースホルダーになっており、実際のAPI呼び出しは`UnrecognizedClientException`等で失敗する。一方、GitHub Actionsのランナーはリポジトリのsecrets経由で実認証情報を持つ。この差を前提に、「調査・修正のロジックはコード化してリポジトリにコミットし、実行自体はGitHub Actions側に委ねる」運用パターンを確立する。examination（[examination#182](https://github.com/bamiyanapp/examination/issues/182)、本番DynamoDBデータの文字化け調査・修正）で確立した。
 
 スマートフォンのみで運用する（ローカル端末でのCLI操作ができない）開発環境とも相性がよい。`workflow_dispatch`はGitHubのWeb/モバイルアプリから実行でき、結果はJob Summaryでその場から確認できる。
 
@@ -42,7 +42,7 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 ```
 
-`node scripts/find-mojibake.js`はテーブルを`Scan`し、全文字列フィールドにU+FFFD（置換文字）が含まれる行のテーブル名・キー・フィールド名・該当箇所を出力するだけの読み取り専用スクリプト。書き込みは一切行わない。
+`node scripts/find-mojibake.js`はテーブルを`Scan`する。全文字列フィールドにU+FFFD（置換文字）が含まれる行のテーブル名・キー・フィールド名・該当箇所を出力するだけの読み取り専用スクリプトである。書き込みは一切行わない。
 
 ## 修正用ワークフロー（dry-run/apply切り替え）
 
