@@ -119,6 +119,8 @@ export default defineConfig({
 });
 ```
 
+**karutaの招待画面は意図的に非採用（issue #1168）**: `ShareButton.jsx`はボタン押下でモーダルを開くUXである。karutaのクイズ大会招待画面（`QuizRoomInfoView`）は、画面遷移直後からQRコード・招待URLを常時表示する設計（issue #547）である。モーダル化すると閲覧に追加のタップが必要になり、この設計意図に反するため、QRコード生成・URLコピーのロジックのみを画面側で個別実装し、`ShareButton.jsx`自体はsymlinkしていない。CSSフレームワーク不一致（daisyUI等）以外にも、インタラクションモデルの不一致（常時表示 vs. モーダル）が非採用理由になり得る一例である。
+
 ### `shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`
 
 `docs/frontend-ui-conventions.md`「トップページの必須構成」（バージョン・更新日時の表示）を実装するための2つの関数。`getAppVersionDefine.js`はNode.js側（`vite.config.js`）で動く点が他の`shared/ui/`コンポーネントと異なる。ブラウザで動くReactコンポーネントではない。
