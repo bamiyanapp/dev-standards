@@ -63,7 +63,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 
 ## `reusable-cd.yml`
 
-参照側の `.github/workflows/cd.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行する。バージョン自動採番・タグ付けを行い、GitHub Releaseを作成する。出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
+参照側の `.github/workflows/cd.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行する。バージョン自動採番・タグ付けを行い、GitHub Releaseを作成する。出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。`github.sha`（このpush自体のコミット）はバージョン更新前のコミットを指すため、デプロイジョブのcheckout対象には出力 `release_commit_sha`（base_branch上でバージョン更新が反映された実際のコミットSHA）を使うこと。`github.sha`をそのまま使うと、デプロイされるアプリのバージョン表示・changelogが常に1つ前のリリースのままになる（[bamiyanapp/karuta#1274](https://github.com/bamiyanapp/karuta/issues/1274)）。指定できる入力は以下の通り。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|
