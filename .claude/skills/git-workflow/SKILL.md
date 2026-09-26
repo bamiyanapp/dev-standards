@@ -6,16 +6,11 @@ description: 作業開始から終了までのGitブランチ戦略および基�
 
 ## 作業開始
 
-1. 対応するIssueの確認（CLAUDE.md「Issue駆動の原則」参照）。存在しなければ着手前に起票し、
-   種別ラベル（`bug`/`enhancement`/`documentation`等）と
-   重要度ラベル（`priority: high`/`priority: medium`/`priority: low`）を必ず付与する。
+1. 対応するIssueの確認（CLAUDE.md「Issue駆動の原則」参照）。存在しなければ着手前に起票する。
+   種別ラベル（`bug`/`enhancement`/`documentation`等）を必ず付与する。
+   重要度ラベル（`priority: high`/`priority: medium`/`priority: low`）も必ず付与する。
    既存Issueを流用する場合も、いずれかのラベルが未設定であれば着手前に補う
-   - 特に、複数の対応項目を列挙したバックログ的なIssue（例:
-     「①〜⑧」のような箇条書き）から1項目を取り出して着手・起票する場合は、
-     その項目が既に別PRで対応済みでないかを`git log --grep`や該当ファイルの
-     `git blame`で必ず確認してから起票する。バックログのIssue本文が古いまま
-     更新されておらず、実装は既に完了しているのに未対応と誤認して重複Issueを
-     起票してしまうことがある
+   - 特に、複数の対応項目を列挙したバックログ的なIssue（例: 「①〜⑧」のような箇条書き）から1項目を取り出して着手・起票する場合を考える。その項目が既に別PRで対応済みでないかを`git log --grep`や該当ファイルの`git blame`で必ず確認してから起票する。バックログのIssue本文が古いまま更新されていないことがある。実装は既に完了しているのに未対応と誤認して重複Issueを起票してしまうことがある
 2. main更新
 3. 作業ブランチ作成（同名ブランチが既に存在する場合は、続行前に必ず「ブランチ再利用前の確認」を行う）
 4. 既存ブランチを再利用する場合、対応するPRの状態（オープン/マージ済み/クローズ済み）を確認する（後述の「ブランチ再利用前の確認」）
@@ -33,11 +28,10 @@ description: 作業開始から終了までのGitブランチ戦略および基�
 ## ブランチ再利用前の確認（重要）
 
 同名の作業ブランチ・そのPRが既に存在する状態から作業を再開する場合、pushする前に必ずPRの状態を確認する。
-マージ済みのPRは完了した成果物であり、追加コミットの受け皿にはできない（マージ時にブランチがsquash等で削除される運用の場合、
-同名ブランチへの追加pushは意図せず孤立コミットを作り、どのPRにも紐付かない変更として宙に浮く）。
+マージ済みのPRは完了した成果物であり、追加コミットの受け皿にはできない。マージ時にブランチがsquash等で削除される運用の場合、同名ブランチへの追加pushは意図せず孤立コミットを作る。どのPRにも紐付かない変更として宙に浮く。
 
 - 対応するPRが**オープン**: そのままpushしてPRを更新してよい。
-- 対応するPRが**マージ済み／クローズ済み**、またはPRが存在しない: 新しい作業として扱う。最新のmain（ベースブランチ）から同名ブランチを作り直し（`git fetch origin main && git checkout -B <branch> origin/main` 等）、まだmainに取り込まれていないコミットがあればcherry-pickやrebaseで引き継ぐ（破棄しない）。そのうえで新規PRとして作成する。既存のマージ済みPRの上に積み増してはならない。**cherry-pick・rebase後は、別ブランチで既にVerifier（lint/test/build）を通していたとしても、そのまま省略せず、新しいブランチ上で必ずVerifier全体を再実行してからpushする**。ブランチ・実行環境が変わればテスト結果も変わり得るため、「以前検証済みだから」は再実行を省略する理由にならない。
+- 対応するPRが**マージ済み／クローズ済み**、またはPRが存在しない: 新しい作業として扱う。最新のmain（ベースブランチ）から同名ブランチを作り直す（`git fetch origin main && git checkout -B <branch> origin/main` 等）。まだmainに取り込まれていないコミットがあればcherry-pickやrebaseで引き継ぐ（破棄しない）。そのうえで新規PRとして作成する。既存のマージ済みPRの上に積み増してはならない。**cherry-pick・rebase後も、別ブランチで既にVerifierを通していたことを理由に省略しない**。新しいブランチ上で必ずVerifier全体を再実行してからpushする。ブランチ・実行環境が変わればテスト結果も変わり得るため、「以前検証済みだから」は再実行を省略する理由にならない。
 
 ブランチ命名は
 git-conventions Skillを使用する。
@@ -54,8 +48,7 @@ git-conventions Skillを使用する。
 
 1. `git fetch origin <base-branch>`でmainを再取得する
 2. 直前のpushに対応するPRが存在する場合、その状態（オープン/マージ済み/クローズ済み）を確認する
-3. マージ・クローズ済みだった場合は「ブランチ再利用前の確認」の手順（`origin/<base-branch>`から
-   ブランチを作り直し、未取り込みのコミットをcherry-pick、Verifier全体を再実行）に従う
+3. マージ・クローズ済みだった場合は「ブランチ再利用前の確認」の手順に従う。具体的には`origin/<base-branch>`からブランチを作り直し、未取り込みのコミットをcherry-pick、Verifier全体を再実行する
 
 ## Issueのクローズ運用（CI自動マージとの対応）
 
@@ -63,25 +56,20 @@ git-conventions Skillを使用する。
 
 1. **PR本文に対応Issueへの参照キーワードを必ず含める。**
    - 対応するIssueと同一リポジトリで変更が完結し、そのPRのマージのみでIssueの完了条件を満たす場合: `Closes #N`（またはGitHubが対応する同義語）を使う。マージ時にGitHubが自動的にIssueをクローズする
-   - 対応するIssueと異なるリポジトリでPRを作成する場合を考える。または他リポジトリ側の追加対応が完了して初めてIssueの完了条件を満たす場合（複数リポジトリにまたがる変更、下記「複合action・pinned tagを伴う変更の展開確認」に該当するケース等）も同様である。`Refs #N`など、自動クローズされない参照表現を使う
+   - 対応するIssueと異なるリポジトリでPRを作成する場合を考える。または他リポジトリ側の追加対応が完了して初めてIssueの完了条件を満たす場合も同様である。具体的には複数リポジトリにまたがる変更、下記「複合action・pinned tagを伴う変更の展開確認」に該当するケース等である。`Refs #N`など、自動クローズされない参照表現を使う
 2. **`Closes #N`を使った単一リポジトリ完結のIssueは、マージ後に改めてクローズの要否を判断・操作する必要が無い**。GitHubの自動クローズに委ねてよい
 3. **`Refs #N`で参照した複数リポジトリにまたがるIssueは、関連する全リポジトリのPRがマージされたことを確認したうえで手動でクローズする**。マージ確認だけで即クローズせず、「複合action・pinned tagを伴う変更の展開確認」の内容（実際にmain上で意図した効果が出ているかの再検証）を併せて行う
 4. Issue本文に未完了のチェックリスト項目（例: 実機での見た目確認等、人間の手を要する確認）が残っている場合は、対応するPRがマージされていてもクローズしない。全項目が満たされたことを確認してからクローズする
 
 ## push後にCIの`commitlint`ジョブが失敗した場合の切り分け
 
-mainへのpush（PRマージ）をトリガーに実行されるCIの`commitlint`ジョブが失敗しても、
+mainへのpush（PRマージ）をトリガーに実行されるCIの`commitlint`ジョブが失敗することがある。
 原因が直前のコミットメッセージの体裁（git-conventions Skill参照）とは限らない。
-このジョブは実際のcommitlint検証より前に、リポジトリ**ルート直下**（frontend/backendとは別の、
-commitlint/semantic-release用の依存関係）で`npm ci`を実行して依存関係をインストールする
-構成になっていることがある。ルート直下の`package.json`/`package-lock.json`が同期していない場合、
-`npm ci`が`npm error Missing: <package>@<version> from lock file`で失敗し、
-コミットメッセージの内容に関わらずこのジョブ自体が失敗する。
+このジョブは実際のcommitlint検証より前に`npm ci`を実行して依存関係をインストールする構成になっていることがある。対象はリポジトリ**ルート直下**（frontend/backendとは別の、commitlint/semantic-release用の依存関係）である。ルート直下の`package.json`/`package-lock.json`が同期していない場合を考える。`npm ci`が`npm error Missing: <package>@<version> from lock file`で失敗する。コミットメッセージの内容に関わらずこのジョブ自体が失敗する。
 
 ### 切り分け手順
 
-1. 失敗したジョブのログを確認し、エラーが`npm ci`由来（`npm error ... Missing: ... from lock file`等の
-   インストールエラー）か、commitlint本体の出力（`✖ ... problems`等の検証エラー）かを区別する。
+1. 失敗したジョブのログを確認する。エラーが`npm ci`由来（`npm error ... Missing: ... from lock file`等のインストールエラー）かを確認する。あるいはcommitlint本体の出力（`✖ ... problems`等の検証エラー）かを区別する。
 2. `npm ci`由来の場合は、直前のコミットメッセージの体裁を疑わない。リポジトリルート直下で
    `npm install`を実行してpackage-lock.jsonをpackage.jsonと同期させ（`package.json`自体は
    変更しない）、`npm ci --dry-run`が成功することを確認したうえで最小限の修正コミットとして
@@ -89,11 +77,9 @@ commitlint/semantic-release用の依存関係）で`npm ci`を実行して依存
 3. commitlint本体の出力の場合のみ、git-conventions Skillのフォーマット規則と照らして
    直前のコミットメッセージを修正する。
 
-疑わしい場合は、`npx commitlint --from <対象の親コミット> --to <対象コミット> --verbose`を
-ローカルで実行し、対象コミットのメッセージ自体が実際に規則違反かどうかを先に確認してから
-対応方針を決める。
+疑わしい場合は、`npx commitlint --from <対象の親コミット> --to <対象コミット> --verbose`をローカルで実行する。対象コミットのメッセージ自体が実際に規則違反かどうかを先に確認してから対応方針を決める。
 
-`commitlint`ジョブはPRタイトル自体も検証する（`pull_request`イベント時、Squash merge時にmainへ残る唯一のコミットの件名になるため）。**このPRタイトル検証が失敗した場合、PRタイトルをGitHub API等で修正しただけでは直らない**。失敗したワークフロー実行を`rerun_failed_jobs`で再実行しても、そのrunが最初にトリガーされた時点の`pull_request`イベントペイロード（修正前の古いタイトル）を再利用するだけである。GitHub側の最新のPR状態を再取得しないため、同じ失敗を繰り返す（bamiyanapp/karuta#920で実際に発生）。
+`commitlint`ジョブはPRタイトル自体も検証する（`pull_request`イベント時、Squash merge時にmainへ残る唯一のコミットの件名になるため）。**このPRタイトル検証が失敗した場合、PRタイトルをGitHub API等で修正しただけでは直らない**。失敗したワークフロー実行を`rerun_failed_jobs`で再実行しても直らない。そのrunが最初にトリガーされた時点の`pull_request`イベントペイロード（修正前の古いタイトル）を再利用するだけである。GitHub側の最新のPR状態を再取得しないため、同じ失敗を繰り返す（bamiyanapp/karuta#920で実際に発生）。
 PRタイトル修正を実際に検証させるには、新しい`pull_request`イベント（`synchronize`、
 実質的には新しいpush）を発生させる必要がある。他に反映すべき変更が無い場合は、
 空コミット（`git commit --allow-empty`、有効なConventional Commitsメッセージを付与）を
@@ -101,7 +87,7 @@ pushすればよい。
 
 ## 複合action・pinned tagを伴う変更の展開確認（重要）
 
-dev-standardsの複合action（`.github/actions/*`）は、参照側リポジトリから`reusable-ci.yml`経由でpinned tagにより参照される（bamiyanapp/karuta#583）。`reusable-ci.yml`自身も、内部の各jobで当該複合actionを利用するため、`.dev-standards-actions`という名前で**自己参照のpinned tagチェックアウト**（`ref: vX.Y.Z`）を持つ。
+dev-standardsの複合action（`.github/actions/*`）は、参照側リポジトリから`reusable-ci.yml`経由でpinned tagにより参照される。詳細はbamiyanapp/karuta#583を参照。`reusable-ci.yml`自身も、内部の各jobで当該複合actionを利用する。そのため、`.dev-standards-actions`という名前で**自己参照のpinned tagチェックアウト**（`ref: vX.Y.Z`）を持つ。
 
 この複合actionの実装を変更した場合、次の2点を確認しないと、PRがマージされても修正が実際には反映されない。
 
@@ -110,9 +96,9 @@ dev-standardsの複合action（`.github/actions/*`）は、参照側リポジト
 
 **実際にこの見落としが2回発生している**（bamiyanapp/karuta#837、#849）。1回目の発生を受けて本節を追加したにもかかわらず、直後の別の複合action修正（issue #849）で全く同じ見落としを繰り返した。「あとで確認する」という運用は機能しない。そのため、`.github/actions/*`配下を変更するPRを作成した場合は、次の手順を機械的に実行する（「後で気づいたら直す」ではなく、その場でTODOとして扱う）。
 
-- PR作成直後に、`grep -n "ref: v" .github/workflows/reusable-ci.yml`で現在の自己参照タグの値を確認し、チャット上で「このPRのマージ・リリース後、自己参照タグ（現在`vX.Y.Z`）の更新フォローアップが必要」と明示的に述べる
+- PR作成直後に、`grep -n "ref: v" .github/workflows/reusable-ci.yml`で現在の自己参照タグの値を確認する。チャット上で「このPRのマージ・リリース後、自己参照タグ（現在`vX.Y.Z`）の更新フォローアップが必要」と明示的に述べる
 - 当該PRがマージされ新タグが発行されたことを確認したら、他の作業に進む前に、まずこのフォローアップ（自己参照タグの更新）を実施する
-- **フォローアップコミットは必ず`fix(ci)`型を使う**。`chore`型では絶対にコミットしない。semantic-releaseは`chore`コミット単体では新しいリリース（新タグ）を発行しないため、`chore`型で自己参照タグを更新しても、その修正自体が永久にどのタグにも含まれない（bamiyanapp/dev-standards#395で実際に発生）。過去の同種フォローアップ#123・#128はいずれも`fix(ci)`型で正しくリリースをトリガーしていたにもかかわらず、後続の#391で誤って`chore(ci)`型を使い、issue #388の修正がv2.12.0時点でも一切反映されていなかった
+- **フォローアップコミットは必ず`fix(ci)`型を使う**。`chore`型では絶対にコミットしない。semantic-releaseは`chore`コミット単体では新しいリリース（新タグ）を発行しない。そのため、`chore`型で自己参照タグを更新しても、その修正自体が永久にどのタグにも含まれない（bamiyanapp/dev-standards#395で実際に発生）。過去の同種フォローアップ#123・#128はいずれも`fix(ci)`型で正しくリリースをトリガーしていた。にもかかわらず、後続の#391で誤って`chore(ci)`型を使った。issue #388の修正がv2.12.0時点でも一切反映されていなかった
 - 参照側リポジトリでのタグ更新・動作確認まで完了して初めて、元issueをクローズしてよい
 
 <details>
@@ -138,11 +124,11 @@ flowchart TD
 
 ![pinned tag展開確認のロールアウト手順 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/SKILL.png)
 
-**PRがマージされた・CIが成功した、というだけでは「実際に修正が反映された」ことを意味しない**。このような複数段階のロールアウトが必要な変更では、Issueをクローズする前・完了報告をする前に、実際にmain上の挙動・生成物を再検証する（例: 生成されたファイルの形式・内容を実際に確認する、参照側リポジトリの`ci.yml`で実際に使われているタグを確認する等）。CIが緑であることや「マージできた」という報告だけを根拠に完了と判断してはならない。
+**PRがマージされた・CIが成功した、というだけでは「実際に修正が反映された」ことを意味しない**。このような複数段階のロールアウトが必要な変更では、Issueをクローズする前・完了報告をする前に、実際にmain上の挙動・生成物を再検証する。例えば、生成されたファイルの形式・内容を実際に確認する、参照側リポジトリの`ci.yml`で実際に使われているタグを確認する等である。CIが緑であることや「マージできた」という報告だけを根拠に完了と判断してはならない。
 
 ## `.github/workflows/*`変更時の自動マージ失敗（BOT_TOKENのworkflowスコープ不足、履歴）
 
-`.github/workflows/*.yml`（`ci.yml`・`cd.yml`等）を変更するPRで、CIの品質チェック（lint/test/e2e等）が全て成功していても`ci / merge`ジョブ自体が失敗し自動マージされない、という事象がbamiyanapp/karuta#920で発生していた。
+`.github/workflows/*.yml`（`ci.yml`・`cd.yml`等）を変更するPRで、ある事象が発生していた。CIの品質チェック（lint/test/e2e等）が全て成功していても`ci / merge`ジョブ自体が失敗する。その結果、自動マージされないという事象である（bamiyanapp/karuta#920で発生）。
 
 **症状**: `ci / merge`ジョブのログに以下のエラーが出る。
 
@@ -150,15 +136,15 @@ flowchart TD
 refusing to allow a Personal Access Token to create or update workflow `.github/workflows/<file>.yml` without `workflow` scope
 ```
 
-**原因**: GitHubのMerge PR APIは、`.github/workflows/`配下のファイルを含む変更をマージする際、使用しているトークンに`workflow`スコープが無いと403を返す仕様になっている。`merge`ジョブが使う`BOT_TOKEN`にこのスコープが付与されていないと発生する。
+**原因**: GitHubのMerge PR APIには仕様がある。`.github/workflows/`配下のファイルを含む変更をマージする際、使用しているトークンに`workflow`スコープが無いと403を返す仕様である。`merge`ジョブが使う`BOT_TOKEN`にこのスコープが付与されていないと発生する。
 
-**dev-standardsでは解消済み**: PR #214・#221（いずれも`.github/workflows/*`を変更）で`ci / merge`ジョブが正常に成功しており（2026-08-15確認）、dev-standardsのBOT_TOKENには現在`workflow`スコープが付与されている。そのため、**dev-standards自身のPRについては本制約はもはや発生せず、「事前に手動マージが必要と伝える」対応は不要**。
+**dev-standardsでは解消済み**: PR #214・#221では`ci / merge`ジョブが正常に成功している（2026-08-15確認）。いずれも`.github/workflows/*`を変更するPRである。dev-standardsのBOT_TOKENには現在`workflow`スコープが付与されている。そのため、**dev-standards自身のPRについては本制約はもはや発生せず、「事前に手動マージが必要と伝える」対応は不要**。
 
-**他リポジトリでは個別確認が必要**: `BOT_TOKEN`は各リポジトリが個別に設定するシークレットのため、この解消はdev-standards固有であり、他の参照側リポジトリ（karuta等）に自動的に及ぶものではない。`.github/workflows/*`を変更するPRを作成する際は、まず`ci / merge`ジョブの実行結果を確認し、上記403エラーが再び出た場合にのみ以下のとおり対応する。
+**他リポジトリでは個別確認が必要**: `BOT_TOKEN`は各リポジトリが個別に設定するシークレットである。そのため、この解消はdev-standards固有であり、他の参照側リポジトリ（karuta等）に自動的に及ぶものではない。`.github/workflows/*`を変更するPRを作成する際は、まず`ci / merge`ジョブの実行結果を確認し、上記403エラーが再び出た場合にのみ以下のとおり対応する。
 
 - これはワークフローYAMLの記述ミスやコミットメッセージの体裁とは無関係の、トークン権限設定の問題。差分の内容を疑ってリトライや修正を試みても解決しない
-- 恒久的な修正には`BOT_TOKEN`（GitHub App/PATのシークレット）に`workflow`スコープを追加する必要があるが、これはGitHub上のシークレット・トークン設定変更であり、**Claudeが実行できる範囲を超える（人間による対応が必須）**。発見したら、原因（403エラーの内容）を明示してユーザーに報告し、対応を委ねる
-- 恒久対応がなされるまでの間、`.github/workflows/*`を含むPRは自動マージされない。CIの品質チェックが全てgreenであることを確認したうえで、人間がGitHubのWeb/モバイルアプリからPRを手動でマージする必要がある（スマートフォンのブラウザ操作で完結するため、「開発環境の制約（スマホオンリー）」には抵触しない）
+- 恒久的な修正には`BOT_TOKEN`（GitHub App/PATのシークレット）に`workflow`スコープを追加する必要がある。これはGitHub上のシークレット・トークン設定変更である。**Claudeが実行できる範囲を超える（人間による対応が必須）**。発見したら、原因（403エラーの内容）を明示してユーザーに報告し、対応を委ねる
+- 恒久対応がなされるまでの間、`.github/workflows/*`を含むPRは自動マージされない。CIの品質チェックが全てgreenであることを確認したうえで、人間がGitHubのWeb/モバイルアプリからPRを手動でマージする必要がある。スマートフォンのブラウザ操作で完結するため、「開発環境の制約（スマホオンリー）」には抵触しない
 
 ## PR（MR）承認・マージ禁止
 

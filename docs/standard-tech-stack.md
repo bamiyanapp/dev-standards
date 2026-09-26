@@ -46,7 +46,7 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 
 横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は`docs/shared-ui-components.md`を参照する。共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照する（いずれもプロダクトに応じて任意採用）。
 
-テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は`docs/client-only-vite-spa-pattern.md`を参照。lintルール（複雑度・sonarjs等）の具体的な推奨値は`docs/code-quality-conventions.md`、テストカバレッジ閾値・コード重複検知の目標値は`docs/cicd-pipeline-specification.md`を参照。
+テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は`docs/client-only-vite-spa-pattern.md`を参照。lintルール（複雑度・sonarjs等）の具体的な推奨値は`docs/code-quality-conventions.md`を参照。テストカバレッジ閾値・コード重複検知の目標値は`docs/cicd-pipeline-specification.md`を参照。
 
 ## 2. ログイン（認証）: 必要な場合のみ採用
 
@@ -81,7 +81,7 @@ S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共�
 
 ## 5. PWA: 必要な場合のみ採用
 
-初期ローディング表示は`docs/pwa-initial-loading-indicator.md`を参照。Service Workerのキャッシュ更新・反映パターン、ホーム画面アイコンの生成手順は`docs/service-worker-update-pattern.md`・`docs/pwa-icon-generation-pattern.md`を参照。
+初期ローディング表示は`docs/pwa-initial-loading-indicator.md`を参照。Service Workerのキャッシュ更新・反映パターンは`docs/service-worker-update-pattern.md`を参照。ホーム画面アイコンの生成手順は`docs/pwa-icon-generation-pattern.md`を参照。
 
 ## 6. CI/CD（全プロジェクトで採用）
 
@@ -89,7 +89,7 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 ## 7. コミット規約・開発フロー（全プロジェクトで採用）
 
-コミット規約（Conventional Commits、commitlint）はリポジトリルート`commitlint.config.cjs`・`.claude/skills/git-conventions`を参照。開発フロー（Issue駆動、Git運用、コードレビュー観点等、Claude Code向け）はリポジトリルート`CLAUDE.md`・`.claude/skills/`を参照。
+コミット規約はConventional Commits・commitlintに従う。詳細はリポジトリルート`commitlint.config.cjs`・`.claude/skills/git-conventions`を参照。開発フロー（Issue駆動、Git運用、コードレビュー観点等、Claude Code向け）はリポジトリルート`CLAUDE.md`・`.claude/skills/`を参照。
 
 ## 新規プロジェクトの立ち上げ手順（最短ルート）
 
@@ -100,26 +100,26 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
    node dev-standards/scripts/bootstrap.js
    ```
 
-   `CLAUDE.md`を新規作成し先頭で`@dev-standards/CLAUDE.md`をインポートする（`docs/reusable-workflows-reference.md`「参照側リポジトリでの導入」参照）。
+   `CLAUDE.md`を新規作成する。先頭で`@dev-standards/CLAUDE.md`をインポートする（`docs/reusable-workflows-reference.md`「参照側リポジトリでの導入」参照）。
 
    GitHubリポジトリのSettings > General > Pull Requestsで「Automatically delete head branches」を有効化する。この設定が無効だと、マージ済みPRのブランチが削除されずに残り続け、後から大量の不要ブランチを手動整理する手間が生じる。この設定はClaude Codeの利用するプロキシ経由でのリポジトリ設定変更がブロックされているため、人間が直接設定する必要がある。
 
 2. **フロントエンドの雛形を用意**
 
-   `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿って構築する（現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる）。
+   `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿って構築する。現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる。
 
 3. **横断的UIコンポーネント・PWAパターンの適用**（「1. フロントエンド」共通規約・「5. PWA」が必要な場合のみ）
 
-   `sync-manifest.local.json`へエントリを追加する。`node dev-standards/scripts/bootstrap.js`を再実行する。参照先は`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`・`docs/service-worker-update-pattern.md`。TypeScriptプロジェクトへ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
+   `sync-manifest.local.json`へエントリを追加する。`node dev-standards/scripts/bootstrap.js`を再実行する。参照先は`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`である。加えて`docs/service-worker-update-pattern.md`も参照。TypeScriptプロジェクトへ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
 
 4. **「2. ログイン」が必要な場合、標準構成を導入**（不要なら本手順自体をスキップ）
 
-   - Firebase Authenticationを使う場合: `docs/lambda-api-firebase-auth-pattern.md`に沿ってFirebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBを構築する
-   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合を考える。手順5の「3. バックエンドAPI」標準構成（OSLS）を構築した上で、`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」に沿ってGoogle IDトークンをバックエンドで直接検証するミドルウェアを追加する
+   - Firebase Authenticationを使う場合: `docs/lambda-api-firebase-auth-pattern.md`に沿って構築する。Firebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBの構成である
+   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合を考える。手順5の「3. バックエンドAPI」標準構成（OSLS）を構築する。その上で`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」に沿って構築する。Google IDトークンをバックエンドで直接検証するミドルウェアを追加する
 
 5. **「3. バックエンドAPI」が必要な場合、標準構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
-   `docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合は、`docs/serverless-spa-pattern.md`のAPI Gateway WebSocket API追加方法も併せて参照する（フロントエンドはnpm workspaces構成にする）。詳細は`docs/client-only-vite-spa-pattern.md`「npm workspacesでバックエンドと組み合わせる場合」を参照。
+   `docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合を考える。`docs/serverless-spa-pattern.md`のAPI Gateway WebSocket API追加方法も併せて参照する。フロントエンドはnpm workspaces構成にする。詳細は`docs/client-only-vite-spa-pattern.md`「npm workspacesでバックエンドと組み合わせる場合」を参照。
 
 6. **「4. ホスティング」を構築**（共通）
 
@@ -127,13 +127,13 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
 
 7. **「6. CI/CD」を有効化**
 
-   `docs/cicd-pipeline-specification.md`に沿って`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`workspaces`（バックエンドと組み合わせる場合）・`enable_release`（semantic-release運用する場合）・`enable_e2e_test`（Playwright E2Eを行う場合）等、プロダクトに応じた入力を選ぶ。
+   `docs/cicd-pipeline-specification.md`に沿って構築する。`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`workspaces`（バックエンドと組み合わせる場合）・`enable_release`（semantic-release運用する場合）等がある。`enable_e2e_test`（Playwright E2Eを行う場合）等、プロダクトに応じた入力を選ぶ。
 
 8. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
 
 ## 個人情報を扱うプロダクトのための参考実装
 
-実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトの参考実装（データはDBに置きAPI経由で取得、コンテンツ・コミットへの個人情報混入を防ぐ具体的な仕組み）: `docs/public-repo-no-pii-pattern.md`。
+実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトには参考実装がある。データはDBに置きAPI経由で取得し、コンテンツ・コミットへの個人情報混入を防ぐ具体的な仕組みを持つ。詳細は`docs/public-repo-no-pii-pattern.md`を参照。
 
 ## この索引に無いもの
 

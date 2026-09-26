@@ -1,12 +1,12 @@
 # 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`, `shared/sfx/`, `shared/hooks/`）
 
-複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）で、プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）・汎用Reactフック（`shared/hooks/`）と同様、`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」を参照する（考え方は共通）。
+複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）を対象とする。プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）・汎用Reactフック（`shared/hooks/`）と同様の扱いである。`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」を参照する（考え方は共通）。
 
 ## 提供するコンポーネント
 
 ### `shared/ui/common-theme.css`
 
-フレームワーク非依存の共通テーマ（issue #236）。共通フォント（`docs/frontend-ui-conventions.md`）・フェードイン/アウトの共通ユーティリティ（`.fade-in`/`.fade-out`）・ボタン押下時の軽い触覚的フィードバックを提供する。Bootstrap・Tailwind等どのCSSフレームワークを使うプロダクトでも利用できる（Bootstrap固有のダークモード対応は含まない。それが必要な場合は下記`bootstrap-theme.css`を使う）。
+フレームワーク非依存の共通テーマ（issue #236）。共通フォント（`docs/frontend-ui-conventions.md`）・フェードイン/アウトの共通ユーティリティ（`.fade-in`/`.fade-out`）を提供する。ボタン押下時の軽い触覚的フィードバックも提供する。Bootstrap・Tailwind等どのCSSフレームワークを使うプロダクトでも利用できる。Bootstrap固有のダークモード対応は含まない。それが必要な場合は下記`bootstrap-theme.css`を使う。
 
 利用側のグローバルCSSへ`@import`する。
 
@@ -16,7 +16,7 @@
 
 「M PLUS Rounded 1c」フォント自体（Google Fonts等からの読み込み）は利用側の既存の資産管理方針に従う。本ファイルは`font-family`の指定のみ行う。
 
-`.fade-in`/`.fade-out`は「要素をopacity: 0の状態でマウントしておき、その後任意のタイミングでクラスを付与・削除してtransitionさせる」という**トグル駆動**のユーティリティであり、トースト通知等、表示⇄非表示を繰り返す用途に向いている。「要素がDOMに挿入された瞬間に1回だけ自動再生したい」（起動時のオープニング演出等）というユースケースには、呼び出し側の状態管理（マウント直後はopacity: 0でレンダリングし、次のレンダリングでクラスを付与する等）が別途必要になり素直に使えない。そのような用途には`@keyframes` + `animation`ベースの独自実装が適する（`uchi-stock/kingyo`の`.app-opening-fade-in`が実例）。両者は解決する問題自体が異なるため、意図的に別実装のままとした。詳細は[uchi-stock/kingyo#140](https://github.com/uchi-stock/kingyo/issues/140)参照。
+`.fade-in`/`.fade-out`は**トグル駆動**のユーティリティである。要素をopacity: 0の状態でマウントしておき、その後任意のタイミングでクラスを付与・削除してtransitionさせる仕組みである。トースト通知等、表示⇄非表示を繰り返す用途に向いている。「要素がDOMに挿入された瞬間に1回だけ自動再生したい」（起動時のオープニング演出等）というユースケースを考える。呼び出し側の状態管理（マウント直後はopacity: 0でレンダリングし、次のレンダリングでクラスを付与する等）が別途必要になり、素直には使えない。そのような用途には`@keyframes` + `animation`ベースの独自実装が適する（`uchi-stock/kingyo`の`.app-opening-fade-in`が実例）。両者は解決する問題自体が異なるため、意図的に別実装のままとした。詳細は[uchi-stock/kingyo#140](https://github.com/uchi-stock/kingyo/issues/140)参照。
 
 ### `shared/ui/bootstrap-theme.css`
 
@@ -32,7 +32,7 @@ Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。ダー
 
 ### `shared/ui/NavigationOverlay.jsx`
 
-SPAクライアントサイドルーティングを導入しない全ページ遷移の設計で、リンククリックから実際の画面遷移までの間、読み込み中であることが分かるオーバーレイを表示する。プロダクト固有の値は無いが、利用側のCSSに、JSがclickイベントでvisibleクラスを付け外しする状態遷移を表現する以下のルールが必要（Bootstrapのユーティリティだけでは表現できないため）。
+SPAクライアントサイドルーティングを導入しない全ページ遷移の設計で、リンククリックから実際の画面遷移までの間、読み込み中であることが分かるオーバーレイを表示する。プロダクト固有の値は無い。ただし利用側のCSSに、JSがclickイベントでvisibleクラスを付け外しする状態遷移を表現する以下のルールが必要（Bootstrapのユーティリティだけでは表現できないため）。
 
 ```css
 .nav-overlay {
@@ -62,7 +62,7 @@ Speculation Rules API（Chrome）による他ページのprefetch。`urls`（先
 
 ### `shared/pwa/BackendCacheWarmer.jsx`
 
-初回訪問時にバックエンドAPIをバックグラウンドで先読みし、Service Worker（`shared/pwa/sw.js`）のキャッシュを温めておく。`endpoints`（先読みするURL一覧）・`getAuthToken`（認証トークンを取得する非同期関数、任意）・`warmedFlagKey`（`sessionStorage`のフラグキー、プロダクトごとに固有の値にすること）をpropsで受け取る。
+初回訪問時にバックエンドAPIをバックグラウンドで先読みし、Service Worker（`shared/pwa/sw.js`）のキャッシュを温めておく。`endpoints`（先読みするURL一覧）・`getAuthToken`（認証トークンを取得する非同期関数、任意）をpropsで受け取る。`warmedFlagKey`（`sessionStorage`のフラグキー、プロダクトごとに固有の値にすること）も同様に受け取る。
 
 ```jsx
 <BackendCacheWarmer
@@ -94,13 +94,13 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
 />
 ```
 
-`resize: "none"`・`overflow: "hidden"`をtextarea自体に指定し、ブラウザ標準のリサイズハンドル・スクロールバーを出さないようにすること（Bootstrapに`resize-none`等のユーティリティクラスは無いため、インラインスタイルで指定する）。
+`resize: "none"`・`overflow: "hidden"`をtextarea自体に指定する。ブラウザ標準のリサイズハンドル・スクロールバーを出さないようにすること（Bootstrapに`resize-none`等のユーティリティクラスは無いため、インラインスタイルで指定する）。
 
 ### `shared/ui/ShareButton.jsx`
 
 現在のページをQRコードで表示し、URLをワンタップコピーできるボタン＋モーダル。スマートフォンオンリーの利用環境での画面共有を想定。
 
-**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになる。symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと（Camp-Stock `frontend/src/components/ShareButton.jsx`が実例、issue #393）。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントは、異なるフレームワークの消費者に同時対応できないという制約があるため、新規にこの種のコンポーネントを追加・変更する際は`docs/consumer-repositories.md`で全消費側のCSSフレームワークを確認すること。
+**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになる。symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと。実例はCamp-Stock `frontend/src/components/ShareButton.jsx`（issue #393）である。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントには制約がある。異なるフレームワークの消費者に同時対応できないという制約である。そのため、新規にこの種のコンポーネントを追加・変更する際は`docs/consumer-repositories.md`で全消費側のCSSフレームワークを確認すること。
 
 ```jsx
 <ShareButton label="このページを共有" />
@@ -108,7 +108,7 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
 
 **依存関係**: `qrcode.react`を利用側の`package.json`へ追加する必要がある（dev-standards側では強制できない）。
 
-**Viteの`resolve.preserveSymlinks`が必須**: `ShareButton.jsx`のようにnpmパッケージをimportするコンポーネントをsymlink経由で共有する場合を考える。Viteは既定でシンボリックリンクの実体パス（dev-standards配下）を起点に`node_modules`を探索する。このため利用側にインストール済みの`qrcode.react`を見つけられずビルドエラーになる。利用側の`vite.config.js`へ以下を追加すること（PRECACHE等プロダクト固有値を持たないコンポーネント同士でも、npmパッケージに依存する共有コンポーネントを1つでも導入する場合はアプリ全体でこの設定が必要になる）。
+**Viteの`resolve.preserveSymlinks`が必須**: `ShareButton.jsx`のようにnpmパッケージをimportするコンポーネントをsymlink経由で共有する場合を考える。Viteは既定でシンボリックリンクの実体パス（dev-standards配下）を起点に`node_modules`を探索する。このため利用側にインストール済みの`qrcode.react`を見つけられずビルドエラーになる。利用側の`vite.config.js`へ以下を追加すること。PRECACHE等プロダクト固有値を持たないコンポーネント同士でも、npmパッケージに依存する共有コンポーネントを1つでも導入する場合はアプリ全体でこの設定が必要になる。
 
 ```js
 export default defineConfig({
@@ -121,7 +121,7 @@ export default defineConfig({
 
 ### `shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`
 
-`docs/frontend-ui-conventions.md`「トップページの必須構成」（バージョン・更新日時の表示）を実装するための2つの関数。`getAppVersionDefine.js`はNode.js側（`vite.config.js`）で動く点が他の`shared/ui/`コンポーネントと異なる（ブラウザで動くReactコンポーネントではない）。
+`docs/frontend-ui-conventions.md`「トップページの必須構成」（バージョン・更新日時の表示）を実装するための2つの関数。`getAppVersionDefine.js`はNode.js側（`vite.config.js`）で動く点が他の`shared/ui/`コンポーネントと異なる。ブラウザで動くReactコンポーネントではない。
 
 `vite.config.js`:
 
@@ -135,7 +135,7 @@ export default defineConfig({
 });
 ```
 
-`package.json`のパスは呼び出し側で指定する（semantic-releaseがバージョンを更新するリポジトリルートの`package.json`か、アプリ自身の`package.json`かはプロダクトの構成による）。`getAppVersionDefine.js`は`vite.config.js`から直接importするNode.js側のファイルのため、他の`shared/ui/`コンポーネント（`src/components/`配下）とは異なり、`vite.config.js`と同じディレクトリへsymlinkすること。
+`package.json`のパスは呼び出し側で指定する。semantic-releaseがバージョンを更新するリポジトリルートの`package.json`か、アプリ自身の`package.json`かはプロダクトの構成による。`getAppVersionDefine.js`は`vite.config.js`から直接importするNode.js側のファイルである。そのため、他の`shared/ui/`コンポーネント（`src/components/`配下）とは異なる場所に置く。`vite.config.js`と同じディレクトリへsymlinkすること。
 
 アプリ側のコンポーネントの実装例を以下に示す（表示位置・マークアップはプロダクトごとに異なるため、この部分は共有しない）。
 
@@ -155,11 +155,11 @@ function AppHeader() {
 
 太鼓のイントロ音（issue #786）。クイズ・ゲーム系プロダクトで「出題の合図」等に使える汎用的な効果音で、karuta（`bamiyanapp/karuta`）から切り出したもの。プロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("wadodon.mp3")`のように直接参照するだけでよい。
 
-Viteの`public/`ディレクトリ配下へsymlinkすることを想定している（`public/`配下はビルド時に加工されずそのままコピーされるため、`base`設定に関わらず相対パスでの参照が崩れない）。iOS Safari等の自動再生ポリシー対策（ユーザー操作の中で一度再生してから使い回す）が必要な場合は、karutaの`frontend/src/utils/audioUnlock.js`の実装を参考にする。
+Viteの`public/`ディレクトリ配下へsymlinkすることを想定している（`public/`配下はビルド時に加工されずそのままコピーされるため、`base`設定に関わらず相対パスでの参照が崩れない）。iOS Safari等の自動再生ポリシー対策（ユーザー操作の中で一度再生してから使い回す）が必要な場合を考える。karutaの`frontend/src/utils/audioUnlock.js`の実装を参考にする。
 
 ### `shared/sfx/click.mp3`・`shared/sfx/shock.mp3`
 
-決定/クリック音（`click.mp3`）と、不正解・失敗・警告を強く印象付けるブザー/アラート音（`shock.mp3`）（issue #314）。Electric-Chair-Arena（`bamiyanapp/Electric-Chair-Arena`）から切り出したもの。`click.mp3`は椅子選択・クイズの回答決定・メニュー選択等の「選択を確定した」汎用UIフィードバック音、`shock.mp3`はクイズの不正解演出・ゲームオーバー演出等の「失敗・警告」を印象付けたい場面で使える。いずれもプロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("click.mp3")`のように直接参照するだけでよい。
+決定/クリック音（`click.mp3`）と、不正解・失敗・警告を強く印象付けるブザー/アラート音（`shock.mp3`）（issue #314）。Electric-Chair-Arena（`bamiyanapp/Electric-Chair-Arena`）から切り出したもの。`click.mp3`は椅子選択・クイズの回答決定・メニュー選択等の「選択を確定した」汎用UIフィードバック音である。`shock.mp3`はクイズの不正解演出・ゲームオーバー演出等の「失敗・警告」を印象付けたい場面で使える。いずれもプロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("click.mp3")`のように直接参照するだけでよい。
 
 Next.jsの`public/`ディレクトリもVite同様、ビルド時に加工されずそのままコピーされるため、同じ考え方でsymlinkできる。
 
@@ -224,7 +224,7 @@ const [answers, setAnswers] = useSessionStorageState("myapp-answers", []);
 
 ### `shared/hooks/useValueChange.js`
 
-「前回レンダー時の値と比較し、変わっていれば副作用の無いstate更新を同期的に行う」パターンの共通化hook（issue #560）。karutaから切り出したもの。`useEffect`内での無条件`setState`が`react-hooks/set-state-in-effect`ルールに抵触するのを避けるため、Reactが推奨する「レンダー中のstate調整」の代替手段にあたる。外部キーの変化・接続状態の監視等、値の変化検知一般に同型で繰り返し現れる。
+「前回レンダー時の値と比較し、変わっていれば副作用の無いstate更新を同期的に行う」パターンの共通化hook（issue #560）。karutaから切り出したもの。`useEffect`内での無条件`setState`は`react-hooks/set-state-in-effect`ルールに抵触する。これを避けるため、Reactが推奨する「レンダー中のstate調整」の代替手段にあたる。外部キーの変化・接続状態の監視等、値の変化検知一般に同型で繰り返し現れる。
 
 ```jsx
 import { useValueChange } from "./hooks/useValueChange.js";

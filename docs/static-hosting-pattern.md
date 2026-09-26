@@ -1,8 +1,8 @@
 # S3 + CloudFrontによる静的サイト配信パターン
 
-全プロダクト共通の静的サイトホスティング構成。OSLS（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」参照）でS3バケット・CloudFrontディストリビューションをコードとして定義する。
+全プロダクト共通の静的サイトホスティング構成。OSLS（`osls`パッケージ）でS3バケット・CloudFrontディストリビューションをコードとして定義する。パッケージ本体は[oss-serverless/osls](https://github.com/oss-serverless/osls)である。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」を参照。
 
-`docs/serverless-static-site-pattern.md`（examination由来、Lambda@Edgeによるサイト全体ログイン保護込みの構成）から、認証ゲート部分を除いた純粋なホスティング部分を切り出したもの。サイト全体をログイン必須にしたい場合（閲覧自体を保護したい場合）は、そちらのCognito + Lambda@Edge構成を検討すること。ログインが必要な場合の標準はAPI呼び出し単位の認証（`docs/standard-tech-stack.md`「2. ログイン」参照）であり、フロントエンド自体は誰でも閲覧できる前提とする。
+`docs/serverless-static-site-pattern.md`（examination由来、Lambda@Edgeによるサイト全体ログイン保護込みの構成）がベースである。そこから認証ゲート部分を除いた、純粋なホスティング部分を切り出したものである。サイト全体をログイン必須にしたい場合（閲覧自体を保護したい場合）は、そちらのCognito + Lambda@Edge構成を検討すること。ログインが必要な場合の標準はAPI呼び出し単位の認証（`docs/standard-tech-stack.md`「2. ログイン」参照）であり、フロントエンド自体は誰でも閲覧できる前提とする。
 
 ## 全体構成
 
@@ -13,16 +13,16 @@
 
 ## キャッシュヘッダー戦略
 
-静的サイト配信の標準的な戦略として、ファイル種別ごとに異なる`Cache-Control`を明示的に付与する（S3はデフォルトでCache-Controlを付与しないため、明示しないとCloudFrontのDefaultTTLに委ねられ、更新後も古い内容が配信され続ける不具合の原因になる）。
+静的サイト配信の標準的な戦略として、ファイル種別ごとに異なる`Cache-Control`を明示的に付与する。S3はデフォルトでCache-Controlを付与しないため、明示しないとCloudFrontのDefaultTTLに委ねられる。その結果、更新後も古い内容が配信され続ける不具合の原因になる。
 
 - ハッシュ付きJS/CSS等のビルド成果物: `public, max-age=31536000, immutable`（内容が変われば名前自体が変わるため長期不変キャッシュにしてよい）
 - それ以外（`index.html`・`favicon`等、内容が変わってもファイル名が変わらないもの）: `no-cache`（使用前に必ずオリジンへ再検証させる）
 
-デプロイのたびに`aws cloudfront create-invalidation --paths "/*"`でCloudFrontのエッジキャッシュを無効化する。ただしこれはユーザーのブラウザ本体のキャッシュまでは無効化しないため、PWA化する場合はService Workerの更新パターン（`docs/service-worker-update-pattern.md`）と合わせて設計する。
+デプロイのたびに`aws cloudfront create-invalidation --paths "/*"`でCloudFrontのエッジキャッシュを無効化する。ただしこれはユーザーのブラウザ本体のキャッシュまでは無効化しない。そのためPWA化する場合はService Workerの更新パターン（`docs/service-worker-update-pattern.md`）と合わせて設計する。
 
 ## デプロイ
 
-OSLSの`serverless.yml`でS3バケット・CloudFrontディストリビューションをCloudFormationリソースとして定義し、`osls deploy`でインフラを構築した上で、ビルド成果物をS3へ同期しCloudFrontのキャッシュを無効化する。
+OSLSの`serverless.yml`でS3バケット・CloudFrontディストリビューションをCloudFormationリソースとして定義する。`osls deploy`でインフラを構築した上で、ビルド成果物をS3へ同期しCloudFrontのキャッシュを無効化する。
 
 ```sh
 osls deploy
@@ -31,13 +31,13 @@ aws s3 sync dist/assets/ s3://<bucket-name>/assets/ --cache-control "public, max
 aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "/*"
 ```
 
-`cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できる。ただし、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離し、`workspaces`構成のCI/CD入力（`docs/cicd-pipeline-specification.md`参照）でそれぞれデプロイする。
+`cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できる。ただし、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離する。`workspaces`構成のCI/CD入力（`docs/cicd-pipeline-specification.md`参照）でそれぞれデプロイする。
 
 ### semantic-release後のcheckoutタイミングに関する注意
 
-`deploy` jobは通常、semantic-releaseを実行する`cd` jobの完了を`needs`で待つ。この`deploy` job自身の`actions/checkout`ステップで`ref`を明示しない場合、デフォルトではワークフローをトリガーしたpush時点のコミット（`github.sha`）がチェックアウトされる。一方、semantic-releaseはそのpushの**後**に「chore(release): X.Y.Z」というバージョン更新コミットを作成・pushするため、`deploy` jobの`needs`はジョブの完了順序を保証するだけで、`Checkout`ステップが取得する内容までは新しくしない。
+`deploy` jobは通常、semantic-releaseを実行する`cd` jobの完了を`needs`で待つ。この`deploy` job自身の`actions/checkout`ステップで`ref`を明示しない場合を考える。デフォルトではワークフローをトリガーしたpush時点のコミット（`github.sha`）がチェックアウトされる。一方、semantic-releaseはそのpushの**後**に「chore(release): X.Y.Z」というバージョン更新コミットを作成・pushする。そのため、`deploy` jobの`needs`はジョブの完了順序を保証するだけである。`Checkout`ステップが取得する内容までは新しくしない。
 
-`package.json`のversionをビルド時に埋め込んで画面表示するなど、リリース後の状態に依存するビルドを行う場合、この差分により表示バージョンが実際のリリースより常に1つ古くなる不具合が起こりうる（`uchi-stock/kingyo` issue #127で発生）。該当する場合は`deploy` jobの`Checkout`ステップに`ref: main`（デフォルトブランチ名）を明示し、semantic-releaseのバージョン更新コミット後の最新状態を取得し直すこと。
+`package.json`のversionをビルド時に埋め込んで画面表示するなど、リリース後の状態に依存するビルドを行う場合を考える。この差分により表示バージョンが実際のリリースより常に1つ古くなる不具合が起こりうる（`uchi-stock/kingyo` issue #127で発生）。該当する場合は`deploy` jobの`Checkout`ステップに`ref: main`（デフォルトブランチ名）を明示し、semantic-releaseのバージョン更新コミット後の最新状態を取得し直すこと。
 
 ```yaml
 - name: Checkout
@@ -57,7 +57,7 @@ S3バケット名は全AWSアカウント間・リージョン内でグローバ
 ## 初回デプロイ時によくある失敗
 
 - **S3バケット名の重複**: `already exists`エラーが出た場合、別名を指定して再実行する
-- **IAMユーザーの権限不足**: デプロイ用IAMユーザーにはS3・CloudFront・CloudFormationへの十分な権限が必要（バックエンドAPIも同じIAMユーザーでデプロイする場合はLambda・DynamoDB・IAM関連の権限も追加で必要）
+- **IAMユーザーの権限不足**: デプロイ用IAMユーザーにはS3・CloudFront・CloudFormationへの十分な権限が必要である。バックエンドAPIも同じIAMユーザーでデプロイする場合は、Lambda・DynamoDB・IAM関連の権限も追加で必要
 
 ## この構成に無いもの
 
