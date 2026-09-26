@@ -262,10 +262,17 @@ flowchart TD
 各プロダクトのフロントエンド構成（フレームワーク・ビルドツール）はプロダクトごとに異なる。そのため`reusable-cd.yml`自体の機能や共有UIコンポーネントとしては提供しない。以下の手順（コンベンション）として参照側リポジトリが個別に適用する。
 
 1. **バージョン・SHA・ビルド日時を環境変数として用意する**: `release` jobの`outputs.version`について説明する。この値は「このCD実行でsemantic-releaseが新バージョンを発行した場合のみ」設定される。`feat`/`fix`を含まないコミット（`docs`/`chore`等）による実行では**空文字列になる**点に注意（上記「2. CDワークフロー」の`outputs`参照）。「新バージョンが出た時だけ知りたい」用途（Slack通知等）であればこの値をそのまま使える。examinationのように**常にアプリの現在バージョンを表示し続けたい**用途もある。この用途では、`outputs.version`ではなく`package.json`の`version`フィールドを直接読む。読み取りには`node -p "require('./package.json').version"`を使う。`release` jobは新バージョンを発行しない実行でも`package.json`の内容自体は変更しない。そのため、直前のリリースバージョンがそのまま読み取れる。Git SHA・ビルド日時は参照側の`cd.yml`（`deploy` job等）内で1行で算出できる。例として`git rev-parse --short HEAD`、`date -u +%Y-%m-%dT%H:%M:%SZ`が挙げられる。
+
+   **`deploy` jobのcheckout対象コミットに注意する（重要）**: `deploy` jobをトリガーした`github.sha`は、semantic-releaseによるバージョン更新（`package.json`・`CHANGELOG.md`等の更新）が反映される**前**のコミットを指す。バージョン更新は同じCD実行内の`release` jobが生成する**別の後続コミット**（base_branchが保護されていない場合は直接pushされたコミット、保護されている場合はPRのsquash mergeコミット）でのみ反映される。`deploy` jobのcheckoutで`ref: github.sha`を指定すると、常に「1つ前のリリース」のバージョン・changelogをデプロイし続けてしまう（bamiyanapp/karuta issue #1274で実際に発生し、発覚しにくい不具合だった）。`release` jobの新しい出力`release_commit_sha`（バージョン更新が反映された実際のコミットSHA）をcheckoutの`ref`に指定すること。
    ```yaml
    deploy:
      needs: release
      steps:
+       - uses: actions/checkout@v7
+         with:
+           # release jobをトリガーしたgithub.shaではなく、semantic-releaseによる
+           # バージョン更新が反映された実際のコミットをcheckoutする
+           ref: ${{ needs.release.outputs.release_commit_sha }}
        - run: |
            export APP_BUILD_VERSION="v$(node -p "require('./package.json').version")"
            export APP_BUILD_SHA="$(git rev-parse --short HEAD)"
