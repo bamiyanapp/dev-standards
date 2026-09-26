@@ -2,7 +2,7 @@
 
 専用のバックエンドAPI・リアルタイム双方向通信（WebSocket等）が必要な、ログイン不要の小規模〜中規模プロダクト向けの構成。karuta（[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)）から、プロダクト固有の業務ロジックを除いた、他プロダクトでも再利用できるアーキテクチャ・設定パターンを切り出したもの。
 
-`docs/serverless-static-site-pattern.md`（S3 + CloudFront + Cognitoによる認証付き静的サイト配信）とは異なる系統。ログイン・独自ドメイン配信が不要で、代わりに「サーバー側で状態を持つ独自API」「複数クライアント間のリアルタイム同期」が必要な場合はこちらを選ぶ（使い分けは`docs/standard-tech-stack.md`参照）。
+`docs/serverless-static-site-pattern.md`（S3 + CloudFront + Cognitoによる認証付き静的サイト配信）とは異なる系統。ログイン・独自ドメイン配信が不要な場合がある。代わりに「サーバー側で状態を持つ独自API」「複数クライアント間のリアルタイム同期」が必要な場合はこちらを選ぶ（使い分けは`docs/standard-tech-stack.md`参照）。
 
 コードそのものの共有（symlink化）ではなく、**モノレポ構成・インフラ構成・設計判断の共有**が目的。実際の完全な実装例はkarutaの`frontend/`・`backend/`を参照する。
 
@@ -21,11 +21,11 @@ npm workspaces構成のモノレポで、`frontend`（SPA）と`backend`（Serve
 - `.npmrc`に`install-strategy=nested`を指定する。Lambda関数を`package.individually: true`で個別zip化する構成（後述）と組み合わせるため、hoisted構成より確実にワークスペース単位で依存が解決される
 - `.nvmrc`でNode.jsバージョンをLambdaランタイム（例: `nodejs22.x`）と統一しておく。frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する
 
-`dev-standards`は`git submodule add -b main`でルートに取り込み、`sync-manifest.local.json`経由で横断的UIコンポーネント（`docs/shared-ui-components.md`）等をsymlink共有する。手順は`docs/standard-tech-stack.md`の立ち上げ手順を参照。
+`dev-standards`は`git submodule add -b main`でルートに取り込む。`sync-manifest.local.json`経由で横断的UIコンポーネント（`docs/shared-ui-components.md`）等をsymlink共有する。手順は`docs/standard-tech-stack.md`の立ち上げ手順を参照。
 
 ## フロントエンド（`frontend/`）
 
-- **Vite + React 19**。UIフレームワークは**Bootstrap 5.3を`index.html`のCDN `<link>`で読み込む**（`docs/client-only-vite-spa-pattern.md`の標準フロントエンド構成と同じCSSフレームワーク）。共通フォント・ダークモード対応・ボタン押下フィードバック等は`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
+- **Vite + React 19**。UIフレームワークは**Bootstrap 5.3を`index.html`のCDN `<link>`で読み込む**。これは`docs/client-only-vite-spa-pattern.md`の標準フロントエンド構成と同じCSSフレームワークである。共通フォント・ダークモード対応・ボタン押下フィードバック等がある。これらは`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
 - PWA化する場合は`vite-plugin-pwa`を使う。
 
   ```js
@@ -37,11 +37,11 @@ npm workspaces構成のモノレポで、`frontend`（SPA）と`backend`（Serve
   })
   ```
 
-  `registerType: 'prompt'`を選ぶ場合、更新通知UI（`useRegisterSW`）は自前実装が必要になる。「操作中は更新ボタンを出さない」等のガードが要るなら、`main.jsx`でアプリ本体の兄弟としてグローバルマウントされたコンポーネントへ、`useSyncExternalStore`ベースの最小限store（例: 「印刷中かどうか」「プレイ中かどうか」等）経由で状態を伝える。props経由で直接つなげないため
+  `registerType: 'prompt'`を選ぶ場合、更新通知UI（`useRegisterSW`）は自前実装が必要になる。「操作中は更新ボタンを出さない」等のガードが要る場合がある。`main.jsx`でアプリ本体の兄弟としてグローバルマウントされたコンポーネントへ状態を伝える。`useSyncExternalStore`ベースの最小限store（例: 「印刷中かどうか」「プレイ中かどうか」等）経由で行う。props経由で直接つなげないため
 - `build.sourcemap: true`を指定する（後述のE2E JSカバレッジのソースマッピングに必須）
 - ディレクトリ構成: `views/`＝画面単位のコンポーネント、`components/`＝画面内で再利用する部品、`hooks/`＝状態・副作用ロジック、`utils/`＝純関数。**テストは実装と同じディレクトリに`*.test.jsx`/`*.test.js`を併置**する
 - テストはvitest（jsdom環境）+ Testing Library。`vite.config.js`の`test.exclude`にE2E用ディレクトリ（例: `./e2e/**`）を追加し、vitestの既定`*.spec.js`マッチと衝突しないようにする
-- **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。ローカル確認用の`npm run preview`サーバーのみがローカル動作で、APIは常に実環境を使う。これにより「モックとの乖離」による見落としを避けられる一方、外部要因（バックエンドのコールドスタート・依存する外部AI/合成API等のレイテンシ）に起因する既知のflakyが発生し得る前提を受け入れる必要がある（対応の実例は後述のCI/CD節参照）
+- **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。ローカル確認用の`npm run preview`サーバーのみがローカル動作で、APIは常に実環境を使う。これにより「モックとの乖離」による見落としを避けられる。一方、外部要因（バックエンドのコールドスタート・依存する外部AI/合成API等のレイテンシ）に起因する既知のflakyが発生し得る前提を受け入れる必要がある（対応の実例は後述のCI/CD節参照）
 - E2Eの実行結果はスクリーンショット付きでPRへ自動投稿される（`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）。開発環境がCLIから離れている（スマートフォンのみ等）場合でも、実装した画面をその場で目視確認できる
 
 ## バックエンド（`backend/`）
@@ -76,7 +76,7 @@ functions:
             origins: ${self:custom.allowedOrigins}
 ```
 
-- **`serverless-esbuild` + `package.individually: true`**: 関数ごとに実際に使うコードだけをesbuildでバンドルしてからzip化する。理由は速度だけではない。npm workspaces（`install-strategy=nested`）構成で関数数が増えると、`node_modules`をそのまま個別zip化する素朴な方式では問題が起きる。CIランナーのファイルディスクリプタ上限（既定1024）を超えて`EMFILE: too many open files`でデプロイが失敗することがある（zipサイズ縮小・コールドスタート改善も副次効果）。ネイティブ依存や動的importのみのパッケージ（Chromiumバイナリ等）は`custom.esbuild.external`でバンドル対象から除外し、実体ファイルのまま含める
+- **`serverless-esbuild` + `package.individually: true`**: 関数ごとに実際に使うコードだけをesbuildでバンドルしてからzip化する。理由は速度だけではない。npm workspaces（`install-strategy=nested`）構成で関数数が増えると、`node_modules`をそのまま個別zip化する素朴な方式では問題が起きる。CIランナーのファイルディスクリプタ上限（既定1024）を超えることがある。`EMFILE: too many open files`でデプロイが失敗する（zipサイズ縮小・コールドスタート改善も副次効果）。ネイティブ依存や動的importのみのパッケージ（Chromiumバイナリ等）は`custom.esbuild.external`でバンドル対象から除外し、実体ファイルのまま含める
 - **DynamoDBは`BillingMode: PAY_PER_REQUEST`を既定にする**（低トラフィックなプロダクトでキャパシティプランニングが不要）。一時的・自動失効させたいデータ（キャッシュ、無人ルーム等）は`TimeToLiveSpecification`でTTL属性を設定する。
 
   ```yaml
@@ -104,9 +104,9 @@ functions:
         AttributeName: ttl
         Enabled: true
   ```
-- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分には共通ロジックがある。内容は、接続取得、GSIによるルーム内接続一覧Query、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパーである。これは`shared/lambda/webSocketBroadcast.js`としてsymlink共有できる（`docs/shared-ui-components.md`と同様の索引は無いため本ファイルから直接参照する）。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外で、フロントエンド側の設計知見は`docs/websocket-client-reconnect-pattern.md`を参照
-- **IAMは`provider.iam.role.statements`に必要最小限のアクションのみ列挙する**（`dynamodb:Scan/Query/GetItem/PutItem/UpdateItem`を用途ごとに区別する等）。他の関数を非同期起動する（`lambda:InvokeFunction`）等、循環参照が起きる権限は関数専用のIAMロールへ分離する
-- ハンドラーはフラット配置（`src/`を必ずしも作らない）でよい。REST用（`handler.js`）・WebSocket用（`xxxHandler.js`）・共通レスポンス生成程度の粒度に分ける。REST（HTTPプロキシ統合）ハンドラ向けの共通CORSレスポンス生成（`jsonResponse`/`badRequest`/`notFound`/`serverError`）は`shared/lambda/httpResponse.js`としてsymlink共有できる。API Gateway側でCORSを設定する構成（`docs/serverless-api-dynamodb-pattern.md`）ではなく、Lambda側でCORSヘッダーを付与する構成向け
+- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分には共通ロジックがある。内容は、接続取得、GSIによるルーム内接続一覧Queryである。加えて、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパーでもある。これは`shared/lambda/webSocketBroadcast.js`としてsymlink共有できる。`docs/shared-ui-components.md`と同様の索引は無いため、本ファイルから直接参照する。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外である。フロントエンド側の設計知見は`docs/websocket-client-reconnect-pattern.md`を参照
+- **IAMは`provider.iam.role.statements`に必要最小限のアクションのみ列挙する**。例えば`dynamodb:Scan/Query/GetItem/PutItem/UpdateItem`を用途ごとに区別する。他の関数を非同期起動する（`lambda:InvokeFunction`）等、循環参照が起きる権限は関数専用のIAMロールへ分離する
+- ハンドラーはフラット配置（`src/`を必ずしも作らない）でよい。REST用（`handler.js`）・WebSocket用（`xxxHandler.js`）・共通レスポンス生成程度の粒度に分ける。REST（HTTPプロキシ統合）ハンドラ向けの共通CORSレスポンス生成関数がある（`jsonResponse`/`badRequest`/`notFound`/`serverError`）。これらは`shared/lambda/httpResponse.js`としてsymlink共有できる。API Gateway側でCORSを設定する構成（`docs/serverless-api-dynamodb-pattern.md`）ではなく、Lambda側でCORSヘッダーを付与する構成向け
 - 単体テストは**vitest + `aws-sdk-client-mock`**。
 
   ```js
@@ -127,7 +127,7 @@ functions:
 
 ## デプロイ
 
-`.github/actions/deploy-serverless`複合action（[#147](https://github.com/bamiyanapp/dev-standards/issues/147)）を使う。`setup-node → npm ci → デプロイコマンド実行`の定型パターンに加え、`EMFILE`対策も持つ。npm workspaces + `package.individually: true`構成で起きがちなこの問題に対し、ファイルディスクリプタのソフトリミットをハードリミットまで引き上げる対策をデフォルトで内蔵している。
+`.github/actions/deploy-serverless`複合action（[#147](https://github.com/bamiyanapp/dev-standards/issues/147)）を使う。`setup-node → npm ci → デプロイコマンド実行`の定型パターンに加え、`EMFILE`対策も持つ。npm workspaces + `package.individually: true`構成ではこの問題が起きがちである。そのため、ファイルディスクリプタのソフトリミットをハードリミットまで引き上げる対策をデフォルトで内蔵している。
 
 ```yaml
 - uses: bamiyanapp/dev-standards/.github/actions/deploy-serverless@v2.3.0
@@ -140,7 +140,7 @@ functions:
     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
-フロントエンドは`.github/actions/deploy-github-pages`（`docs/standard-tech-stack.md`参照）でGitHub Pagesへ、`workspaces: true`を指定して同様にデプロイする。両方とも`reusable-cd.yml`の`release`ジョブ（semantic-release）に`needs`させ、新バージョンがリリースされた場合のみ実行する。
+フロントエンドは`.github/actions/deploy-github-pages`（`docs/standard-tech-stack.md`参照）でGitHub Pagesへデプロイする。`workspaces: true`を指定して同様にデプロイする。両方とも`reusable-cd.yml`の`release`ジョブ（semantic-release）に`needs`させ、新バージョンがリリースされた場合のみ実行する。
 
 ## CI/CD連携（`reusable-ci.yml`）
 
@@ -157,18 +157,18 @@ functions:
 | `enable_standards_check` | `true` | `sync-manifest.local.json`のsymlink整合性を検証する |
 | `skip_verification_on_push` | `true`（up-to-date required + Squash merge運用の場合） | push-to-mainのツリーは直前のPRで検証済みのため、lint/test/buildの再実行を省略できる |
 
-**実バックエンド直結のE2Eが外部要因（バックエンドのコールドスタート等）で既知のflakyになる場合**、キャッシュのウォームアップやCI側の自動リトライは一般に費用対効果が見合わないことが多い。該当箇所を`try/catch`で囲み、タイムアウト時に`test.skip(true, reason)`でそのテストのみskip扱いにする（テスト内容自体は60秒等の許容時間内に収まった実行では引き続き全て検証される）運用上の割り切りが有効な場合がある。
+**実バックエンド直結のE2Eが外部要因（バックエンドのコールドスタート等）で既知のflakyになる場合**、キャッシュのウォームアップやCI側の自動リトライは一般に費用対効果が見合わないことが多い。該当箇所を`try/catch`で囲む。タイムアウト時に`test.skip(true, reason)`でそのテストのみskip扱いにする（テスト内容自体は60秒等の許容時間内に収まった実行では引き続き全て検証される）。この運用上の割り切りが有効な場合がある。
 
 ## ドキュメント自動生成（`serverless.yml`駆動）
 
 `backend/serverless.yml`は環境変数・APIルート・DynamoDBテーブル定義等、プロダクトの構成情報を集約した単一の正（source of truth）である。これを手動でドキュメントへ転記すると、`serverless.yml`の変更に追従できず実態と乖離する（ドキュメントドリフト）。`serverless.yml`をパースしてMarkdownを自動生成し、`docs/generated/`へ出力する仕組みを設けると、この乖離を構造的に防げる。
 
-- **共通ローダー**: `js-yaml`の`CORE_SCHEMA`に、CloudFormation組み込み関数（`!GetAtt`・`!Sub`・`!Ref`等）のタグを`{ "Fn::<Tag>": <値> }`として素通しするだけの最小限のカスタムスキーマを追加する。これを使ってパースする（値の解決は行わない。静的なルート・テーブル定義の抽出が目的のため）。`${self:custom.xxx}`変数参照は`custom`セクションの実値へ解決する
-- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、環境変数の一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等、用途ごとに必要な情報だけを抽出してMarkdownへ整形する。テーブル形式が向くもの（環境変数の一覧等）、Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）は`docs/documentation-format-conventions.md`の基準で使い分ける
-- **出力先とワークフロー**: 生成先の`docs/generated/`配下に「手動編集禁止・再生成コマンドで上書きされる」旨を明記したREADMEを置く。`npm run docs:generate`のような単一コマンドで全生成スクリプトを実行できるようにし、`serverless.yml`を変更したPRではこのコマンドを実行してから生成物ごとコミットする運用にする
+- **共通ローダー**: `js-yaml`の`CORE_SCHEMA`にカスタムスキーマを追加する。CloudFormation組み込み関数（`!GetAtt`・`!Sub`・`!Ref`等）のタグを`{ "Fn::<Tag>": <値> }`として素通しするだけの最小限のものである。これを使ってパースする（値の解決は行わない。静的なルート・テーブル定義の抽出が目的のため）。`${self:custom.xxx}`変数参照は`custom`セクションの実値へ解決する
+- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、用途ごとに必要な情報だけを抽出する。環境変数の一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等をMarkdownへ整形する。テーブル形式が向くもの（環境変数の一覧等）がある。Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）もある。両者は`docs/documentation-format-conventions.md`の基準で使い分ける
+- **出力先とワークフロー**: 生成先の`docs/generated/`配下に「手動編集禁止・再生成コマンドで上書きされる」旨を明記したREADMEを置く。`npm run docs:generate`のような単一コマンドで全生成スクリプトを実行できるようにする。`serverless.yml`を変更したPRではこのコマンドを実行してから生成物ごとコミットする運用にする
 
 コード自体はプロダクトごとに`serverless.yml`の構成（リソース名・関数名等）が異なるため、共通ローダー・生成スクリプトのsymlink共有はせず、このパターン記述と実装例の参照にとどめる。
 
 ## 実例
 
-karuta（`bamiyanapp/karuta`）の`frontend/`・`backend/serverless.yml`・`.github/workflows/ci.yml`・`cd.yml`が本パターンの完全な実装例。ドキュメント自動生成は`scripts/docs/serverless-yaml.js`（共通ローダー）・`scripts/docs/generate-env-vars.js`等の各生成スクリプト・`docs/generated/`が実例。
+karuta（`bamiyanapp/karuta`）の`frontend/`・`backend/serverless.yml`が本パターンの実装例である。`.github/workflows/ci.yml`・`cd.yml`も同様に完全な実装例である。ドキュメント自動生成は`scripts/docs/serverless-yaml.js`（共通ローダー）が実例である。`scripts/docs/generate-env-vars.js`等の各生成スクリプト・`docs/generated/`も実例である。

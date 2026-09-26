@@ -1,6 +1,6 @@
 # reusable workflow 導入・入力リファレンス
 
-`docs/cicd-pipeline-specification.md`はCI/CDパイプラインの仕様（各ジョブの実行内容・Architecture）を扱う。これに対し本ドキュメントは、参照側リポジトリでの**導入手順**と、`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の**全入力パラメータのリファレンス**を扱う。
+`docs/cicd-pipeline-specification.md`はCI/CDパイプラインの仕様（各ジョブの実行内容・Architecture）を扱う。これに対し本ドキュメントは、参照側リポジトリでの**導入手順**を扱う。加えて、`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の**全入力パラメータのリファレンス**も扱う。
 
 ## 参照側リポジトリでの導入
 
@@ -10,24 +10,24 @@
 git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-standards
 ```
 
-- `CLAUDE.md`: 参照側の `CLAUDE.md` 先頭で `@dev-standards/CLAUDE.md` と記述してインポートし、プロジェクト固有のルール（対象パッケージ名、CI/自動マージ構成など）のみを参照側ファイルに追記する。
-- `.clinerules/*.md` ・ `.claude/skills/` 配下の**全Skill** ・ `commitlint.config.cjs` ・ `.clineignore` ・ `.claude/settings.json` ・ `.gitignore`が対象。下記の `scripts/bootstrap.js` を参照側リポジトリのルートで実行してセットアップする（手動でのシンボリックリンク作成・コピーは不要）。
+- `CLAUDE.md`: 参照側の `CLAUDE.md` 先頭で `@dev-standards/CLAUDE.md` と記述してインポートする。プロジェクト固有のルール（対象パッケージ名、CI/自動マージ構成など）のみを参照側ファイルに追記する。
+- `.clinerules/*.md` ・ `.claude/skills/` 配下の**全Skill** ・ `commitlint.config.cjs` が対象である。加えて `.clineignore` ・ `.claude/settings.json` ・ `.gitignore`も対象。下記の `scripts/bootstrap.js` を参照側リポジトリのルートで実行してセットアップする（手動でのシンボリックリンク作成・コピーは不要）。
 
   ```
   node dev-standards/scripts/bootstrap.js
   ```
 
   - `sync-manifest.json`（本リポジトリのルート）に、シンボリックリンク対象・コピー対象のファイル一覧を定義している。新規Skill追加等でこのマニフェストに変更があった場合も、参照側リポジトリで同スクリプトを再実行するだけで追従できる。
-  - `--check` を付けると、実際にファイルを変更せずに欠落・リンク切れ・内容の乖離のみを検知し、問題があれば非0終了する（CIでのドリフト検知に利用可能。後述の `enable_standards_check` 入力を参照）。
+  - `--check` を付けると、実際にファイルを変更せずに欠落・リンク切れ・内容の乖離のみを検知する。問題があれば非0終了する（CIでのドリフト検知に利用可能。後述の `enable_standards_check` 入力を参照）。
   - 既存の実ファイル・ディレクトリ（シンボリックリンクではないもの）がリンク先に存在する場合は、誤って上書きしないよう検知のみ行い変更しない。
-  - `.claude/settings.json` はプロジェクト固有の許可ルールを追加できない。そのようなルールは参照側リポジトリの `.claude/settings.local.json`（Claude Codeが `settings.json` と合わせてマージする、プロジェクト固有の追加設定ファイル）に記載する。
-  - `.gitignore` はGitHub側の制約によりシンボリックリンクにできない（symlink化した `.gitignore`/`.gitattributes` はsubmodule経由の攻撃に使われた前例があり、pushしようとすると `gitignoreSymlink` 警告が出る）。このため、`bootstrap.js` は実体ファイルとしてコピーする。本リポジトリ側の `.gitignore` は `# --- dev-standards managed: start ---` 〜 `# --- dev-standards managed: end ---` のマーカーで囲まれた**管理区間**を持つ。`--check`/コピー元との一致判定はこの区間内のみを対象にする（issue #138）。区間外（前後）にプロジェクト固有のignoreエントリを追記でき、その部分は乖離検知の対象外となるため、ルート直下の `.gitignore` に直接追記してよい（マーカーが無い場合はファイル全体の完全一致が要求される従来の挙動にフォールバックする）。管理区間内の差分（本リポジトリ側の`.gitignore`更新への追従）は `bootstrap.js`（`--check` 無し）を再実行すると、区間外の追記を保持したまま自動的に再同期される。
-  - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある（例: `shared/pwa/` 配下のPWAキャッシュ更新パターン、詳細は `docs/service-worker-update-pattern.md` 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述すると、`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
-- `docs/cicd-pipeline-specification.md`: Claude Codeの `@import` 構文で解決可能なMarkdownのため、シンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
+  - `.claude/settings.json` はプロジェクト固有の許可ルールを追加できない。そのようなルールは参照側リポジトリの `.claude/settings.local.json` に記載する。これはClaude Codeが `settings.json` と合わせてマージする、プロジェクト固有の追加設定ファイルである。
+  - `.gitignore` はGitHub側の制約によりシンボリックリンクにできない。symlink化した `.gitignore`/`.gitattributes` はsubmodule経由の攻撃に使われた前例がある。そのためpushしようとすると `gitignoreSymlink` 警告が出る。このため、`bootstrap.js` は実体ファイルとしてコピーする。本リポジトリ側の `.gitignore` は**管理区間**を持つ。`# --- dev-standards managed: start ---` 〜 `# --- dev-standards managed: end ---` のマーカーで囲まれた区間である。`--check`/コピー元との一致判定はこの区間内のみを対象にする（issue #138）。区間外（前後）にプロジェクト固有のignoreエントリを追記できる。その部分は乖離検知の対象外となるため、ルート直下の `.gitignore` に直接追記してよい（マーカーが無い場合はファイル全体の完全一致が要求される従来の挙動にフォールバックする）。管理区間内の差分（本リポジトリ側の`.gitignore`更新への追従）は `bootstrap.js`（`--check` 無し）を再実行すると、区間外の追記を保持したまま自動的に再同期される。
+  - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある。例えば `shared/pwa/` 配下のPWAキャッシュ更新パターンである（詳細は `docs/service-worker-update-pattern.md` 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述する。すると`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
+- `docs/cicd-pipeline-specification.md`: Claude Codeの `@import` 構文で解決可能なMarkdownである。そのためシンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
 
 ## `reusable-ci.yml`
 
-参照側の `.github/workflows/ci.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す。`@main`のような未固定のブランチ参照は避け、タグで固定すること。指定できる入力は以下の通り。
+参照側の `.github/workflows/ci.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。指定できる入力は以下の通り。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|
@@ -57,13 +57,13 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `skip_verification_on_push` | `true`かつ`push`イベントの場合、`frontend-test`・`backend-test`・`package-test`・`standards-check`・`duplication-check`・`doc-duplication-check`・`architecture-check`・`text-lint`・`dead-link-check`をスキップする（CI/CD実行回数削減、[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)）。PRが`base_branch`と同期済みでなければマージ不可（up-to-date required）＋Squash merge運用（マージ後のmainのツリーがPR headと完全に一致する）を前提に、`pull_request`イベントで既に検証済みの内容を`push`側で再検証しない最適化のため、この前提が成り立たない運用では有効化しないこと。`frontend-e2e-test`・`render-mermaid-diagrams`は`push`イベントでのみ発生する副作用（`latest/`ベースラインの公開）を担うためスキップ対象に含めない | `false` |
 | `enable_path_filtering` | `true`の場合、`frontend_dir`/`backend_dir`配下の変更有無に応じて`frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`・`architecture-check`を選択的にスキップする（CI/CD実行回数削減、[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)）。ルート直下の`package.json`・`package-lock.json`・`.github/workflows/**`の変更は共通変更とみなしいずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）は対象外（常に全ジョブを実行する）。`standards-check`・`text-lint`・`doc-duplication-check`はいずれもリポジトリ全体のチェックのため対象外（常に実行する）。変更検出自体が失敗した場合は安全側に倒し全ジョブを実行する | `false` |
 
-`frontend_dir`/`backend_dir`/`node_version`等のCI関連inputとは別に、semantic-releaseの実行に関する入力も存在する。具体的には`enable_release` / `semantic_release_node_version` / `base_branch`が該当する。加えて`enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path` / `enable_shared_release_config`も該当する。これらは`reusable-cd.yml`側の入力であり、このワークフロー（`reusable-ci.yml`）には存在しない。[bamiyanapp/dev-standards#76](https://github.com/bamiyanapp/dev-standards/issues/76)でのメジャーバージョンアップに伴い削除した。同名の入力を`reusable-cd.yml`側に指定すること（下記）。
+`frontend_dir`/`backend_dir`/`node_version`等のCI関連inputとは別に、semantic-releaseの実行に関する入力も存在する。具体的には`enable_release` / `semantic_release_node_version` / `base_branch`が該当する。加えて`enable_changelog_json` / `changelog_source_path`も該当する。`changelog_json_output_path` / `enable_shared_release_config`も同様である。これらは`reusable-cd.yml`側の入力であり、このワークフロー（`reusable-ci.yml`）には存在しない。[bamiyanapp/dev-standards#76](https://github.com/bamiyanapp/dev-standards/issues/76)でのメジャーバージョンアップに伴い削除した。同名の入力を`reusable-cd.yml`側に指定すること（下記）。
 
-`secrets.BOT_TOKEN`（任意）を渡すと、commitlintジョブのsubmodule取得や、`merge` jobでの実際のPRマージ（squash merge API呼び出し）で利用される。
+`secrets.BOT_TOKEN`（任意）を渡すことができる。これはcommitlintジョブのsubmodule取得や、`merge` jobでの実際のPRマージ（squash merge API呼び出し）で利用される。
 
 ## `reusable-cd.yml`
 
-参照側の `.github/workflows/cd.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す。`@main`のような未固定のブランチ参照は避け、タグで固定すること。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行してバージョン自動採番・タグ付けを行い、GitHub Releaseを作成する。出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
+参照側の `.github/workflows/cd.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。`base_branch`へのpush時、`release` jobがbase_branch上で直接semantic-releaseを実行する。バージョン自動採番・タグ付けを行い、GitHub Releaseを作成する。出力 `new_release_published` / `version` を呼び出し側のデプロイジョブの実行条件に利用できる。指定できる入力は以下の通り。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|
@@ -74,14 +74,14 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `changelog_source_path` | 変換元の`CHANGELOG.md`パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `CHANGELOG.md` |
 | `changelog_json_output_path` | 変換後のJSON出力先パス（リポジトリルート基準）。`enable_changelog_json: true`の場合のみ使用 | `frontend/src/changelog.json` |
 
-`secrets.BOT_TOKEN`（任意）を渡すと、`release` jobでのバージョン更新コミット・タグのpush、GitHub Release作成に利用される。**`base_branch`へのpushがCDワークフローのトリガーとなるため、`enable_release: true`で運用する場合は`BOT_TOKEN`の設定を推奨する**（`GITHUB_TOKEN`によるpushはCDをトリガーしない）。
+`secrets.BOT_TOKEN`（任意）を渡すと、`release` jobでのバージョン更新コミット・タグのpush、GitHub Release作成に利用される。**`base_branch`へのpushがCDワークフローのトリガーとなる**。**そのため`enable_release: true`で運用する場合は`BOT_TOKEN`の設定を推奨する**（`GITHUB_TOKEN`によるpushはCDをトリガーしない）。
 
 ## `reusable-codeql.yml`
 
-参照側の `.github/workflows/codeql.yml` から `uses: bamiyanapp/dev-standards/.github/workflows/reusable-codeql.yml@v1.0.0` ＋ `with:` で値を指定して呼び出す。`@main`のような未固定のブランチ参照は避け、タグで固定すること。参照側の`codeql.yml`自体の`on:`に`push`・`pull_request`・`schedule`（週次等の定期実行、コード変更が無い期間もクエリセット更新を検知するため推奨）を設定する。指定できる入力は以下の通り。
+参照側の `.github/workflows/codeql.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-codeql.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。参照側の`codeql.yml`自体の`on:`に`push`・`pull_request`・`schedule`（週次等の定期実行、コード変更が無い期間もクエリセット更新を検知するため推奨）を設定する。指定できる入力は以下の通り。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|
 | `languages` | CodeQLで解析する言語をJSON配列形式で指定する（例: `'["javascript-typescript"]'`）。GitHub Actions matrixとしてlanguageごとに展開される | `'["javascript-typescript"]'` |
 
-CodeQLを必須チェックにするかどうかは参照側リポジトリのブランチ保護設定（Required status checks）側の責務であり、このワークフロー自体は`reusable-ci.yml`の`merge` jobのマージ処理に関与しない。
+CodeQLを必須チェックにするかどうかは参照側リポジトリのブランチ保護設定（Required status checks）側の責務である。このワークフロー自体は`reusable-ci.yml`の`merge` jobのマージ処理に関与しない。
