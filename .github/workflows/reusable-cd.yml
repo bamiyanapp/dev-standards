@@ -37,6 +37,9 @@ on:
       version:
         description: "リリースされたバージョン番号（リリースでない場合は空文字列）"
         value: ${{ jobs.release.outputs.version }}
+      release_commit_sha:
+        description: "semantic-releaseによるバージョン更新（package.json・CHANGELOG.md等）を反映した、base_branch上の実際のコミットSHA（リリースでない場合は空文字列）。このジョブをトリガーしたgithub.shaはバージョン更新前のコミットを指すため、デプロイ対象のcheckoutにはgithub.shaではなくこちらを使うこと（bamiyanapp/karuta issue #1274）。"
+        value: ${{ jobs.release.outputs.release_commit_sha }}
 
 jobs:
   # base_branch（push）上で直接semantic-releaseを実行する。
@@ -66,6 +69,7 @@ jobs:
     outputs:
       new_release_published: ${{ steps.check-release.outputs.release_prepared }}
       version: ${{ steps.check-release.outputs.version }}
+      release_commit_sha: ${{ steps.release-commit-sha.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -176,6 +180,7 @@ jobs:
         id: check-release
         run: |
           AFTER_SHA=$(git rev-parse HEAD)
+          echo "after_sha=$AFTER_SHA" >> "$GITHUB_OUTPUT"
           if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
             VERSION=$(node -p "require('./package.json').version")
             echo "release_prepared=true" >> "$GITHUB_OUTPUT"
@@ -358,3 +363,23 @@ jobs:
           fi
           gh release edit "$TAG" --title "$TAG" --notes "$NOTES" \
             || gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+
+      # このジョブをトリガーしたgithub.sha（このpush自体のコミット）は、semantic-release
+      # によるバージョン更新（package.json・CHANGELOG.md等）を反映する前のコミットである。
+      # 参照側のデプロイジョブ（例: karutaのbuild-and-deploy-frontend）がgithub.shaを
+      # そのままcheckoutすると、常に「1つ前のバージョン」の状態をデプロイしてしまう
+      # （bamiyanapp/karuta issue #1274で実際に確認された不具合）。base_branch上で
+      # 実際にバージョン更新が反映された最終コミットのSHAを、release_needs_pr（PR
+      # フォールバック、squash mergeコミット）・release_pushed_directly（直接push、
+      # semantic-release実行直後のHEAD）のいずれの経路かに応じて求め、後続の
+      # デプロイジョブがcheckout対象として使えるよう出力する
+      - name: Determine the actual release commit SHA on base_branch
+        id: release-commit-sha
+        run: |
+          if [ "${{ steps.check-release.outputs.release_needs_pr }}" = "true" ]; then
+            echo "sha=${{ steps.merge-release-pr.outputs.merge_sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.check-release.outputs.release_pushed_directly }}" = "true" ]; then
+            echo "sha=${{ steps.check-release.outputs.after_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=" >> "$GITHUB_OUTPUT"
+          fi
