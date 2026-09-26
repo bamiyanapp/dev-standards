@@ -4,7 +4,7 @@ Gemini・OpenAI等のLLM APIをチャット的な機能に統合する際の2つ
 
 ## パターン1: 1回の呼び出しで複数フォーマットを同時生成させる
 
-同じ内容を複数のチャネル・UIで異なる形式で使いたい場合（例: 音声で読み上げる簡潔な話し言葉と、チャット画面に表示する詳しい文章）、チャネルごとに別々のLLM呼び出しをすると、課金・レート制限（`docs/daily-rate-limit-pattern.md`参照）を追加で消費してしまう。
+同じ内容を複数のチャネル・UIで異なる形式で使いたい場合を考える（例: 音声で読み上げる簡潔な話し言葉と、チャット画面に表示する詳しい文章）。チャネルごとに別々のLLM呼び出しをすると、課金・レート制限（`docs/daily-rate-limit-pattern.md`参照）を追加で消費してしまう。
 
 代わりに、システムプロンプトで「必ず両フォーマットを含むJSON形式のみを出力せよ」と指示し、1回の呼び出しで両方を生成させる。
 
@@ -21,11 +21,11 @@ function buildSystemPrompt({ /* ... */ }) {
 
 呼び出し側は用途に応じて`voice`・`text`のどちらかを選んで使う。次ターンへの入力コンテキスト（会話履歴）にどちらを記録するかも、情報量が多い方（`text`）に統一する等、用途に応じて決める。
 
-同様のパターンは、会話の振り返り（サマリー生成）と既存データとの照合を1回の呼び出しに統合する場合にも使える（`{"summary": "...", "questions": [...]}`のように、要約と構造化データを同時に出力させる）。
+同様のパターンは、会話の振り返り（サマリー生成）と既存データとの照合を1回の呼び出しに統合する場合にも使える。`{"summary": "...", "questions": [...]}`のように、要約と構造化データを同時に出力させる。
 
 ## パターン2: LLMの緩いJSON出力を救済してパースする
 
-LLMは指示通りの厳密なJSONを返すとは限らない。特に、複数文にまたがる長い文字列値を含む場合、JSON文字列リテラル内であるべき改行を`\n`にエスケープせず生の改行文字のまま出力することがあり、通常の`JSON.parse`は`Unexpected token`で失敗する。
+LLMは指示通りの厳密なJSONを返すとは限らない。特に、複数文にまたがる長い文字列値を含む場合を考える。JSON文字列リテラル内であるべき改行を`\n`にエスケープせず生の改行文字のまま出力することがある。通常の`JSON.parse`は`Unexpected token`で失敗する。
 
 ```js
 // フィードバック＋次の質問という複数文を1つのJSON文字列値に収めると、LLMが
@@ -84,4 +84,4 @@ function parseReply(rawText) {
 
 ## 実例
 
-examination `infra/bot-stack/functions/geminiConversation.js`の`buildSystemPrompt`/`parseDualReply`（パターン1・2）が実例である。`buildSummaryPrompt`/`parseReconciliationReply`（要約と構造化データの同時生成、パターン1の応用）も参照。
+examination `infra/bot-stack/functions/geminiConversation.js`が実例である。`buildSystemPrompt`/`parseDualReply`（パターン1・2）が該当する。`buildSummaryPrompt`/`parseReconciliationReply`（要約と構造化データの同時生成、パターン1の応用）も参照。

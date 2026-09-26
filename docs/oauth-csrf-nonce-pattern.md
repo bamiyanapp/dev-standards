@@ -1,13 +1,13 @@
 # OAuthログインのCSRF対策はCookieではなくサーバー側nonce管理にする
 
-CloudFront + Lambda@Edge（またはこれに類する構成）でCognito/Google等のOAuthログインを実装する際、ログインCSRF（第三者が発行させた認可コードをこのブラウザに横流しして紐付けさせる攻撃）を防ぐ必要がある。そのための`state`パラメータのnonce検証を、**Cookieではなくサーバー側（DynamoDB）で管理する**。examinationの`infra/site-stack/functions/checkAuth.js`（[examination#143](https://github.com/bamiyanapp/examination/issues/143)）で、Cookie方式の5回にわたる修正の末にたどり着いた設計。
+CloudFront + Lambda@Edge（またはこれに類する構成）でCognito/Google等のOAuthログインを実装する場合を考える。ログインCSRF（第三者が発行させた認可コードをこのブラウザに横流しして紐付けさせる攻撃）を防ぐ必要がある。そのための`state`パラメータのnonce検証を、**Cookieではなくサーバー側（DynamoDB）で管理する**。examinationの`infra/site-stack/functions/checkAuth.js`（[examination#143](https://github.com/bamiyanapp/examination/issues/143)）で、Cookie方式の5回にわたる修正の末にたどり着いた設計。
 
 ## 問題: なぜCookieでのCSRF対策はOAuthログインフローで壊れやすいか
 
-未認証時のログインリダイレクトでは、nonceを`state`パラメータに埋め込みCognito（IdP）から戻ってきた際に照合する。このnonceを素朴にCookie（例: `csrf_state`）へ保存して照合する実装は、以下の要因でブラウザ側のCookieの生存・一貫性に依存してしまい、「invalid state」エラーが再現性高く発生する。
+未認証時のログインリダイレクトでは、nonceを`state`パラメータに埋め込みCognito（IdP）から戻ってきた際に照合する。このnonceを素朴にCookie（例: `csrf_state`）へ保存して照合する実装は、以下の要因でブラウザ側のCookieの生存・一貫性に依存してしまう。「invalid state」エラーが再現性高く発生する。
 
-- **バックグラウンドリクエストによる上書き**: Service Workerのプリキャッシュ、Speculation Rules API（Chrome）による他ページのprefetch等、ユーザー操作を伴わない未認証状態のバックグラウンドリクエストが発生することがある。これらが、ログイン試行中のものとは別のnonceで`csrf_state`Cookieを上書きしてしまう
-- **ブラウザのCookieポリシーによる破棄**: 特にSafari等のITP（Intelligent Tracking Prevention）は、クロスサイトリダイレクト直後のCookieを破棄することがある。ログアウト直後の再ログイン（IdP・OAuthプロバイダのセッションが直前まで有効なため認証の往復が高速に完了する）はこのタイミングに該当しやすい
+- **バックグラウンドリクエストによる上書き**: ユーザー操作を伴わない未認証状態のバックグラウンドリクエストが発生することがある。例えばService Workerのプリキャッシュ、Speculation Rules API（Chrome）による他ページのprefetch等である。これらが、ログイン試行中のものとは別のnonceで`csrf_state`Cookieを上書きしてしまう
+- **ブラウザのCookieポリシーによる破棄**: 特にSafari等のITP（Intelligent Tracking Prevention）に注意が必要である。クロスサイトリダイレクト直後のCookieを破棄することがある。ログアウト直後の再ログイン（IdP・OAuthプロバイダのセッションが直前まで有効なため認証の往復が高速に完了する）はこのタイミングに該当しやすい
 
 examinationでは「バックグラウンドリクエストをどう見分けてCookie上書きを避けるか」を4回試みた。
 
@@ -112,7 +112,7 @@ if (!(await consumeCsrfNonce(decoded.nonce))) {
 }
 ```
 
-実例: examination `infra/site-stack/functions/checkAuth.js`の`issueCsrfNonce`/`consumeCsrfNonce`（テーブル名は`examination-csrf-nonces`）。
+実例: examination `infra/site-stack/functions/checkAuth.js`の`issueCsrfNonce`/`consumeCsrfNonce`である。テーブル名は`examination-csrf-nonces`である。
 
 ## 前提となるDynamoDBテーブル定義
 
@@ -139,4 +139,4 @@ MyAppCsrfNoncesTable:
 
 - nonceのTTLは短命（examinationでは300秒）でよい。ログインリダイレクトからコールバックまでは通常数秒〜数十秒で完結するため
 - `DeleteItem`に`ConditionExpression`を付けることが要。単純な`GetItem`→検証→`DeleteItem`の2ステップにすると、その間に同じnonceで2回目のコールバックが飛んできた場合（多重タブでの二重コールバック等）にリプレイを許してしまう。`DeleteItem`自体に条件を持たせ、単一リクエストで検証・失効を同時に行う
-- 本パターンはコードの共有ではなく設計判断・教訓の共有が主目的。プロダクトごとにコールバックの実装（Lambda@Edge/API Gatewayなど実行環境が異なる）は個別に実装してよいが、「CSRF nonceをCookieに保存して検証する」設計を選ばないことが最も重要な教訓
+- 本パターンはコードの共有ではなく設計判断・教訓の共有が主目的。プロダクトごとにコールバックの実装（Lambda@Edge/API Gatewayなど実行環境が異なる）は個別に実装してよい。しかし「CSRF nonceをCookieに保存して検証する」設計を選ばないことが最も重要な教訓

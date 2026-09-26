@@ -4,11 +4,11 @@ PWA（ホーム画面に追加したアプリ、スタンドアロン表示）�
 
 ## 原因
 
-各アプリの`index.html`は`<div id="root"></div>`が空のまま配信され、JSバンドルの読み込み・パース・実行（Reactのマウント）が完了するまで、ブラウザは何も表示するものを持たない。
+各アプリの`index.html`は`<div id="root"></div>`が空のまま配信される。JSバンドルの読み込み・パース・実行（Reactのマウント）が完了するまで、ブラウザは何も表示するものを持たない。
 
 ## 対処: JS非依存の静的ローディング表示を`index.html`へ直接埋め込む
 
-コード共有ではなく、コピー可能なスニペット＋手順としてのレシピ。JSバンドルの読み込みを待たずにブラウザがHTML/CSSだけで表示できるよう、ローディング表示（スピナー）を`index.html`の`<div id="root">`の**中身**として直接書く。`createRoot(document.getElementById("root")).render(<App />)`はマウント時に`#root`の中身を丸ごと置き換えるため、追加のJSコードなしにReactマウント完了と同時に自動的に消える。
+コード共有ではなく、コピー可能なスニペット＋手順としてのレシピ。JSバンドルの読み込みを待たずにブラウザがHTML/CSSだけで表示できるよう、ローディング表示（スピナー）を`index.html`の`<div id="root">`の**中身**として直接書く。`createRoot(document.getElementById("root")).render(<App />)`はマウント時に`#root`の中身を丸ごと置き換える。そのため、追加のJSコードなしにReactマウント完了と同時に自動的に消える。
 
 ```html
 <!doctype html>
@@ -67,4 +67,4 @@ PWA（ホーム画面に追加したアプリ、スタンドアロン表示）�
 - `prefers-color-scheme`メディアクエリで明暗テーマに追従させる。ビルド後のTailwind設定（`data-theme`属性等）とは独立した、ブラウザ標準のOSテーマ設定ベースの判定になるが、ローディング表示自体はごく短時間しか表示されないため実用上問題にならない
 - `aria-hidden="true"`を付け、スクリーンリーダーに読み上げさせない
 - このパターンは`index.html`という各アプリのビルド設定ファイルに直接埋め込む性質上、`shared/pwa/`のようなJSファイルのsymlink共有には向かない。プロダクトごとに`index.html`へ直接コピー＆調整する
-- Service Workerによるキャッシュ更新パターン（`docs/service-worker-update-pattern.md`）とは別の問題（こちらはJS到達前の空白、あちらはHTML自体の到達・更新検知）のため、混同しないこと。PWA起動時の体感速度改善としては、本パターンに加えてHTML到達自体の速度（ナビゲーションリクエストのキャッシュ戦略）も別途検討する余地がある（examinationでの検討例: examination#175）
+- Service Workerによるキャッシュ更新パターン（`docs/service-worker-update-pattern.md`）とは別の問題である。こちらはJS到達前の空白、あちらはHTML自体の到達・更新検知であり、混同しないこと。PWA起動時の体感速度改善としては、本パターンに加えてHTML到達自体の速度（ナビゲーションリクエストのキャッシュ戦略）も別途検討する余地がある。examinationでの検討例はexamination#175である

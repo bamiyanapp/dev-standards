@@ -1,6 +1,6 @@
 # フロントエンド共通UI規約
 
-複数プロダクトのフロントエンドで統一しておきたいUI規約をここにまとめる。`docs/shared-ui-components.md`（共有UIコンポーネント）・`docs/client-only-vite-spa-pattern.md`（スキャフォールド構成）と異なり、コンポーネントや雛形そのものではなく、各プロダクトが独自に実装する際に従うべき仕様を定義する。
+複数プロダクトのフロントエンドで統一しておきたいUI規約をここにまとめる。`docs/shared-ui-components.md`（共有UIコンポーネント）とは異なる。`docs/client-only-vite-spa-pattern.md`（スキャフォールド構成）とも異なる。コンポーネントや雛形そのものではなく、各プロダクトが独自に実装する際に従うべき仕様を定義する。
 
 ## 共通フォント
 
@@ -16,15 +16,15 @@
 - **バージョン**: `package.json`の`version`フィールドの値
 - **更新日時**: 現在デプロイされているバージョンの最終更新日時
 
-`version`はビルド時に埋め込む。Viteを使うプロダクトは`shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`（`docs/shared-ui-components.md`参照）を利用する。`package.json`の読み込み・`define`埋め込み・表示用の日時整形を個別実装せず共有する。更新日時の具体的な取得元（デプロイ日時・最終リリース日時・最終コミット日時等）は各プロダクトの実装に委ねるが、実際にデプロイされているバージョンの更新時点を正しく表すものとする（上記共有ヘルパーはビルド時刻を使う）。
+`version`はビルド時に埋め込む。Viteを使うプロダクトは`shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`を利用する。詳細は`docs/shared-ui-components.md`を参照。`package.json`の読み込み・`define`埋め込み・表示用の日時整形を個別実装せず共有する。更新日時の具体的な取得元（デプロイ日時・最終リリース日時・最終コミット日時等）は各プロダクトの実装に委ねる。実際にデプロイされているバージョンの更新時点を正しく表すものとする（上記共有ヘルパーはビルド時刻を使う）。
 
 ## 各プロダクトへの適用
 
-このドキュメントはdev-standards側での規約を明文化するものである。共通フォント（`shared/ui/common-theme.css`等）・トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）は共有コードとして提供している。提供元は`docs/shared-ui-components.md`側である。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。
+このドキュメントはdev-standards側での規約を明文化するものである。共通フォント（`shared/ui/common-theme.css`等）は共有コードとして提供している。トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）も共有コードとして提供している。提供元は`docs/shared-ui-components.md`側である。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。
 
 ### 適用状況
 
-`docs/consumer-repositories.md`に列挙された全リポジトリを記載する（特定セッションが確認できたリポジトリのみを書かない。未確認のリポジトリも「未確認」として残し、一覧から漏れないようにする）。
+`docs/consumer-repositories.md`に列挙された全リポジトリを記載する。特定セッションが確認できたリポジトリのみを書かない。未確認のリポジトリも「未確認」として残し、一覧から漏れないようにする。
 
 | リポジトリ | 共通フォント | トップページ必須構成 | 備考 |
 |---|---|---|---|

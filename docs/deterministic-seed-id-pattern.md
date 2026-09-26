@@ -4,7 +4,7 @@ Markdown等の静的コンテンツをデプロイのたびにDynamoDB等のデ�
 
 ## 問題: シードスクリプトを何度実行しても安全にしたい
 
-デプロイのたびにMarkdown等のソースファイルから同じ内容をデータストアへ投入する処理を書くと、素朴に「ランダムID・現在時刻ベースのID」で行を追加してしまうと、実行するたびに重複行が増え続ける。事前にテーブルを全削除してから再投入する方式は、ユーザーが後からUI経由で追加した行（シード対象外のコンテンツ）まで消してしまう。
+デプロイのたびにMarkdown等のソースファイルから同じ内容をデータストアへ投入する処理を書く場合を考える。素朴に「ランダムID・現在時刻ベースのID」で行を追加してしまうと、実行するたびに重複行が増え続ける。事前にテーブルを全削除してから再投入する方式は、ユーザーが後からUI経由で追加した行（シード対象外のコンテンツ）まで消してしまう。
 
 ## 解決: コンテンツ自体から決定的なIDを導出する
 
@@ -22,7 +22,7 @@ function buildQuestionId(familySlug, category, question) {
 }
 ```
 
-同じ入力（`familySlug`・`category`・`question`の組み合わせ）からは常に同じIDが生成されるため、`PutItem`を何度実行しても同じ行を上書きするだけで、新規重複は発生しない。ソース側の内容が変わればID自体も変わる（＝別レコード扱いになる）ため、「更新」ではなく「置き換え」の意味論になる点に注意する（更新前のIDに紐づく他データ（コメント・参照等）がある設計では別途考慮が必要）。
+同じ入力（`familySlug`・`category`・`question`の組み合わせ）からは常に同じIDが生成されるため、`PutItem`を何度実行しても同じ行を上書きするだけで、新規重複は発生しない。ソース側の内容が変わればID自体も変わる（＝別レコード扱いになる）。そのため、「更新」ではなく「置き換え」の意味論になる点に注意する（更新前のIDに紐づく他データ（コメント・参照等）がある設計では別途考慮が必要）。
 
 ## ランダムID・決定的IDの使い分け
 
@@ -76,7 +76,7 @@ async function removeLegacySeedRows(ddb, tableName, familySlug) {
 }
 ```
 
-このように、ID体系の移行（ランダムID→決定的ID等）を行った場合も、`createdBy`（由来の記録）と組み合わせることで、ユーザー操作由来の行を巻き込まずに旧形式の行だけを安全にクリーンアップできる。
+このように、ID体系の移行（ランダムID→決定的ID等）を行った場合を考える。`createdBy`（由来の記録）と組み合わせることで、ユーザー操作由来の行を巻き込まずに旧形式の行だけを安全にクリーンアップできる。
 
 ## 設計上の要点
 
@@ -86,4 +86,4 @@ async function removeLegacySeedRows(ddb, tableName, familySlug) {
 
 ## 実例
 
-examination `infra/bot-stack/scripts/seed-interview-questions.js`の`buildQuestionId`・`removeLegacySeedRows`（[examination#77](https://github.com/bamiyanapp/examination/issues/77)）。
+examination `infra/bot-stack/scripts/seed-interview-questions.js`が実例である。`buildQuestionId`・`removeLegacySeedRows`が該当する。詳細は[examination#77](https://github.com/bamiyanapp/examination/issues/77)を参照。

@@ -1,13 +1,13 @@
 # E2Eテストのカバレッジ収集パターン（`monocart-reporter`）
 
-`reusable-ci.yml`の`frontend-e2e-test`ジョブは「Show E2E coverage」ステップで`<frontend_dir>/coverage/coverage-summary.json`（frontend-testのユニットテストカバレッジと同じ形式・パス）を読む。読み取った値を使い、Job Summaryへの表示・`e2e_coverage_threshold`によるゲートを行う（README.md「入力パラメータ」参照）。
+`reusable-ci.yml`の`frontend-e2e-test`ジョブは「Show E2E coverage」ステップを持つ。このステップは`<frontend_dir>/coverage/coverage-summary.json`を読む。これはfrontend-testのユニットテストカバレッジと同じ形式・パスである。読み取った値を使い、Job Summaryへの表示・`e2e_coverage_threshold`によるゲートを行う（README.md「入力パラメータ」参照）。
 
-この仕組みは「Playwright側でその形式のファイルを実際に出力する」構成が各プロダクトで組まれていることが前提である。単に`enable_e2e_test: true`にしただけでは何も出力されず、「coverage/coverage-summary.json が見つからないため、カバレッジ表示をスキップします」というメッセージだけがJob Summaryに残る。この状態ではE2Eカバレッジが恒常的に算出できない（複数プロダクトで同じ症状が確認されている）。本ドキュメントは、この出力を実際に行うための具体的な設定手順を示す。
+この仕組みは「Playwright側でその形式のファイルを実際に出力する」構成が各プロダクトで組まれていることが前提である。単に`enable_e2e_test: true`にしただけでは何も出力されない。「coverage/coverage-summary.json が見つからないため、カバレッジ表示をスキップします」というメッセージだけがJob Summaryに残る。この状態ではE2Eカバレッジが恒常的に算出できない（複数プロダクトで同じ症状が確認されている）。本ドキュメントは、この出力を実際に行うための具体的な設定手順を示す。
 
 ## 全体像
 
 1. Playwrightの`reporter`に`monocart-reporter`を追加し、`coverage`オプションで出力先・レポート種別を指定する
-2. `shared/e2e/coverageFixture.js`（本ドキュメント）をsymlinkする。各E2Eスペックファイルの`test`/`expect`をこれ経由のものへ差し替える（テスト実行中のJS/CSSカバレッジをChrome DevTools Protocol経由で収集し、monocart-reporterのグローバルレポートへ追加する）
+2. `shared/e2e/coverageFixture.js`（本ドキュメント）をsymlinkする。各E2Eスペックファイルの`test`/`expect`をこれ経由のものへ差し替える。これによりテスト実行中のJS/CSSカバレッジをChrome DevTools Protocol経由で収集する。monocart-reporterのグローバルレポートへ追加する
 3. ビルド成果物にソースマップを含める（`vite.config.js`の`build.sourcemap: true`）。無いとカバレッジがビルド後のバンドルファイル単位でしか集計されず、`coverage_check_per_file`によるソースファイル単位のゲートが機能しない
 
 ## 1. 依存関係の追加
@@ -61,7 +61,7 @@ export default defineConfig({
 });
 ```
 
-`coverage.outputDir`は`check-coverage-threshold`複合actionの`working-directory`（＝`frontend_dir`）からの相対パスで解決されるため、`./coverage`のままでよい（`reusable-ci.yml`側の変更は不要）。
+`coverage.outputDir`は`check-coverage-threshold`複合actionの`working-directory`からの相対パスで解決される。この`working-directory`は`frontend_dir`である。そのため、`./coverage`のままでよい（`reusable-ci.yml`側の変更は不要）。
 
 ## 3. `vite.config.js`にソースマップを追加
 
@@ -94,11 +94,11 @@ export default defineConfig({
 import { test, expect } from './coverageFixture.js'; // symlink
 ```
 
-`coverageFixture.js`が自動fixtureとして各テストの前後で`page.coverage.startJSCoverage()`/`startCSSCoverage()`・`stopJSCoverage()`/`stopCSSCoverage()`を呼ぶ。収集結果は`monocart-reporter`の`addCoverageReport()`でグローバルレポートへ追加する。Chromiumプロジェクト（`playwright.config.js`の`projects[].name`が`'chromium'`）以外では、`page.coverage`のChrome DevTools Protocol APIが使えない。そのため自動的に収集をスキップする（既存の`test`/`expect`と完全互換のため、既存のテストコード自体の変更は不要）。
+`coverageFixture.js`が自動fixtureとして各テストの前後で呼び出す。具体的には`page.coverage.startJSCoverage()`/`startCSSCoverage()`を呼ぶ。`stopJSCoverage()`/`stopCSSCoverage()`も呼ぶ。収集結果は`monocart-reporter`の`addCoverageReport()`でグローバルレポートへ追加する。Chromiumプロジェクト（`playwright.config.js`の`projects[].name`が`'chromium'`）を考える。それ以外では、`page.coverage`のChrome DevTools Protocol APIが使えない。そのため自動的に収集をスキップする（既存の`test`/`expect`と完全互換のため、既存のテストコード自体の変更は不要）。
 
 ### `NODE_OPTIONS=--preserve-symlinks`が必要
 
-`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれる。しかしNode（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索する。このため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗する（`Error: Cannot find package '@playwright/test'`）。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する（`vite.config.js`の`resolve.preserveSymlinks`と同種の問題。`docs/shared-ui-components.md`参照）。
+`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれる。しかしNode（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索する。このため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗することがある。エラー例は`Error: Cannot find package '@playwright/test'`である。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する。`vite.config.js`の`resolve.preserveSymlinks`と同種の問題である（`docs/shared-ui-components.md`参照）。
 
 ```json
 { "scripts": { "test:e2e": "NODE_OPTIONS=--preserve-symlinks playwright test" } }
@@ -112,7 +112,7 @@ npm run test:e2e
 cat coverage/coverage-summary.json   # totalと各src/*.jsxファイルのpctが入っていることを確認
 ```
 
-`node_modules/**`のエントリが混入している場合は`sourceFilter`の設定を見直す。ソースファイル単位のエントリ（`src/components/Foo.jsx`等）ではなくビルド後のバンドルファイル単位（`assets/index-xxxxx.js`）しか出てこない場合はソースマップが有効になっているか確認する。
+`node_modules/**`のエントリが混入している場合は`sourceFilter`の設定を見直す。ソースファイル単位のエントリ（`src/components/Foo.jsx`等）が出てこない場合を考える。ビルド後のバンドルファイル単位（`assets/index-xxxxx.js`）しか出てこない場合である。その場合はソースマップが有効になっているか確認する。
 
 ## 実例
 

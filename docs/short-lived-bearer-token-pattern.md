@@ -1,20 +1,20 @@
 # CloudFront+Cognito静的サイト→別バックエンドAPIの短命Bearerトークン認証パターン
 
-CloudFront + Lambda@Edge + Cognitoでログイン管理する静的サイトから、別オリジンで動くバックエンドAPI（API Gateway + Lambda等）をブラウザから直接呼びたい場合の認証パターン。examinationの`/_voice-token`（[examination#62](https://github.com/bamiyanapp/examination/issues/62)）で採用している設計を、他プロダクトでも参考にできるようレシピ化する。コードの共有ではなく、Cognito/CloudFront/Lambda@Edgeという特定インフラに強く結合した**設計判断**の共有が目的。
+CloudFront + Lambda@Edge + Cognitoでログイン管理する静的サイトを対象とする。そこから別オリジンで動くバックエンドAPI（API Gateway + Lambda等）をブラウザから直接呼びたい場合の認証パターンである。examinationの`/_voice-token`（[examination#62](https://github.com/bamiyanapp/examination/issues/62)）で採用している設計を、他プロダクトでも参考にできるようレシピ化する。コードの共有ではなく、Cognito/CloudFront/Lambda@Edgeという特定インフラに強く結合した**設計判断**の共有が目的。
 
 ## 問題: 静的サイトのログインセッションと別バックエンドAPIをどう繋ぐか
 
-CloudFrontの`id_token`Cookie（Lambda@Edgeで検証）によるログインセッションは、そのCloudFrontディストリビューション自身が処理するリクエストにしか効かない。別オリジンのAPI Gateway等へブラウザから直接fetchする場合、そちらは別のCookie検証の仕組みを持たない（あるいは持たせるとCloudFront側の認証ロジックを二重に実装することになる）。
+CloudFrontの`id_token`Cookie（Lambda@Edgeで検証）によるログインセッションは、そのCloudFrontディストリビューション自身が処理するリクエストにしか効かない。別オリジンのAPI Gateway等へブラウザから直接fetchする場合を考える。そちらは別のCookie検証の仕組みを持たない。持たせるとCloudFront側の認証ロジックを二重に実装することになる。
 
-かといって、CognitoのIDトークン（JWT）自体をブラウザ→バックエンドAPIへそのまま渡す設計は、有効期限が長め（既定1時間、リフレッシュも絡む）でスコープも広いトークンを別オリジンへ露出させることになり、バックエンドAPI側でのJWT検証ロジック（JWKS取得等）の重複実装も必要になる。
+かといって、CognitoのIDトークン（JWT）自体をブラウザ→バックエンドAPIへそのまま渡す設計にも問題がある。有効期限が長め（既定1時間、リフレッシュも絡む）でスコープも広いトークンを別オリジンへ露出させることになる。加えて、バックエンドAPI側でのJWT検証ロジック（JWKS取得等）の重複実装も必要になる。
 
 ## 解決: 用途汎用・短命なトークンをCloudFront側で発行し、バックエンドAPIはそれだけを検証する
 
-1. **発行側**（CloudFrontのLambda@Edge、Cognitoセッションを検証できる立場）: ログイン済み・許可済みユーザーからのリクエストに対し、ランダムな短命トークンを発行してDynamoDBへ保存し、レスポンスボディで返す
+1. **発行側**（CloudFrontのLambda@Edge、Cognitoセッションを検証できる立場）: ログイン済み・許可済みユーザーからのリクエストに対し、ランダムな短命トークンを発行する。DynamoDBへ保存し、レスポンスボディで返す
 2. **ブラウザ側**: このトークンを`Authorization: Bearer <token>`ヘッダーに載せて、別オリジンのバックエンドAPIへCORS越しにリクエストする
-3. **検証側**（バックエンドAPI Lambda）: `Authorization`ヘッダーからトークンを取り出し、DynamoDBへ問い合わせて有効期限内かどうか・紐づくメールアドレスが許可リストに含まれるかどうかを確認する。CognitoのJWT検証ロジックをバックエンドAPI側に持たせる必要が無い
+3. **検証側**（バックエンドAPI Lambda）: `Authorization`ヘッダーからトークンを取り出す。DynamoDBへ問い合わせて有効期限内かどうか・紐づくメールアドレスが許可リストに含まれるかどうかを確認する。CognitoのJWT検証ロジックをバックエンドAPI側に持たせる必要が無い
 
-トークン自体は「ログイン済み・許可済みユーザーであることの証明」以上の意味を持たない汎用的なものにし、特定機能名に縛られた名前を避ける（examinationでは`/_voice-token`という発行元エンドポイント名は音声機能由来だが、トークン自体はバックエンドAPI全般で使い回している）。
+トークン自体は「ログイン済み・許可済みユーザーであることの証明」以上の意味を持たない汎用的なものにする。特定機能名に縛られた名前は避ける。examinationでは`/_voice-token`という発行元エンドポイント名は音声機能由来だが、トークン自体はバックエンドAPI全般で使い回している。
 
 <details>
 <summary>トークン発行〜検証フロー（mermaid図）</summary>
@@ -106,7 +106,7 @@ async function verifyBearerEmail(event) {
 }
 ```
 
-実例: examination`infra/site-stack/functions/checkAuth.js`の`handleVoiceTokenApi`（発行側）・`infra/bot-stack/functions/apiAuth.js`の`verifyBearerEmail`（検証側）。
+実例: examination`infra/site-stack/functions/checkAuth.js`の`handleVoiceTokenApi`が発行側である。examination`infra/bot-stack/functions/apiAuth.js`の`verifyBearerEmail`が検証側である。
 
 ## 前提となるDynamoDBテーブル定義
 
@@ -129,11 +129,11 @@ MyAppTokensTable:
       Enabled: true
 ```
 
-発行側（CloudFront Lambda@Edge）の実行ロールにこのテーブルへの`dynamodb:PutItem`権限を、検証側（バックエンドAPI Lambda）の実行ロールに`dynamodb:GetItem`権限を付与する。発行側と検証側は別スタック・別リージョンにまたがることが多いため、テーブル自体をどちらのスタックで定義するか・クロスリージョンアクセスが必要かは各プロダクトの構成に応じて検討する。
+発行側（CloudFront Lambda@Edge）の実行ロールにこのテーブルへの`dynamodb:PutItem`権限を付与する。検証側（バックエンドAPI Lambda）の実行ロールには`dynamodb:GetItem`権限を付与する。発行側と検証側は別スタック・別リージョンにまたがることが多いため、テーブル自体をどちらのスタックで定義するか・クロスリージョンアクセスが必要かは各プロダクトの構成に応じて検討する。
 
 ## 設計上の要点
 
-- トークンのTTLは短命（examinationでは1時間）にする。長時間有効なセッション自体はCloudFront側のCookie（`id_token`/`refresh_token`）が担うため、このトークンは「バックエンドAPI呼び出しのための一時的な鍵」の位置づけでよい
+- トークンのTTLは短命（examinationでは1時間）にする。長時間有効なセッション自体はCloudFront側のCookie（`id_token`/`refresh_token`）が担う。そのため、このトークンは「バックエンドAPI呼び出しのための一時的な鍵」の位置づけでよい
 - 発行回数自体にも1日あたりの上限を設け、誤操作・アカウント乗っ取り等でのAPI呼び出し急増を抑える（`docs/daily-rate-limit-pattern.md`のパターンをそのまま使える）
 - トークンの用途を機能名に縛らず汎用化しておくと、後から追加したバックエンドAPI（examinationでは想定問答閲覧・模擬面接の記録閲覧・家族情報API等）でも同じトークン発行フローを使い回せる
 - バックエンドAPI側はCognitoのJWT検証ロジック（JWKS取得・署名検証等）を一切持たなくてよい。DynamoDBへの単純な`GetItem`のみで完結する

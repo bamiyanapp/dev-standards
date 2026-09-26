@@ -11,7 +11,7 @@
 1. `ExclusiveStartKey`によるページネーションで、テーブル全体を`Scan`する
 2. 既に移行済み（対象フィールドが存在する）アイテムはスキップする
 3. 移行後の値を計算し、`UpdateCommand`に`ConditionExpression: "attribute_not_exists(<対象フィールド>)"`を付けて書き込む
-4. `ConditionalCheckFailedException`（Scan後、実際のUpdateまでの間にライブトラフィックが先に対象フィールドを書き込んでいた場合）はエラーではなくスキップとして扱い、処理を継続する
+4. `ConditionalCheckFailedException`が発生する場合がある。Scan後、実際のUpdateまでの間にライブトラフィックが先に対象フィールドを書き込んでいた場合である。エラーではなくスキップとして扱う。処理を継続する
 
 ```js
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
@@ -72,7 +72,7 @@ async function backfillNewField(tableName) {
 
 - **実行タイミングを明記する**: このパターンは「同時書き込みでライブトラフィックの記録を上書きしない」ことは保証するが、「移行前の履歴が新フィールドへ反映されないまま残る」ケース自体は防げない。`ConditionalCheckFailedException`でスキップしたアイテムは、移行元フィールドの旧い値のまま新フィールドには反映されない。新しい書き込みロジック（新フィールドへの`ADD`等）をデプロイする**前**、もしくはトラフィックが無い時間帯に一度だけ実行するようスクリプトのコメント・実行手順に明記する
 - **冪等にする**: 既に移行済み（対象フィールドが存在する）アイテムは`Scan`結果からその場でスキップする。同じスクリプトを何度実行しても安全（2回目以降は何もしない）になる
-- **モジュールとして分離し、CLI実行もテストも両対応にする**: `module.exports`で関数をエクスポートしつつ、`require.main === module`のガードで直接実行（`node backfill-xxx.js`）にも対応する。テスト（`aws-sdk-client-mock`）では関数を直接importして呼び出し、実行結果（`updatedCount`）やモックへの呼び出し内容を検証できる
+- **モジュールとして分離し、CLI実行もテストも両対応にする**: `module.exports`で関数をエクスポートする。`require.main === module`のガードで直接実行（`node backfill-xxx.js`）にも対応する。テスト（`aws-sdk-client-mock`）では関数を直接importして呼び出し、実行結果（`updatedCount`）やモックへの呼び出し内容を検証できる
 - **進捗をログ出力する**: 大規模テーブルでは`Scan`のページネーションに時間がかかるため、更新件数・スキップ件数を最後にログ出力しておくと、実行結果の妥当性（想定件数と一致するか）を確認しやすい
 - 決定的ID・冪等な同期処理全般については`docs/deterministic-seed-id-pattern.md`も参照。あちらは「新規追加を何度実行しても重複させない」パターン、本ドキュメントは「既存アイテムの更新をライブトラフィックと安全に共存させる」パターンで、解決する問題が異なる
 
