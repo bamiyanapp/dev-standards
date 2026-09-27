@@ -31,3 +31,26 @@ jobs:
       enable_shared_release_config: false
     secrets:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+  # 参照側アプリ一覧のハブページ（issue #636）。site/apps.json・README.mdの内容には
+  # semantic-releaseのバージョン番号を含まないため、releaseジョブの結果（新バージョンが
+  # 発行されたか）に関わらず、pushのたびに常に再デプロイする。dev-standardsは
+  # パブリックリポジトリでActions無料枠の制限が無いため、この実行回数は問題にならない
+  # （releaseジョブがpushトリガーへ戻した際の判断と同じ、上記run-name付近のコメント参照）
+  deploy-pages:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page-url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: ./.github/actions/deploy-github-pages
+        with:
+          working-directory: site
+          artifact-path: site/dist
