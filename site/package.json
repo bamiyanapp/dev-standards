@@ -1,0 +1,9 @@
+{
+  "name": "dev-standards-apps-hub",
+  "private": true,
+  "version": "1.0.0",
+  "description": "dev-standards参照側アプリ一覧のハブページ（GitHub Pages、issue #636）",
+  "scripts": {
+    "build": "node scripts/generate.js"
+  }
+}

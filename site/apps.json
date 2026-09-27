@@ -1,0 +1,76 @@
+{
+  "apps": [
+    {
+      "id": "karuta",
+      "name": "karuta",
+      "description": "カルタ読み上げアプリ",
+      "url": "https://bamiyanapp.github.io/karuta/",
+      "repoUrl": "https://github.com/bamiyanapp/karuta",
+      "loginRequired": false,
+      "note": null
+    },
+    {
+      "id": "camp-stock",
+      "name": "Camp-Stock",
+      "description": "キャンプ道具管理アプリ",
+      "url": "https://d2mfi7ve53o8zl.cloudfront.net/",
+      "repoUrl": "https://github.com/bamiyanapp/Camp-Stock",
+      "loginRequired": true,
+      "note": "cd.yml実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的確認だけでは固定URLを特定できない。Google OAuthログインで保護されている（許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。"
+    },
+    {
+      "id": "examination",
+      "name": "examination",
+      "description": "小学校の受験対策ナレッジベース",
+      "url": "https://d3b80dryg4uis7.cloudfront.net/",
+      "repoUrl": "https://github.com/bamiyanapp/examination",
+      "loginRequired": true,
+      "note": "CloudFront配信で、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、Google OAuthログインで保護された家族限定利用。"
+    },
+    {
+      "id": "uchi-stock",
+      "name": "uchi-stock",
+      "description": "家庭用品の在庫管理アプリ",
+      "url": "https://bamiyanapp.github.io/uchi-stock/",
+      "repoUrl": "https://github.com/bamiyanapp/uchi-stock",
+      "loginRequired": false,
+      "note": null
+    },
+    {
+      "id": "kingyo",
+      "name": "kingyo",
+      "description": "金魚すくい体験アプリ",
+      "url": "https://dmuxvf1bg8ldn.cloudfront.net/",
+      "repoUrl": "https://github.com/uchi-stock/kingyo",
+      "loginRequired": false,
+      "note": "CloudFormationのスタック出力から動的に取得したドメイン。ログイン機構は無く全員共通ランキングを扱う仕様のため、一般公開の入り口として案内して問題ない。"
+    },
+    {
+      "id": "electric-chair-arena",
+      "name": "Electric-Chair-Arena",
+      "description": "電気イスゲームAI対戦",
+      "url": "https://bamiyanapp.github.io/Electric-Chair-Arena/",
+      "repoUrl": "https://github.com/bamiyanapp/Electric-Chair-Arena",
+      "loginRequired": false,
+      "note": null
+    },
+    {
+      "id": "hanko-master-kentei",
+      "name": "hanko-master-kentei",
+      "description": "ハンコ捺印の作法をテーマにした風刺Webアプリ",
+      "url": "https://bamiyanapp.github.io/hanko-master-kentei/",
+      "repoUrl": "https://github.com/bamiyanapp/hanko-master-kentei",
+      "loginRequired": false,
+      "note": null
+    },
+    {
+      "id": "shock-lab",
+      "name": "shock-lab",
+      "description": "車両サスペンション物理シミュレータ",
+      "url": "https://bamiyanapp.github.io/shock-lab/",
+      "repoUrl": "https://github.com/bamiyanapp/shock-lab",
+      "loginRequired": false,
+      "note": null
+    }
+  ]
+}
