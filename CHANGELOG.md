@@ -1,3 +1,10 @@
+# [2.29.0](https://github.com/bamiyanapp/dev-standards/compare/v2.28.3...v2.29.0) (2026-09-27)
+
+
+### Features
+
+* **site:** 参照側アプリ一覧のハブページをGitHub Pagesで公開する ([#637](https://github.com/bamiyanapp/dev-standards/issues/637)) ([8c03535](https://github.com/bamiyanapp/dev-standards/commit/8c03535b6bb979d8ea988503c8115d9725517132)), closes [#636](https://github.com/bamiyanapp/dev-standards/issues/636)
+
 ## [2.28.3](https://github.com/bamiyanapp/dev-standards/compare/v2.28.2...v2.28.3) (2026-09-26)
 
 
