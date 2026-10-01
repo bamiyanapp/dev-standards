@@ -1,3 +1,10 @@
+# [2.31.0](https://github.com/bamiyanapp/dev-standards/compare/v2.30.0...v2.31.0) (2026-10-01)
+
+
+### Features
+
+* **ci:** 依存更新PRへupdate type等をまとめたRisk Summaryコメントを投稿する ([#651](https://github.com/bamiyanapp/dev-standards/issues/651)) ([e1aa7bf](https://github.com/bamiyanapp/dev-standards/commit/e1aa7bf25e6361070500b61bd8c91a29bdb71f02)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.30.0](https://github.com/bamiyanapp/dev-standards/compare/v2.29.0...v2.30.0) (2026-10-01)
 
 
