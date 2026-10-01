@@ -1,3 +1,10 @@
+# [2.34.0](https://github.com/bamiyanapp/dev-standards/compare/v2.33.0...v2.34.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** test系・static analysis系jobの結果をRisk Summary用に整形する ([#654](https://github.com/bamiyanapp/dev-standards/issues/654)) ([28eba41](https://github.com/bamiyanapp/dev-standards/commit/28eba41f2bcb01f49ff48641246ddb3a87b18516)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.33.0](https://github.com/bamiyanapp/dev-standards/compare/v2.32.0...v2.33.0) (2026-10-01)
 
 
