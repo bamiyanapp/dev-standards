@@ -1,3 +1,10 @@
+# [2.41.0](https://github.com/bamiyanapp/dev-standards/compare/v2.40.0...v2.41.0) (2026-10-01)
+
+
+### Features
+
+* **ci:** Risk SummaryへCVE/CVSS/EPSS/KEV情報を統合する ([#662](https://github.com/bamiyanapp/dev-standards/issues/662)) ([192a03e](https://github.com/bamiyanapp/dev-standards/commit/192a03e1b9f3cf029c2110515fae3a4a15de7f15)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646) [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.40.0](https://github.com/bamiyanapp/dev-standards/compare/v2.39.0...v2.40.0) (2026-10-01)
 
 
