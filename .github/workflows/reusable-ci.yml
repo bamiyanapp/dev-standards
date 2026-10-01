@@ -268,6 +268,18 @@ on:
           変更検出自体が失敗した場合は安全側に倒し、全ジョブを実行する。
         type: boolean
         default: false
+      enable_dependency_risk_summary:
+        description: >-
+          trueの場合、PRでpackage-lock.jsonが変更されていれば、更新されたパッケージ
+          ごとのupdate type（major/minor/patch）・直接/間接依存かをPRコメントへ
+          投稿する`dependency-risk-summary` jobを実行するかどうか
+          （bamiyanapp/dev-standards#645「OSS依存更新の自動安全判定・エスカレーション
+          基盤」Phase 1、issue #646）。Renovate等が作成した依存更新PRのリスク判断を
+          補助する情報を、人間が調査を始める前にコメントとして用意しておくのが目的。
+          現時点ではCVE/CVSS/EPSS/KEV等のセキュリティ情報は含まない（後続のPhase 1
+          タスクで同じコメントへ追記していく予定）。
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -1765,8 +1777,124 @@ jobs:
               body,
             });
 
+  # Renovate等が作成した依存更新PRに対し、更新されたパッケージごとのupdate type
+  # （major/minor/patch）・直接/間接依存かをまとめたRisk SummaryをPRコメントとして
+  # 投稿する（issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1、
+  # issue #646）。CVE/CVSS/EPSS/KEV等のセキュリティ情報は未対応（後続タスクで同じ
+  # コメントへ追記していく想定）。あくまで人間の一次調査を補助する情報提供であり、
+  # マージ判断そのものには関与しないため、各ステップはcontinue-on-error: trueとし、
+  # このジョブの失敗がmergeジョブをブロックしないようにする
+  dependency-risk-summary:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_dependency_risk_summary &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # package-lock.jsonが変更されていないPRでは判定対象が無いため、無関係なPRへ
+      # 毎回コメントが付く煩わしさを避ける（render-mermaid-diagrams jobの同種の
+      # gateステップと同じ方針）。判定できない場合（変更ファイル一覧の取得に失敗した
+      # 場合）は見落としを避けるため常に実行する側にフォールバックする
+      - name: Determine whether package-lock.json changed
+        id: gate
+        uses: actions/github-script@v9
+        with:
+          script: |
+            try {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                per_page: 100,
+              });
+              const changed = files.some((f) => f.filename === 'package-lock.json');
+              core.setOutput('should_run', String(changed));
+            } catch (error) {
+              core.warning(`Failed to determine changed files, running unconditionally: ${error.message}`);
+              core.setOutput('should_run', 'true');
+            }
+
+      # PR head（デフォルトのcheckoutで取得済み）のpackage-lock.jsonと比較するため、
+      # base側のpackage-lock.jsonだけを別途取得する。履歴全体をfetchする
+      # （fetch-depth: 0）よりも該当コミット単体の取得の方が軽量
+      - name: Fetch base package-lock.json
+        id: fetch-base
+        if: steps.gate.outputs.should_run == 'true'
+        continue-on-error: true
+        run: |
+          git fetch --depth 1 origin ${{ github.event.pull_request.base.sha }}
+          git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
+
+      # scripts/dependency-update-info.jsはdev-standards自身のスクリプトのため、
+      # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある。「reusable
+      # workflow参照のバージョン固定」（docs/cicd-pipeline-specification.md）の方針に
+      # 合わせ固定タグで参照する。スクリプトの入出力仕様を変更した場合は、このrefの
+      # 更新を忘れないこと（過去にcheck-coverage-thresholdで更新忘れにより新規入力が
+      # 黙って無視された実例がある。本ファイル内の他の「Checkout dev-standards」
+      # ステップのコメントも参照）
+      - name: Checkout dev-standards (for the local script)
+        if: steps.fetch-base.outcome == 'success'
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: v2.30.0
+          path: .dev-standards-actions
+
+      - name: Generate dependency update info
+        id: dependency-info
+        if: steps.fetch-base.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+
+      - name: Build and post Risk Summary
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const { summary, changes } = JSON.parse(fs.readFileSync('/tmp/dependency-update-info.json', 'utf-8'));
+            if (summary.total === 0) return;
+
+            const updateTypeLabel = {
+              major: 'major',
+              minor: 'minor',
+              patch: 'patch',
+              other: 'other（バージョン比較不能・ダウングレード等）',
+            };
+
+            let body = '## Risk Summary（依存更新）\n\n';
+            body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
+            body += '| update type | 件数 |\n|---|---|\n';
+            for (const [type, count] of Object.entries(summary.byUpdateType)) {
+              if (count === 0) continue;
+              body += `| ${updateTypeLabel[type]} | ${count} |\n`;
+            }
+            body += '\n<details><summary>変更されたパッケージ一覧</summary>\n\n';
+            body += '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
+            for (const c of changes) {
+              body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |\n`;
+            }
+            body += '\n</details>\n\n';
+            body += '_CVE/CVSS/EPSS/KEV等のセキュリティ情報は未対応です（bamiyanapp/dev-standards#646）。_\n';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams, dependency-risk-summary]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -1792,7 +1920,8 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result)
+      !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result)
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -37,6 +37,9 @@ jobs:
       enable_doc_duplication_check: true
       doc_duplication_threshold: 1
       doc_duplication_paths: "docs\nREADME.md\nCLAUDE.md\n.claude/skills"
+      # issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1（issue #646）:
+      # dev-standards自身の依存更新PR（Renovate等）でもRisk Summaryコメントをdogfoodingする
+      enable_dependency_risk_summary: true
     secrets:
       # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
       # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、
