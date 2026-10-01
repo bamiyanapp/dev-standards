@@ -6,6 +6,7 @@ const {
   parseConsumerRepositoriesTable,
   listConsumerRepositories,
   countConsumerRepositories,
+  renderFanOutNote,
 } = require("./consumer-repositories.js");
 
 const SAMPLE_MARKDOWN = [
@@ -67,4 +68,15 @@ test("実際のdocs/consumer-repositories.mdをパースできる（回帰確認
   assert.ok(repos.length > 0, "実際のドキュメントから1件以上の参照側リポジトリを取得できること");
   assert.ok(repos.some((r) => r.repo === "bamiyanapp/karuta"));
   assert.ok(!repos.some((r) => r.repo === "bamiyanapp/dev-standards"));
+});
+
+test("renderFanOutNote: 件数を含む注記を生成する", () => {
+  const note = renderFanOutNote(8);
+  assert.match(note, /8件/);
+  assert.match(note, /dev-standards自体/);
+  assert.match(note, /docs\/consumer-repositories\.md/);
+});
+
+test("renderFanOutNote: 0件の場合はnullを返す（解析失敗等で誤った安心を与えないため）", () => {
+  assert.equal(renderFanOutNote(0), null);
 });
