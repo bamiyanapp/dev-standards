@@ -1,3 +1,10 @@
+# [2.33.0](https://github.com/bamiyanapp/dev-standards/compare/v2.32.0...v2.33.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** CISA KEV該当有無・EPSSスコアをCVE idごとに取得する ([#653](https://github.com/bamiyanapp/dev-standards/issues/653)) ([1488c1e](https://github.com/bamiyanapp/dev-standards/commit/1488c1ef10100d3c91502e12110c8c3a759d3815)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.32.0](https://github.com/bamiyanapp/dev-standards/compare/v2.31.0...v2.32.0) (2026-10-01)
 
 
