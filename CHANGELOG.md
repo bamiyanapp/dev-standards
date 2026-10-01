@@ -1,3 +1,10 @@
+# [2.40.0](https://github.com/bamiyanapp/dev-standards/compare/v2.39.0...v2.40.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** CVE/CVSS/EPSS/KEV情報を結合しRisk Summary用に整形する ([#661](https://github.com/bamiyanapp/dev-standards/issues/661)) ([5f34a09](https://github.com/bamiyanapp/dev-standards/commit/5f34a092fcaa18cd59d690019f10443910826b5c)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.39.0](https://github.com/bamiyanapp/dev-standards/compare/v2.38.0...v2.39.0) (2026-10-01)
 
 
