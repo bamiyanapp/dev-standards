@@ -66,6 +66,25 @@ test("renderCiResultsSection: 失敗したjobがある場合は警告文を含�
   assert.match(body, /失敗したjobがあります/);
 });
 
+test("renderCiResultsSection: 既知flakyパターンに該当するjobが失敗した場合は注記を含む", () => {
+  const summary = summarizeCiResults({ frontendE2eTest: "failure" });
+  const body = renderCiResultsSection(summary);
+  assert.match(body, /frontend-e2e-test.*既知のflakyパターンに該当する可能性があります/);
+  assert.match(body, /bamiyanapp\/karuta#972/);
+});
+
+test("renderCiResultsSection: 既知flakyパターンが無いjobの失敗では注記を含まない", () => {
+  const summary = summarizeCiResults({ backendTest: "failure" });
+  const body = renderCiResultsSection(summary);
+  assert.doesNotMatch(body, /既知のflakyパターン/);
+});
+
+test("renderCiResultsSection: 既知flakyパターンに該当するjobがsuccessの場合は注記を含まない", () => {
+  const summary = summarizeCiResults({ frontendE2eTest: "success" });
+  const body = renderCiResultsSection(summary);
+  assert.doesNotMatch(body, /既知のflakyパターン/);
+});
+
 test("CLI: CI_RESULT_*環境変数からjob結果を読み取り、Markdown断片を標準出力する", () => {
   const output = execFileSync(process.execPath, [path.join(__dirname, "dependency-risk-ci-results.js")], {
     encoding: "utf-8",
