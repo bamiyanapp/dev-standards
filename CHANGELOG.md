@@ -1,3 +1,10 @@
+# [2.37.0](https://github.com/bamiyanapp/dev-standards/compare/v2.36.0...v2.37.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** dev-standards自体の更新のファンアウト（参照側リポジトリ数）を取得する ([#658](https://github.com/bamiyanapp/dev-standards/issues/658)) ([09a17c7](https://github.com/bamiyanapp/dev-standards/commit/09a17c70b37eda0ebf22f7f845ace049e320a1da)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.36.0](https://github.com/bamiyanapp/dev-standards/compare/v2.35.0...v2.36.0) (2026-10-01)
 
 
