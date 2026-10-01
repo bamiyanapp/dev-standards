@@ -1,3 +1,10 @@
+# [2.38.0](https://github.com/bamiyanapp/dev-standards/compare/v2.37.0...v2.38.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** GitHub Actions/reusable workflowのバージョン更新をリスク分類する ([#659](https://github.com/bamiyanapp/dev-standards/issues/659)) ([510e22c](https://github.com/bamiyanapp/dev-standards/commit/510e22c79817dee26687529ad3eca3c469fa8ed7)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.37.0](https://github.com/bamiyanapp/dev-standards/compare/v2.36.0...v2.37.0) (2026-10-01)
 
 
