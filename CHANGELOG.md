@@ -1,3 +1,10 @@
+# [2.39.0](https://github.com/bamiyanapp/dev-standards/compare/v2.38.0...v2.39.0) (2026-10-01)
+
+
+### Features
+
+* **ci:** Risk Summaryコメントへファンアウト注記を追加する ([#660](https://github.com/bamiyanapp/dev-standards/issues/660)) ([c8efac4](https://github.com/bamiyanapp/dev-standards/commit/c8efac4c6369222aeb50e14bda9c9351d7db7922)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646) [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.38.0](https://github.com/bamiyanapp/dev-standards/compare/v2.37.0...v2.38.0) (2026-10-01)
 
 
