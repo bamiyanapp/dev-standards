@@ -1,3 +1,10 @@
+# [2.36.0](https://github.com/bamiyanapp/dev-standards/compare/v2.35.0...v2.36.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** 失敗したjobが既知flakyパターンに該当する場合Risk Summaryへ注記する ([#656](https://github.com/bamiyanapp/dev-standards/issues/656)) ([d0fd59c](https://github.com/bamiyanapp/dev-standards/commit/d0fd59c9d0bf7c02f96291f6413788ec905640f3)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.35.0](https://github.com/bamiyanapp/dev-standards/compare/v2.34.0...v2.35.0) (2026-10-01)
 
 
