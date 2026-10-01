@@ -56,11 +56,26 @@ function countConsumerRepositories(markdown) {
   return listConsumerRepositories(markdown).length;
 }
 
+// Risk Summaryへ追記するファンアウト注記のMarkdown断片を生成する。
+// count === 0（一覧の解析に失敗した・一覧が空等）の場合は、誤って「影響なし」と
+// 伝えないよう注記自体を省略する（呼び出し側でnullチェックする想定）
+function renderFanOutNote(count) {
+  if (count === 0) return null;
+  return (
+    "### ファンアウト\n\n" +
+    `⚠️ この変更は複数リポジトリから参照される**dev-standards自体**への更新です。` +
+    `既知の参照側リポジトリが**${count}件**あります` +
+    "（[docs/consumer-repositories.md](https://github.com/bamiyanapp/dev-standards/blob/main/docs/consumer-repositories.md)参照）。" +
+    "影響範囲が広い可能性があるため、通常より慎重な確認を推奨します。\n"
+  );
+}
+
 function main() {
   const docPath = process.argv[2] ?? DEFAULT_DOC_PATH;
   const markdown = fs.readFileSync(docPath, "utf-8");
-  const repos = listConsumerRepositories(markdown);
-  console.log(JSON.stringify({ count: repos.length, repos: repos.map((r) => r.repo) }, null, 2));
+  const count = countConsumerRepositories(markdown);
+  const note = renderFanOutNote(count);
+  if (note) console.log(note);
 }
 
 if (require.main === module) {
@@ -71,4 +86,5 @@ module.exports = {
   parseConsumerRepositoriesTable,
   listConsumerRepositories,
   countConsumerRepositories,
+  renderFanOutNote,
 };

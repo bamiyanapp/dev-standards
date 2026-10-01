@@ -1837,21 +1837,22 @@ jobs:
           git fetch --depth 1 origin ${{ github.event.pull_request.base.sha }}
           git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
 
-      # scripts/dependency-update-info.js・dependency-risk-ci-results.jsはdev-standards
+      # scripts/dependency-update-info.js・dependency-risk-ci-results.js・
+      # consumer-repositories.js・github-actions-update-info.jsはdev-standards
       # 自身のスクリプトのため、参照側リポジトリ（karuta等）では別途チェックアウトする
       # 必要がある。「reusable workflow参照のバージョン固定」
       # （docs/cicd-pipeline-specification.md）の方針に合わせ固定タグで参照する。
       # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと（過去に
       # check-coverage-thresholdで更新忘れにより新規入力が黙って無視された実例がある。
       # 本ファイル内の他の「Checkout dev-standards」ステップのコメントも参照）。
-      # v2.34.0で、dependency-risk-ci-results.js（issue #646 Task E）を追加した
-      # ため、その追加を含むタグへ更新した
+      # v2.38.0で、consumer-repositories.js・github-actions-update-info.js
+      # （issue #646 Task G）を追加したため、その追加を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.fetch-base.outcome == 'success'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.34.0
+          ref: v2.38.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
@@ -1859,6 +1860,19 @@ jobs:
         if: steps.fetch-base.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+
+      # ファンアウト注記（issue #646 Task G前半）: dev-standardsは複数リポジトリから
+      # 参照される共有基盤のため、dev-standards自身への依存更新は「影響リポジトリ数」
+      # という次元を持つ（issue #645「8-1」参照）。この注記は「dev-standardsリポジトリ
+      # 自身のPRである」場合のみ意味を持つため、github.repositoryで判定する
+      # （.dev-standards-actions/配下は参照側リポジトリでも常にチェックアウトされるが、
+      # そのdocs/consumer-repositories.mdはdev-standards自身のものであり、参照側
+      # リポジトリ自身の依存更新とは無関係なため誤って表示しないようにする）
+      - name: Generate fan-out note
+        id: fanout
+        if: steps.dependency-info.outcome == 'success' && github.repository == 'bamiyanapp/dev-standards'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/consumer-repositories.js .dev-standards-actions/docs/consumer-repositories.md > /tmp/fanout-note.md
 
       # job結果の整形（純粋なMarkdown生成）はscripts/dependency-risk-ci-results.jsの
       # CLIへ切り出し、`node script.js > 出力ファイル`という他のPhase 1スクリプトと
@@ -1912,6 +1926,10 @@ jobs:
 
             if (fs.existsSync('/tmp/ci-results-section.md')) {
               body += fs.readFileSync('/tmp/ci-results-section.md', 'utf-8') + '\n';
+            }
+
+            if (fs.existsSync('/tmp/fanout-note.md')) {
+              body += fs.readFileSync('/tmp/fanout-note.md', 'utf-8') + '\n';
             }
 
             body += '_CVE/CVSS/EPSS/KEV等のセキュリティ情報は未対応です（bamiyanapp/dev-standards#646）。_\n';
