@@ -1,3 +1,10 @@
+# [2.30.0](https://github.com/bamiyanapp/dev-standards/compare/v2.29.0...v2.30.0) (2026-10-01)
+
+
+### Features
+
+* **scripts:** Renovate PRのpackage-lock.json差分からupdate type・依存変更数を判定する ([#650](https://github.com/bamiyanapp/dev-standards/issues/650)) ([51ed38c](https://github.com/bamiyanapp/dev-standards/commit/51ed38ca07cd8b8c9ba81b963481354fad3f8e1a)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.29.0](https://github.com/bamiyanapp/dev-standards/compare/v2.28.3...v2.29.0) (2026-09-27)
 
 
