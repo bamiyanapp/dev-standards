@@ -1,3 +1,10 @@
+# [2.35.0](https://github.com/bamiyanapp/dev-standards/compare/v2.34.0...v2.35.0) (2026-10-01)
+
+
+### Features
+
+* **ci:** Risk SummaryコメントへTests / Static Analysisの結果を追記する ([#655](https://github.com/bamiyanapp/dev-standards/issues/655)) ([57522a9](https://github.com/bamiyanapp/dev-standards/commit/57522a9996903cd71cb2f8a277483dc07b07fcb9)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.34.0](https://github.com/bamiyanapp/dev-standards/compare/v2.33.0...v2.34.0) (2026-10-01)
 
 
