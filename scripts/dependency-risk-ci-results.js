@@ -9,6 +9,10 @@
 // （同一ワークフロー実行内のjob間連携のため）。そのためこのモジュールは
 // 「結果を集約・整形する純粋関数」のみを提供し、ワークフロー側は
 // `${{ needs.<job>.result }}`で取得した文字列をそのまま渡すだけでよい
+//
+// 失敗したjobについては、known-flaky-ci-patterns.js（issue #646 Task F）の登録簿と
+// 突合し、既知のflakyパターンに該当する場合はRisk Summaryへその旨を注記する
+const { findKnownFlakyPatterns } = require("./known-flaky-ci-patterns.js");
 
 // jobKeyと、Risk Summary上での表示名・カテゴリ（test/staticAnalysis）の対応表。
 // reusable-ci.ymlのjob idと一致させる（新しいjobを追加した場合はここにも追記すること）
@@ -36,7 +40,7 @@ function summarizeCiResults(results = {}) {
 
   for (const def of JOB_DEFINITIONS) {
     const conclusion = results[def.key] ?? "skipped";
-    const entry = { label: def.label, conclusion };
+    const entry = { key: def.key, label: def.label, conclusion };
     if (def.category === "test") {
       tests.push(entry);
       if (FAILURE_CONCLUSIONS.has(conclusion)) allTestsPassed = false;
@@ -62,15 +66,29 @@ function renderResultRow(entry) {
   return `| ${entry.label} | ${icon} ${entry.conclusion} |`;
 }
 
+// 失敗したjobについて、既知flakyパターンに該当する場合の注記行（箇条書き）を返す。
+// 該当パターンが無ければ空配列を返す
+function renderKnownFlakyNotes(entry) {
+  if (!FAILURE_CONCLUSIONS.has(entry.conclusion)) return [];
+  return findKnownFlakyPatterns(entry.key).map(
+    (p) => `- **${entry.label}**: 既知のflakyパターンに該当する可能性があります（${p.issueRef}）。${p.description}。まず再実行で解消するか確認してください`,
+  );
+}
+
 // summarizeCiResultsの戻り値をRisk Summaryコメントへ追記するMarkdown断片へ整形する
 function renderCiResultsSection(summary) {
   let body = "### Tests / Static Analysis\n\n";
   body += "| job | 結果 |\n|---|---|\n";
-  for (const entry of [...summary.tests, ...summary.staticAnalysis]) {
+  const allEntries = [...summary.tests, ...summary.staticAnalysis];
+  for (const entry of allEntries) {
     body += `${renderResultRow(entry)}\n`;
   }
   if (!summary.allTestsPassed || !summary.allStaticAnalysisPassed) {
     body += "\n⚠️ 失敗したjobがあります。マージ前に原因を確認してください。\n";
+  }
+  const flakyNotes = allEntries.flatMap(renderKnownFlakyNotes);
+  if (flakyNotes.length > 0) {
+    body += `\n${flakyNotes.join("\n")}\n`;
   }
   return body;
 }
