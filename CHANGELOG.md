@@ -1,3 +1,10 @@
+# [2.49.0](https://github.com/bamiyanapp/dev-standards/compare/v2.48.0...v2.49.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** メンテナ/所有権異常の検知を実装 ([#675](https://github.com/bamiyanapp/dev-standards/issues/675)) ([5b63ccc](https://github.com/bamiyanapp/dev-standards/commit/5b63ccc056302dd86778d72089f6892eea93c543))
+
 # [2.48.0](https://github.com/bamiyanapp/dev-standards/compare/v2.47.0...v2.48.0) (2026-10-02)
 
 
