@@ -1,3 +1,10 @@
+# [2.48.0](https://github.com/bamiyanapp/dev-standards/compare/v2.47.0...v2.48.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** install script新規出現の検知（package script/diff検査）を実装 ([#674](https://github.com/bamiyanapp/dev-standards/issues/674)) ([53d0508](https://github.com/bamiyanapp/dev-standards/commit/53d05082e9ea62c313d2f4fa270f73b5d4dd2be8))
+
 # [2.47.0](https://github.com/bamiyanapp/dev-standards/compare/v2.46.0...v2.47.0) (2026-10-02)
 
 
