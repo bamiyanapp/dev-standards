@@ -187,4 +187,5 @@ if (require.main === module) {
 module.exports = {
   classifyRisk,
   loadRiskPolicy,
+  escalate,
 };
