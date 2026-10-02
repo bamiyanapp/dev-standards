@@ -1,3 +1,10 @@
+# [2.42.0](https://github.com/bamiyanapp/dev-standards/compare/v2.41.0...v2.42.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** Risk分類エンジン（Low/Medium/High判定）を実装 ([#667](https://github.com/bamiyanapp/dev-standards/issues/667)) ([95c7f8d](https://github.com/bamiyanapp/dev-standards/commit/95c7f8d5fb1a94976b677600b0038693867bf3b2)), closes [#647](https://github.com/bamiyanapp/dev-standards/issues/647)
+
 # [2.41.0](https://github.com/bamiyanapp/dev-standards/compare/v2.40.0...v2.41.0) (2026-10-01)
 
 
