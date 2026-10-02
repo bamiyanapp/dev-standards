@@ -1,3 +1,10 @@
+# [2.44.0](https://github.com/bamiyanapp/dev-standards/compare/v2.43.0...v2.44.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** dependency-risk-summaryへRisk分類・ラベル付与を組み込む ([#670](https://github.com/bamiyanapp/dev-standards/issues/670)) ([4049673](https://github.com/bamiyanapp/dev-standards/commit/4049673990df5973623f85612ba7fd8a6bb4127f))
+
 # [2.43.0](https://github.com/bamiyanapp/dev-standards/compare/v2.42.0...v2.43.0) (2026-10-02)
 
 
