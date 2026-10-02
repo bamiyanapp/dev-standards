@@ -1,3 +1,10 @@
+# [2.52.0](https://github.com/bamiyanapp/dev-standards/compare/v2.51.0...v2.52.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** Phase 3のSupply Chainチェックをdependency-risk-summaryへ組み込む ([#678](https://github.com/bamiyanapp/dev-standards/issues/678)) ([d26ffd1](https://github.com/bamiyanapp/dev-standards/commit/d26ffd118c79b83ac8cb0fcd67d12cce3d4883ec))
+
 # [2.51.0](https://github.com/bamiyanapp/dev-standards/compare/v2.50.0...v2.51.0) (2026-10-02)
 
 
