@@ -1,3 +1,10 @@
+# [2.46.0](https://github.com/bamiyanapp/dev-standards/compare/v2.45.0...v2.46.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** github-actions-update-info.jsへCI組み込み用CLIを追加 ([#672](https://github.com/bamiyanapp/dev-standards/issues/672)) ([f77a462](https://github.com/bamiyanapp/dev-standards/commit/f77a46276c94d2ae3236729688dc96c2047ed2f8)), closes [#646](https://github.com/bamiyanapp/dev-standards/issues/646)
+
 # [2.45.0](https://github.com/bamiyanapp/dev-standards/compare/v2.44.0...v2.45.0) (2026-10-02)
 
 
