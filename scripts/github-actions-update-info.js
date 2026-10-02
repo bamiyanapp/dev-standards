@@ -1,5 +1,8 @@
 "use strict";
 
+const fs = require("node:fs");
+const path = require("node:path");
+
 // issue #646（OSS依存更新の自動安全判定基盤 Phase 1）Task G（後半: GitHub Actions
 // バージョン更新のリスク分類対応）。
 //
@@ -80,9 +83,45 @@ function diffActionReferences(oldContent, newContent) {
   return changes.sort((a, b) => a.action.localeCompare(b.action));
 }
 
+// CI組み込み用CLIエントリポイント（issue #666）。
+// baseDir: 変更前のワークフロー・actionファイルを、リポジトリルートからの相対パスを
+//   保ったまま配置したディレクトリ（reusable-ci.ymlの`git show <base_sha>:<path>`で生成）。
+//   base時点でファイルが存在しなかった場合（新規追加ファイル）はdiff対象外とする
+// changedFiles: 変更された.github/workflows/*.yml・.github/actions/*/action.ymlの
+//   リポジトリルートからの相対パスの配列
+function collectActionUpdates(baseDir, changedFiles) {
+  const allChanges = [];
+  for (const file of changedFiles) {
+    const baseFilePath = path.join(baseDir, file);
+    if (!fs.existsSync(baseFilePath) || !fs.existsSync(file)) continue;
+    const oldContent = fs.readFileSync(baseFilePath, "utf-8");
+    const newContent = fs.readFileSync(file, "utf-8");
+    for (const change of diffActionReferences(oldContent, newContent)) {
+      allChanges.push({ file, ...change });
+    }
+  }
+  return allChanges;
+}
+
+function main() {
+  const [, , baseDir, changedFilesJsonPath] = process.argv;
+  if (!baseDir || !changedFilesJsonPath) {
+    console.error("Usage: node github-actions-update-info.js <base-dir> <changed-files.json>");
+    process.exitCode = 1;
+    return;
+  }
+  const changedFiles = JSON.parse(fs.readFileSync(changedFilesJsonPath, "utf-8"));
+  console.log(JSON.stringify(collectActionUpdates(baseDir, changedFiles), null, 2));
+}
+
+if (require.main === module) {
+  main();
+}
+
 module.exports = {
   extractActionReferences,
   parseVersionComponents,
   classifyActionRefUpdate,
   diffActionReferences,
+  collectActionUpdates,
 };
