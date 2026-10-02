@@ -284,11 +284,14 @@ on:
         description: >-
           trueの場合、dependency-risk-summary job（enable_dependency_risk_summary）が
           出力するrisk_level（Low/Medium/High、bamiyanapp/dev-standards#647「OSS依存更新
-          の自動安全判定基盤 Phase 2」Task 1〜2）がmedium/highのPRでは、merge jobによる
-          自動マージを行わない。Low判定、またはrisk_levelが無い（package-lock.jsonを
-          変更していないPR等、dependency-risk-summary job自体が実行されなかった）場合は
-          従来どおり他のCI条件のみで自動マージの可否を判定する。falseの場合はrisk_levelを
-          一切参照せず、Phase 1と同じ動作（CI結果のみで自動マージ）を維持する。
+          の自動安全判定基盤 Phase 2」Task 1〜2）がhighのPRでは、merge jobによる
+          自動マージを行わない。Low/Medium判定、またはrisk_levelが無い
+          （package-lock.jsonを変更していないPR等、dependency-risk-summary job自体が
+          実行されなかった）場合は従来どおり他のCI条件のみで自動マージの可否を判定する
+          （issue #685。当初はmedium/highの両方を対象外としていたが、dev-standards自体の
+          更新がファンアウトを理由に一律Medium判定され自動マージされないケースが
+          頻発したため、Highのみへ縮小した）。falseの場合はrisk_levelを一切参照せず、
+          Phase 1と同じ動作（CI結果のみで自動マージ）を維持する。
           enable_dependency_risk_summaryがfalseの場合はrisk_level自体が生成されないため、
           本入力の値に関わらず常に従来どおりの動作になる。
         type: boolean
@@ -2099,7 +2102,7 @@ jobs:
             const riskLabelText = { low: '🟢 LOW', medium: '🟡 MEDIUM', high: '🔴 HIGH' };
             const riskAction = {
               low: '自動マージの対象です（他のCI条件を満たす場合）。',
-              medium: '自動マージの対象外です。CI結果・理由を確認の上、問題なければ人間がマージしてください。',
+              medium: '自動マージの対象です（他のCI条件を満たす場合）。CI結果・理由をご確認ください（issue #685）。',
               high: 'Human Reviewが必須です。自動マージの対象外です。',
             };
             let riskResult = null;
@@ -2176,7 +2179,7 @@ jobs:
               const labelDescription =
                 riskResult.level === 'high'
                   ? 'dependency-risk-summaryによるHigh Risk判定。Human Reviewが必須です'
-                  : 'dependency-risk-summaryによるMedium Risk判定。自動マージの対象外です';
+                  : 'dependency-risk-summaryによるMedium Risk判定。自動マージ対象（issue #685）だが要確認';
               try {
                 await github.rest.issues.createLabel({
                   owner: context.repo.owner,
@@ -2213,11 +2216,15 @@ jobs:
     # （inputs.packages == '' または fromJSON(inputs.packages)[0] == null、
     # いずれも実機で検証済み）を直接見て判定する必要がある
     #
-    # 最後の行（issue #647 Phase 2 Task 3）: dependency-risk-summary jobが出力する
-    # risk_levelがmedium/highの場合、enable_dependency_risk_gatingが有効なら自動マージ
-    # しない。risk_levelが空文字列（package-lock.jsonを変更していないPR等でjob自体が
-    # 実行されなかった場合）やlowの場合はcontains()がfalseを返すため、このor条件全体は
-    # trueになり他の条件のみで判定される（従来どおりの動作を変えない）
+    # 最後の行（issue #647 Phase 2 Task 3、issue #685で対象をHighのみへ変更）:
+    # dependency-risk-summary jobが出力するrisk_levelがhighの場合のみ、
+    # enable_dependency_risk_gatingが有効なら自動マージしない。Medium判定は
+    # 自動マージ対象に含める（issue #645当初設計ではMediumも人間判断の想定だったが、
+    # 実運用でdev-standards自体の更新がファンアウトを理由に一律Medium判定され、
+    # 自動マージされないケースが頻発したため、ユーザー指示によりHighのみへ縮小した）。
+    # risk_levelが空文字列（package-lock.jsonを変更していないPR等でjob自体が
+    # 実行されなかった場合）やlow/mediumの場合は左辺がfalseになるため、このor条件
+    # 全体はtrueになり他の条件のみで判定される
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -2235,7 +2242,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
-      (!inputs.enable_dependency_risk_gating || !contains(fromJSON('["medium", "high"]'), needs.dependency-risk-summary.outputs.risk_level))
+      (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high')
     runs-on: ubuntu-latest
     permissions:
       contents: write
