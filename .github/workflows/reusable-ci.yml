@@ -1822,11 +1822,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # package-lock.jsonが変更されていないPRでは判定対象が無いため、無関係なPRへ
-      # 毎回コメントが付く煩わしさを避ける（render-mermaid-diagrams jobの同種の
-      # gateステップと同じ方針）。判定できない場合（変更ファイル一覧の取得に失敗した
-      # 場合）は見落としを避けるため常に実行する側にフォールバックする
-      - name: Determine whether package-lock.json changed
+      # package-lock.json・GitHub Actions/reusable workflow参照（.github/workflows/*.yml・
+      # .github/actions/*/action.yml）のいずれも変更されていないPRでは判定対象が無いため、
+      # 無関係なPRへ毎回コメントが付く煩わしさを避ける（render-mermaid-diagrams jobの
+      # 同種のgateステップと同じ方針）。判定できない場合（変更ファイル一覧の取得に失敗した
+      # 場合）は見落としを避けるため常に実行する側にフォールバックする。
+      # action_filesはgithub-actions-update-info.js（issue #666）へそのまま渡すための
+      # 変更ファイル一覧（JSON配列文字列）
+      - name: Determine whether package-lock.json / GitHub Actions references changed
         id: gate
         uses: actions/github-script@v9
         with:
@@ -1838,10 +1841,19 @@ jobs:
                 pull_number: context.payload.pull_request.number,
                 per_page: 100,
               });
-              const changed = files.some((f) => f.filename === 'package-lock.json');
-              core.setOutput('should_run', String(changed));
+              const packageLockChanged = files.some((f) => f.filename === 'package-lock.json');
+              const actionFiles = files
+                .map((f) => f.filename)
+                .filter((f) => /^\.github\/workflows\/.*\.ya?ml$/.test(f) || /^\.github\/actions\/[^/]+\/action\.ya?ml$/.test(f));
+              core.setOutput('package_lock_changed', String(packageLockChanged));
+              core.setOutput('actions_changed', String(actionFiles.length > 0));
+              core.setOutput('action_files', JSON.stringify(actionFiles));
+              core.setOutput('should_run', String(packageLockChanged || actionFiles.length > 0));
             } catch (error) {
               core.warning(`Failed to determine changed files, running unconditionally: ${error.message}`);
+              core.setOutput('package_lock_changed', 'true');
+              core.setOutput('actions_changed', 'true');
+              core.setOutput('action_files', '[]');
               core.setOutput('should_run', 'true');
             }
 
@@ -1850,11 +1862,27 @@ jobs:
       # （fetch-depth: 0）よりも該当コミット単体の取得の方が軽量
       - name: Fetch base package-lock.json
         id: fetch-base
-        if: steps.gate.outputs.should_run == 'true'
+        if: steps.gate.outputs.package_lock_changed == 'true'
         continue-on-error: true
         run: |
           git fetch --depth 1 origin ${{ github.event.pull_request.base.sha }}
           git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
+
+      # GitHub Actions/reusable workflow参照の変更分（action_files）について、
+      # base側の内容だけを別途取得する。head側はこのjobのデフォルトcheckoutに
+      # 既に存在するため不要（issue #666）
+      - name: Fetch base GitHub Actions / workflow files
+        id: fetch-actions-base
+        if: steps.gate.outputs.actions_changed == 'true'
+        continue-on-error: true
+        run: |
+          git fetch --depth 1 origin ${{ github.event.pull_request.base.sha }}
+          echo '${{ steps.gate.outputs.action_files }}' > /tmp/gh-actions-changed-files.json
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            mkdir -p "/tmp/gh-actions-base/$(dirname "$file")"
+            git show "${{ github.event.pull_request.base.sha }}:$file" > "/tmp/gh-actions-base/$file" 2>/dev/null || true
+          done < <(jq -r '.[]' /tmp/gh-actions-changed-files.json)
 
       # scripts/dependency-update-info.js・dependency-risk-ci-results.js・
       # consumer-repositories.js・github-actions-update-info.js・
@@ -1866,14 +1894,18 @@ jobs:
       # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと（過去に
       # check-coverage-thresholdで更新忘れにより新規入力が黙って無視された実例がある。
       # 本ファイル内の他の「Checkout dev-standards」ステップのコメントも参照）。
-      # v2.43.0で、dependency-risk-classifier.js（issue #647 Phase 2 Task 1）の追加と、
-      # consumer-repositories.jsのGITHUB_OUTPUT対応（Task 2）を含むタグへ更新した
+      # v2.46.0で、github-actions-update-info.jsへのCLI追加（issue #666、PR #672）を
+      # 含むタグへ更新した。このステップはpackage-lock.json・GitHub Actions参照の
+      # いずれの変更でも必要なスクリプト群を含むため、gate自体（should_run）で判定する
+      # （issue #666。以前はfetch-base.outcomeで判定しており、actions_changedのみの
+      # 場合にこのステップ自体がスキップされ後続のGitHub Actions更新情報生成が
+      # 動かない問題があった）
       - name: Checkout dev-standards (for the local script)
-        if: steps.fetch-base.outcome == 'success'
+        if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.43.0
+          ref: v2.46.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
@@ -1881,6 +1913,15 @@ jobs:
         if: steps.fetch-base.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+
+      # GitHub Actions/reusable workflow参照のバージョン更新情報（issue #666）。
+      # fetch-actions-baseが取得したbase側のファイル内容と、head側（デフォルトcheckoutの
+      # 現在の作業ツリー）の内容をgithub-actions-update-info.jsのCLIへ渡す
+      - name: Generate GitHub Actions update info
+        id: actions-info
+        if: steps.fetch-actions-base.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/github-actions-update-info.js /tmp/gh-actions-base /tmp/gh-actions-changed-files.json > /tmp/actions-update-info.json
 
       # CVE/CVSS（issue #646 Task C）・EPSS/KEV（Task D）・両者を結合した表示整形
       # （Task H）を順に呼び出す。いずれもosv.dev・CISA KEV・FIRST EPSSという外部APIへの
@@ -1957,15 +1998,25 @@ jobs:
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
         run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" > /tmp/risk-classification.json
 
+      # issue #666: package-lock.jsonの変更・GitHub Actions参照の変更のいずれか一方
+      # だけが存在するPRでもコメントを投稿できるよう、gate自体（should_run）で判定する
       - name: Build and post Risk Summary
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.gate.outputs.should_run == 'true'
         continue-on-error: true
         uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
-            const { summary, changes } = JSON.parse(fs.readFileSync('/tmp/dependency-update-info.json', 'utf-8'));
-            if (summary.total === 0) return;
+            let summary = { total: 0, direct: 0, transitive: 0, byUpdateType: {} };
+            let changes = [];
+            if (fs.existsSync('/tmp/dependency-update-info.json')) {
+              ({ summary, changes } = JSON.parse(fs.readFileSync('/tmp/dependency-update-info.json', 'utf-8')));
+            }
+            let actionChanges = [];
+            if (fs.existsSync('/tmp/actions-update-info.json')) {
+              actionChanges = JSON.parse(fs.readFileSync('/tmp/actions-update-info.json', 'utf-8'));
+            }
+            if (summary.total === 0 && actionChanges.length === 0) return;
 
             const updateTypeLabel = {
               major: 'major',
@@ -1992,18 +2043,32 @@ jobs:
               for (const reason of riskResult.reasons) body += `- ${reason}\n`;
               body += `\nRecommended Action: ${riskAction[riskResult.level]}\n\n`;
             }
-            body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
-            body += '| update type | 件数 |\n|---|---|\n';
-            for (const [type, count] of Object.entries(summary.byUpdateType)) {
-              if (count === 0) continue;
-              body += `| ${updateTypeLabel[type]} | ${count} |\n`;
+            if (summary.total > 0) {
+              body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
+              body += '| update type | 件数 |\n|---|---|\n';
+              for (const [type, count] of Object.entries(summary.byUpdateType)) {
+                if (count === 0) continue;
+                body += `| ${updateTypeLabel[type]} | ${count} |\n`;
+              }
+              body += '\n<details><summary>変更されたパッケージ一覧</summary>\n\n';
+              body += '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
+              for (const c of changes) {
+                body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |\n`;
+              }
+              body += '\n</details>\n\n';
             }
-            body += '\n<details><summary>変更されたパッケージ一覧</summary>\n\n';
-            body += '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
-            for (const c of changes) {
-              body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |\n`;
+
+            // issue #666: GitHub Actions/reusable workflow参照のバージョン更新セクション。
+            // npmパッケージとは別の表として追記する（update typeの分類ロジックが異なるため、
+            // 同じ表へ混在させない。github-actions-update-info.jsのコメント参照）
+            if (actionChanges.length > 0) {
+              body += '### GitHub Actions / reusable workflow参照\n\n';
+              body += '| ファイル | action | 旧ref | 新ref | update type |\n|---|---|---|---|---|\n';
+              for (const c of actionChanges) {
+                body += `| ${c.file} | ${c.action} | ${c.oldRef} | ${c.newRef} | ${updateTypeLabel[c.updateType]} |\n`;
+              }
+              body += '\n';
             }
-            body += '\n</details>\n\n';
 
             if (fs.existsSync('/tmp/ci-results-section.md')) {
               body += fs.readFileSync('/tmp/ci-results-section.md', 'utf-8') + '\n';
