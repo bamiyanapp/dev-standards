@@ -1839,10 +1839,15 @@ jobs:
       pull-requests: write
       issues: write
     # risk_level: dependency-risk-classifier.js（issue #647 Phase 2 Task 1）によるLow/Medium/High
-    # 判定結果。merge job（Task 3で接続）がこの出力を見て自動マージを止めるかどうかを決める。
-    # gateがそもそも実行されない場合（package-lock.jsonが変更されていないPR等）は空文字列になる
+    # 判定結果（「適用リスク」＝このPRを適用すること自体の危険度）。merge job（Task 3で接続）
+    # がこの出力を見て自動マージを止めるかどうかを決める。
+    # stale_risk_level: dependency-stale-risk-classifier.js（issue #690）による
+    # 「維持リスク」＝このPRを適用せず現行バージョンに留まった場合の危険度。
+    # gateがそもそも実行されない場合（package-lock.jsonが変更されていないPR等）はいずれも
+    # 空文字列になる
     outputs:
       risk_level: ${{ steps.classify.outputs.level }}
+      stale_risk_level: ${{ steps.classify-stale.outputs.level }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -2021,6 +2026,28 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-risk-security-summary.js /tmp/vulnerability-info.json /tmp/exploit-info.json > /tmp/security-section.md
 
+      # issue #690。「適用リスク」（上記）とは別の「維持リスク」（このPRを適用せず
+      # 現行バージョンに留まった場合の危険度）を判定するため、oldVersion（更新前）向けに
+      # 同じvulnerability-info.js/exploit-info.jsを再実行する。versionFieldの第2引数で
+      # 新旧を切り替える（ロジック自体はnewVersion向けと共通）
+      - name: Generate old-version vulnerability info (CVE/CVSS via OSV.dev)
+        id: old-vulnerability-info
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-vulnerability-info.js /tmp/dependency-update-info.json oldVersion > /tmp/old-vulnerability-info.json
+
+      - name: Generate old-version exploit info (KEV/EPSS)
+        id: old-exploit-info
+        if: steps.old-vulnerability-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-exploit-info.js /tmp/old-vulnerability-info.json > /tmp/old-exploit-info.json
+
+      - name: Classify stale risk
+        id: classify-stale
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json > /tmp/stale-risk-classification.json
+
       # ファンアウト注記（issue #646 Task G前半）: dev-standardsは複数リポジトリから
       # 参照される共有基盤のため、dev-standards自身への依存更新は「影響リポジトリ数」
       # という次元を持つ（issue #645「8-1」参照）。この注記は「dev-standardsリポジトリ
@@ -2100,22 +2127,45 @@ jobs:
             };
 
             const riskLabelText = { low: '🟢 LOW', medium: '🟡 MEDIUM', high: '🔴 HIGH' };
-            const riskAction = {
-              low: '自動マージの対象です（他のCI条件を満たす場合）。',
-              medium: '自動マージの対象です（他のCI条件を満たす場合）。CI結果・理由をご確認ください（issue #685）。',
-              high: 'Human Reviewが必須です。自動マージの対象外です。',
-            };
+            // issue #690: 「適用リスク」（levelがHighの場合は原則保留）と「維持リスク」
+            // （staleLevelがHighの場合、適用せず現行バージョンに留まる方が危険）の
+            // 組み合わせでRecommended Actionを決める。維持リスクがHighなら、適用リスクが
+            // Highでも自動マージ対象にする（放置の方が危険なため）
+            function describeRecommendedAction(level, staleLevel) {
+              if (level === 'high') {
+                return staleLevel === 'high'
+                  ? '維持リスクが高いため、適用リスクがHighでも自動マージの対象です（issue #690）。'
+                  : 'Human Reviewが必須です。自動マージの対象外です。';
+              }
+              if (level === 'medium') {
+                return '自動マージの対象です（他のCI条件を満たす場合）。CI結果・理由をご確認ください（issue #685）。';
+              }
+              return '自動マージの対象です（他のCI条件を満たす場合）。';
+            }
             let riskResult = null;
             if (fs.existsSync('/tmp/risk-classification.json')) {
               riskResult = JSON.parse(fs.readFileSync('/tmp/risk-classification.json', 'utf-8'));
             }
+            let staleRiskResult = null;
+            if (fs.existsSync('/tmp/stale-risk-classification.json')) {
+              staleRiskResult = JSON.parse(fs.readFileSync('/tmp/stale-risk-classification.json', 'utf-8'));
+            }
 
             let body = '## Risk Summary（依存更新）\n\n';
             if (riskResult) {
-              body += `**Risk: ${riskLabelText[riskResult.level]}**\n\n`;
+              body += `**適用リスク（このPRを適用する場合）: ${riskLabelText[riskResult.level]}**\n\n`;
               body += '理由:\n';
               for (const reason of riskResult.reasons) body += `- ${reason}\n`;
-              body += `\nRecommended Action: ${riskAction[riskResult.level]}\n\n`;
+              body += '\n';
+            }
+            if (staleRiskResult) {
+              body += `**維持リスク（このPRを適用せず現行バージョンに留まる場合）: ${riskLabelText[staleRiskResult.level]}**\n\n`;
+              body += '理由:\n';
+              for (const reason of staleRiskResult.reasons) body += `- ${reason}\n`;
+              body += '\n';
+            }
+            if (riskResult) {
+              body += `Recommended Action: ${describeRecommendedAction(riskResult.level, staleRiskResult?.level)}\n\n`;
             }
             if (summary.total > 0) {
               body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
@@ -2203,6 +2253,32 @@ jobs:
               }
             }
 
+            // issue #690: 維持リスクがHighのPRは、放置せず優先的にマージすべきことが
+            // スマートフォンのPR一覧からでも分かるよう、別軸のラベルを付与する
+            if (staleRiskResult && staleRiskResult.level === 'high') {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'risk: urgent to merge',
+                  color: '0e8a16',
+                  description: '維持リスク（dependency-stale-risk-classifier.js）がHigh。放置の方が危険なため優先的にマージしてください',
+                });
+              } catch (error) {
+                core.info(`Label "risk: urgent to merge" の作成をスキップしました（既に存在する等）: ${error.message}`);
+              }
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  labels: ['risk: urgent to merge'],
+                });
+              } catch (error) {
+                core.warning(`Label "risk: urgent to merge" の付与に失敗しました: ${error.message}`);
+              }
+            }
+
   merge:
     needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams, dependency-risk-summary]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
@@ -2216,15 +2292,15 @@ jobs:
     # （inputs.packages == '' または fromJSON(inputs.packages)[0] == null、
     # いずれも実機で検証済み）を直接見て判定する必要がある
     #
-    # 最後の行（issue #647 Phase 2 Task 3、issue #685で対象をHighのみへ変更）:
-    # dependency-risk-summary jobが出力するrisk_levelがhighの場合のみ、
-    # enable_dependency_risk_gatingが有効なら自動マージしない。Medium判定は
-    # 自動マージ対象に含める（issue #645当初設計ではMediumも人間判断の想定だったが、
-    # 実運用でdev-standards自体の更新がファンアウトを理由に一律Medium判定され、
-    # 自動マージされないケースが頻発したため、ユーザー指示によりHighのみへ縮小した）。
-    # risk_levelが空文字列（package-lock.jsonを変更していないPR等でjob自体が
-    # 実行されなかった場合）やlow/mediumの場合は左辺がfalseになるため、このor条件
-    # 全体はtrueになり他の条件のみで判定される
+    # 最後の行（issue #647 Phase 2 Task 3、issue #685で対象をHighのみへ変更、
+    # issue #690で維持リスクによる救済を追加）: dependency-risk-summary jobが出力する
+    # risk_level（適用リスク）がhighの場合、enable_dependency_risk_gatingが有効なら
+    # 原則自動マージしない。ただしstale_risk_level（維持リスク、このPRを適用せず
+    # 現行バージョンに留まった場合の危険度）がhighの場合は、放置の方が危険なため
+    # risk_levelがhighでも自動マージを止めない。risk_levelが空文字列
+    # （package-lock.jsonを変更していないPR等でjob自体が実行されなかった場合）や
+    # low/mediumの場合は左辺がfalseになるため、このor条件全体はtrueになり他の条件
+    # のみで判定される
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -2242,7 +2318,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
-      (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high')
+      (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || needs.dependency-risk-summary.outputs.stale_risk_level == 'high')
     runs-on: ubuntu-latest
     permissions:
       contents: write
