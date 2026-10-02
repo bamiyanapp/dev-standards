@@ -1,3 +1,10 @@
+# [2.43.0](https://github.com/bamiyanapp/dev-standards/compare/v2.42.0...v2.43.0) (2026-10-02)
+
+
+### Features
+
+* **renovate:** minimumReleaseAgeで依存更新PRの猶予期間を設ける ([#668](https://github.com/bamiyanapp/dev-standards/issues/668)) ([23785c3](https://github.com/bamiyanapp/dev-standards/commit/23785c37cb8aa9f698044c7e3a915e7e04807d3a)), closes [#645](https://github.com/bamiyanapp/dev-standards/issues/645)
+
 # [2.42.0](https://github.com/bamiyanapp/dev-standards/compare/v2.41.0...v2.42.0) (2026-10-02)
 
 
