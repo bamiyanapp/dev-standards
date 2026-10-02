@@ -1,3 +1,10 @@
+# [2.55.0](https://github.com/bamiyanapp/dev-standards/compare/v2.54.0...v2.55.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** duplication-checkでshared/と参照側リポジトリのproduct codeとの重複を検知する ([#684](https://github.com/bamiyanapp/dev-standards/issues/684)) ([6b70bf7](https://github.com/bamiyanapp/dev-standards/commit/6b70bf7144a6b2d54b7afa46c5bcb393144a3149)), closes [#626](https://github.com/bamiyanapp/dev-standards/issues/626) [#621](https://github.com/bamiyanapp/dev-standards/issues/621)
+
 # [2.54.0](https://github.com/bamiyanapp/dev-standards/compare/v2.53.0...v2.54.0) (2026-10-02)
 
 
