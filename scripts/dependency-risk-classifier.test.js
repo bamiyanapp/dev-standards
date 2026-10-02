@@ -101,6 +101,20 @@ test("classifyRisk: 既知flakyパターンに該当する失敗のみならmedi
   assert.ok(result.reasons.some((r) => r.includes("既知flakyパターン")));
 });
 
+test("classifyRisk: 新規にinstall scriptを持つパッケージがある場合はhigh", () => {
+  const result = classifyRisk(baseInput({ installScriptAnomalies: [{ name: "evil-pkg", version: "1.0.0", kind: "new_package_with_install_script" }] }));
+  assert.equal(result.level, "high");
+  assert.ok(result.reasons.some((r) => r.includes("install script") && r.includes("evil-pkg")));
+});
+
+test("classifyRisk: メンテナ（公開者）が変化したパッケージがある場合はhigh", () => {
+  const result = classifyRisk(
+    baseInput({ maintainerAnomalies: [{ name: "foo", oldVersion: "1.0.0", newVersion: "1.1.0", oldPublisher: "alice", newPublisher: "mallory" }] }),
+  );
+  assert.equal(result.level, "high");
+  assert.ok(result.reasons.some((r) => r.includes("メンテナ") && r.includes("foo")));
+});
+
 test("classifyRisk: セキュリティ情報取得失敗（securityDataAvailable=false）はmedium", () => {
   const result = classifyRisk(baseInput({ securityDataAvailable: false }));
   assert.equal(result.level, "medium");
@@ -163,6 +177,40 @@ test("CLI: 入力ファイルからJSON結果を出力し、GITHUB_OUTPUTにleve
   const parsed = JSON.parse(output);
   assert.equal(parsed.level, "low");
   assert.match(fs.readFileSync(githubOutputPath, "utf-8"), /level=low/);
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("CLI: install-script-anomalies.json・maintainer-anomalies.jsonを渡すとhigh判定になる", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "risk-classifier-test-"));
+  const updateInfoPath = path.join(tmpDir, "dependency-update-info.json");
+  const vulnerabilityInfoPath = path.join(tmpDir, "vulnerability-info.json");
+  const exploitInfoPath = path.join(tmpDir, "exploit-info.json");
+  const installScriptAnomaliesPath = path.join(tmpDir, "install-script-anomalies.json");
+  const maintainerAnomaliesPath = path.join(tmpDir, "maintainer-anomalies.json");
+  fs.writeFileSync(
+    updateInfoPath,
+    JSON.stringify({ summary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 0, minor: 1, patch: 0, other: 0 } }, changes: [] }),
+  );
+  fs.writeFileSync(vulnerabilityInfoPath, "[]");
+  fs.writeFileSync(exploitInfoPath, "[]");
+  fs.writeFileSync(installScriptAnomaliesPath, JSON.stringify([{ name: "evil-pkg", version: "1.0.0", kind: "new_package_with_install_script" }]));
+  fs.writeFileSync(maintainerAnomaliesPath, "[]");
+
+  const output = execFileSync(
+    process.execPath,
+    [
+      path.join(__dirname, "dependency-risk-classifier.js"),
+      updateInfoPath,
+      vulnerabilityInfoPath,
+      exploitInfoPath,
+      "",
+      installScriptAnomaliesPath,
+      maintainerAnomaliesPath,
+    ],
+    { encoding: "utf-8" },
+  );
+  assert.equal(JSON.parse(output).level, "high");
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
