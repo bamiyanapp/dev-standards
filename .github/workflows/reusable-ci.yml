@@ -1931,13 +1931,15 @@ jobs:
       # 場合にこのステップ自体がスキップされ後続のGitHub Actions更新情報生成が
       # 動かない問題があった）。v2.51.0で、issue #648（Phase 3）の
       # dependency-package-anomaly-info.js・dependency-maintainer-info.js・
-      # dependency-sbom-summary.js・classifyRisk()への接続を含むタグへ更新した
+      # dependency-sbom-summary.js・classifyRisk()への接続を含むタグへ更新した。
+      # v2.56.0で、issue #690（維持リスク軸、dependency-stale-risk-classifier.js・
+      # dependency-vulnerability-info.jsのversionField引数追加）を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.51.0
+          ref: v2.56.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
