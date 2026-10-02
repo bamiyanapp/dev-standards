@@ -1,3 +1,10 @@
+# [2.54.0](https://github.com/bamiyanapp/dev-standards/compare/v2.53.0...v2.54.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** dependency-risk-gatingの自動マージ対象外をHigh Riskのみへ縮小する ([#686](https://github.com/bamiyanapp/dev-standards/issues/686)) ([9c953ca](https://github.com/bamiyanapp/dev-standards/commit/9c953cae3d68b282044b37b74ddc5dfe61015b86)), closes [#649](https://github.com/bamiyanapp/dev-standards/issues/649) [#685](https://github.com/bamiyanapp/dev-standards/issues/685)
+
 # [2.53.0](https://github.com/bamiyanapp/dev-standards/compare/v2.52.0...v2.53.0) (2026-10-02)
 
 
