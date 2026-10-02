@@ -44,6 +44,8 @@ function classifyRisk({
   ciSummary,
   fanOutCount = null,
   directDependencyThreshold = DIRECT_DEPENDENCY_THRESHOLD_DEFAULT,
+  installScriptAnomalies = [],
+  maintainerAnomalies = [],
 }) {
   let level = "low";
   const reasons = [];
@@ -70,6 +72,21 @@ function classifyRisk({
   if (ciFailures.hasUnexplainedFailure) {
     level = escalate(level, "high");
     reasons.push("既知flakyパターンで説明できないtest/static analysisの失敗があります");
+  }
+
+  // issue #648（Phase 3）Supply Chainチェック。いずれも異常検知の性質上、
+  // 誤判定時の実害（悪意あるコードの混入を見逃す）が大きいためHighへ確実に
+  // エスカレーションする（#648完了条件「異常を検知した場合にHigh Riskへ
+  // 確実にエスカレーションされる」）
+  if (installScriptAnomalies.length > 0) {
+    level = escalate(level, "high");
+    const names = installScriptAnomalies.map((a) => a.name).join(", ");
+    reasons.push(`新規にinstall scriptを持つようになったパッケージがあります: ${names}`);
+  }
+  if (maintainerAnomalies.length > 0) {
+    level = escalate(level, "high");
+    const names = maintainerAnomalies.map((a) => a.name).join(", ");
+    reasons.push(`メンテナ（公開者）が変化したパッケージがあります: ${names}`);
   }
 
   if (!securityDataAvailable) {
@@ -102,10 +119,19 @@ function readJsonFileIfExists(path) {
 }
 
 function main() {
-  const [, , updateInfoPath, vulnerabilityInfoPath, exploitInfoPath, fanOutCountArg] = process.argv;
+  const [
+    ,
+    ,
+    updateInfoPath,
+    vulnerabilityInfoPath,
+    exploitInfoPath,
+    fanOutCountArg,
+    installScriptAnomaliesPath,
+    maintainerAnomaliesPath,
+  ] = process.argv;
   if (!updateInfoPath) {
     console.error(
-      "Usage: node dependency-risk-classifier.js <dependency-update-info.json> [vulnerability-info.json] [exploit-info.json] [fanout-count]",
+      "Usage: node dependency-risk-classifier.js <dependency-update-info.json> [vulnerability-info.json] [exploit-info.json] [fanout-count] [install-script-anomalies.json] [maintainer-anomalies.json]",
     );
     process.exitCode = 1;
     return;
@@ -125,6 +151,8 @@ function main() {
     securityDataAvailable,
     ciSummary,
     fanOutCount: Number.isFinite(fanOutCount) ? fanOutCount : null,
+    installScriptAnomalies: readJsonFileIfExists(installScriptAnomaliesPath) ?? [],
+    maintainerAnomalies: readJsonFileIfExists(maintainerAnomaliesPath) ?? [],
   });
 
   console.log(JSON.stringify(result, null, 2));
