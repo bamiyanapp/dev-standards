@@ -75,6 +75,26 @@ function renderKnownFlakyNotes(entry) {
   );
 }
 
+// issue #647（Phase 2 Task 1）。summarizeCiResultsの戻り値を基に、失敗したjobを
+// 「既知flakyパターンで説明できる失敗」と「説明できない失敗（真のリグレッションの
+// 疑いがある）」に分類する。dependency-risk-classifier.js（Risk Engine）が
+// High Risk判定とMedium Risk判定を区別するために使う（#645「8-5」参照。
+// 既知flakyのみの失敗でHuman Reviewを無駄に増やさない）
+function analyzeCiFailures(summary) {
+  const allEntries = [...summary.tests, ...summary.staticAnalysis];
+  let hasUnexplainedFailure = false;
+  let hasExplainedFailure = false;
+  for (const entry of allEntries) {
+    if (!FAILURE_CONCLUSIONS.has(entry.conclusion)) continue;
+    if (findKnownFlakyPatterns(entry.key).length > 0) {
+      hasExplainedFailure = true;
+    } else {
+      hasUnexplainedFailure = true;
+    }
+  }
+  return { hasUnexplainedFailure, hasExplainedFailure };
+}
+
 // summarizeCiResultsの戻り値をRisk Summaryコメントへ追記するMarkdown断片へ整形する
 function renderCiResultsSection(summary) {
   let body = "### Tests / Static Analysis\n\n";
@@ -104,13 +124,20 @@ function envKeyFor(jobKey) {
   return `CI_RESULT_${jobKey.replace(/([A-Z])/g, "_$1").toUpperCase()}`;
 }
 
-function main() {
+// 環境変数（CI_RESULT_<JOB_KEY>）からjob結果を読み取る。dependency-risk-classifier.js
+// （Risk Engine）もこのjobと同じ環境変数経由でCI結果を受け取るため、読み取りロジックを
+// ここに一本化してexportする（envKeyForの命名規則を重複実装しない）
+function readCiResultsFromEnv(env = process.env) {
   const results = {};
   for (const def of JOB_DEFINITIONS) {
-    const value = process.env[envKeyFor(def.key)];
+    const value = env[envKeyFor(def.key)];
     if (value) results[def.key] = value;
   }
-  console.log(renderCiResultsSection(summarizeCiResults(results)));
+  return results;
+}
+
+function main() {
+  console.log(renderCiResultsSection(summarizeCiResults(readCiResultsFromEnv())));
 }
 
 if (require.main === module) {
@@ -120,5 +147,8 @@ if (require.main === module) {
 module.exports = {
   JOB_DEFINITIONS,
   summarizeCiResults,
+  analyzeCiFailures,
   renderCiResultsSection,
+  envKeyFor,
+  readCiResultsFromEnv,
 };

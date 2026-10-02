@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
-const { summarizeCiResults, renderCiResultsSection } = require("./dependency-risk-ci-results.js");
+const { summarizeCiResults, analyzeCiFailures, renderCiResultsSection, readCiResultsFromEnv } = require("./dependency-risk-ci-results.js");
 
 test("summarizeCiResults: test系・static analysis系を分類し、全件成功ならtrueを返す", () => {
   const result = summarizeCiResults({
@@ -83,6 +83,39 @@ test("renderCiResultsSection: 既知flakyパターンに該当するjobがsucces
   const summary = summarizeCiResults({ frontendE2eTest: "success" });
   const body = renderCiResultsSection(summary);
   assert.doesNotMatch(body, /既知のflakyパターン/);
+});
+
+test("analyzeCiFailures: 全件成功時はどちらもfalse", () => {
+  const result = analyzeCiFailures(summarizeCiResults({ frontendTest: "success", architectureCheck: "success" }));
+  assert.equal(result.hasUnexplainedFailure, false);
+  assert.equal(result.hasExplainedFailure, false);
+});
+
+test("analyzeCiFailures: 既知flakyパターンに該当しない失敗はhasUnexplainedFailure=true", () => {
+  const result = analyzeCiFailures(summarizeCiResults({ backendTest: "failure" }));
+  assert.equal(result.hasUnexplainedFailure, true);
+  assert.equal(result.hasExplainedFailure, false);
+});
+
+test("analyzeCiFailures: 既知flakyパターンに該当する失敗のみならhasExplainedFailure=trueかつhasUnexplainedFailure=false", () => {
+  const result = analyzeCiFailures(summarizeCiResults({ frontendE2eTest: "failure" }));
+  assert.equal(result.hasUnexplainedFailure, false);
+  assert.equal(result.hasExplainedFailure, true);
+});
+
+test("analyzeCiFailures: 説明できる失敗と説明できない失敗が混在する場合は両方true", () => {
+  const result = analyzeCiFailures(summarizeCiResults({ frontendE2eTest: "failure", backendTest: "failure" }));
+  assert.equal(result.hasUnexplainedFailure, true);
+  assert.equal(result.hasExplainedFailure, true);
+});
+
+test("readCiResultsFromEnv: CI_RESULT_*環境変数からjob結果のmapを読み取る", () => {
+  const results = readCiResultsFromEnv({ CI_RESULT_FRONTEND_TEST: "success", CI_RESULT_BACKEND_TEST: "failure", UNRELATED: "x" });
+  assert.deepEqual(results, { frontendTest: "success", backendTest: "failure" });
+});
+
+test("readCiResultsFromEnv: 該当する環境変数が無ければ空オブジェクトを返す", () => {
+  assert.deepEqual(readCiResultsFromEnv({}), {});
 });
 
 test("CLI: CI_RESULT_*環境変数からjob結果を読み取り、Markdown断片を標準出力する", () => {
