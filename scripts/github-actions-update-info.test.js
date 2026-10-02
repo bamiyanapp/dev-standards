@@ -7,6 +7,7 @@ const {
   parseVersionComponents,
   classifyActionRefUpdate,
   diffActionReferences,
+  collectActionUpdates,
 } = require("./github-actions-update-info.js");
 
 test("extractActionReferences: 複数のuses:行を抽出する", () => {
@@ -98,4 +99,83 @@ test("diffActionReferences: 複数のactionが同時に更新された場合はa
     changes.map((c) => c.action),
     ["actions/checkout", "actions/setup-node"],
   );
+});
+
+test("collectActionUpdates: 複数ファイルの変更を1つの配列へ集約し、fileを付与する", () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "github-actions-update-info-test-"));
+  const cwd = process.cwd();
+  try {
+    const baseDir = path.join(tmpDir, "base");
+    fs.mkdirSync(path.join(baseDir, ".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(baseDir, ".github", "workflows", "ci.yml"), "- uses: actions/checkout@v7\n");
+
+    process.chdir(tmpDir);
+    fs.mkdirSync(path.join(".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(".github", "workflows", "ci.yml"), "- uses: actions/checkout@v8\n");
+
+    const changes = collectActionUpdates(baseDir, [".github/workflows/ci.yml"]);
+    assert.deepEqual(changes, [
+      { file: ".github/workflows/ci.yml", action: "actions/checkout", oldRef: "v7", newRef: "v8", updateType: "major" },
+    ]);
+  } finally {
+    process.chdir(cwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test("collectActionUpdates: baseに存在しないファイル（新規追加）は対象外とする", () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "github-actions-update-info-test-"));
+  const cwd = process.cwd();
+  try {
+    const baseDir = path.join(tmpDir, "base");
+    fs.mkdirSync(baseDir, { recursive: true });
+
+    process.chdir(tmpDir);
+    fs.mkdirSync(path.join(".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(".github", "workflows", "new.yml"), "- uses: actions/checkout@v7\n");
+
+    assert.deepEqual(collectActionUpdates(baseDir, [".github/workflows/new.yml"]), []);
+  } finally {
+    process.chdir(cwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI: base-dirと変更ファイル一覧からJSON配列を出力する", () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const { execFileSync } = require("node:child_process");
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "github-actions-update-info-test-"));
+  try {
+    const baseDir = path.join(tmpDir, "base");
+    fs.mkdirSync(path.join(baseDir, ".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(baseDir, ".github", "workflows", "ci.yml"), "- uses: actions/checkout@v7\n");
+
+    fs.mkdirSync(path.join(tmpDir, ".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".github", "workflows", "ci.yml"), "- uses: actions/checkout@v8\n");
+
+    const changedFilesPath = path.join(tmpDir, "changed-files.json");
+    fs.writeFileSync(changedFilesPath, JSON.stringify([".github/workflows/ci.yml"]));
+
+    const output = execFileSync(
+      process.execPath,
+      [path.join(__dirname, "github-actions-update-info.js"), baseDir, changedFilesPath],
+      { encoding: "utf-8", cwd: tmpDir },
+    );
+    assert.deepEqual(JSON.parse(output), [
+      { file: ".github/workflows/ci.yml", action: "actions/checkout", oldRef: "v7", newRef: "v8", updateType: "major" },
+    ]);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
