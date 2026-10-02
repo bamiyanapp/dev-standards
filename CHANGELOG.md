@@ -1,3 +1,10 @@
+# [2.53.0](https://github.com/bamiyanapp/dev-standards/compare/v2.52.0...v2.53.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** Risk判定ルールの閾値をpolicy-as-code化する ([#679](https://github.com/bamiyanapp/dev-standards/issues/679)) ([8733ffc](https://github.com/bamiyanapp/dev-standards/commit/8733ffc2fe8d27e2cd14c3c8d40c2f61d3c0df0c))
+
 # [2.52.0](https://github.com/bamiyanapp/dev-standards/compare/v2.51.0...v2.52.0) (2026-10-02)
 
 
