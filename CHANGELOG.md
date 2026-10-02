@@ -1,3 +1,10 @@
+# [2.51.0](https://github.com/bamiyanapp/dev-standards/compare/v2.50.0...v2.51.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** Risk分類エンジンへSupply Chain異常検知を接続 ([#677](https://github.com/bamiyanapp/dev-standards/issues/677)) ([5beb4aa](https://github.com/bamiyanapp/dev-standards/commit/5beb4aa5db4537e1388529c99c634cbfe075d5f7))
+
 # [2.50.0](https://github.com/bamiyanapp/dev-standards/compare/v2.49.0...v2.50.0) (2026-10-02)
 
 
