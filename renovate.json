@@ -1,0 +1,7 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rebaseWhen": "behind-base-branch",
+  "minimumReleaseAge": "3 days",
+  "description": "minimumReleaseAge: 公開直後のバージョンはコミュニティ検証が済んでいないため、リリースから3日間はPRを作成させず異常発覚の猶予期間を作る（issue #647 Phase 2 8-3）。dependency-risk-classifier.js側では同等のチェックを実装していない。Renovate自身がネイティブに対応するため、CIに到達するPRは既にこの条件を満たしている前提にできる"
+}
