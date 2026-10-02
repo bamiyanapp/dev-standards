@@ -121,6 +121,19 @@ function checkSymlinkEntry(repoRoot, devStandardsDir, sourceRel, targetRel) {
   return { type: "symlink", target: targetRel, status: STATUS.OK };
 }
 
+// .claude/skills（配下がskill名ディレクトリ）・textlint-rules（配下が独自ルールの
+// .jsファイル）の両方をsymlinkAllInDirで扱うため、ディレクトリ・ファイルどちらも
+// 対象にする（issue #591、以前はディレクトリのみに絞り込んでいたためファイル単位の
+// エントリ（textlint-rules）が常に空扱いになっていた）。sync-manifest-targets.js
+// （issue #621）からも同じ列挙ロジックを再利用する
+function listDirEntryNames(dirAbsPath) {
+  return fs
+    .readdirSync(dirAbsPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() || entry.isFile())
+    .map((entry) => entry.name)
+    .sort();
+}
+
 function checkSymlinkAllInDirEntry(repoRoot, devStandardsDir, sourceRel, targetRel) {
   const sourceDirAbsPath = path.join(devStandardsDir, sourceRel);
   if (!fs.existsSync(sourceDirAbsPath)) {
@@ -134,15 +147,7 @@ function checkSymlinkAllInDirEntry(repoRoot, devStandardsDir, sourceRel, targetR
     ];
   }
 
-  // .claude/skills（配下がskill名ディレクトリ）・textlint-rules（配下が独自ルールの
-  // .jsファイル）の両方をsymlinkAllInDirで扱うため、ディレクトリ・ファイルどちらも
-  // 対象にする（issue #591、以前はディレクトリのみに絞り込んでいたためファイル単位の
-  // エントリ（textlint-rules）が常に空扱いになっていた）
-  const names = fs
-    .readdirSync(sourceDirAbsPath, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() || entry.isFile())
-    .map((entry) => entry.name)
-    .sort();
+  const names = listDirEntryNames(sourceDirAbsPath);
 
   return names.map((name) =>
     checkSymlinkEntry(repoRoot, devStandardsDir, path.join(sourceRel, name), path.join(targetRel, name))
@@ -353,14 +358,20 @@ function hasUnresolvedIssues(results) {
   return results.some((item) => REPORT_ONLY_STATUSES.has(item.status) || item.status === STATUS.BLOCKED);
 }
 
+// 「--submodule-dir=<path>（既定: dev-standards）」オプションとprocess.cwd()から
+// dev-standards submoduleの絶対パスを解決する。sync-manifest-targets.js
+// （issue #621）のCLIからも同じ解決ロジックを再利用する
+function resolveDevStandardsDir(args) {
+  const submoduleDirArg = args.find((arg) => arg.startsWith("--submodule-dir="));
+  const submoduleDirName = submoduleDirArg ? submoduleDirArg.split("=")[1] : "dev-standards";
+  const repoRoot = process.cwd();
+  return { repoRoot, devStandardsDir: path.resolve(repoRoot, submoduleDirName) };
+}
+
 function main() {
   const args = process.argv.slice(2);
   const checkOnly = args.includes("--check");
-  const submoduleDirArg = args.find((arg) => arg.startsWith("--submodule-dir="));
-  const submoduleDirName = submoduleDirArg ? submoduleDirArg.split("=")[1] : "dev-standards";
-
-  const repoRoot = process.cwd();
-  const devStandardsDir = path.resolve(repoRoot, submoduleDirName);
+  const { repoRoot, devStandardsDir } = resolveDevStandardsDir(args);
 
   if (!fs.existsSync(devStandardsDir)) {
     console.error(`dev-standards submoduleが見つかりません: ${devStandardsDir}`);
@@ -386,6 +397,8 @@ module.exports = {
   loadManifest,
   loadLocalManifest,
   mergeManifests,
+  listDirEntryNames,
+  resolveDevStandardsDir,
   computePlan,
   applyPlan,
   hasUnresolvedIssues,

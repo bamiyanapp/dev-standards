@@ -1350,8 +1350,14 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
+      # dev-standardsのshared/（submodule）もスキャン対象に含めることで、参照側
+      # リポジトリのproduct codeがshared/と重複（symlink化し忘れ）していないかを
+      # 検知できるようにする（issue #621）。duplication-check単体ではdev-standards
+      # 自身（submoduleが存在しない）でも安全に動作し、何もスキップしない
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
       - name: Use Node.js (attempt 1/2)
@@ -1369,6 +1375,17 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "24"
+      # sync-manifest（dev-standards本体＋参照側リポジトリのsync-manifest.local.json）に
+      # 列挙されたsymlink/copyのtarget一覧を、jscpdの-iへ渡す除外対象として取得する
+      # （issue #621）。これらは意図的にshared/側と同一化しているファイルのため、
+      # 除外しないと「意図したsymlink/copyの組」自体が重複として誤検知されてしまう。
+      # dev-standardsをsubmoduleとして持たないリポジトリ（dev-standards自身）では
+      # 空文字列になり、以降の除外リストに何も追加しない
+      - name: Compute dev-standards sync-manifest excludes
+        id: sync-manifest-excludes
+        run: |
+          IGNORE_LIST=$(node dev-standards/scripts/sync-manifest-targets.js 2>/dev/null || true)
+          echo "ignore=$IGNORE_LIST" >> "$GITHUB_OUTPUT"
       # jscpdはリポジトリ直下の.gitignoreを既定で尊重する（node_modules/dist/coverage等の
       # 生成物は追加のignore指定なしで自動的に除外される）。frontend_dir/backend_dir/packages
       # のどの構成にも依存しないよう、スキャン対象はリポジトリ全体（"."）とし、
@@ -1381,9 +1398,14 @@ jobs:
       # プロダクトコードの重複とは性質・対応の要否が異なるため）
       - name: Run jscpd (duplication check)
         run: |
+          IGNORE="**/*.test.js,**/*.test.jsx,**/*.test.ts,**/*.test.tsx,**/*.spec.js,**/*.spec.jsx,**/*.spec.ts,**/*.spec.tsx,**/e2e/**"
+          SYNC_MANIFEST_IGNORE="${{ steps.sync-manifest-excludes.outputs.ignore }}"
+          if [ -n "$SYNC_MANIFEST_IGNORE" ]; then
+            IGNORE="$IGNORE,$SYNC_MANIFEST_IGNORE"
+          fi
           npx --yes jscpd@5 . \
             -f javascript,jsx,typescript,tsx \
-            -i "**/*.test.js,**/*.test.jsx,**/*.test.ts,**/*.test.tsx,**/*.spec.js,**/*.spec.jsx,**/*.spec.ts,**/*.spec.tsx,**/e2e/**" \
+            -i "$IGNORE" \
             -r markdown,console \
             -o ./jscpd-report \
             ${{ inputs.duplication_threshold > 0 && format('-t {0}', inputs.duplication_threshold) || '' }}
