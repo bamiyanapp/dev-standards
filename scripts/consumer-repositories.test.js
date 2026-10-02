@@ -80,3 +80,24 @@ test("renderFanOutNote: 件数を含む注記を生成する", () => {
 test("renderFanOutNote: 0件の場合はnullを返す（解析失敗等で誤った安心を与えないため）", () => {
   assert.equal(renderFanOutNote(0), null);
 });
+
+test("CLI: GITHUB_OUTPUTが設定されている場合はcountを書き込む", () => {
+  const { execFileSync } = require("node:child_process");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "consumer-repositories-test-"));
+  const docPath = path.join(tmpDir, "consumer-repositories.md");
+  const githubOutputPath = path.join(tmpDir, "github-output.txt");
+  fs.writeFileSync(docPath, SAMPLE_MARKDOWN);
+  fs.writeFileSync(githubOutputPath, "");
+
+  execFileSync(process.execPath, [path.join(__dirname, "consumer-repositories.js"), docPath], {
+    encoding: "utf-8",
+    env: { ...process.env, GITHUB_OUTPUT: githubOutputPath },
+  });
+
+  assert.match(fs.readFileSync(githubOutputPath, "utf-8"), /count=2/);
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});

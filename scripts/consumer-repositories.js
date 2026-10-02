@@ -70,12 +70,18 @@ function renderFanOutNote(count) {
   );
 }
 
+// issue #647（Phase 2 Task 2）。dependency-risk-classifier.js（Risk Engine）が
+// ファンアウト件数を判定材料として使うため、GITHUB_OUTPUT経由でも件数を渡す
+// （Markdown注記本文はdependency-risk-classifier.jsにとって不要で、数値のみで十分）
 function main() {
   const docPath = process.argv[2] ?? DEFAULT_DOC_PATH;
   const markdown = fs.readFileSync(docPath, "utf-8");
   const count = countConsumerRepositories(markdown);
   const note = renderFanOutNote(count);
   if (note) console.log(note);
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `count=${count}\n`);
+  }
 }
 
 if (require.main === module) {

@@ -1799,6 +1799,12 @@ jobs:
     timeout-minutes: 10
     permissions:
       pull-requests: write
+      issues: write
+    # risk_level: dependency-risk-classifier.js（issue #647 Phase 2 Task 1）によるLow/Medium/High
+    # 判定結果。merge job（Task 3で接続）がこの出力を見て自動マージを止めるかどうかを決める。
+    # gateがそもそも実行されない場合（package-lock.jsonが変更されていないPR等）は空文字列になる
+    outputs:
+      risk_level: ${{ steps.classify.outputs.level }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -1847,14 +1853,14 @@ jobs:
       # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと（過去に
       # check-coverage-thresholdで更新忘れにより新規入力が黙って無視された実例がある。
       # 本ファイル内の他の「Checkout dev-standards」ステップのコメントも参照）。
-      # v2.40.0で、dependency-risk-security-summary.js（issue #646 Task H）を
-      # 追加したため、その追加を含むタグへ更新した
+      # v2.43.0で、dependency-risk-classifier.js（issue #647 Phase 2 Task 1）の追加と、
+      # consumer-repositories.jsのGITHUB_OUTPUT対応（Task 2）を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.fetch-base.outcome == 'success'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.40.0
+          ref: v2.43.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
@@ -1919,6 +1925,25 @@ jobs:
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
         run: node .dev-standards-actions/scripts/dependency-risk-ci-results.js > /tmp/ci-results-section.md
 
+      # Risk分類（issue #647 Phase 2 Task 1・2）: update type・CVE/CVSS/KEV/EPSS・CI結果・
+      # ファンアウトを基にLow/Medium/Highへ機械的に分類する。vulnerability-info.json・
+      # exploit-info.jsonが存在しない場合（外部API呼び出し失敗等）はdependency-risk-classifier.js
+      # 自身が「セキュリティ情報不明」としてMedium以上へ格上げするため、このステップでは
+      # ファイルの有無を気にせずそのまま渡す。出力されるrisk_levelはjob outputとして
+      # merge job（Task 3で接続）へ渡す
+      - name: Classify risk
+        id: classify
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        env:
+          CI_RESULT_FRONTEND_TEST: ${{ needs.frontend-test.result }}
+          CI_RESULT_BACKEND_TEST: ${{ needs.backend-test.result }}
+          CI_RESULT_PACKAGE_TEST: ${{ needs.package-test.result }}
+          CI_RESULT_FRONTEND_E2E_TEST: ${{ needs.frontend-e2e-test.result }}
+          CI_RESULT_ARCHITECTURE_CHECK: ${{ needs.architecture-check.result }}
+          CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
+        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" > /tmp/risk-classification.json
+
       - name: Build and post Risk Summary
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -1936,7 +1961,24 @@ jobs:
               other: 'other（バージョン比較不能・ダウングレード等）',
             };
 
+            const riskLabelText = { low: '🟢 LOW', medium: '🟡 MEDIUM', high: '🔴 HIGH' };
+            const riskAction = {
+              low: '自動マージの対象です（他のCI条件を満たす場合）。',
+              medium: '自動マージの対象外です。CI結果・理由を確認の上、問題なければ人間がマージしてください。',
+              high: 'Human Reviewが必須です。自動マージの対象外です。',
+            };
+            let riskResult = null;
+            if (fs.existsSync('/tmp/risk-classification.json')) {
+              riskResult = JSON.parse(fs.readFileSync('/tmp/risk-classification.json', 'utf-8'));
+            }
+
             let body = '## Risk Summary（依存更新）\n\n';
+            if (riskResult) {
+              body += `**Risk: ${riskLabelText[riskResult.level]}**\n\n`;
+              body += '理由:\n';
+              for (const reason of riskResult.reasons) body += `- ${reason}\n`;
+              body += `\nRecommended Action: ${riskAction[riskResult.level]}\n\n`;
+            }
             body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
             body += '| update type | 件数 |\n|---|---|\n';
             for (const [type, count] of Object.entries(summary.byUpdateType)) {
@@ -1970,6 +2012,40 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body,
             });
+
+            // Medium/High判定のPRをスマートフォンのPR一覧からでも見分けられるよう、
+            // ラベルを付与する（issue #647「8-8」参照。コメント全文を読まなくても
+            // Human Reviewが必要かどうかが分かる）。ラベル作成・付与の失敗はコメント
+            // 投稿自体を妨げないよう、それぞれ個別にtry/catchで握る
+            if (riskResult && (riskResult.level === 'medium' || riskResult.level === 'high')) {
+              const labelName = riskResult.level === 'high' ? 'risk: high' : 'risk: medium';
+              const labelColor = riskResult.level === 'high' ? 'd73a4a' : 'fbca04';
+              const labelDescription =
+                riskResult.level === 'high'
+                  ? 'dependency-risk-summaryによるHigh Risk判定。Human Reviewが必須です'
+                  : 'dependency-risk-summaryによるMedium Risk判定。自動マージの対象外です';
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: labelName,
+                  color: labelColor,
+                  description: labelDescription,
+                });
+              } catch (error) {
+                core.info(`Label "${labelName}" の作成をスキップしました（既に存在する等）: ${error.message}`);
+              }
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  labels: [labelName],
+                });
+              } catch (error) {
+                core.warning(`Label "${labelName}" の付与に失敗しました: ${error.message}`);
+              }
+            }
 
   merge:
     needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams, dependency-risk-summary]
