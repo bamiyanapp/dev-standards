@@ -1,3 +1,10 @@
+# [2.47.0](https://github.com/bamiyanapp/dev-standards/compare/v2.46.0...v2.47.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** GitHub Actionsバージョン更新もdependency-risk-summaryで検知する ([#673](https://github.com/bamiyanapp/dev-standards/issues/673)) ([fdd47f2](https://github.com/bamiyanapp/dev-standards/commit/fdd47f2557cd456199986e8626045e744b685b7f))
+
 # [2.46.0](https://github.com/bamiyanapp/dev-standards/compare/v2.45.0...v2.46.0) (2026-10-02)
 
 
