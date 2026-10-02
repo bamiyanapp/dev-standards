@@ -1,3 +1,10 @@
+# [2.50.0](https://github.com/bamiyanapp/dev-standards/compare/v2.49.0...v2.50.0) (2026-10-02)
+
+
+### Features
+
+* **scripts:** SBOM要約（dependency-sbom-summary.js）を実装 ([#676](https://github.com/bamiyanapp/dev-standards/issues/676)) ([24029e5](https://github.com/bamiyanapp/dev-standards/commit/24029e53c36690986c394dedfc9722582a3bcaf7))
+
 # [2.49.0](https://github.com/bamiyanapp/dev-standards/compare/v2.48.0...v2.49.0) (2026-10-02)
 
 
