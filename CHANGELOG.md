@@ -1,3 +1,10 @@
+# [2.56.0](https://github.com/bamiyanapp/dev-standards/compare/v2.55.0...v2.56.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** Risk判定を適用リスク・維持リスクの2軸に分離する ([#691](https://github.com/bamiyanapp/dev-standards/issues/691)) ([2205c70](https://github.com/bamiyanapp/dev-standards/commit/2205c708840145974f20578707bd89e690c0eefd)), closes [#690](https://github.com/bamiyanapp/dev-standards/issues/690)
+
 # [2.55.0](https://github.com/bamiyanapp/dev-standards/compare/v2.54.0...v2.55.0) (2026-10-02)
 
 
