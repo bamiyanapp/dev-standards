@@ -3,5 +3,6 @@
   "extends": ["config:recommended"],
   "rebaseWhen": "behind-base-branch",
   "minimumReleaseAge": "3 days",
-  "description": "minimumReleaseAge: 公開直後のバージョンはコミュニティ検証が済んでいないため、リリースから3日間はPRを作成させず異常発覚の猶予期間を作る（issue #647 Phase 2 8-3）。dependency-risk-classifier.js側では同等のチェックを実装していない。Renovate自身がネイティブに対応するため、CIに到達するPRは既にこの条件を満たしている前提にできる"
+  "description": "minimumReleaseAge: 公開直後のバージョンはコミュニティ検証が済んでいないため、リリースから3日間はPRを作成させず異常発覚の猶予期間を作る（issue #647 Phase 2 8-3）。dependency-risk-classifier.js側では同等のチェックを実装していない。Renovate自身がネイティブに対応するため、CIに到達するPRは既にこの条件を満たしている前提にできる",
+  "dependencyDashboardHeader": "> 📝 本issueはRenovate botが自動生成・管理する「Dependency Dashboard」です。保留中の依存更新候補（Pending）と、リポジトリ内で検知した依存関係（Detected Dependencies）の一覧を表示します。以下の見出し・本文はRenovate自体が生成する固定テキストのため英語のままです（ロケール設定による日本語化機能が無いため）。この説明文のみ、dev-standardsの`renovate.json`（`dependencyDashboardHeader`）で付加しています（issue #681）。"
 }
