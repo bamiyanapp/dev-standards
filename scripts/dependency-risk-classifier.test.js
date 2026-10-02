@@ -6,7 +6,7 @@ const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { classifyRisk } = require("./dependency-risk-classifier.js");
+const { classifyRisk, loadRiskPolicy } = require("./dependency-risk-classifier.js");
 const { summarizeCiResults } = require("./dependency-risk-ci-results.js");
 
 const PASSING_CI = summarizeCiResults({
@@ -29,6 +29,10 @@ function baseInput(overrides = {}) {
     ...overrides,
   };
 }
+
+test("loadRiskPolicy: scripts/risk-policy.jsonからdirectDependencyThresholdを読み取る（回帰確認）", () => {
+  assert.deepEqual(loadRiskPolicy(), { directDependencyThreshold: 2 });
+});
 
 test("classifyRisk: patch/minor・脆弱性なし・CI全PASS・ファンアウトなしはlow", () => {
   const result = classifyRisk(baseInput());

@@ -1,0 +1,5 @@
+{
+  "$comment": "issue #649（OSS依存更新の自動安全判定基盤 Phase 4）8-6 policy-as-code化。dependency-risk-classifier.jsのclassifyRisk()が参照する閾値。コード変更・レビューを経ずにこのファイルの変更だけでチューニングできるようにする",
+  "directDependencyThreshold": 2,
+  "_directDependencyThreshold_comment": "直接依存の更新件数がこの値以上の場合、変更の複雑さを理由にMedium以上へ格上げする（#645「2. Risk判定」のMedium Risk条件「依存変更が複数」に対応）"
+}

@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const path = require("node:path");
 const { summarizeCiResults, analyzeCiFailures, readCiResultsFromEnv } = require("./dependency-risk-ci-results.js");
 const { buildSecurityRows } = require("./dependency-risk-security-summary.js");
 
@@ -20,6 +21,21 @@ const { buildSecurityRows } = require("./dependency-risk-security-summary.js");
 // （Risk Engineが新たにそのリスクを増やすことはない）
 
 const DIRECT_DEPENDENCY_THRESHOLD_DEFAULT = 2;
+
+// issue #649（OSS依存更新の自動安全判定基盤 Phase 4）8-6 policy-as-code化。
+// scripts/risk-policy.jsonが存在する場合、その値をclassifyRisk()呼び出し側
+// （main()）のデフォルト値として使う。これにより閾値のチューニングに
+// コード変更・レビューを必要としない（ファイルが無い・壊れている場合は
+// 既存のDIRECT_DEPENDENCY_THRESHOLD_DEFAULTへ安全側にフォールバックする）
+function loadRiskPolicy() {
+  try {
+    const policyPath = path.join(__dirname, "risk-policy.json");
+    const policy = JSON.parse(fs.readFileSync(policyPath, "utf-8"));
+    return { directDependencyThreshold: policy.directDependencyThreshold ?? DIRECT_DEPENDENCY_THRESHOLD_DEFAULT };
+  } catch {
+    return { directDependencyThreshold: DIRECT_DEPENDENCY_THRESHOLD_DEFAULT };
+  }
+}
 
 function escalate(current, next) {
   const order = { low: 0, medium: 1, high: 2 };
@@ -143,6 +159,7 @@ function main() {
   const securityDataAvailable = vulnerabilityInfo != null && exploitInfo != null;
   const fanOutCount = fanOutCountArg ? Number(fanOutCountArg) : null;
   const ciSummary = summarizeCiResults(readCiResultsFromEnv());
+  const policy = loadRiskPolicy();
 
   const result = classifyRisk({
     updateSummary: summary,
@@ -153,6 +170,7 @@ function main() {
     fanOutCount: Number.isFinite(fanOutCount) ? fanOutCount : null,
     installScriptAnomalies: readJsonFileIfExists(installScriptAnomaliesPath) ?? [],
     maintainerAnomalies: readJsonFileIfExists(maintainerAnomaliesPath) ?? [],
+    directDependencyThreshold: policy.directDependencyThreshold,
   });
 
   console.log(JSON.stringify(result, null, 2));
@@ -168,4 +186,5 @@ if (require.main === module) {
 
 module.exports = {
   classifyRisk,
+  loadRiskPolicy,
 };
