@@ -1899,13 +1899,15 @@ jobs:
       # いずれの変更でも必要なスクリプト群を含むため、gate自体（should_run）で判定する
       # （issue #666。以前はfetch-base.outcomeで判定しており、actions_changedのみの
       # 場合にこのステップ自体がスキップされ後続のGitHub Actions更新情報生成が
-      # 動かない問題があった）
+      # 動かない問題があった）。v2.51.0で、issue #648（Phase 3）の
+      # dependency-package-anomaly-info.js・dependency-maintainer-info.js・
+      # dependency-sbom-summary.js・classifyRisk()への接続を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.46.0
+          ref: v2.51.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
@@ -1922,6 +1924,53 @@ jobs:
         if: steps.fetch-actions-base.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/github-actions-update-info.js /tmp/gh-actions-base /tmp/gh-actions-changed-files.json > /tmp/actions-update-info.json
+
+      # issue #648（Phase 3）package script/diff検査: 新規にinstall scriptを持つ
+      # ようになったパッケージを検知する。package-lock.jsonのみの比較で外部通信が
+      # 不要なため、ネットワーク依存の他のSupply Chainチェックより前に実行する
+      - name: Generate package script anomaly info
+        id: package-anomaly
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-package-anomaly-info.js /tmp/base-package-lock.json package-lock.json > /tmp/package-anomaly-info.json
+
+      # issue #648（Phase 3）メンテナ/所有権異常の検知。npm registryへの問い合わせを
+      # 伴う（osv.dev等と同様、このサンドボックスでは疎通確認済みだが、実際の
+      # GitHub Actions実行環境での動作は初めて検証される）
+      - name: Generate maintainer anomaly info
+        id: maintainer-anomaly
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-maintainer-info.js /tmp/dependency-update-info.json > /tmp/maintainer-anomaly-info.json
+
+      # issue #648（Phase 3）SBOM生成。--package-lock-onlyによりnode_modulesの実
+      # インストール無しにpackage-lock.jsonのみから生成できる（実機確認済み）。
+      # このjobは他のステップでもnpm installを行わないため、この性質が重要。
+      # cyclonedx-npm自体はdev-standardsのスクリプトではないため、他のnpx経由
+      # ツール（jscpd・dependency-cruiser等）と同じくメジャーバージョン固定で呼ぶ
+      - name: Generate SBOM
+        id: sbom
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: npx --yes @cyclonedx/cyclonedx-npm@6 --package-lock-only --output-file /tmp/sbom.json
+
+      # SBOM本体はPRコメントへ埋め込まず、artifactとして保存する（スマホのPR画面での
+      # 閲覧に適さないため。要約のみをコメントへ載せる、後続のGenerate SBOM summary
+      # 参照）。90日はこのリポジトリの他のartifact（E2Eスクリーンショット等）と
+      # 揃える必要が無いため、GitHub Actionsのデフォルト保持期間に委ねる
+      - name: Upload SBOM artifact
+        if: steps.sbom.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-pr${{ github.event.pull_request.number }}
+          path: /tmp/sbom.json
+
+      - name: Generate SBOM summary
+        id: sbom-summary
+        if: steps.sbom.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-sbom-summary.js /tmp/sbom.json > /tmp/sbom-section.md
 
       # CVE/CVSS（issue #646 Task C）・EPSS/KEV（Task D）・両者を結合した表示整形
       # （Task H）を順に呼び出す。いずれもosv.dev・CISA KEV・FIRST EPSSという外部APIへの
@@ -1996,7 +2045,7 @@ jobs:
           CI_RESULT_FRONTEND_E2E_TEST: ${{ needs.frontend-e2e-test.result }}
           CI_RESULT_ARCHITECTURE_CHECK: ${{ needs.architecture-check.result }}
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
-        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" > /tmp/risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" /tmp/package-anomaly-info.json /tmp/maintainer-anomaly-info.json > /tmp/risk-classification.json
 
       # issue #666: package-lock.jsonの変更・GitHub Actions参照の変更のいずれか一方
       # だけが存在するPRでもコメントを投稿できるよう、gate自体（should_run）で判定する
@@ -2082,6 +2131,10 @@ jobs:
               body += fs.readFileSync('/tmp/security-section.md', 'utf-8') + '\n';
             } else {
               body += '_CVE/CVSS/EPSS/KEV情報の取得に失敗しました（外部API呼び出しエラー等）。必要に応じて手動でご確認ください。_\n';
+            }
+
+            if (fs.existsSync('/tmp/sbom-section.md')) {
+              body += fs.readFileSync('/tmp/sbom-section.md', 'utf-8') + '\n';
             }
 
             await github.rest.issues.createComment({
