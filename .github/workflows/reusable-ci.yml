@@ -280,6 +280,19 @@ on:
           タスクで同じコメントへ追記していく予定）。
         type: boolean
         default: false
+      enable_dependency_risk_gating:
+        description: >-
+          trueの場合、dependency-risk-summary job（enable_dependency_risk_summary）が
+          出力するrisk_level（Low/Medium/High、bamiyanapp/dev-standards#647「OSS依存更新
+          の自動安全判定基盤 Phase 2」Task 1〜2）がmedium/highのPRでは、merge jobによる
+          自動マージを行わない。Low判定、またはrisk_levelが無い（package-lock.jsonを
+          変更していないPR等、dependency-risk-summary job自体が実行されなかった）場合は
+          従来どおり他のCI条件のみで自動マージの可否を判定する。falseの場合はrisk_levelを
+          一切参照せず、Phase 1と同じ動作（CI結果のみで自動マージ）を維持する。
+          enable_dependency_risk_summaryがfalseの場合はrisk_level自体が生成されないため、
+          本入力の値に関わらず常に従来どおりの動作になる。
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -2059,6 +2072,12 @@ jobs:
     # package-testだけは救えず、matrix要素が実際に0件かどうか
     # （inputs.packages == '' または fromJSON(inputs.packages)[0] == null、
     # いずれも実機で検証済み）を直接見て判定する必要がある
+    #
+    # 最後の行（issue #647 Phase 2 Task 3）: dependency-risk-summary jobが出力する
+    # risk_levelがmedium/highの場合、enable_dependency_risk_gatingが有効なら自動マージ
+    # しない。risk_levelが空文字列（package-lock.jsonを変更していないPR等でjob自体が
+    # 実行されなかった場合）やlowの場合はcontains()がfalseを返すため、このor条件全体は
+    # trueになり他の条件のみで判定される（従来どおりの動作を変えない）
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -2075,7 +2094,8 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result)
+      !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
+      (!inputs.enable_dependency_risk_gating || !contains(fromJSON('["medium", "high"]'), needs.dependency-risk-summary.outputs.risk_level))
     runs-on: ubuntu-latest
     permissions:
       contents: write

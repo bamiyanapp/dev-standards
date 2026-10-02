@@ -40,6 +40,10 @@ jobs:
       # issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1（issue #646）:
       # dev-standards自身の依存更新PR（Renovate等）でもRisk Summaryコメントをdogfoodingする
       enable_dependency_risk_summary: true
+      # issue #647（Phase 2 Task 3）: Medium/High Risk判定時は自動マージを止める運用も
+      # dogfoodingする。package-lock.jsonを変更しないPR（このPhase 2自体の実装PR群を含む）
+      # ではrisk_level自体が生成されないため、他のPRの自動マージへの影響は無い
+      enable_dependency_risk_gating: true
     secrets:
       # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
       # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、
