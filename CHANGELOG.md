@@ -1,3 +1,10 @@
+# [2.45.0](https://github.com/bamiyanapp/dev-standards/compare/v2.44.0...v2.45.0) (2026-10-02)
+
+
+### Features
+
+* **ci:** Medium/High Risk判定時はmerge jobの自動マージを止める ([#671](https://github.com/bamiyanapp/dev-standards/issues/671)) ([dbb79c4](https://github.com/bamiyanapp/dev-standards/commit/dbb79c4e0b7bff32402bdbad6dd1010c48b28057))
+
 # [2.44.0](https://github.com/bamiyanapp/dev-standards/compare/v2.43.0...v2.44.0) (2026-10-02)
 
 
