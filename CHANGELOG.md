@@ -1,3 +1,15 @@
+# [2.60.0](https://github.com/bamiyanapp/dev-standards/compare/v2.59.3...v2.60.0) (2026-10-03)
+
+
+### Bug Fixes
+
+* **ci:** package-lock.json未変更時にRisk Summaryが誤って失敗表示するのを修正 ([#728](https://github.com/bamiyanapp/dev-standards/issues/728)) ([eee006e](https://github.com/bamiyanapp/dev-standards/commit/eee006eeb0eaf114c9376ea5a0bb544ef6f4c008)), closes [#727](https://github.com/bamiyanapp/dev-standards/issues/727)
+
+
+### Features
+
+* **ci:** mermaid latest画像のcamoキャッシュ古さ対策を追加する ([#724](https://github.com/bamiyanapp/dev-standards/issues/724)) ([c33062a](https://github.com/bamiyanapp/dev-standards/commit/c33062a21e13f996090c6cfcf5f91062b3f4875d)), closes [#723](https://github.com/bamiyanapp/dev-standards/issues/723)
+
 ## [2.59.3](https://github.com/bamiyanapp/dev-standards/compare/v2.59.2...v2.59.3) (2026-10-03)
 
 
