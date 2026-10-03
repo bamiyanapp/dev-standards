@@ -120,7 +120,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `enable_dependency_risk_summary` | 依存更新PRのRisk SummaryをPRコメントへ投稿する（`dependency-risk-summary` job） | `false` |
 | `enable_dependency_risk_gating` | 適用リスクがhighのPRで`merge` jobによる自動マージを行わない | `false` |
 
-判定フロー（flowchart付き）・各ルールの詳細は`docs/dependency-risk-judgment.md`を参照する。
+判定フロー（flowchart付き）・各ルールの詳細は[`dependency-risk-judgment.md`](dependency-risk-judgment.md)を参照する。
 
 ### 補足
 
