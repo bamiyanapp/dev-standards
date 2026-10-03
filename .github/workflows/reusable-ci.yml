@@ -1849,8 +1849,13 @@ jobs:
       risk_level: ${{ steps.classify.outputs.level }}
       stale_risk_level: ${{ steps.classify-stale.outputs.level }}
     steps:
+      # submodules: true（issue #689、業務影響度・ブラスト半径判定用）: dependency-cruiser
+      # の実行にはdependency-cruiser.config.cjs（dev-standards submodule配下からの
+      # symlink、architecture-checkと同じ）が必要
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: true
 
       # package-lock.json・GitHub Actions/reusable workflow参照（.github/workflows/*.yml・
       # .github/actions/*/action.yml）のいずれも変更されていないPRでは判定対象が無いため、
@@ -2082,12 +2087,40 @@ jobs:
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
         run: node .dev-standards-actions/scripts/dependency-risk-ci-results.js > /tmp/ci-results-section.md
 
+      # issue #689（業務影響度・ブラスト半径）: 変更された直接依存パッケージが
+      # プロダクトコードのどこでimportされているかをdependency-cruiser（architecture-check
+      # と同じ設定・同じ対象ディレクトリ）で解析する。node_modulesの実インストールは
+      # 不要（dependency-cruiserはimportの記法だけでnpm依存を分類するため、
+      # architecture-check job自体がnpm install無しで動作していることからも実証済み）
+      - name: Run dependency-cruiser for blast radius
+        id: blast-radius-cruise
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: |
+          targets=()
+          [ -d "${{ inputs.frontend_dir }}" ] && targets+=("${{ inputs.frontend_dir }}")
+          [ -d "${{ inputs.backend_dir }}" ] && targets+=("${{ inputs.backend_dir }}")
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo '{"modules":[]}' > /tmp/depcruise-output.json
+            exit 0
+          fi
+          npx --yes dependency-cruiser@16 --config dependency-cruiser.config.cjs --output-type json "${targets[@]}" > /tmp/depcruise-output.json
+
+      # 重要パス（決済・認証等）の宣言は参照側リポジトリ自身の責務。リポジトリルートに
+      # dependency-risk-critical-paths.jsonが無い場合はdependency-blast-radius.js側で
+      # 空配列へ安全側にフォールバックし、Risk判定への影響は無い（issue #689初期スコープ）
+      - name: Classify blast radius
+        id: classify-blast-radius
+        if: steps.blast-radius-cruise.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-blast-radius.js /tmp/depcruise-output.json /tmp/dependency-update-info.json dependency-risk-critical-paths.json > /tmp/blast-radius-info.json
+
       # Risk分類（issue #647 Phase 2 Task 1・2）: update type・CVE/CVSS/KEV/EPSS・CI結果・
-      # ファンアウトを基にLow/Medium/Highへ機械的に分類する。vulnerability-info.json・
-      # exploit-info.jsonが存在しない場合（外部API呼び出し失敗等）はdependency-risk-classifier.js
-      # 自身が「セキュリティ情報不明」としてMedium以上へ格上げするため、このステップでは
-      # ファイルの有無を気にせずそのまま渡す。出力されるrisk_levelはjob outputとして
-      # merge job（Task 3で接続）へ渡す
+      # ファンアウト・ブラスト半径（issue #689）を基にLow/Medium/Highへ機械的に分類する。
+      # vulnerability-info.json・exploit-info.jsonが存在しない場合（外部API呼び出し失敗等）
+      # はdependency-risk-classifier.js自身が「セキュリティ情報不明」としてMedium以上へ
+      # 格上げするため、このステップではファイルの有無を気にせずそのまま渡す。
+      # 出力されるrisk_levelはjob outputとしてmerge job（Task 3で接続）へ渡す
       - name: Classify risk
         id: classify
         if: steps.dependency-info.outcome == 'success'
@@ -2099,7 +2132,7 @@ jobs:
           CI_RESULT_FRONTEND_E2E_TEST: ${{ needs.frontend-e2e-test.result }}
           CI_RESULT_ARCHITECTURE_CHECK: ${{ needs.architecture-check.result }}
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
-        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" /tmp/package-anomaly-info.json /tmp/maintainer-anomaly-info.json > /tmp/risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" /tmp/package-anomaly-info.json /tmp/maintainer-anomaly-info.json /tmp/blast-radius-info.json > /tmp/risk-classification.json
 
       # issue #666: package-lock.jsonの変更・GitHub Actions参照の変更のいずれか一方
       # だけが存在するPRでもコメントを投稿できるよう、gate自体（should_run）で判定する
@@ -2152,6 +2185,13 @@ jobs:
             if (fs.existsSync('/tmp/stale-risk-classification.json')) {
               staleRiskResult = JSON.parse(fs.readFileSync('/tmp/stale-risk-classification.json', 'utf-8'));
             }
+            // issue #689: 適用リスクの昇格理由（reasons）だけでは「重要パスに該当した」
+            // ことまでは分かるが、どのパッケージ・どのファイルが該当したかは分からない。
+            // 詳細をたどれるよう内訳を別途添える
+            let blastRadiusResult = null;
+            if (fs.existsSync('/tmp/blast-radius-info.json')) {
+              blastRadiusResult = JSON.parse(fs.readFileSync('/tmp/blast-radius-info.json', 'utf-8'));
+            }
 
             let body = '## Risk Summary（依存更新）\n\n';
             if (riskResult) {
@@ -2159,6 +2199,14 @@ jobs:
               body += '理由:\n';
               for (const reason of riskResult.reasons) body += `- ${reason}\n`;
               body += '\n';
+              if (blastRadiusResult?.hasCriticalPathImpact) {
+                body += '<details><summary>重要パスへの影響内訳（issue #689）</summary>\n\n';
+                body += '| パッケージ | import元 | 該当した重要パス |\n|---|---|---|\n';
+                for (const hit of blastRadiusResult.hits) {
+                  body += `| ${hit.packageName} | ${hit.file} | ${hit.criticalPath} |\n`;
+                }
+                body += '\n</details>\n\n';
+              }
             }
             if (staleRiskResult) {
               body += `**維持リスク（このPRを適用せず現行バージョンに留まる場合）: ${riskLabelText[staleRiskResult.level]}**\n\n`;

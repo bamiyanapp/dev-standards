@@ -62,6 +62,7 @@ function classifyRisk({
   directDependencyThreshold = DIRECT_DEPENDENCY_THRESHOLD_DEFAULT,
   installScriptAnomalies = [],
   maintainerAnomalies = [],
+  blastRadiusImpact = false,
 }) {
   let level = "low";
   const reasons = [];
@@ -122,6 +123,23 @@ function classifyRisk({
     reasons.push(`直接依存の更新が${updateSummary.direct}件あり、影響範囲の特定が難しい可能性があります`);
   }
 
+  // issue #689（業務影響度・ブラスト半径）。変更された直接依存が、参照側リポジトリが
+  // 宣言した「重要パス」（dependency-blast-radius.js）からimportされている場合、
+  // Risk判定を1段階昇格する（low→medium、medium→high、既にhighなら変化無し）。
+  // 重要パスの宣言が無いリポジトリではblastRadiusImpactが常にfalseになり、
+  // 既存の判定（昇格なし）のままフォールバックする
+  if (blastRadiusImpact) {
+    const escalatedLevel = level === "low" ? "medium" : "high";
+    if (escalatedLevel !== level) {
+      reasons.push(
+        `変更された直接依存が重要パス（宣言済み）からimportされているため、Risk判定を${level}から${escalatedLevel}へ1段階昇格しました`,
+      );
+      level = escalatedLevel;
+    } else {
+      reasons.push("変更された直接依存が重要パス（宣言済み）からimportされていますが、既にHighのため追加の昇格はありません");
+    }
+  }
+
   if (reasons.length === 0) {
     reasons.push("patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした");
   }
@@ -144,10 +162,11 @@ function main() {
     fanOutCountArg,
     installScriptAnomaliesPath,
     maintainerAnomaliesPath,
+    blastRadiusInfoPath,
   ] = process.argv;
   if (!updateInfoPath) {
     console.error(
-      "Usage: node dependency-risk-classifier.js <dependency-update-info.json> [vulnerability-info.json] [exploit-info.json] [fanout-count] [install-script-anomalies.json] [maintainer-anomalies.json]",
+      "Usage: node dependency-risk-classifier.js <dependency-update-info.json> [vulnerability-info.json] [exploit-info.json] [fanout-count] [install-script-anomalies.json] [maintainer-anomalies.json] [blast-radius-info.json]",
     );
     process.exitCode = 1;
     return;
@@ -160,6 +179,7 @@ function main() {
   const fanOutCount = fanOutCountArg ? Number(fanOutCountArg) : null;
   const ciSummary = summarizeCiResults(readCiResultsFromEnv());
   const policy = loadRiskPolicy();
+  const blastRadiusInfo = readJsonFileIfExists(blastRadiusInfoPath);
 
   const result = classifyRisk({
     updateSummary: summary,
@@ -167,6 +187,7 @@ function main() {
     exploitInfo: exploitInfo ?? [],
     securityDataAvailable,
     ciSummary,
+    blastRadiusImpact: blastRadiusInfo?.hasCriticalPathImpact ?? false,
     fanOutCount: Number.isFinite(fanOutCount) ? fanOutCount : null,
     installScriptAnomalies: readJsonFileIfExists(installScriptAnomaliesPath) ?? [],
     maintainerAnomalies: readJsonFileIfExists(maintainerAnomaliesPath) ?? [],
