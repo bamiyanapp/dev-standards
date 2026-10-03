@@ -2213,6 +2213,12 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            // issue #727: package-lock.jsonを変更していないPR（GitHub Actionsの
+            // バージョン更新のみ等）では、CVE/CVSS取得ステップ自体が実行されない
+            // （対象が無いだけで失敗ではない）。/tmp/security-section.mdの有無だけでは
+            // 「対象外」と「実際にAPI呼び出し等が失敗した」を区別できないため、
+            // この値を別途参照する
+            const packageLockChanged = ${{ steps.gate.outputs.package_lock_changed }};
             let summary = { total: 0, direct: 0, transitive: 0, byUpdateType: {} };
             let changes = [];
             if (fs.existsSync('/tmp/dependency-update-info.json')) {
@@ -2328,9 +2334,13 @@ jobs:
 
             if (fs.existsSync('/tmp/security-section.md')) {
               body += fs.readFileSync('/tmp/security-section.md', 'utf-8') + '\n';
-            } else {
+            } else if (packageLockChanged) {
+              // issue #727: package-lock.jsonの変更があったにもかかわらず
+              // security-section.mdが無い場合のみ、実際の取得失敗として表示する
               body += '_CVE/CVSS/EPSS/KEV情報の取得に失敗しました（外部API呼び出しエラー等）。必要に応じて手動でご確認ください。_\n';
             }
+            // packageLockChangedがfalse（GitHub Actionsのバージョン更新のみ等）の場合は、
+            // CVE/CVSS自体が対象外なだけで失敗ではないため、何も表示しない（issue #727）
 
             if (fs.existsSync('/tmp/sbom-section.md')) {
               body += fs.readFileSync('/tmp/sbom-section.md', 'utf-8') + '\n';
