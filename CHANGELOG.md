@@ -1,3 +1,10 @@
+## [2.59.2](https://github.com/bamiyanapp/dev-standards/compare/v2.59.1...v2.59.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* npm workspaces構成で直接依存が常に間接と誤分類される問題を修正する ([#721](https://github.com/bamiyanapp/dev-standards/issues/721)) ([496639d](https://github.com/bamiyanapp/dev-standards/commit/496639d84e88f9970b821fcf56cf5e8b5af67c38)), closes [#720](https://github.com/bamiyanapp/dev-standards/issues/720)
+
 ## [2.59.1](https://github.com/bamiyanapp/dev-standards/compare/v2.59.0...v2.59.1) (2026-10-03)
 
 
