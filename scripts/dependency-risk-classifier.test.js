@@ -263,3 +263,84 @@ test("classifyRisk: blastRadiusImpactを省略（既定false）した場合は�
   assert.equal(result.level, "low");
   assert.ok(!result.reasons.some((r) => r.includes("重要パス")));
 });
+
+test("classifyRisk: vulnerabilityOnlyHigh: Critical/High CVEのみが理由のhighはtrue（issue #700）", () => {
+  const result = classifyRisk(
+    baseInput({
+      vulnerabilityInfo: [
+        { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "HIGH", cvssVectors: [] }] },
+      ],
+      exploitInfo: [],
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, true);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: KEVのみが理由のhighはtrue", () => {
+  const result = classifyRisk(
+    baseInput({
+      vulnerabilityInfo: [
+        { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "LOW", cvssVectors: [] }] },
+      ],
+      exploitInfo: [{ cveId: "CVE-2024-1", kev: true, epssScore: 0.9, epssPercentile: 0.9 }],
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, true);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: major updateが理由のhighはfalse", () => {
+  const result = classifyRisk(
+    baseInput({ updateSummary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 1, minor: 0, patch: 0, other: 0 } } }),
+  );
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, false);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: 説明できないCI失敗が理由のhighはfalse", () => {
+  const ciSummary = summarizeCiResults({ backendTest: "failure" });
+  const result = classifyRisk(baseInput({ ciSummary }));
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, false);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: install script異常が理由のhighはfalse", () => {
+  const result = classifyRisk(baseInput({ installScriptAnomalies: [{ name: "evil-pkg", version: "1.0.0", kind: "new_package_with_install_script" }] }));
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, false);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: メンテナ変化が理由のhighはfalse", () => {
+  const result = classifyRisk(
+    baseInput({ maintainerAnomalies: [{ name: "foo", oldVersion: "1.0.0", newVersion: "1.1.0", oldPublisher: "alice", newPublisher: "mallory" }] }),
+  );
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, false);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: ブラスト半径でmedium→highへ昇格した場合はfalse（CVE/KEV以外が理由でhighに達したため）", () => {
+  const result = classifyRisk(baseInput({ blastRadiusImpact: true, fanOutCount: 3 }));
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, false);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: CVE/HighでHigh到達後にブラスト半径が重なってもtrueのまま（既にHighで追加昇格なし）", () => {
+  const result = classifyRisk(
+    baseInput({
+      blastRadiusImpact: true,
+      vulnerabilityInfo: [
+        { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "HIGH", cvssVectors: [] }] },
+      ],
+      exploitInfo: [],
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, true);
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: highに達していない場合はfalse", () => {
+  const result = classifyRisk(baseInput());
+  assert.equal(result.level, "low");
+  assert.equal(result.vulnerabilityOnlyHigh, false);
+});
