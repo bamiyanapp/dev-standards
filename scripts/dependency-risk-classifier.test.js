@@ -235,3 +235,31 @@ test("CLI: vulnerability-info.json・exploit-info.jsonが無い場合はセキ�
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test("classifyRisk: blastRadiusImpactがtrueの場合、lowをmediumへ1段階昇格する（issue #689）", () => {
+  const result = classifyRisk(baseInput({ blastRadiusImpact: true }));
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("重要パス")));
+});
+
+test("classifyRisk: blastRadiusImpactがtrueの場合、mediumをhighへ1段階昇格する", () => {
+  const result = classifyRisk(baseInput({ blastRadiusImpact: true, fanOutCount: 3 }));
+  assert.equal(result.level, "high");
+});
+
+test("classifyRisk: blastRadiusImpactがtrueでも既にhighならhighのまま（追加昇格なし）", () => {
+  const result = classifyRisk(
+    baseInput({
+      blastRadiusImpact: true,
+      updateSummary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 1, minor: 0, patch: 0, other: 0 } },
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.ok(result.reasons.some((r) => r.includes("既にHigh")));
+});
+
+test("classifyRisk: blastRadiusImpactを省略（既定false）した場合は昇格しない（重要パス未宣言リポジトリへの後方互換）", () => {
+  const result = classifyRisk(baseInput());
+  assert.equal(result.level, "low");
+  assert.ok(!result.reasons.some((r) => r.includes("重要パス")));
+});
