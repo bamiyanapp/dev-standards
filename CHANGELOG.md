@@ -1,3 +1,10 @@
+# [2.58.0](https://github.com/bamiyanapp/dev-standards/compare/v2.57.1...v2.58.0) (2026-10-03)
+
+
+### Features
+
+* **ci:** 維持リスクによる自動マージ上書きをCVE/KEV限定にし、維持リスクにブラスト半径を反映する ([#702](https://github.com/bamiyanapp/dev-standards/issues/702)) ([fc0e30a](https://github.com/bamiyanapp/dev-standards/commit/fc0e30a799a28cb6afc7bf7df178adb050f25571))
+
 ## [2.57.1](https://github.com/bamiyanapp/dev-standards/compare/v2.57.0...v2.57.1) (2026-10-03)
 
 
