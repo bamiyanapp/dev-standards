@@ -1943,13 +1943,15 @@ jobs:
       # v2.56.0で、issue #690（維持リスク軸、dependency-stale-risk-classifier.js・
       # dependency-vulnerability-info.jsのversionField引数追加）を含むタグへ更新した。
       # v2.57.0で、issue #689（業務影響度・ブラスト半径、dependency-blast-radius.js追加）
-      # を含むタグへ更新した
+      # を含むタグへ更新した。v2.58.0で、issue #700（vulnerabilityOnlyHighによる
+      # 維持リスク上書きの限定）・issue #701（維持リスクへのブラスト半径反映）を
+      # 含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.57.0
+          ref: v2.58.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
