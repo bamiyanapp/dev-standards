@@ -1679,6 +1679,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    # secretsコンテキストはstepのif:条件では参照できないため、job env経由で
+    # boolean化してから後段のif:で使う（standards-check jobと同様）
+    env:
+      HAS_BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -1769,6 +1773,7 @@ jobs:
       # bamiyanapp/karuta#824のフィードバックで判明: PRコメントだけでは
       # 「ドキュメント本体に組み込まれていない」ため実質見に行けない）
       - name: Publish rendered diagrams as the latest baseline
+        id: publish-latest
         if: steps.diagrams.outputs.found == 'true' && github.event_name == 'push'
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v4
@@ -1778,6 +1783,54 @@ jobs:
           publish_branch: docs-diagrams
           destination_dir: latest
           keep_files: true
+
+      # latest/<file>.pngは固定URLのまま内容だけを上書きする設計のため、GitHubの
+      # Markdownレンダリング画面が画像表示に使うcamo.githubusercontent.com
+      # （画像プロキシ）が、オリジン（raw.githubusercontent.com）のCache-Controlに
+      # 関わらずURL文字列をキャッシュキーとして古い内容を返し続けることがある
+      # （issue #723、ユーザーが実機で確認）。再レンダリングのたびにimageリンクへ
+      # キャッシュバスティング用のクエリ文字列（コミットSHA）を付与し直すことで、
+      # camo側に新しいURL＝新しいキャッシュエントリとして認識させる
+      - name: Cache-bust latest diagram links in the referencing docs
+        id: cache-bust
+        if: steps.publish-latest.outcome == 'success' && env.HAS_BOT_TOKEN == 'true'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const sha = context.sha;
+            const repo = '${{ github.repository }}';
+            const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const manifest = JSON.parse(fs.readFileSync('mermaid-diagrams/manifest.json', 'utf-8'));
+            const changedFiles = [];
+            for (const { sourceFile, fileName } of manifest) {
+              const content = fs.readFileSync(sourceFile, 'utf-8');
+              const pattern = new RegExp(`(https://raw\\.githubusercontent\\.com/${escape(repo)}/docs-diagrams/latest/${escape(fileName)})(\\?[^)\\s]*)?`, 'g');
+              const updated = content.replace(pattern, `$1?${sha}`);
+              if (updated !== content) {
+                fs.writeFileSync(sourceFile, updated);
+                changedFiles.push(sourceFile);
+              }
+            }
+            core.setOutput('changed', changedFiles.length > 0 ? 'true' : 'false');
+            core.setOutput('files', changedFiles.join(' '));
+
+      # [skip ci]必須: このコミット自体がpushイベントを再トリガーし
+      # render-mermaid-diagrams jobを再実行すると、新しいcontext.shaで
+      # またキャッシュバスティング文字列を書き換えて再度pushする無限ループになる
+      - name: Push cache-busted doc links back to the base branch
+        if: steps.cache-bust.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANGED_FILES: ${{ steps.cache-bust.outputs.files }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- $CHANGED_FILES
+          git commit -m "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する [skip ci]" -m "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723）。"
+          git push "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ github.ref_name }}"
 
       - name: Build mermaid diagrams summary
         id: diagrams-summary
