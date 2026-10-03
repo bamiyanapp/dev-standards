@@ -41,14 +41,26 @@ function classifyUpdateType(oldVersion, newVersion) {
 
 // package-lock.json（npm lockfileVersion 3）のルートエントリ（packages[""]）から、
 // 直接依存（dependencies/devDependencies/optionalDependencies/peerDependencies）の
-// パッケージ名集合を取得する
+// パッケージ名集合を取得する。npm workspaces構成（packages[""].workspaces、
+// 例: ["frontend", "backend"]）の場合、各ワークスペースメンバー自身の
+// package.jsonが宣言する依存はpackages[""]には現れず、packages["<ワークスペース
+// パス>"]に現れる。これを合算しないと、workspaces構成の参照側リポジトリ
+// （karuta等）では各ワークスペースの直接依存が常に「間接」と誤分類され、
+// ブラスト半径判定（dependency-blast-radius.jsのchanges.filter((c) => c.direct)）が
+// 直接依存の更新を一切対象にできなくなる（bamiyanapp/dev-standards#720）
 function extractDirectDependencyNames(lockJson) {
   const root = lockJson?.packages?.[""] ?? {};
   const names = new Set();
-  for (const field of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
-    for (const name of Object.keys(root[field] ?? {})) {
-      names.add(name);
+  const addFieldsFrom = (entry) => {
+    for (const field of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+      for (const name of Object.keys(entry[field] ?? {})) {
+        names.add(name);
+      }
     }
+  };
+  addFieldsFrom(root);
+  for (const workspacePath of root.workspaces ?? []) {
+    addFieldsFrom(lockJson?.packages?.[workspacePath] ?? {});
   }
   return names;
 }

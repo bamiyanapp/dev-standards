@@ -46,6 +46,37 @@ test("extractDirectDependencyNames: ルートのdependencies/devDependenciesを�
   assert.deepEqual([...names].sort(), ["bar", "foo"]);
 });
 
+test("extractDirectDependencyNames: npm workspaces構成では各ワークスペースメンバーの依存も合算する（karuta実環境で発覚、bamiyanapp/dev-standards#720）", () => {
+  const lock = {
+    packages: {
+      "": {
+        workspaces: ["frontend", "backend"],
+        devDependencies: { commitlint: "^21.0.0" },
+      },
+      frontend: {
+        dependencies: { react: "^19.0.0" },
+      },
+      backend: {
+        dependencies: { "@aws-sdk/client-polly": "^3.1146.0" },
+      },
+    },
+  };
+  const names = extractDirectDependencyNames(lock);
+  assert.deepEqual([...names].sort(), ["@aws-sdk/client-polly", "commitlint", "react"]);
+});
+
+test("extractDirectDependencyNames: workspacesが無い通常構成の判定結果は変化しない", () => {
+  const lock = {
+    packages: {
+      "": {
+        dependencies: { foo: "^1.0.0" },
+      },
+    },
+  };
+  const names = extractDirectDependencyNames(lock);
+  assert.deepEqual([...names], ["foo"]);
+});
+
 test("packageNameFromKey: スコープ付き・ネストしたパッケージ名を取り出す", () => {
   assert.equal(packageNameFromKey("node_modules/foo"), "foo");
   assert.equal(packageNameFromKey("node_modules/@scope/foo"), "@scope/foo");
