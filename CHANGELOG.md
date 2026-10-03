@@ -1,3 +1,10 @@
+# [2.57.0](https://github.com/bamiyanapp/dev-standards/compare/v2.56.1...v2.57.0) (2026-10-03)
+
+
+### Features
+
+* **ci:** 依存更新のRisk判定に業務影響度（ブラスト半径）を反映する ([#693](https://github.com/bamiyanapp/dev-standards/issues/693)) ([162376b](https://github.com/bamiyanapp/dev-standards/commit/162376b0673092182d1aeccdd30ffa86ca7126ba)), closes [#689](https://github.com/bamiyanapp/dev-standards/issues/689)
+
 ## [2.56.1](https://github.com/bamiyanapp/dev-standards/compare/v2.56.0...v2.56.1) (2026-10-02)
 
 
