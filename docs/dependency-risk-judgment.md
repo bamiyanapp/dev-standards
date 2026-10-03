@@ -76,7 +76,7 @@ CVE/CVSS/KEVチェック（上記）は「既知の脆弱性があるかどう�
 
 ### SBOM（Software Bill of Materials）
 
-SBOMはRisk判定そのものには使わない。**「何が入っているか」を記録するための証跡**である（本体はartifactとして保存し、要約のみRisk Summaryコメントに掲載する）。
+SBOMはRisk判定そのものには使わない。**「何が入っているか」を記録するための証跡**である（本体はartifactとして保存し、要約のみRisk Summaryコメントに掲載する）。artifact（zip）をスマートフォンで開いて確認するのは現実的ではないため、ライセンス不明のコンポーネントだけは名前・バージョンをコメント内へ直接列挙する（[#716](https://github.com/bamiyanapp/dev-standards/issues/716)）。
 
 依存関係を記録しておくことで、将来新たなCVEが公表された際に影響範囲を逆引きできる。
 
