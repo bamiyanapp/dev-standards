@@ -1,3 +1,10 @@
+# [2.59.0](https://github.com/bamiyanapp/dev-standards/compare/v2.58.1...v2.59.0) (2026-10-03)
+
+
+### Features
+
+* **ci:** SBOM要約にライセンス不明コンポーネントの一覧をPRコメント内へ直接列挙する ([#716](https://github.com/bamiyanapp/dev-standards/issues/716)) ([#717](https://github.com/bamiyanapp/dev-standards/issues/717)) ([93d25e7](https://github.com/bamiyanapp/dev-standards/commit/93d25e730ee57ca098579b477637769f45f34a20))
+
 ## [2.58.1](https://github.com/bamiyanapp/dev-standards/compare/v2.58.0...v2.58.1) (2026-10-03)
 
 
