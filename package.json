@@ -16,7 +16,7 @@
     "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1106.0",
+    "@aws-sdk/client-dynamodb": "^3.1146.0",
     "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^21.0.0",
     "@semantic-release/changelog": "^7.0.0",
