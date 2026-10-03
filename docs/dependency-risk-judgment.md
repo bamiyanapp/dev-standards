@@ -14,7 +14,7 @@ flowchart TD
     B -->|package-lock.json変更あり| D[dependency-update-info.js: update type・直接/間接判定]
     D --> E[新バージョンのCVE/CVSS/KEV/EPSS取得]
     D --> F[旧バージョンのCVE/CVSS/KEV/EPSS取得]
-    D --> G[新規install script・メンテナ変化を検知<br/>SBOM生成（Supply Chainチェック）]
+    D --> G[Supply Chainチェック]
     D --> H[dependency-cruiser + 重要パス宣言で<br/>業務影響度（ブラスト半径）判定]
     E --> I[適用リスク分類: classifyRisk]
     G --> I
