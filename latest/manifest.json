@@ -80,9 +80,9 @@
     "fileName": "serverless-static-site-pattern-2.png"
   },
   {
-    "sourceFile": "docs/reusable-workflows-reference.md",
+    "sourceFile": "docs/dependency-risk-judgment.md",
     "index": 1,
-    "fileName": "reusable-workflows-reference.png"
+    "fileName": "dependency-risk-judgment.png"
   },
   {
     "sourceFile": ".claude/skills/git-workflow/SKILL.md",
