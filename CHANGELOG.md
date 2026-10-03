@@ -1,3 +1,10 @@
+## [2.59.3](https://github.com/bamiyanapp/dev-standards/compare/v2.59.2...v2.59.3) (2026-10-03)
+
+
+### Bug Fixes
+
+* **ci:** dependency-risk-summaryの自己参照タグをv2.59.2へ更新する ([#722](https://github.com/bamiyanapp/dev-standards/issues/722)) ([bd471cf](https://github.com/bamiyanapp/dev-standards/commit/bd471cf32a6b43fb87da576e026e106badfd2453))
+
 ## [2.59.2](https://github.com/bamiyanapp/dev-standards/compare/v2.59.1...v2.59.2) (2026-10-03)
 
 
