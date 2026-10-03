@@ -41,8 +41,60 @@ flowchart TD
 
 - update type（major/minor/patch）・直接/間接依存・CVE/CVSS/EPSS/KEV・CI結果・ファンアウト（dev-standards自体の更新の場合）
 - GitHub Actions/reusable workflow参照の更新（dev-standards自体を含むworkflow参照のバージョン更新）
-- **Supply Chainチェック**（[#648](https://github.com/bamiyanapp/dev-standards/issues/648) Phase 3）: 新規にinstall scriptを持つようになったパッケージの検知（マルウェア混入の兆候）・メンテナ（公開者）が変化したパッケージの検知（乗っ取りの兆候）・SBOM生成（本体はartifactとして保存し、要約のみコメントに掲載）
+- **Supply Chainチェック**（新規install script・メンテナ変更・SBOM、詳細は次節）
 - **業務影響度（ブラスト半径）**: 変更された直接依存のimport元が、重要パスに該当する場合を考える。重要パスはリポジトリルートの`dependency-risk-critical-paths.json`（`{"criticalPaths": ["frontend/src/payment/"]}`形式、パスのprefix文字列でglobは使わない）で宣言する。該当する場合、適用リスクを1段階昇格する。宣言が無い場合は昇格しない（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)）
+
+## Supply Chainチェック（[#648](https://github.com/bamiyanapp/dev-standards/issues/648) Phase 3）
+
+CVE/CVSS/KEVチェック（上記）は「既知の脆弱性があるかどうか」を見る。Supply Chainチェックはこれとは別の観点で、OSSパッケージそのものに不自然な変化が無いかを見る。CVEが0件でも、install script追加や公開者変更等の別のリスクシグナルが存在し得るため、両方を独立に見る。
+
+**重要**: いずれの検知結果も、悪性であることを証明するものではない。通常のバージョン更新では見落としやすい変化を検出し、人間による確認が必要かどうかを判断するための**シグナル**である。「検知＝Riskを上げる材料」ではあるが、「検知＝即危険」ではない。
+
+| チェック | 検知対象 | Riskへの使い方 |
+|---|---|---|
+| 新規install script | インストール時に実行されるコードの有無の変化（`package-lock.json`の`hasInstallScript`フラグ比較のみ、外部通信無し） | 異常変化としてHighへ格上げする材料 |
+| メンテナ（公開者）変更 | npm registryの公開者情報（`_npmUser.name`）の変化 | takeover等のシグナルとしてHighへ格上げする材料 |
+| SBOM生成 | 実際に含まれるコンポーネントと依存関係そのもの | Risk判定には使わない。影響範囲の追跡・監査のための証跡 |
+
+### 新規install scriptの検知（例）
+
+```
+更新前: @scope/pkg@1.0.0 → hasInstallScript: false
+更新後: @scope/pkg@1.1.0 → hasInstallScript: true
+```
+
+`package-lock.json`（lockfileVersion 3）は、実際のscript本文ではなく`hasInstallScript`という真偽値フラグのみを記録する（本文自体はpackage.json側にあり、lockfileには含まれない）。このフラグが新規に`true`へ変化したパッケージを検知する（`scripts/dependency-package-anomaly-info.js`）。既存パッケージがinstall scriptを失う（`true`→`false`）変化は、より安全な状態への変化のため検知対象としない。
+
+### メンテナ（公開者）変更の検知（例）
+
+```
+更新前: publisher = alice
+更新後: publisher = mallory
+```
+
+旧バージョンと新バージョンでnpm registry上の公開者（npmアカウント名）が異なる場合に検知する（`scripts/dependency-maintainer-info.js`）。暗号学的な署名検証（provenance attestation等）は対象外である（詳細は同ファイルのコードコメント参照）。
+
+### SBOM（Software Bill of Materials）
+
+SBOMはRisk判定そのものには使わない。**「何が入っているか」を記録するための証跡**である（本体はartifactとして保存し、要約のみRisk Summaryコメントに掲載する）。
+
+依存関係を記録しておくことで、将来新たなCVEが公表された際に影響範囲を逆引きできる。
+
+```
+Application → library A → library B → library C
+```
+
+上記の依存関係が分かっていれば、`library C`に新規CVEが公表された場合、`library B`・`library A`経由で`Application`まで影響が及ぶことを即座に追跡できる。
+
+### Risk Engineとの接続
+
+install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力され、検知された場合は無条件でHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
+
+```
+install script検知: NEW      ─┐
+メンテナ変更検知:   CHANGED  ─┼─→ classifyRisk() → 適用リスク（Low/Medium/High）
+SBOM生成:           実施済み ─┘   （SBOMはRisk判定へは渡らない。証跡として別表示のみ）
+```
 
 ## 適用リスク
 
