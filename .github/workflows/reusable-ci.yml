@@ -1938,13 +1938,15 @@ jobs:
       # dependency-package-anomaly-info.js・dependency-maintainer-info.js・
       # dependency-sbom-summary.js・classifyRisk()への接続を含むタグへ更新した。
       # v2.56.0で、issue #690（維持リスク軸、dependency-stale-risk-classifier.js・
-      # dependency-vulnerability-info.jsのversionField引数追加）を含むタグへ更新した
+      # dependency-vulnerability-info.jsのversionField引数追加）を含むタグへ更新した。
+      # v2.57.0で、issue #689（業務影響度・ブラスト半径、dependency-blast-radius.js追加）
+      # を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.56.0
+          ref: v2.57.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
