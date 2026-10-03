@@ -59,6 +59,40 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `enable_dependency_risk_summary` | `true`の場合、PRで`package-lock.json`・`.github/workflows/*.yml`・`.github/actions/*/action.yml`のいずれかが変更されていれば、更新されたパッケージごとのupdate type（major/minor/patch）・直接/間接依存・CVE/CVSS/EPSS/KEV・CI結果・ファンアウト（dev-standards自体の更新の場合）・GitHub Actions/reusable workflow参照の更新・SBOM要約・package script異常・メンテナ異常・**業務影響度（ブラスト半径）**（変更された直接依存のimport元が、リポジトリルートの`dependency-risk-critical-paths.json`（`{"criticalPaths": ["frontend/src/payment/"]}`形式、パスのprefix文字列でglobは使わない）で宣言された重要パスに該当する場合、適用リスクを1段階昇格する。宣言が無い場合は昇格しない。[bamiyanapp/dev-standards#689](https://github.com/bamiyanapp/dev-standards/issues/689)）・**適用リスク**（このPRを適用する場合のLow/Medium/High判定）・**維持リスク**（このPRを適用せず現行バージョンに留まる場合のLow/Medium/High判定、更新前バージョンのCVE/KEVを見る。[bamiyanapp/dev-standards#690](https://github.com/bamiyanapp/dev-standards/issues/690)）をまとめたRisk SummaryをPRコメントへ投稿する`dependency-risk-summary` jobを実行するかどうか（[bamiyanapp/dev-standards#645](https://github.com/bamiyanapp/dev-standards/issues/645)「OSS依存更新の自動安全判定・エスカレーション基盤」、Phase 1: [bamiyanapp/dev-standards#646](https://github.com/bamiyanapp/dev-standards/issues/646)、Phase 3: [bamiyanapp/dev-standards#648](https://github.com/bamiyanapp/dev-standards/issues/648)）。Renovate等が作成した依存更新PRのリスク判断を、人間が調査を始める前に補助する情報を用意するのが目的。各ステップは`continue-on-error: true`のため、このjobの失敗が`merge` jobをブロックすることはない。SBOM本体はPRコメントへ埋め込まずワークフローのartifactとして保存する | `false` |
 | `enable_dependency_risk_gating` | `true`の場合、`dependency-risk-summary` jobが出力する適用リスク（risk_level、Low/Medium/High）がhighのPRでは、`merge` jobによる自動マージを行わない（[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「OSS依存更新の自動安全判定・エスカレーション基盤 Phase 2」Task 3、対象をHighのみへ縮小した経緯は[bamiyanapp/dev-standards#685](https://github.com/bamiyanapp/dev-standards/issues/685)参照）。ただし維持リスク（stale_risk_level、このPRを適用せず現行バージョンに留まった場合の危険度）がhighの場合は、放置の方が危険なため適用リスクがhighでも自動マージを止めない（[bamiyanapp/dev-standards#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。適用リスクがLow/Medium判定、またはrisk_levelが無い（`package-lock.json`を変更していないPR等で`dependency-risk-summary` job自体が実行されなかった場合）は、他のCI条件のみで自動マージの可否を判定する従来どおりの動作になる。`enable_dependency_risk_summary`が`false`の場合はrisk_level・stale_risk_level自体が生成されないため、本入力の値に関わらず常に従来どおりの動作になる | `false` |
 
+### 依存更新Risk判定フロー（issue #645）
+
+上記2つの入力が関わる`dependency-risk-summary` job内部の判定フローは、個別ルールの説明が表に集約されている一方で全体の流れを把握しにくい。[bamiyanapp/dev-standards#695](https://github.com/bamiyanapp/dev-standards/issues/695)で、分岐を含む処理フローとして以下のflowchartへ可視化した。個別の昇格ルール（major update・CVE/KEV・ファンアウト等）は上記の表およびscripts/dependency-risk-classifier.jsのコードコメントを正本とし、ここでは全体構造のみを示す。
+
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart TD
+    A[依存更新PR] --> B{package-lock.jsonまたは<br/>GitHub Actions参照が変更された?}
+    B -->|いいえ| C[risk_level/stale_risk_levelは生成されない]
+    B -->|package-lock.json変更あり| D[dependency-update-info.js: update type・直接/間接判定]
+    D --> E[新バージョンのCVE/CVSS/KEV/EPSS取得]
+    D --> F[旧バージョンのCVE/CVSS/KEV/EPSS取得]
+    D --> G[package script異常・メンテナ異常・SBOM]
+    D --> H[dependency-cruiser + 重要パス宣言でブラスト半径判定]
+    E --> I[適用リスク分類: classifyRisk]
+    G --> I
+    H --> I
+    F --> J[維持リスク分類: classifyStaleRisk]
+    I --> K{適用リスク Low/Medium/High}
+    J --> L{維持リスク Low/Medium/High}
+    K --> M{merge gateの判定}
+    L --> M
+    M -->|適用High かつ 維持High以外| N[自動マージ停止・人間レビュー待ち]
+    M -->|それ以外| O[自動マージ継続]
+```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+
+</details>
+
+![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/reusable-workflows-reference.png)
+
 `frontend_dir`/`backend_dir`/`node_version`等のCI関連inputとは別に、semantic-releaseの実行に関する入力も存在する。具体的には`enable_release` / `semantic_release_node_version` / `base_branch`が該当する。加えて`enable_changelog_json` / `changelog_source_path`も該当する。`changelog_json_output_path` / `enable_shared_release_config`も同様である。これらは`reusable-cd.yml`側の入力であり、このワークフロー（`reusable-ci.yml`）には存在しない。[bamiyanapp/dev-standards#76](https://github.com/bamiyanapp/dev-standards/issues/76)でのメジャーバージョンアップに伴い削除した。同名の入力を`reusable-cd.yml`側に指定すること（下記）。
 
 `secrets.BOT_TOKEN`（任意）を渡すことができる。これはcommitlintジョブのsubmodule取得や、`merge` jobでの実際のPRマージ（squash merge API呼び出し）で利用される。
