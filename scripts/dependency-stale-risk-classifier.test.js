@@ -52,6 +52,48 @@ test("classifyStaleRisk: LOW severityのCVEのみ（KEV無し）ならlowのま�
   assert.equal(result.level, "low");
 });
 
+test("classifyStaleRisk: blastRadiusImpactがtrueの場合、lowをmediumへ1段階昇格する（issue #701）", () => {
+  const result = classifyStaleRisk({ oldVulnerabilityInfo: [], oldExploitInfo: [], securityDataAvailable: true, blastRadiusImpact: true });
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("重要パス")));
+});
+
+test("classifyStaleRisk: blastRadiusImpactがtrueでもmediumからhighへは昇格しない（CVE/KEVのみがhighの根拠）", () => {
+  const result = classifyStaleRisk({
+    oldVulnerabilityInfo: [
+      { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "HIGH", cvssVectors: [] }] },
+    ],
+    oldExploitInfo: [],
+    securityDataAvailable: true,
+    blastRadiusImpact: true,
+  });
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("highへの昇格は既知のCVE/KEVのみを根拠とする")));
+});
+
+test("classifyStaleRisk: blastRadiusImpactがtrueでも既にhigh（KEV該当）ならhighのまま", () => {
+  const result = classifyStaleRisk({
+    oldVulnerabilityInfo: [
+      { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "LOW", cvssVectors: [] }] },
+    ],
+    oldExploitInfo: [{ cveId: "CVE-2024-1", kev: true, epssScore: 0.9, epssPercentile: 0.9 }],
+    securityDataAvailable: true,
+    blastRadiusImpact: true,
+  });
+  assert.equal(result.level, "high");
+});
+
+test("classifyStaleRisk: securityDataAvailable=falseでもblastRadiusImpactがtrueならmediumへ昇格する（highへは倒さない）", () => {
+  const result = classifyStaleRisk({ securityDataAvailable: false, blastRadiusImpact: true });
+  assert.equal(result.level, "medium");
+});
+
+test("classifyStaleRisk: blastRadiusImpactを省略（既定false）した場合は昇格しない（重要パス未宣言リポジトリへの後方互換）", () => {
+  const result = classifyStaleRisk({ oldVulnerabilityInfo: [], oldExploitInfo: [], securityDataAvailable: true });
+  assert.equal(result.level, "low");
+  assert.ok(!result.reasons.some((r) => r.includes("重要パス")));
+});
+
 test("CLI: 引数無しの場合はUsageを表示して終了コード1", () => {
   assert.throws(() => {
     execFileSync("node", [path.join(__dirname, "dependency-stale-risk-classifier.js")], { stdio: "pipe" });
@@ -74,4 +116,23 @@ test("CLI: old-vulnerability-info.jsonのみを渡した場合（old-exploit-inf
   assert.equal(result.level, "low");
   const output = fs.readFileSync(githubOutputPath, "utf-8");
   assert.ok(output.includes("level=low"));
+});
+
+test("CLI: blast-radius-info.json（hasCriticalPathImpact: true）を渡すとlowからmediumへ昇格する", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "stale-risk-cli-test-"));
+  const oldVulnerabilityInfoPath = path.join(tmpDir, "old-vulnerability-info.json");
+  const oldExploitInfoPath = path.join(tmpDir, "old-exploit-info.json");
+  const blastRadiusInfoPath = path.join(tmpDir, "blast-radius-info.json");
+  fs.writeFileSync(oldVulnerabilityInfoPath, "[]");
+  fs.writeFileSync(oldExploitInfoPath, "[]");
+  fs.writeFileSync(blastRadiusInfoPath, JSON.stringify({ hasCriticalPathImpact: true, hits: [] }));
+
+  const stdout = execFileSync(
+    "node",
+    [path.join(__dirname, "dependency-stale-risk-classifier.js"), oldVulnerabilityInfoPath, oldExploitInfoPath, blastRadiusInfoPath],
+    { encoding: "utf-8" },
+  );
+
+  const result = JSON.parse(stdout);
+  assert.equal(result.level, "medium");
 });

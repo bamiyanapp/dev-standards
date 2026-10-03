@@ -1841,12 +1841,15 @@ jobs:
     # risk_level: dependency-risk-classifier.js（issue #647 Phase 2 Task 1）によるLow/Medium/High
     # 判定結果（「適用リスク」＝このPRを適用すること自体の危険度）。merge job（Task 3で接続）
     # がこの出力を見て自動マージを止めるかどうかを決める。
+    # vulnerability_only_high: risk_levelがhighに達した理由がCVE/KEV残存のみか（issue #700）。
+    # major update・CI失敗・supply chain異常・ブラスト半径由来のHighではfalseになる。
     # stale_risk_level: dependency-stale-risk-classifier.js（issue #690）による
     # 「維持リスク」＝このPRを適用せず現行バージョンに留まった場合の危険度。
     # gateがそもそも実行されない場合（package-lock.jsonが変更されていないPR等）はいずれも
     # 空文字列になる
     outputs:
       risk_level: ${{ steps.classify.outputs.level }}
+      vulnerability_only_high: ${{ steps.classify.outputs.vulnerability_only_high }}
       stale_risk_level: ${{ steps.classify-stale.outputs.level }}
     steps:
       # submodules: true（issue #689、業務影響度・ブラスト半径判定用）: dependency-cruiser
@@ -2035,6 +2038,36 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-risk-security-summary.js /tmp/vulnerability-info.json /tmp/exploit-info.json > /tmp/security-section.md
 
+      # issue #689（業務影響度・ブラスト半径）: 変更された直接依存パッケージが
+      # プロダクトコードのどこでimportされているかをdependency-cruiser（architecture-check
+      # と同じ設定・同じ対象ディレクトリ）で解析する。node_modulesの実インストールは
+      # 不要（dependency-cruiserはimportの記法だけでnpm依存を分類するため、
+      # architecture-check job自体がnpm install無しで動作していることからも実証済み）。
+      # issue #701で、後述の「維持リスク」判定（Classify stale risk）もブラスト半径の
+      # 結果を参照するようになったため、このステップはそれより前に実行する必要がある
+      - name: Run dependency-cruiser for blast radius
+        id: blast-radius-cruise
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: |
+          targets=()
+          [ -d "${{ inputs.frontend_dir }}" ] && targets+=("${{ inputs.frontend_dir }}")
+          [ -d "${{ inputs.backend_dir }}" ] && targets+=("${{ inputs.backend_dir }}")
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo '{"modules":[]}' > /tmp/depcruise-output.json
+            exit 0
+          fi
+          npx --yes dependency-cruiser@16 --config dependency-cruiser.config.cjs --output-type json "${targets[@]}" > /tmp/depcruise-output.json
+
+      # 重要パス（決済・認証等）の宣言は参照側リポジトリ自身の責務。リポジトリルートに
+      # dependency-risk-critical-paths.jsonが無い場合はdependency-blast-radius.js側で
+      # 空配列へ安全側にフォールバックし、Risk判定への影響は無い（issue #689初期スコープ）
+      - name: Classify blast radius
+        id: classify-blast-radius
+        if: steps.blast-radius-cruise.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-blast-radius.js /tmp/depcruise-output.json /tmp/dependency-update-info.json dependency-risk-critical-paths.json > /tmp/blast-radius-info.json
+
       # issue #690。「適用リスク」（上記）とは別の「維持リスク」（このPRを適用せず
       # 現行バージョンに留まった場合の危険度）を判定するため、oldVersion（更新前）向けに
       # 同じvulnerability-info.js/exploit-info.jsを再実行する。versionFieldの第2引数で
@@ -2051,11 +2084,14 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-exploit-info.js /tmp/old-vulnerability-info.json > /tmp/old-exploit-info.json
 
+      # issue #701。blast-radius-info.jsonを3rd引数で渡し、重要パスに該当する場合は
+      # 維持リスクをlow→mediumへ1段階昇格する（high昇格はCVE/KEVのみを根拠とする設計を
+      # 維持するため対象外。dependency-stale-risk-classifier.jsのコメント参照）
       - name: Classify stale risk
         id: classify-stale
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json > /tmp/stale-risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json > /tmp/stale-risk-classification.json
 
       # ファンアウト注記（issue #646 Task G前半）: dev-standardsは複数リポジトリから
       # 参照される共有基盤のため、dev-standards自身への依存更新は「影響リポジトリ数」
@@ -2088,34 +2124,6 @@ jobs:
           CI_RESULT_ARCHITECTURE_CHECK: ${{ needs.architecture-check.result }}
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
         run: node .dev-standards-actions/scripts/dependency-risk-ci-results.js > /tmp/ci-results-section.md
-
-      # issue #689（業務影響度・ブラスト半径）: 変更された直接依存パッケージが
-      # プロダクトコードのどこでimportされているかをdependency-cruiser（architecture-check
-      # と同じ設定・同じ対象ディレクトリ）で解析する。node_modulesの実インストールは
-      # 不要（dependency-cruiserはimportの記法だけでnpm依存を分類するため、
-      # architecture-check job自体がnpm install無しで動作していることからも実証済み）
-      - name: Run dependency-cruiser for blast radius
-        id: blast-radius-cruise
-        if: steps.dependency-info.outcome == 'success'
-        continue-on-error: true
-        run: |
-          targets=()
-          [ -d "${{ inputs.frontend_dir }}" ] && targets+=("${{ inputs.frontend_dir }}")
-          [ -d "${{ inputs.backend_dir }}" ] && targets+=("${{ inputs.backend_dir }}")
-          if [ ${#targets[@]} -eq 0 ]; then
-            echo '{"modules":[]}' > /tmp/depcruise-output.json
-            exit 0
-          fi
-          npx --yes dependency-cruiser@16 --config dependency-cruiser.config.cjs --output-type json "${targets[@]}" > /tmp/depcruise-output.json
-
-      # 重要パス（決済・認証等）の宣言は参照側リポジトリ自身の責務。リポジトリルートに
-      # dependency-risk-critical-paths.jsonが無い場合はdependency-blast-radius.js側で
-      # 空配列へ安全側にフォールバックし、Risk判定への影響は無い（issue #689初期スコープ）
-      - name: Classify blast radius
-        id: classify-blast-radius
-        if: steps.blast-radius-cruise.outcome == 'success'
-        continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-blast-radius.js /tmp/depcruise-output.json /tmp/dependency-update-info.json dependency-risk-critical-paths.json > /tmp/blast-radius-info.json
 
       # Risk分類（issue #647 Phase 2 Task 1・2）: update type・CVE/CVSS/KEV/EPSS・CI結果・
       # ファンアウト・ブラスト半径（issue #689）を基にLow/Medium/Highへ機械的に分類する。
@@ -2167,10 +2175,14 @@ jobs:
             // issue #690: 「適用リスク」（levelがHighの場合は原則保留）と「維持リスク」
             // （staleLevelがHighの場合、適用せず現行バージョンに留まる方が危険）の
             // 組み合わせでRecommended Actionを決める。維持リスクがHighなら、適用リスクが
-            // Highでも自動マージ対象にする（放置の方が危険なため）
-            function describeRecommendedAction(level, staleLevel) {
+            // Highでも自動マージ対象にする（放置の方が危険なため）。
+            // issue #700: ただしこの上書きは、適用リスクHighの理由がCVE/KEV残存のみ
+            // （vulnerabilityOnlyHigh）の場合に限る。major update・CI失敗・supply chain異常
+            // （install script/メンテナ変化）・ブラスト半径由来のHighは、新旧どちらを選ぶかの
+            // 比較ではなくPR自体の危険性・複雑さが理由のため、維持リスクに関わらず保留する
+            function describeRecommendedAction(level, staleLevel, vulnerabilityOnlyHigh) {
               if (level === 'high') {
-                return staleLevel === 'high'
+                return vulnerabilityOnlyHigh && staleLevel === 'high'
                   ? '維持リスクが高いため、適用リスクがHighでも自動マージの対象です（issue #690）。'
                   : 'Human Reviewが必須です。自動マージの対象外です。';
               }
@@ -2217,7 +2229,7 @@ jobs:
               body += '\n';
             }
             if (riskResult) {
-              body += `Recommended Action: ${describeRecommendedAction(riskResult.level, staleRiskResult?.level)}\n\n`;
+              body += `Recommended Action: ${describeRecommendedAction(riskResult.level, staleRiskResult?.level, riskResult.vulnerabilityOnlyHigh)}\n\n`;
             }
             if (summary.total > 0) {
               body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
@@ -2345,14 +2357,17 @@ jobs:
     # いずれも実機で検証済み）を直接見て判定する必要がある
     #
     # 最後の行（issue #647 Phase 2 Task 3、issue #685で対象をHighのみへ変更、
-    # issue #690で維持リスクによる救済を追加）: dependency-risk-summary jobが出力する
-    # risk_level（適用リスク）がhighの場合、enable_dependency_risk_gatingが有効なら
-    # 原則自動マージしない。ただしstale_risk_level（維持リスク、このPRを適用せず
-    # 現行バージョンに留まった場合の危険度）がhighの場合は、放置の方が危険なため
-    # risk_levelがhighでも自動マージを止めない。risk_levelが空文字列
-    # （package-lock.jsonを変更していないPR等でjob自体が実行されなかった場合）や
-    # low/mediumの場合は左辺がfalseになるため、このor条件全体はtrueになり他の条件
-    # のみで判定される
+    # issue #690で維持リスクによる救済を追加、issue #700で救済の対象をさらに限定）:
+    # dependency-risk-summary jobが出力するrisk_level（適用リスク）がhighの場合、
+    # enable_dependency_risk_gatingが有効なら原則自動マージしない。ただし
+    # vulnerability_only_high（risk_levelがhighに達した理由がCVE/KEV残存のみであること、
+    # issue #700）かつstale_risk_level（維持リスク、このPRを適用せず現行バージョンに
+    # 留まった場合の危険度）がhighの場合は、放置の方が危険なためrisk_levelがhighでも
+    # 自動マージを止めない。major update・CI失敗・supply chain異常・ブラスト半径由来の
+    # Highはvulnerability_only_highがfalseになるため、維持リスクに関わらず保留のままになる。
+    # risk_levelが空文字列（package-lock.jsonを変更していないPR等でjob自体が実行されな
+    # かった場合）やlow/mediumの場合は左辺がfalseになるため、このor条件全体はtrueになり
+    # 他の条件のみで判定される
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -2370,7 +2385,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
-      (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || needs.dependency-risk-summary.outputs.stale_risk_level == 'high')
+      (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
     runs-on: ubuntu-latest
     permissions:
       contents: write

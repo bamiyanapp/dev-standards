@@ -123,6 +123,10 @@ function classifyRisk({
     reasons.push(`直接依存の更新が${updateSummary.direct}件あり、影響範囲の特定が難しい可能性があります`);
   }
 
+  // issue #700のvulnerabilityOnlyHigh判定用に、ブラスト半径エスカレーション直前の
+  // levelを記録しておく（「このHighはCVE/KEV残存だけが理由か」を後から判定するため）
+  const levelBeforeBlastRadius = level;
+
   // issue #689（業務影響度・ブラスト半径）。変更された直接依存が、参照側リポジトリが
   // 宣言した「重要パス」（dependency-blast-radius.js）からimportされている場合、
   // Risk判定を1段階昇格する（low→medium、medium→high、既にhighなら変化無し）。
@@ -144,7 +148,19 @@ function classifyRisk({
     reasons.push("patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした");
   }
 
-  return { level, reasons };
+  // issue #700。merge jobが「維持リスクによる自動マージ上書き」（issue #690）を
+  // 許していい場面を、適用リスクHighの理由がCVE/KEV残存のみの場合に限定するためのフラグ。
+  // major update・CI失敗・supply chain異常（install script/メンテナ変化）・ブラスト半径
+  // 由来のエスカレーションのいずれかが関与している場合はfalseにする。これらは「新旧どちらも
+  // 脆弱だから新しい方がまし」という比較が成り立たない理由（PR自体の危険性・複雑さ）であり、
+  // 「維持リスクが高いから」を理由に無審査で自動マージしてよい対象ではないため
+  const nonVulnerabilityHighDriver =
+    isUnclassifiable || ciFailures.hasUnexplainedFailure || installScriptAnomalies.length > 0 || maintainerAnomalies.length > 0;
+  const blastRadiusCausedHigh = blastRadiusImpact && levelBeforeBlastRadius !== "high" && level === "high";
+  const vulnerabilityOnlyHigh =
+    level === "high" && !nonVulnerabilityHighDriver && !blastRadiusCausedHigh && (hasCriticalOrHighCve || hasKev);
+
+  return { level, reasons, vulnerabilityOnlyHigh };
 }
 
 function readJsonFileIfExists(path) {
@@ -198,6 +214,7 @@ function main() {
 
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `level=${result.level}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `vulnerability_only_high=${result.vulnerabilityOnlyHigh}\n`);
   }
 }
 
