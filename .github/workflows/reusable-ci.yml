@@ -1947,13 +1947,16 @@ jobs:
       # 維持リスク上書きの限定）・issue #701（維持リスクへのブラスト半径反映）を
       # 含むタグへ更新した。v2.59.0で、issue #716（dependency-sbom-summary.jsの
       # 戻り値をunknownLicenseComponentsへ変更、PRコメントへライセンス不明
-      # コンポーネントの一覧を直接列挙）を含むタグへ更新した
+      # コンポーネントの一覧を直接列挙）を含むタグへ更新した。v2.59.2で、
+      # issue #720（npm workspaces構成でextractDirectDependencyNames()が
+      # 各ワークスペースメンバーの直接依存を見ておらず、常に「間接」と
+      # 誤分類していた問題の修正）を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.59.0
+          ref: v2.59.2
           path: .dev-standards-actions
 
       - name: Generate dependency update info
