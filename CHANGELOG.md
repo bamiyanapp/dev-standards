@@ -1,3 +1,10 @@
+# [2.61.0](https://github.com/bamiyanapp/dev-standards/compare/v2.60.0...v2.61.0) (2026-10-04)
+
+
+### Features
+
+* **shared/ui:** ErrorBoundaryへfallbackUrl propを追加する ([#730](https://github.com/bamiyanapp/dev-standards/issues/730)) ([9fcbefa](https://github.com/bamiyanapp/dev-standards/commit/9fcbefa951b9747ac3a9dc55a72198d760aa9bfb))
+
 # [2.60.0](https://github.com/bamiyanapp/dev-standards/compare/v2.59.3...v2.60.0) (2026-10-03)
 
 
