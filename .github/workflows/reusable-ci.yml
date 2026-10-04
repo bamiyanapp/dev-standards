@@ -2228,7 +2228,17 @@ jobs:
             if (fs.existsSync('/tmp/actions-update-info.json')) {
               actionChanges = JSON.parse(fs.readFileSync('/tmp/actions-update-info.json', 'utf-8'));
             }
-            if (summary.total === 0 && actionChanges.length === 0) return;
+            let riskResult = null;
+            if (fs.existsSync('/tmp/risk-classification.json')) {
+              riskResult = JSON.parse(fs.readFileSync('/tmp/risk-classification.json', 'utf-8'));
+            }
+            // issue #729: summary.totalは「既存パッケージのバージョン更新」のみを
+            // 数えるため、新規パッケージ追加のみ（旧バージョンが存在しない）のPRでは
+            // 0のままになる。この場合もdependency-risk-classifier.jsはinstall script
+            // 異常等を検知してriskResult.levelをhigh/mediumへ正しく分類し得るため、
+            // 「更新が無い」ことと「報告すべきリスクが無い」ことを区別する。riskResultが
+            // low以外ならこのガードでは早期returnしない
+            if (summary.total === 0 && actionChanges.length === 0 && (!riskResult || riskResult.level === 'low')) return;
 
             const updateTypeLabel = {
               major: 'major',
@@ -2256,10 +2266,6 @@ jobs:
                 return '自動マージの対象です（他のCI条件を満たす場合）。CI結果・理由をご確認ください（issue #685）。';
               }
               return '自動マージの対象です（他のCI条件を満たす場合）。';
-            }
-            let riskResult = null;
-            if (fs.existsSync('/tmp/risk-classification.json')) {
-              riskResult = JSON.parse(fs.readFileSync('/tmp/risk-classification.json', 'utf-8'));
             }
             let staleRiskResult = null;
             if (fs.existsSync('/tmp/stale-risk-classification.json')) {
