@@ -1,3 +1,10 @@
+## [2.61.1](https://github.com/bamiyanapp/dev-standards/compare/v2.61.0...v2.61.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **ci:** 新規パッケージ追加のみの場合もRisk Summaryを投稿する ([#732](https://github.com/bamiyanapp/dev-standards/issues/732)) ([b834c84](https://github.com/bamiyanapp/dev-standards/commit/b834c8448b3ec3dfcfb0452a0ef75e70167c7a0e))
+
 # [2.61.0](https://github.com/bamiyanapp/dev-standards/compare/v2.60.0...v2.61.0) (2026-10-04)
 
 
