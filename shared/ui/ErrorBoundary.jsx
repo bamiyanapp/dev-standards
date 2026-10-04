@@ -16,6 +16,13 @@ import { Component } from "react";
 //
 // プレイ内容・入力内容等の個人情報・利用状況の詳細は本コンポーネントが呼び出し側から
 // 収集することは無い（収集するのはJavaScriptの例外情報のみ）
+//
+// `fallbackUrl`（任意）を指定すると、例外検知時に`window.location.reload()`の
+// 代わりに自動的にそのURLへ遷移する（karuta issue #1328由来）。A/Bテスト等で
+// 複数バリアントを配信している環境で、現在表示中のバリアントに問題がある場合に
+// 別バリアントへ明示的に退避させたいケースを想定している。本コンポーネント自体は
+// どのバリアント機構にも依存せず、遷移先URLの文字列を受け取るだけの汎用的な
+// インターフェースとする。未指定時は従来通り`window.location.reload()`のみを行う
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -44,6 +51,13 @@ class ErrorBoundary extends Component {
         // 妨げてはならないため何もしない
       });
     }
+
+    // 「リロードで戻る」という手動操作をユーザーに求めるのではなく、問題のある
+    // バリアントから自動的に離脱させる（karuta issue #1328）。フォールバック画面
+    // 自体は描画されるが、通常はこの遷移がそれより先に完了する
+    if (this.props.fallbackUrl) {
+      window.location.href = this.props.fallbackUrl;
+    }
   }
 
   render() {
@@ -57,7 +71,13 @@ class ErrorBoundary extends Component {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              if (this.props.fallbackUrl) {
+                window.location.href = this.props.fallbackUrl;
+              } else {
+                window.location.reload();
+              }
+            }}
           >
             再読み込み
           </button>
