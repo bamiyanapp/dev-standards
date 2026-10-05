@@ -1,3 +1,10 @@
+## [2.61.2](https://github.com/bamiyanapp/dev-standards/compare/v2.61.1...v2.61.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* **ci:** render-mermaid-diagramsのキャッシュバスティングをPR経由フォールバックへ切り替える ([#735](https://github.com/bamiyanapp/dev-standards/issues/735)) ([c27cbe5](https://github.com/bamiyanapp/dev-standards/commit/c27cbe5ce0bdd903e8b0c210fab4e041d864c82a))
+
 ## [2.61.1](https://github.com/bamiyanapp/dev-standards/compare/v2.61.0...v2.61.1) (2026-10-04)
 
 
