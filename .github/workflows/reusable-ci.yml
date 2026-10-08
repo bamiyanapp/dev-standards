@@ -296,6 +296,20 @@ on:
           本入力の値に関わらず常に従来どおりの動作になる。
         type: boolean
         default: false
+      enable_dependency_risk_auto_close:
+        description: >-
+          trueの場合、dependency-risk-summary jobが「適用リスクHigh・維持リスクLow」
+          （このPRを適用するのは危険だが、適用せず現行バージョンに留まるのは安全）と
+          判定したPRを、その旨をコメントした上で自動的にクローズする（bamiyanapp/
+          dev-standards#746）。人間が確認するまでもなく「適用しない」が明確な結論である
+          にもかかわらず、通常のHigh Risk PRと同様にHuman Review待ちのまま残り続ける
+          問題に対応する。誤ってHuman作成のPRを自動クローズしてしまう事故を避けるため、
+          PR作成者がbotアカウント（GitHub APIの`user.type === 'Bot'`、Renovate等）の
+          場合のみ対象とする。falseの場合は従来どおりクローズせず、Human Review待ちの
+          ままPRを残す。enable_dependency_risk_summaryがfalseの場合はrisk_level自体が
+          生成されないため、本入力の値に関わらずクローズは行われない。
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -2540,6 +2554,51 @@ jobs:
                 core.warning(`Label "risk: urgent to merge" の付与に失敗しました: ${error.message}`);
               }
             }
+
+      # issue #746: 適用リスクHigh・維持リスクLow（このPRを適用するのは危険だが、
+      # 適用せず現行バージョンに留まるのは安全）は、人間が確認するまでもなく
+      # 「適用しない」が明確な結論であるため、コメントの上でPR自体を自動クローズする。
+      # 前段の「Build and post Risk Summary」ステップとは別ステップに分離し、
+      # /tmp配下のJSONファイルを直接読み直す（同一job内なので永続している）。
+      # 誤って人間作成のPRを自動クローズしてしまう事故を避けるため、PR作成者がbot
+      # アカウント（Renovate等）の場合のみ対象とする
+      - name: Close PRs with high apply risk and low stale risk (bot-authored only)
+        if: inputs.enable_dependency_risk_auto_close && steps.gate.outputs.should_run == 'true'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            if (context.payload.pull_request.user.type !== 'Bot') {
+              core.info('PR作成者がbotではないため、自動クローズの対象外とする');
+              return;
+            }
+            let riskResult = null;
+            if (fs.existsSync('/tmp/risk-classification.json')) {
+              riskResult = JSON.parse(fs.readFileSync('/tmp/risk-classification.json', 'utf-8'));
+            }
+            let staleRiskResult = null;
+            if (fs.existsSync('/tmp/stale-risk-classification.json')) {
+              staleRiskResult = JSON.parse(fs.readFileSync('/tmp/stale-risk-classification.json', 'utf-8'));
+            }
+            if (!riskResult || riskResult.level !== 'high' || !staleRiskResult || staleRiskResult.level !== 'low') {
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body:
+                '適用リスクが高く（上記Risk Summary参照）、かつ現行バージョンに留まることが安全（維持リスクLow）であるため、' +
+                'このPRは見送ります（bamiyanapp/dev-standards#746による自動クローズ）。\n\n' +
+                '判定が誤っていると思われる場合は、このPRを再オープンしてください。',
+            });
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              state: 'closed',
+            });
 
   merge:
     needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams, dependency-risk-summary]
