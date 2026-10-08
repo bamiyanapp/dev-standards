@@ -1,0 +1,296 @@
+name: Reusable Promote Canary to Stable
+
+# issue #757（#733の検討対象）。karuta issue #1331（ブルーグリーンデプロイ導入
+# Task 12）・issue #1411（stableがcanaryを追い越している場合のガード）で実装した、
+# CloudFormationスタックのLastUpdatedTimeを流用した経過日数判定による自動昇格
+# ワークフローを一般化したもの。
+#
+# 「経過日数」の判定は、専用のタイムスタンプ管理を新設せず、backendのcanary
+# CloudFormationスタックのLastUpdatedTime（未更新の場合はCreationTime）をそのまま
+# 使う。カナリア直列化（reusable-ci.yml等での同時1件制限）が無い場合、猶予期間内に
+# 複数回デプロイされるとタイマーがその都度リセットされてしまう点は既知の制約。
+#
+# stableがcanaryより新しい場合（緊急手動デプロイ等でstableがcanaryを追い越している
+# 場合）、昇格を安全側にスキップする（karuta issue #1411）。
+#
+# デプロイコマンド・ビルドコマンドはプロダクトのツールチェイン（Serverless
+# Framework/osls、Vite等）に依存するため、inputsとして文字列をそのまま渡す
+# 構成にする。
+
+on:
+  workflow_call:
+    inputs:
+      canary_stack_name:
+        description: "backend canaryのCloudFormationスタック名。"
+        type: string
+        required: true
+      stable_stack_name:
+        description: "backend stableのCloudFormationスタック名。"
+        type: string
+        required: true
+      kvs_arn:
+        description: "canary_weight・force_stable・canary_queue_pendingを保持するCloudFront KeyValueStoreのARN。"
+        type: string
+        required: true
+      grace_period_days:
+        description: "canaryデプロイからこの日数が経過し、かつforce_stableが設定されていなければ昇格対象とする。"
+        type: number
+        default: 7
+      node_version:
+        description: "デプロイ・ビルドに使うNode.jsのバージョン。"
+        type: string
+        default: "22"
+      workspaces:
+        description: "呼び出し元がnpm workspaces構成かどうか。trueの場合、依存インストールをリポジトリルートで一括実行する。"
+        type: boolean
+        default: true
+      backend_working_directory:
+        description: "backendのserverless.ymlが存在するディレクトリ。"
+        type: string
+        required: true
+      backend_deploy_command_stable:
+        description: "canaryのコードでbackend stableスタックを再デプロイ（昇格）するコマンド（例: npx osls deploy --stage stable）。"
+        type: string
+        required: true
+      backend_remove_canary_command:
+        description: "昇格後にbackend canaryスタックを削除するコマンド（例: npx osls remove --stage canary）。"
+        type: string
+        required: true
+      backend_deploy_command_canary:
+        description: "キュー待ちの更新を新しいcanaryへデプロイするコマンド（例: npx osls deploy --stage canary）。カナリア直列化（キュー機構）を使わない場合は省略可能。"
+        type: string
+        default: ""
+      frontend_build_command_stable:
+        description: "canaryのビルドでfrontend stable/を再デプロイするためのビルドコマンド。"
+        type: string
+        default: ""
+      frontend_build_command_canary:
+        description: "キュー待ちの更新を新しいcanaryのフロントエンドとしてビルドするコマンド。カナリア直列化を使わない場合は省略可能。"
+        type: string
+        default: ""
+      frontend_dist_dir:
+        description: "フロントエンドのビルド成果物ディレクトリ。"
+        type: string
+        default: "frontend/dist"
+      infra_stack_name:
+        description: "フロントエンドのS3バケット名・CloudFront distribution IDをOutputsから取得するためのCloudFormationスタック名。frontend_build_command_stableを指定しない場合は不要。"
+        type: string
+        default: ""
+      frontend_bucket_output_key:
+        description: "infra_stack_nameのOutputsのうち、S3バケット名を保持するOutputKey。"
+        type: string
+        default: "FrontendBucketName"
+      frontend_distribution_id_output_key:
+        description: "infra_stack_nameのOutputsのうち、CloudFront distribution IDを保持するOutputKey。"
+        type: string
+        default: "FrontendDistributionId"
+      aws_region:
+        description: "CloudFormationスタックが存在するAWSリージョン。"
+        type: string
+        default: "ap-northeast-1"
+      kvs_region:
+        description: "KVS操作APIが存在するAWSリージョン。"
+        type: string
+        default: "us-east-1"
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
+    outputs:
+      eligible: ${{ steps.check.outputs.eligible }}
+      stable_ahead_of_canary: ${{ steps.check.outputs.stable_ahead_of_canary }}
+      queue_processed: ${{ steps.queue.outputs.process }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.workspaces && '.' || inputs.backend_working_directory }}
+        run: npm ci
+
+      - name: 昇格対象かどうかを判定する
+        id: check
+        run: |
+          set -eu
+          CANARY_STACK="${{ inputs.canary_stack_name }}"
+          STABLE_STACK="${{ inputs.stable_stack_name }}"
+          GRACE_PERIOD_DAYS="${{ inputs.grace_period_days }}"
+
+          if ! aws cloudformation describe-stacks --stack-name "$CANARY_STACK" >/dev/null 2>&1; then
+            echo "canaryスタックが存在しないため対象外"
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "$CANARY_STACK" --query "Stacks[0].LastUpdatedTime" --output text)
+          if [ "$LAST_UPDATED" = "None" ]; then
+            LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "$CANARY_STACK" --query "Stacks[0].CreationTime" --output text)
+          fi
+          LAST_UPDATED_EPOCH=$(date -d "$LAST_UPDATED" +%s)
+          NOW_EPOCH=$(date -u +%s)
+          ELAPSED_DAYS=$(( (NOW_EPOCH - LAST_UPDATED_EPOCH) / 86400 ))
+          echo "canaryスタックの最終更新から${ELAPSED_DAYS}日経過（${LAST_UPDATED}）"
+
+          if [ "$ELAPSED_DAYS" -lt "$GRACE_PERIOD_DAYS" ]; then
+            echo "猶予期間（${GRACE_PERIOD_DAYS}日）未経過のため対象外"
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          FORCE_STABLE=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --key "force_stable" --query Value --output text 2>/dev/null || echo "false")
+          if [ "$FORCE_STABLE" = "true" ]; then
+            echo "force_stableがtrue（ロールバック済み）のため対象外"
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # stableが緊急手動デプロイ等でcanaryを追い越している場合、昇格すると
+          # 緊急対応した内容がcanaryの古いコードで上書きされ退行してしまう
+          if aws cloudformation describe-stacks --stack-name "$STABLE_STACK" >/dev/null 2>&1; then
+            STABLE_LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "$STABLE_STACK" --query "Stacks[0].LastUpdatedTime" --output text)
+            if [ "$STABLE_LAST_UPDATED" = "None" ]; then
+              STABLE_LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "$STABLE_STACK" --query "Stacks[0].CreationTime" --output text)
+            fi
+            STABLE_LAST_UPDATED_EPOCH=$(date -d "$STABLE_LAST_UPDATED" +%s)
+            if [ "$STABLE_LAST_UPDATED_EPOCH" -gt "$LAST_UPDATED_EPOCH" ]; then
+              echo "stableの最終更新（${STABLE_LAST_UPDATED}）がcanaryより新しいため対象外（緊急デプロイ等でcanaryを追い越している可能性がある）"
+              echo "eligible=false" >> "$GITHUB_OUTPUT"
+              echo "stable_ahead_of_canary=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
+
+      - name: 1. KVSの重みをcanary 100%へ更新する
+        if: steps.check.outputs.eligible == 'true'
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "canary_weight" --value "100" >/dev/null
+          echo "canary_weight を 100 に設定した"
+
+      - name: "2. canaryのコードでbackend stableスタックを再デプロイする（昇格）"
+        if: steps.check.outputs.eligible == 'true'
+        working-directory: ${{ inputs.backend_working_directory }}
+        run: ${{ inputs.backend_deploy_command_stable }}
+
+      - name: "2. canaryのビルドでfrontend stable/を再デプロイする（昇格）"
+        if: steps.check.outputs.eligible == 'true' && inputs.frontend_build_command_stable != ''
+        run: |
+          set -eu
+          ${{ inputs.frontend_build_command_stable }}
+          OUTPUTS=$(aws cloudformation describe-stacks --stack-name "${{ inputs.infra_stack_name }}" --query "Stacks[0].Outputs" --output json)
+          BUCKET=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="${{ inputs.frontend_bucket_output_key }}") | .OutputValue')
+          DIST_ID=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="${{ inputs.frontend_distribution_id_output_key }}") | .OutputValue')
+          aws s3 sync "${{ inputs.frontend_dist_dir }}" "s3://${BUCKET}/stable/" --delete
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/stable/*'
+
+      - name: 3. canaryスタックを削除する
+        if: steps.check.outputs.eligible == 'true'
+        working-directory: ${{ inputs.backend_working_directory }}
+        run: ${{ inputs.backend_remove_canary_command }}
+
+      - name: 4. KVSをリセットする（重みを既定値、force_stableをfalseへ）
+        if: steps.check.outputs.eligible == 'true'
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "canary_weight" --value "10" >/dev/null
+          ETAG2=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG2" --key "force_stable" --value "false" >/dev/null
+          echo "KVSを既定値（canary_weight=10, force_stable=false）へリセットした"
+
+      - name: 5. canaryが空いているか・キュー待ちの更新が無いかを確認する
+        id: queue
+        if: inputs.backend_deploy_command_canary != ''
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          CANARY_STACK="${{ inputs.canary_stack_name }}"
+          FREE=false
+          if ! aws cloudformation describe-stacks --stack-name "$CANARY_STACK" >/dev/null 2>&1; then
+            FREE=true
+          else
+            FORCE_STABLE=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --key "force_stable" --query Value --output text 2>/dev/null || echo "false")
+            if [ "$FORCE_STABLE" = "true" ]; then
+              FREE=true
+            fi
+          fi
+          echo "canaryの空き状況: ${FREE}"
+
+          PENDING=false
+          if [ "$FREE" = "true" ]; then
+            PENDING=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --key "canary_queue_pending" --query Value --output text 2>/dev/null || echo "false")
+          fi
+          echo "キュー待ちの更新: ${PENDING}"
+          echo "process=$([ "$FREE" = "true" ] && [ "$PENDING" = "true" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: "5. キュー待ちのbackendを新しいcanaryとしてデプロイする"
+        if: steps.queue.outputs.process == 'true'
+        working-directory: ${{ inputs.backend_working_directory }}
+        run: ${{ inputs.backend_deploy_command_canary }}
+
+      - name: "5. キュー待ちのfrontendを新しいcanaryとしてデプロイする"
+        if: steps.queue.outputs.process == 'true' && inputs.frontend_build_command_canary != ''
+        run: |
+          set -eu
+          ${{ inputs.frontend_build_command_canary }}
+          OUTPUTS=$(aws cloudformation describe-stacks --stack-name "${{ inputs.infra_stack_name }}" --query "Stacks[0].Outputs" --output json)
+          BUCKET=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="${{ inputs.frontend_bucket_output_key }}") | .OutputValue')
+          DIST_ID=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="${{ inputs.frontend_distribution_id_output_key }}") | .OutputValue')
+          aws s3 sync "${{ inputs.frontend_dist_dir }}" "s3://${BUCKET}/canary/" --delete
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/canary/*'
+
+      - name: キュー待ちの更新を処理したら、canary_queue_pendingをfalseへリセットする
+        if: steps.queue.outputs.process == 'true'
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "canary_queue_pending" --value "false" >/dev/null
+          echo "canary_queue_pending を false へリセットした"
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 自動昇格 実行結果"
+            echo ""
+            echo "昇格対象: ${{ steps.check.outputs.eligible == 'true' && 'はい（昇格を実行した）' || 'いいえ（対象外のためスキップした）' }}"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.check.outputs.stable_ahead_of_canary }}" = "true" ]; then
+            {
+              echo "**⚠️ 要確認**: stableの最終更新がcanaryより新しいため、今回の昇格をスキップした。"
+              echo "緊急手動デプロイ等でstableがcanaryを追い越している可能性がある。"
+              echo "このままでは今後も昇格が永続的にスキップされ続ける。canaryを最新の内容で更新するか、この状況の対応方針を人間が判断すること。"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          {
+            echo "キュー待ち更新の処理: ${{ steps.queue.outputs.process == 'true' && 'はい（新しいcanaryとしてデプロイした）' || 'いいえ' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
