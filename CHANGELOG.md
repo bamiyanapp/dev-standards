@@ -1,3 +1,10 @@
+# [2.67.0](https://github.com/bamiyanapp/dev-standards/compare/v2.66.0...v2.67.0) (2026-10-08)
+
+
+### Features
+
+* **cd:** 自動昇格workflowをreusable workflow化する ([#767](https://github.com/bamiyanapp/dev-standards/issues/767)) ([763b15a](https://github.com/bamiyanapp/dev-standards/commit/763b15ab6fed334e3177d8d07a4f7f3908112575))
+
 # [2.66.0](https://github.com/bamiyanapp/dev-standards/compare/v2.65.0...v2.66.0) (2026-10-08)
 
 
