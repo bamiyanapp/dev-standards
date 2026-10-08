@@ -1,3 +1,10 @@
+# [2.68.0](https://github.com/bamiyanapp/dev-standards/compare/v2.67.0...v2.68.0) (2026-10-08)
+
+
+### Features
+
+* **cd:** 旧URL移行ページ（kill switch）を複合action化する ([#769](https://github.com/bamiyanapp/dev-standards/issues/769)) ([a43b7b1](https://github.com/bamiyanapp/dev-standards/commit/a43b7b1b63084b07f45db21eef003b58b80dddbd))
+
 # [2.67.0](https://github.com/bamiyanapp/dev-standards/compare/v2.66.0...v2.67.0) (2026-10-08)
 
 
