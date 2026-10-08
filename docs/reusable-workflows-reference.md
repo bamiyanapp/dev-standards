@@ -235,3 +235,29 @@ falseへ戻す操作（通常運用への復帰）は本ワークフローの対
 | `node_version` / `workspaces` | ビルド・デプロイに使うNode.jsバージョン・npm workspaces構成かどうか | `22` / `true` |
 
 stableが緊急手動デプロイ等でcanaryより新しい場合、昇格を安全側にスキップしJob Summaryへ警告を出す（karuta issue #1411）。カナリア直列化（同時1件制限）を使わない場合は`backend_deploy_command_canary`を省略すればキュー処理自体が無効化される。
+
+## `.github/actions/github-pages-migration-page`（複合action）
+
+ブルーグリーン（stable/canary）デプロイパターンで旧URL（GitHub Pages等）から新URLへ移行する際の、ビルドレスのkill switchページ（`index.html` + Service Worker）を生成する。既存のPWA用Service Workerがページをprecache済みでも、生成したkill switch用SWへの差し替えでキャッシュを確実に破棄し新URLへ誘導する。
+
+```yaml
+- name: Generate migration page
+  uses: bamiyanapp/dev-standards/.github/actions/github-pages-migration-page@v1.0.0
+  with:
+    product-name: "かるた読み上げアプリ"
+    output-directory: github-pages-migration
+
+- name: Deploy to GitHub Pages
+  uses: bamiyanapp/dev-standards/.github/actions/deploy-github-pages@v1.0.0
+  with:
+    working-directory: github-pages-migration
+    build-command: sed -i "s|__NEW_URL__|https://example.cloudfront.net/|" index.html
+    artifact-path: github-pages-migration
+```
+
+| 入力 | 説明 |
+|---|---|
+| `product-name` | 移行ページに表示するプロダクト名 |
+| `output-directory` | `index.html`・`sw.js`の出力先ディレクトリ |
+
+生成される`index.html`内の`__NEW_URL__`は呼び出し元で実際のURLへ置換する（上記例では`deploy-github-pages`の`build-command`で`sed`置換している）。
