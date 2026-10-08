@@ -1,3 +1,10 @@
+# [2.65.0](https://github.com/bamiyanapp/dev-standards/compare/v2.64.0...v2.65.0) (2026-10-08)
+
+
+### Features
+
+* **cd:** DynamoDBオンデマンドバックアップworkflowを汎用化する ([#764](https://github.com/bamiyanapp/dev-standards/issues/764)) ([1ef04a4](https://github.com/bamiyanapp/dev-standards/commit/1ef04a4d39a1bdf29df741b214ecbd96b7a0f85a))
+
 # [2.64.0](https://github.com/bamiyanapp/dev-standards/compare/v2.63.0...v2.64.0) (2026-10-08)
 
 
