@@ -125,6 +125,48 @@ jobs:
         id: pre-release
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      # issue #746 Phase 2: dev-standards自身のリリースに含まれる依存更新のRisk判定
+      # 結果を、各プロダクトリポジトリ（karuta等）が参照できる機械可読な履歴
+      # （docs/generated/dependency-risk-history.json）として残す。dev-standards自身の
+      # リリース時のみ意味を持つため、他リポジトリがこのreusable workflowを使う場合は
+      # 対象外にする（issue #666のfanout注記と同じ判定方式）。
+      #
+      # この時点ではsemantic-releaseの新バージョンはまだ確定していない
+      # （commit-analyzerの実行は後続の「Semantic Release」ステップ内）ため、ここでは
+      # バージョンに依存しない比較用データ（前回リリースタグとの差分）のみを/tmp配下へ
+      # 生成する。実際の履歴ファイルへの追記は、新バージョンが確定した後の
+      # changelogPrepareCmd（scripts/append-dependency-risk-history.js、
+      # ${nextRelease.version}をそのまま渡せる）で行う。
+      #
+      # 外部API呼び出し（OSV.dev・CISA KEV・npm registry）を含むため、一時的な障害で
+      # リリース自体を失敗させないようジョブ全体をcontinue-on-errorにする。このステップが
+      # 丸ごと失敗しても、後続のappend-dependency-risk-history.jsは/tmpファイルの
+      # 欠落を検知して「データ無し」として安全にスキップする
+      - name: Compute dependency risk info for this release (best-effort, dev-standards itself only)
+        if: github.repository == 'bamiyanapp/dev-standards'
+        continue-on-error: true
+        run: |
+          set -eu
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "比較対象となる前回リリースタグが無いため（初回リリース等）、スキップする"
+            exit 0
+          fi
+          echo "前回リリースタグ: $PREV_TAG"
+          git show "$PREV_TAG:package-lock.json" > /tmp/old-package-lock.json
+
+          node scripts/dependency-update-info.js /tmp/old-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+          node scripts/dependency-package-anomaly-info.js /tmp/old-package-lock.json package-lock.json > /tmp/install-script-anomalies.json
+
+          node scripts/dependency-vulnerability-info.js /tmp/dependency-update-info.json newVersion > /tmp/vulnerability-info.json || echo "[]" > /tmp/vulnerability-info.json
+          node scripts/dependency-exploit-info.js /tmp/vulnerability-info.json > /tmp/exploit-info.json || echo "[]" > /tmp/exploit-info.json
+          node scripts/dependency-maintainer-info.js /tmp/dependency-update-info.json > /tmp/maintainer-anomalies.json || echo "[]" > /tmp/maintainer-anomalies.json
+          node scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "" /tmp/install-script-anomalies.json /tmp/maintainer-anomalies.json > /tmp/risk-classification.json
+
+          node scripts/dependency-vulnerability-info.js /tmp/dependency-update-info.json oldVersion > /tmp/old-vulnerability-info.json || echo "[]" > /tmp/old-vulnerability-info.json
+          node scripts/dependency-exploit-info.js /tmp/old-vulnerability-info.json > /tmp/old-exploit-info.json || echo "[]" > /tmp/old-exploit-info.json
+          node scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json > /tmp/stale-risk-classification.json
+
       # base_branchへの実push上で実行するため、--no-ciやブランチ判定の上書きは不要。
       # semantic-releaseは通常通りGITHUB_ACTIONS環境を自動検知してCIモードで動作する。
       #
