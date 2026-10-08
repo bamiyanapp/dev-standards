@@ -1,0 +1,79 @@
+name: Reusable Backup DynamoDB
+
+# issue #726。karuta issue #1320（ブルーグリーンデプロイ導入のデータ層移管）向けに
+# karuta側へ実装した「手動実行でDynamoDBテーブルのオンデマンドバックアップを取得する」
+# ワークフロー（bamiyanapp/karuta#1337）を一般化したもの。移管・スキーマ変更等の
+# 構成変更作業の前に、いつでもこのワークフローを手動実行して明示的なタイミングの
+# バックアップを取得できる。PITR（有効な場合）は過去の任意の時点への復旧用で常時
+# 有効だが、本ワークフローは「このタイミングの状態を明示的に残す」ための追加の保険
+# として使う想定。
+#
+# テーブル名リストはinputsで受け取る。参照側（karuta等）はこのワークフローを
+# 呼ぶ薄いワークフローのみを書けばよい（.github/workflows/backup-dynamodb.yml参照）。
+# AWS認証情報は既存のreusable-cd.ymlやdeploy-serverless複合actionと同じ方式
+# （secretsとして渡す）に合わせる。
+
+on:
+  workflow_call:
+    inputs:
+      table_names:
+        description: "バックアップ対象のDynamoDBテーブル名をJSON配列形式で指定する（例: '[\"my-table-a\", \"my-table-b\"]'）。"
+        type: string
+        required: true
+      aws_region:
+        description: "テーブルが存在するAWSリージョン。"
+        type: string
+        default: "ap-northeast-1"
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
+    steps:
+      - name: Create on-demand backups
+        env:
+          TABLE_NAMES_JSON: ${{ inputs.table_names }}
+        run: |
+          set -u
+
+          readarray -t TABLES < <(echo "$TABLE_NAMES_JSON" | jq -r '.[]')
+
+          TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          FAILED=0
+
+          echo "## DynamoDB バックアップ結果 (${TIMESTAMP})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| テーブル | 結果 | Backup ARN |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+
+          for TABLE in "${TABLES[@]}"; do
+            BACKUP_NAME="${TABLE}-manual-${TIMESTAMP}"
+            if RESULT=$(aws dynamodb create-backup \
+              --table-name "$TABLE" \
+              --backup-name "$BACKUP_NAME" \
+              --output json 2>&1); then
+              ARN=$(echo "$RESULT" | jq -r '.BackupDetails.BackupArn')
+              echo "✅ ${TABLE}: ${ARN}"
+              echo "| ${TABLE} | ✅ 成功 | \`${ARN}\` |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ ${TABLE}: ${RESULT}" >&2
+              echo "| ${TABLE} | ❌ 失敗 | ${RESULT} |" >> "$GITHUB_STEP_SUMMARY"
+              FAILED=1
+            fi
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "一部のテーブルでバックアップに失敗した。上記サマリーを確認すること" >&2
+            exit 1
+          fi
