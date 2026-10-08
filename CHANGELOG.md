@@ -1,3 +1,10 @@
+# [2.66.0](https://github.com/bamiyanapp/dev-standards/compare/v2.65.0...v2.66.0) (2026-10-08)
+
+
+### Features
+
+* **cd:** 管理者ロールバックworkflowをreusable workflow化する ([#765](https://github.com/bamiyanapp/dev-standards/issues/765)) ([d7192dd](https://github.com/bamiyanapp/dev-standards/commit/d7192dd6ecf0d3b66a142c3c1a36b3cc800fbc96))
+
 # [2.65.0](https://github.com/bamiyanapp/dev-standards/compare/v2.64.0...v2.65.0) (2026-10-08)
 
 
