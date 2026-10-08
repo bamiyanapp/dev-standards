@@ -214,3 +214,24 @@ jobs:
 | `kvs_region` | KVSが存在するAWSリージョン | `us-east-1` |
 
 falseへ戻す操作（通常運用への復帰）は本ワークフローの対象外。誤ってtoggleしてしまう事故を避けるため、意図的に「戻す」機能を持たせていない。復帰は自動昇格ワークフロー経由、または別途手動対応とする。KVS更新のCloudFrontエッジ拠点への伝播は非同期のため、実際の反映確認（HTTPリクエストでの動作確認等）は呼び出し元リポジトリ側で行う。
+
+## `reusable-promote-canary.yml`
+
+ブルーグリーン（stable/canary）デプロイパターンで、canaryデプロイから一定の猶予期間が経過し、管理者ロールバック（`force_stable`）が行われていなければcanaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。定期実行（`schedule`トリガー）を想定する。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `canary_stack_name` / `stable_stack_name` | backend canary/stableのCloudFormationスタック名 | （必須） |
+| `kvs_arn` | `canary_weight`・`force_stable`・`canary_queue_pending`を保持するKVSのARN | （必須） |
+| `grace_period_days` | 昇格までの猶予期間（日数） | `7` |
+| `backend_working_directory` | backendの作業ディレクトリ | （必須） |
+| `backend_deploy_command_stable` | canaryのコードでstableスタックを再デプロイ（昇格）するコマンド | （必須） |
+| `backend_remove_canary_command` | 昇格後にcanaryスタックを削除するコマンド | （必須） |
+| `backend_deploy_command_canary` | カナリア直列化（キュー機構）を使う場合、キュー待ちの更新を新しいcanaryへデプロイするコマンド | （省略可、空文字列でキュー処理自体を無効化） |
+| `frontend_build_command_stable` / `frontend_build_command_canary` | フロントエンドをそれぞれstable/canary向けにビルドするコマンド（S3同期・CloudFront invalidationは本ワークフローが行う） | （省略可、空文字列でフロントエンド昇格自体を無効化） |
+| `frontend_dist_dir` | フロントエンドのビルド成果物ディレクトリ | `frontend/dist` |
+| `infra_stack_name` | S3バケット名・CloudFront distribution IDを取得するCloudFormationスタック名 | （`frontend_build_command_stable`使用時は必須） |
+| `frontend_bucket_output_key` / `frontend_distribution_id_output_key` | 上記スタックのOutputKey名 | `FrontendBucketName` / `FrontendDistributionId` |
+| `node_version` / `workspaces` | ビルド・デプロイに使うNode.jsバージョン・npm workspaces構成かどうか | `22` / `true` |
+
+stableが緊急手動デプロイ等でcanaryより新しい場合、昇格を安全側にスキップしJob Summaryへ警告を出す（karuta issue #1411）。カナリア直列化（同時1件制限）を使わない場合は`backend_deploy_command_canary`を省略すればキュー処理自体が無効化される。
