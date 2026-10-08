@@ -1,0 +1,36 @@
+name: "GitHub Pages Migration Kill Switch Page"
+description: >-
+  ブルーグリーン（stable/canary）デプロイパターン（docs/blue-green-stage-pattern.md参照）で
+  旧URL（GitHub Pages等）からの移行時に使う、ビルドレスのkill switchページ
+  （index.html + Service Worker）を生成する複合action。karuta issue #1332
+  （ブルーグリーンデプロイ導入 Task 13）の実装を一般化したもの。
+  既存のPWA用Service Workerがindex.htmlをprecache済みでも、生成したkill
+  switch用SWへの差し替えがブラウザに検出されると、インストール時に
+  skipWaiting()で即座に新SWへ切り替わり、全キャッシュ削除・SW自身の
+  unregister・開いているタブのリロードを行う。リロード後はSWが存在しないため、
+  index.htmlがネットワークから直接取得され、新URLへの誘導が確実に実行される。
+  生成されるindex.html内の`__NEW_URL__`は、呼び出し元リポジトリのデプロイ
+  ステップ（`sed`等）で実際のURLへ置換する想定（dev-standardsの
+  `deploy-github-pages`複合actionの`build-command`入力を使う例を
+  docs/reusable-workflows-reference.mdに示す）。
+
+inputs:
+  product-name:
+    description: "移行ページに表示するプロダクト名（例: 'かるた読み上げアプリ'）。"
+    required: true
+  output-directory:
+    description: "index.html・sw.jsを出力するディレクトリ。既存のPWA成果物等と混在させないよう、専用のディレクトリを指定すること。"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate migration page
+      shell: bash
+      run: |
+        set -eu
+        mkdir -p "${{ inputs.output-directory }}"
+        sed "s|__PRODUCT_NAME__|${{ inputs.product-name }}|g" \
+          "${{ github.action_path }}/templates/index.html" > "${{ inputs.output-directory }}/index.html"
+        cp "${{ github.action_path }}/templates/sw.js" "${{ inputs.output-directory }}/sw.js"
+        echo "移行ページを${{ inputs.output-directory }}へ生成した（__NEW_URL__の置換は呼び出し元で行うこと）"
