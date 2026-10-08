@@ -183,3 +183,34 @@ jobs:
 | `aws_region` | テーブルが存在するAWSリージョン | `ap-northeast-1` |
 
 `secrets.AWS_ACCESS_KEY_ID`・`secrets.AWS_SECRET_ACCESS_KEY`はいずれも必須。結果はテーブルごとの成功/失敗・Backup ARNを表形式でJob Summaryへ出力する。オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。
+
+## `reusable-rollback-to-stable.yml`
+
+ブルーグリーン（stable/canary）デプロイパターン（`docs/blue-green-stage-pattern.md`参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）をtrueに設定する。
+
+```yaml
+on:
+  workflow_dispatch: {}
+
+jobs:
+  resolve-kvs-arn:
+    # KVS ARNの解決方法はプロダクトによって異なるため、呼び出し元側で解決する
+    # （Serverless Framework/oslsのinfo出力、CloudFormationスタック出力等）
+    ...
+  rollback:
+    needs: resolve-kvs-arn
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-rollback-to-stable.yml@v1.0.0
+    with:
+      kvs_arn: ${{ needs.resolve-kvs-arn.outputs.kvs_arn }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `kvs_arn` | stableへ強制的に固定するフラグを保持するCloudFront KeyValueStoreのARN | （必須） |
+| `kvs_key` | KVSキー名 | `force_stable` |
+| `kvs_region` | KVSが存在するAWSリージョン | `us-east-1` |
+
+falseへ戻す操作（通常運用への復帰）は本ワークフローの対象外。誤ってtoggleしてしまう事故を避けるため、意図的に「戻す」機能を持たせていない。復帰は自動昇格ワークフロー経由、または別途手動対応とする。KVS更新のCloudFrontエッジ拠点への伝播は非同期のため、実際の反映確認（HTTPリクエストでの動作確認等）は呼び出し元リポジトリ側で行う。
