@@ -1,3 +1,10 @@
+# [2.64.0](https://github.com/bamiyanapp/dev-standards/compare/v2.63.0...v2.64.0) (2026-10-08)
+
+
+### Features
+
+* **risk:** dev-standards自身のRisk履歴をプロダクト側PRへ注記する ([#761](https://github.com/bamiyanapp/dev-standards/issues/761)) ([2d71828](https://github.com/bamiyanapp/dev-standards/commit/2d7182835d97c29c8b65ab42409373a0742d97ff)), closes [#746](https://github.com/bamiyanapp/dev-standards/issues/746)
+
 # [2.63.0](https://github.com/bamiyanapp/dev-standards/compare/v2.62.0...v2.63.0) (2026-10-08)
 
 
