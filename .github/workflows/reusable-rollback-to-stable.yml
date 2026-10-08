@@ -1,0 +1,72 @@
+name: Reusable Rollback to Stable
+
+# issue #756（#733の検討対象）。karuta issue #1330（ブルーグリーンデプロイ導入
+# Task 11）で実装した、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィック
+# をstableへ戻す（CloudFront FunctionsのKVSキーをtrueに設定する）ワークフローを
+# 一般化したもの。
+#
+# 実行には、呼び出し元リポジトリへの書き込み権限（workflow_dispatch実行権限）と
+# AWS認証情報（secrets、このワークフロー内でのみ利用可能）が必要なため、誰でも
+# 実行できるわけではない。
+#
+# false（通常運用）へ戻す操作は、本ワークフローの対象外とする。誤ってtoggleして
+# しまう事故を避けるため、本ワークフローには「戻す」機能を持たせない。復帰は
+# 自動昇格ワークフロー（reusable-promote-canary.yml）経由、または必要に応じて
+# 別途手動でAWS CLIを実行する運用とする。
+#
+# KVS ARNの解決方法（Serverless Framework/osls等のinfo出力、CloudFormation
+# スタック出力等）はプロダクトによって異なるため、本ワークフロー自身では解決せず、
+# 呼び出し元が解決したKVS ARNをinputsで直接渡す構成にする。
+
+on:
+  workflow_call:
+    inputs:
+      kvs_arn:
+        description: "force_stable相当のフラグを保持するCloudFront KeyValueStoreのARN。"
+        type: string
+        required: true
+      kvs_key:
+        description: "stableへ強制的に固定するためのKVSキー名。"
+        type: string
+        default: "force_stable"
+      kvs_region:
+        description: "KVSが存在するAWSリージョン（CloudFront関連のKVS操作APIはus-east-1固定であることが多い）。"
+        type: string
+        default: "us-east-1"
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - name: "${{ inputs.kvs_key }}をtrueに設定する"
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          KVS_KEY="${{ inputs.kvs_key }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KVS_KEY" --value "true" >/dev/null
+          echo "${KVS_KEY} を true に設定した"
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 管理者ロールバック実行結果"
+            echo ""
+            echo "${{ inputs.kvs_key }}: true に設定した"
+            echo ""
+            echo "通常運用への復帰（${{ inputs.kvs_key }}をfalseへ戻す）は、本ワークフローでは行わない。自動昇格ワークフロー経由、または別途手動対応が必要。"
+            echo "KVS更新のCloudFrontエッジ拠点への伝播は非同期のため、実際の反映確認は呼び出し元リポジトリ側で行うこと。"
+          } >> "$GITHUB_STEP_SUMMARY"
