@@ -1,3 +1,10 @@
+# [2.63.0](https://github.com/bamiyanapp/dev-standards/compare/v2.62.0...v2.63.0) (2026-10-08)
+
+
+### Features
+
+* **cd:** dev-standards自身のRisk判定結果を履歴ファイルへ記録する ([#749](https://github.com/bamiyanapp/dev-standards/issues/749)) ([c755a08](https://github.com/bamiyanapp/dev-standards/commit/c755a086dd2194fa608ede9c5e8eade8b4665ca8))
+
 # [2.62.0](https://github.com/bamiyanapp/dev-standards/compare/v2.61.2...v2.62.0) (2026-10-08)
 
 
