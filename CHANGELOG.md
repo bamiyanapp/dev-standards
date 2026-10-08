@@ -1,3 +1,10 @@
+# [2.62.0](https://github.com/bamiyanapp/dev-standards/compare/v2.61.2...v2.62.0) (2026-10-08)
+
+
+### Features
+
+* **ci:** 適用リスク高・維持リスク低のbot作成PRを自動コメント・クローズする ([#747](https://github.com/bamiyanapp/dev-standards/issues/747)) ([eadb207](https://github.com/bamiyanapp/dev-standards/commit/eadb207ba6b830833f221c11a56818456321e96b))
+
 ## [2.61.2](https://github.com/bamiyanapp/dev-standards/compare/v2.61.1...v2.61.2) (2026-10-05)
 
 
