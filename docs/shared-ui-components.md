@@ -195,6 +195,31 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 </ErrorBoundary>
 ```
 
+### 手動切り替えリンクパターン（ブルーグリーン/カナリアデプロイ）
+
+ErrorBoundaryが検知できない軽微な不具合（クラッシュに至らない表示崩れ等）向けに、ユーザー自身が安定版（stable）へ切り替えられる導線のパターンを考える。karuta（issue #1329）での実装を元にした。dev-standards#733（ブルーグリーンデプロイ方式の開発共通化）の検討対象の1つとして、独立した共有コンポーネントではなくパターンとして文書化する。CloudFront Functions側のCookie制御・stage別ビルド構成等、プロダクト固有のインフラ実装に依存する部分が大きいためである。
+
+- ビルド時のmode判定（例: Viteの`import.meta.env.MODE`）でcanaryビルドの場合のみ表示する
+- クリック時は単純に`/stable${検索クエリ}`等の固定パスへ遷移するだけでよい。CloudFront Functions（viewer-request）側が「`/stable/`への明示アクセス」をきっかけに、以後の通常アクセスも含めてstableへ固定するよう設計しておけば（sticky Cookie発行等）、リンク自体に複雑なロジックは不要になる
+
+```jsx
+export default function StableSwitchLink() {
+  if (import.meta.env.MODE !== "canary") {
+    return null;
+  }
+
+  return (
+    <p className="small mt-2">
+      <a href={`/stable${window.location.search}`} className="text-muted">
+        画面に問題がある場合はこちら（安定版への切り替え）
+      </a>
+    </p>
+  );
+}
+```
+
+`shared/ui/`配下の共有コンポーネントとしては提供しない。CloudFront Functions側の対応するロジック（stage固定ヘッダーの設定等）が無いと単に404になるだけで機能しないため、ブルーグリーンデプロイ基盤全体（dev-standards#733の他のサブissue）を導入したプロダクトでのみ意味を持つ。
+
 ### `shared/hooks/useLocalStorageState.js`
 
 `localStorage`とReact stateを双方向同期する汎用hook（issue #559）。karuta（`bamiyanapp/karuta`）から切り出したもの。キー名・値の型はすべて呼び出し側から注入され、プロダクト固有のロジックは含まない。`parse`/`format`関数（任意）を渡すと文字列以外の値も扱える。
