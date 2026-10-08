@@ -158,3 +158,28 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `languages` | CodeQLで解析する言語をJSON配列形式で指定する（例: `'["javascript-typescript"]'`）。GitHub Actions matrixとしてlanguageごとに展開される | `'["javascript-typescript"]'` |
 
 CodeQLを必須チェックにするかどうかは参照側リポジトリのブランチ保護設定（Required status checks）側の責務である。このワークフロー自体は`reusable-ci.yml`の`merge` jobのマージ処理に関与しない。
+
+## `reusable-backup-dynamodb.yml`
+
+DynamoDBテーブルのオンデマンドバックアップを手動実行で取得する。参照側は`workflow_dispatch`トリガーを持つ薄いワークフローからこのワークフローを呼び出す構成にする（例: `.github/workflows/backup-dynamodb.yml`）。
+
+```yaml
+on:
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-backup-dynamodb.yml@v1.0.0
+    with:
+      table_names: '["my-table-a", "my-table-b"]'
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `table_names` | バックアップ対象のDynamoDBテーブル名をJSON配列形式で指定する | （必須） |
+| `aws_region` | テーブルが存在するAWSリージョン | `ap-northeast-1` |
+
+`secrets.AWS_ACCESS_KEY_ID`・`secrets.AWS_SECRET_ACCESS_KEY`はいずれも必須。結果はテーブルごとの成功/失敗・Backup ARNを表形式でJob Summaryへ出力する。オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。
