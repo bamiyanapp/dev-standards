@@ -60,6 +60,7 @@
 - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
 - [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
 - [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md)がある。フロントエンドError Boundary＋サーバーサイドロギング構成である。`shared/ui/ErrorBoundary.jsx`・`shared/lambda/clientErrorReporting.js`を使う
+- [`blue-green-stage-pattern.md`](docs/blue-green-stage-pattern.md): S3+CloudFront・CloudFront Functions重み付けルーティング・カナリア直列化・自動昇格・DynamoDBスキーマ互換性を組み合わせたブルーグリーン（stable/canary）デプロイパターン
 
 ### CI/CD・運用
 
