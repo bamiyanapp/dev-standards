@@ -140,4 +140,12 @@ dev-standards自体の依存更新を考える。Renovate等によるPRがmain�
 - ファイルの形式: `{ version, date, riskLevel, riskReasons, staleRiskLevel, staleRiskReasons }`の配列。同一`version`への再追記は上書きする（リトライ時の重複防止）
 - 初回リリース等、比較対象となる前回タグが存在しない場合は追記自体をスキップする
 
-**プロダクト側（karuta等）での利用は別issue（issue #746の2点目）で検討する。** 本機能はデータの蓄積のみを担う。`chore(deps): update bamiyanapp/dev-standards action to vX.Y.Z`等のPRでこのファイルを読み込み、該当バージョン範囲のRisk判定結果を自身のRisk Summaryへ注記する仕組みは未実装である。
+### プロダクト側（karuta等）での利用（issue #746 Phase 2b）
+
+`chore(deps): update bamiyanapp/dev-standards action to vX.Y.Z`等、dev-standards自身への参照を更新するPRを考える。このPRでは`dependency-risk-summary` jobが`scripts/dependency-risk-history-lookup.js`を実行する。
+
+- このスクリプトは新ref（タグ）時点の`docs/generated/dependency-risk-history.json`を`raw.githubusercontent.com`経由で取得する
+- 旧refより新しくかつ新ref以下のバージョン（複数バージョンを一度に飛び越える更新PRも含む）に該当する履歴エントリを絞り込む
+- 絞り込んだ結果をRisk Summaryコメントへ「dev-standards側で既に評価済みのRisk」セクションとして追記する。dev-standards自身が自らのリリース時点で下した判定結果を、プロダクト側でゼロから再評価する重複作業を避けるのが目的
+- ネットワーク呼び出しを伴うため、このステップは`continue-on-error`にしている。履歴ファイルが存在しない場合（本機能導入前の古いタグ等）や取得に失敗した場合は、セクション自体を省略する安全側の動作とする
+- dev-standards自身への参照更新を含まないPRでは、このステップは何も出力しない

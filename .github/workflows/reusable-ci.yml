@@ -2163,6 +2163,17 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/github-actions-update-info.js /tmp/gh-actions-base /tmp/gh-actions-changed-files.json > /tmp/actions-update-info.json
 
+      # issue #746 Phase 2（後半）。このPRがbamiyanapp/dev-standards自身への参照を
+      # 更新するものであれば、dev-standards側が自身のリリース時点で既に下した
+      # Risk判定結果（docs/generated/dependency-risk-history.json）を取得し、
+      # プロダクト側での重複判定を避けるための注記を作る。ネットワーク呼び出しを
+      # 伴うため、取得失敗時は何も出力しない安全側の動作とする（スクリプト側で保証）
+      - name: Look up dev-standards' own risk history for this version bump
+        id: dev-standards-risk-history
+        if: steps.actions-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-risk-history-lookup.js /tmp/actions-update-info.json > /tmp/dev-standards-risk-history-section.md
+
       # issue #648（Phase 3）package script/diff検査: 新規にinstall scriptを持つ
       # ようになったパッケージを検知する。package-lock.jsonのみの比較で外部通信が
       # 不要なため、ネットワーク依存の他のSupply Chainチェックより前に実行する
@@ -2464,6 +2475,13 @@ jobs:
                 body += `| ${c.file} | ${c.action} | ${c.oldRef} | ${c.newRef} | ${updateTypeLabel[c.updateType]} |\n`;
               }
               body += '\n';
+            }
+
+            // issue #746 Phase 2（後半）: dev-standards自身への参照更新であれば、
+            // dev-standards側で既に下したRisk判定結果を注記する
+            if (fs.existsSync('/tmp/dev-standards-risk-history-section.md')) {
+              const section = fs.readFileSync('/tmp/dev-standards-risk-history-section.md', 'utf-8');
+              if (section.trim().length > 0) body += section + '\n';
             }
 
             if (fs.existsSync('/tmp/ci-results-section.md')) {
