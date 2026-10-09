@@ -22,7 +22,7 @@ dev-standards全体が提供する内容の一覧は[`README.md`](../README.md)�
 | GitHubアカウント・新規リポジトリ | アイデアごとに1リポジトリを作る（既存プロダクトへの機能追加ではなく、新規アイデアを試す場合）。作成方法は[GitHub公式のクイックスタート](https://docs.github.com/en/repositories/creating-and-managing-repositories/quickstart-for-repositories)を参照 |
 | Claude Code on the webの利用環境 | スマートフォンのブラウザからclaude.ai/codeを開き、上記GitHubリポジトリを対象にセッションを開始できる状態にしておく。利用方法は[Claude Code on the web公式クイックスタート](https://code.claude.com/docs/en/web-quickstart)を参照 |
 | AWSアカウント・認証情報 | フェーズ1は最も簡単な配信先（GitHub Pages等）で足りるため、この段階では不要。バックエンドAPIが最初から必要と分かっている場合、またはフェーズ2で技術選定を見直した場合に、AWSアカウントとGitHub Secrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`）を準備する。アクセスキーの作成方法は[AWS公式のIAMアクセスキー管理ガイド](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)を参照 |
-| 費用の目安 | Claude Codeの利用料はサブスクリプションプラン（Pro/Max等）に依存する。AWS側は、個人の試作程度のアクセス量であればS3 + CloudFront・Lambda等は無料利用枠内、または月あたり数百円程度に収まることが多い。アクセスが増えた場合やPollyの音声合成等、課金が大きくなりうる機能を使う場合は、AWSの料金ページで事前に確認する |
+| 費用の目安 | Claude Codeは最初はProプランで十分である。月次払いは$20/月、年次払いは$200/年（月あたり約$17相当）が目安（2026年時点、変動するため[claude.com/pricing](https://claude.com/pricing)で最新を確認する）。AWS側は、個人の試作程度のアクセス量であればS3 + CloudFront・Lambda等は無料利用枠内、または月あたり数百円程度に収まることが多い。アクセスが増えた場合やPollyの音声合成等、課金が大きくなりうる機能を使う場合は、AWSの料金ページで事前に確認する |
 | アイデアの一言メモ | 技術選定は不要。「誰が」「何をするための」アプリかを1〜2文で言える状態にしておく（最初のプロンプトでそのまま使う）。何を作るか自体が決まっていない場合は、後述の「アイデアを決める（任意）」を先に行う |
 
 dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）はユーザーが準備する項目ではなく、**Claudeへ最初のプロンプトで依頼する作業**である。詳細は後述の「最初のプロンプトの例」を参照。この作業はClaude Code on the webのセッション（Claudeの仮想環境）内で完結し、スマートフォン側で何かを操作する必要は無い。また、dev-standardsは公開リポジトリであり`git submodule add`は読み取り専用のcloneにすぎないため、dev-standards自体への書き込み権限・フォークは一切不要である（書き込み権限が必要なのは、ユーザー自身が新規に作成したリポジトリ側のみ）。
