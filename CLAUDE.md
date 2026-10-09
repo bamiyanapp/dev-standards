@@ -40,9 +40,9 @@ Claudeは設計・実装・PRのTest plan・完了報告のいずれにおいて
 - 人間に依頼する確認・実行手順は、スマートフォンのブラウザ操作（GitHubのWeb/モバイルアプリ、PR画面、Job Summary等）で完結する内容に限定する
 - CLI操作や専用ツールが必要な検証は、Claude自身が実行可能な範囲（CI/CDでの自動検証、コードとしての自動化等）に倒し、人間に手動実行を依頼しない
 - どうしても人間による確認が必要な場合は、その確認がスマートフォンから実行可能であることを設計時点で確認し、不可能な場合は設計自体を見直す
-- E2E等でスクリーンショットによる視覚的な確認が必要な場合、Playwright HTMLレポート（アーティファクトzip）はスマートフォンからの閲覧が事実上困難なため避ける。代わりに`reusable-ci.yml`のE2Eスクリーンショット報告機能を使う。詳細は`docs/cicd-pipeline-specification.md`「1. CIワークフロー」を参照。Job Summary・PRコメントへ画像として直接埋め込む
+- E2E等でスクリーンショットによる視覚的な確認が必要な場合、Playwright HTMLレポート（アーティファクトzip）はスマートフォンからの閲覧が事実上困難なため避ける。代わりに`reusable-ci.yml`のE2Eスクリーンショット報告機能を使う。詳細は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)「1. CIワークフロー」を参照。Job Summary・PRコメントへ画像として直接埋め込む
 - Markdownドキュメントの1行が長すぎてスマートフォンでの閲覧（GitHubのdiffビュー・raw表示）が困難な場合、物理行を単純に折り返さない。日本語テキストの途中で改行すると、レンダリング時に改行位置へ不要な半角スペースが挿入されることを実機検証で確認している（issue #442）。読みにくさの実体は冗長な文（1文に複数の因果関係・手順を詰め込んでいる等）であることが多いため、文自体を短く分割・簡潔化して対処する
-- 検証端末はiPhone（iOS Safari）である。iOS SafariにはVibration API等、他のブラウザ・OSには存在するWeb APIが実装されていないことがある。そうしたAPIに依存する機能を設計・実装する際は、フィーチャー検出（`typeof`チェック等）を行う。非対応環境でも例外を投げず正常に動作すること（または対象外として設計上明示すること）を設計時点で考慮する。模範実装として`shared/hooks/useWakeLock.js`（`docs/shared-ui-components.md`参照）がある
+- 検証端末はiPhone（iOS Safari）である。iOS SafariにはVibration API等、他のブラウザ・OSには存在するWeb APIが実装されていないことがある。そうしたAPIに依存する機能を設計・実装する際は、フィーチャー検出（`typeof`チェック等）を行う。非対応環境でも例外を投げず正常に動作すること（または対象外として設計上明示すること）を設計時点で考慮する。模範実装として`shared/hooks/useWakeLock.js`（[`docs/shared-ui-components.md`](docs/shared-ui-components.md)参照）がある
 
 # Execution Loop
 
@@ -90,10 +90,10 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - プロジェクト固有ルールへ反映すべきか
 - 人間による手動確認手順がある場合、スマホのみで実行可能か（「開発環境の制約（スマホオンリー）」参照）
 - PRのマージ・CI成功だけを根拠に完了・Issueクローズと判断していないか。特に複数リポジトリ・pinned tag参照を伴う変更（git-workflow Skill「複合action・pinned tagを伴う変更の展開確認」参照）を考える。実際にmain上で意図した効果が出ているかを再検証したか
-- 実在の個人情報を扱うプロダクトの場合を考える。コミット対象・コミットメッセージ・PR/Issue本文に実在の個人情報がハードコードされていないか（`docs/public-repo-no-pii-pattern.md`参照）。リポジトリは公開が前提であり、一度コミットした個人情報は事実上消せないため、コミット前に気づくことが唯一の対策
+- 実在の個人情報を扱うプロダクトの場合を考える。コミット対象・コミットメッセージ・PR/Issue本文に実在の個人情報がハードコードされていないか（[`docs/public-repo-no-pii-pattern.md`](docs/public-repo-no-pii-pattern.md)参照）。リポジトリは公開が前提であり、一度コミットした個人情報は事実上消せないため、コミット前に気づくことが唯一の対策
 - `docs/`配下へ新規ドキュメントを追加した場合、「主要ドキュメント」索引への追記を忘れていないか
-- 更新したドキュメントが肥大化していないか確認する。`textlint`の`max-lines`ルール（実効行数、既定200行）が通っていても、巨大な表セルへ詰め込んだ場合は検知をすり抜ける既知の限界がある（`docs/documentation-format-conventions.md`「ドキュメント1本のボリューム上限」参照）。独立した話題として切り出せる内容があれば分割する
-- 新規にmermaid図を追加した場合、`mermaid_doc_paths`（`.github/workflows/ci.yml`）への登録・画像埋め込みリンクの追加をしたか確認する。詳細は`docs/documentation-format-conventions.md`「`enable_mermaid_render`との関係」を参照する。開発環境がスマホオンリーのためPRレビューは差分ビュー経由になり、未登録のままだと図として確認できない
+- 更新したドキュメントが肥大化していないか確認する。`textlint`の`max-lines`ルール（実効行数、既定200行）が通っていても、巨大な表セルへ詰め込んだ場合は検知をすり抜ける既知の限界がある（[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「ドキュメント1本のボリューム上限」参照）。独立した話題として切り出せる内容があれば分割する
+- 新規にmermaid図を追加した場合、`mermaid_doc_paths`（`.github/workflows/ci.yml`）への登録・画像埋め込みリンクの追加をしたか確認する。詳細は[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照する。開発環境がスマホオンリーのためPRレビューは差分ビュー経由になり、未登録のままだと図として確認できない
 - 対応するissueの本文にTODO・検討事項・懸念点の列挙がある場合、今回の対応でそれぞれ解消したかを1つずつ確認する。解消していない項目があれば、フォローアップissueとして切り出す。または対応不要と判断した理由をissueに明記する。このいずれかを行ってからでなければ、元issueをクローズしない（一部だけ実装してTODOごとクローズしない）
 
 # Skills (専門手順)
@@ -128,7 +128,7 @@ Claudeは以下を一切行ってはならない。
 
 PR（MR）の作成およびコメント投稿までは許可される範囲だが、その先の承認・マージ判断は必ず人間（ユーザーやCI/自動マージの仕組み）に委ねること。CIでのテスト通過を条件に自動マージされる仕組みを採用しているリポジトリであっても、この制約は変わらない。ユーザーから明示的に「このPRを承認して」「マージして」と指示された場合でも、まず承認・マージの意図を1文で確認してから実行する。
 
-Renovate等のbotが作成したPR（`dev-standards` submodule参照コミット更新PRを含む）も、通常のPRと同様に人間による承認・マージが必要な運用の対象とする。本ルールの例外にしない。CI/CDパイプラインの詳細仕様は`docs/cicd-pipeline-specification.md`を参照する。
+Renovate等のbotが作成したPR（`dev-standards` submodule参照コミット更新PRを含む）も、通常のPRと同様に人間による承認・マージが必要な運用の対象とする。本ルールの例外にしない。CI/CDパイプラインの詳細仕様は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)を参照する。
 
 # PR作成後の監視方針
 

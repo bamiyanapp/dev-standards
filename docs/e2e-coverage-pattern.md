@@ -98,7 +98,7 @@ import { test, expect } from './coverageFixture.js'; // symlink
 
 ### `NODE_OPTIONS=--preserve-symlinks`が必要
 
-`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれる。しかしNode（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索する。このため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗することがある。エラー例は`Error: Cannot find package '@playwright/test'`である。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する。`vite.config.js`の`resolve.preserveSymlinks`と同種の問題である（`docs/shared-ui-components.md`参照）。
+`coverageFixture.js`はsymlink経由でdev-standards submodule配下から読み込まれる。しかしNode（ESM）は既定でシンボリックリンクの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索する。このため、参照側リポジトリの`node_modules`に存在する`@playwright/test`・`monocart-reporter`の解決に失敗することがある。エラー例は`Error: Cannot find package '@playwright/test'`である。`package.json`の`test:e2e`スクリプトへ`--preserve-symlinks`を付与して回避する。`vite.config.js`の`resolve.preserveSymlinks`と同種の問題である（[`shared-ui-components.md`](shared-ui-components.md)参照）。
 
 ```json
 { "scripts": { "test:e2e": "NODE_OPTIONS=--preserve-symlinks playwright test" } }

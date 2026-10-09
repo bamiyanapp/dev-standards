@@ -1,19 +1,19 @@
 # 単一パッケージReactアプリ構成（Vite + TypeScript + Bootstrap、`client-only-vite-spa-pattern`）
 
-shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）で検証済みの構成がベースである。dev-standards標準のフロントエンド構成である（`docs/standard-tech-stack.md`「1. フロントエンド」参照）。単一`frontend/`パッケージ（React 19 + Vite + TypeScript + Bootstrap 5.3）で、ログイン・バックエンドAPIの要否を問わず全プロダクトに適用する。
+shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）で検証済みの構成がベースである。dev-standards標準のフロントエンド構成である（[`standard-tech-stack.md`](standard-tech-stack.md)「1. フロントエンド」参照）。単一`frontend/`パッケージ（React 19 + Vite + TypeScript + Bootstrap 5.3）で、ログイン・バックエンドAPIの要否を問わず全プロダクトに適用する。
 
 ログイン・バックエンドAPIが不要なプロダクトはそのまま`frontend/`単体で完結する。ログインが必要な場合は「2. ログイン」、独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）が必要な場合は「3. バックエンドAPI」の標準構成と組み合わせる。後者の場合、`frontend/`は単独パッケージではなくnpm workspacesの一部として構成する（後述「npm workspacesでバックエンドと組み合わせる場合」参照）。
 
 ## アーキテクチャ
 
-- 単一`frontend/`パッケージ（React 19 + Vite + **TypeScript**）。バックエンドAPIを持たない場合を考える。`reusable-ci.yml`の`packages`入力で指定する。`[{"dir":"frontend","build":true}]`のような形式である（`docs/cicd-pipeline-specification.md`参照）。バックエンドAPIと組み合わせる場合は後述「npm workspacesでバックエンドと組み合わせる場合」を参照
-- **UIフレームワークはBootstrap 5.3を標準とする**。`index.html`のCDN `<link>`で読み込む（npmパッケージとして導入してもよい）。共通フォント・ダークモード対応・ボタン押下フィードバック等がある。これらは`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
-- **ホスティングはS3 + CloudFront**（`docs/static-hosting-pattern.md`）に統一する。バックエンドAPIの有無・ログインの有無によらずホスティング方式は変わらない
+- 単一`frontend/`パッケージ（React 19 + Vite + **TypeScript**）。バックエンドAPIを持たない場合を考える。`reusable-ci.yml`の`packages`入力で指定する。`[{"dir":"frontend","build":true}]`のような形式である（[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)参照）。バックエンドAPIと組み合わせる場合は後述「npm workspacesでバックエンドと組み合わせる場合」を参照
+- **UIフレームワークはBootstrap 5.3を標準とする**。`index.html`のCDN `<link>`で読み込む（npmパッケージとして導入してもよい）。共通フォント・ダークモード対応・ボタン押下フィードバック等がある。これらは`shared/ui/bootstrap-theme.css`（[`shared-ui-components.md`](shared-ui-components.md)）をsymlinkして`@import`する
+- **ホスティングはS3 + CloudFront**（[`static-hosting-pattern.md`](static-hosting-pattern.md)）に統一する。バックエンドAPIの有無・ログインの有無によらずホスティング方式は変わらない
 - バックエンドAPI・認証基盤を持たない場合、データはすべてクライアント側（メモリ・URLクエリパラメータ・localStorage）で完結する
 
 ## デプロイの要点
 
-ホスティング（S3 + CloudFrontのインフラ構築・キャッシュヘッダー戦略・デプロイ手順）は`docs/static-hosting-pattern.md`を参照する。CloudFrontは独自ドメイン直下（または任意のパス）で配信できる。そのため、GitHub Pagesのプロジェクトページのようなリポジトリ名サブパスへの対応（`vite.config.ts`の`base`調整）は基本的に不要である（サイトルート配信を既定とする）。
+ホスティング（S3 + CloudFrontのインフラ構築・キャッシュヘッダー戦略・デプロイ手順）は[`static-hosting-pattern.md`](static-hosting-pattern.md)を参照する。CloudFrontは独自ドメイン直下（または任意のパス）で配信できる。そのため、GitHub Pagesのプロジェクトページのようなリポジトリ名サブパスへの対応（`vite.config.ts`の`base`調整）は基本的に不要である（サイトルート配信を既定とする）。
 
 ## TypeScript構成
 
@@ -162,7 +162,7 @@ jsdom v30とNode 20の非互換（前述の`node_version`節参照）とは別�
 
 ## lint
 
-ESLintを標準とする（`docs/code-quality-conventions.md`「lint」参照）。`typescript-eslint`の推奨設定に複数のルールを組み合わせる。React Hooksのルール違反検知（`eslint-plugin-react-hooks`）・循環的複雑度（`complexity`ルール）である。加えて`eslint-plugin-sonarjs`・未使用変数の検知（`no-unused-vars`）も組み合わせる。ファイルサイズの検知（`max-lines`ルール）もあわせて組み合わせる。
+ESLintを標準とする（[`code-quality-conventions.md`](code-quality-conventions.md)「lint」参照）。`typescript-eslint`の推奨設定に複数のルールを組み合わせる。React Hooksのルール違反検知（`eslint-plugin-react-hooks`）・循環的複雑度（`complexity`ルール）である。加えて`eslint-plugin-sonarjs`・未使用変数の検知（`no-unused-vars`）も組み合わせる。ファイルサイズの検知（`max-lines`ルール）もあわせて組み合わせる。
 
 ```js
 // eslint.config.js
@@ -212,29 +212,29 @@ jobs:
 
 ## PWA・共有UIコンポーネント導入時の注意点
 
-`shared/pwa/`（`docs/service-worker-update-pattern.md`）をTypeScriptプロジェクトへsymlink共有する場合を考える。`shared/ui/`（`docs/shared-ui-components.md`）も同様である。いずれもプレーンなJSXのため以下の対応が必要になる。
+`shared/pwa/`（[`service-worker-update-pattern.md`](service-worker-update-pattern.md)）をTypeScriptプロジェクトへsymlink共有する場合を考える。`shared/ui/`（[`shared-ui-components.md`](shared-ui-components.md)）も同様である。いずれもプレーンなJSXのため以下の対応が必要になる。
 
 1. **`tsconfig.app.json`に`allowJs: true`を追加する**。symlinkされた`.jsx`ファイルをTypeScript側の型検査対象に含めなくても（`checkJs`は既定false）import解決自体はできるようにする必要がある
 2. **`vite.config.ts`に`resolve.preserveSymlinks: true`を追加する**。symlink共有されたコンポーネントが`react`等のnpmパッケージをimportする場合を考える。Viteは既定でsymlinkの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索してしまう。そのため、利用側にインストール済みのパッケージを解決できずビルドエラーになる
 3. **`ServiceWorkerRegistration.jsx`はサブパス配信では`symlink`のまま使えない**。`register("/sw.js")`が絶対パス固定のため、サイトルート以外のサブパス配下に配信している場合は実際に配信されるURLと一致しない。`import.meta.env.BASE_URL`を使うよう修正したコピー（`.tsx`化し、専用テストを付けると良い）を個別管理すること（サイトルート配信の場合は対応不要）
-4. **daisyUI固有のクラス名（`toast`/`modal`等）を使う共有コンポーネントを流用する場合、Bootstrap環境ではそのままでは無スタイルになりうる**。Bootstrap前提の場合は`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）を導入する。それでも足りない配色は`App.css`等へ対象クラス名のみを狭くスコープして追加で補う
+4. **daisyUI固有のクラス名（`toast`/`modal`等）を使う共有コンポーネントを流用する場合、Bootstrap環境ではそのままでは無スタイルになりうる**。Bootstrap前提の場合は`shared/ui/bootstrap-theme.css`（[`shared-ui-components.md`](shared-ui-components.md)）を導入する。それでも足りない配色は`App.css`等へ対象クラス名のみを狭くスコープして追加で補う
 
 ## npm workspacesでバックエンドと組み合わせる場合
 
-独自バックエンドAPI（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）が必要な場合を考える。`frontend/`を単独パッケージではなくnpm workspacesの一部として構成する。
+独自バックエンドAPI（[`standard-tech-stack.md`](standard-tech-stack.md)「3. バックエンドAPI」参照）が必要な場合を考える。`frontend/`を単独パッケージではなくnpm workspacesの一部として構成する。
 
 - ルートpackage.jsonへ`workspaces: ["frontend", "backend"]`を追加する。ルート直下の`package-lock.json`1本で両ワークスペースの依存を一括管理する
-- `reusable-ci.yml`・`reusable-cd.yml`は`packages`入力ではなく`workspaces: true`入力を使う。`frontend_dir`/`backend_dir`が既定の`frontend`/`backend`のままなら追加指定は不要である。詳細は`docs/cicd-pipeline-specification.md`を参照
+- `reusable-ci.yml`・`reusable-cd.yml`は`packages`入力ではなく`workspaces: true`入力を使う。`frontend_dir`/`backend_dir`が既定の`frontend`/`backend`のままなら追加指定は不要である。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照
 - `.nvmrc`でNode.jsバージョンをバックエンドのLambdaランタイムと統一する（frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する）
 - ディレクトリ構成: `views/`＝画面単位のコンポーネント、`components/`＝画面内で再利用する部品、`hooks/`＝状態・副作用ロジック、`utils/`＝純関数。テストは実装と同じディレクトリに`*.test.tsx`/`*.test.ts`を併置する
-- **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。外部要因（バックエンドのコールドスタート等）に起因する既知のflakyへの対応は`docs/serverless-spa-pattern.md`「CI/CD連携」参照
-- バックエンドAPI自体の構成（OSLS/AWS SAM・API Gateway・DynamoDB等）は対象外とする。詳細は`docs/standard-tech-stack.md`「3. バックエンドAPI」の該当パターンを参照する
+- **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。外部要因（バックエンドのコールドスタート等）に起因する既知のflakyへの対応は[`serverless-spa-pattern.md`](serverless-spa-pattern.md)「CI/CD連携」参照
+- バックエンドAPI自体の構成（OSLS/AWS SAM・API Gateway・DynamoDB等）は対象外とする。詳細は[`standard-tech-stack.md`](standard-tech-stack.md)「3. バックエンドAPI」の該当パターンを参照する
 
 ## 新規プロジェクトでの始め方
 
-1. `docs/standard-tech-stack.md`の手順1（dev-standards取り込み）を実施する
+1. [`standard-tech-stack.md`](standard-tech-stack.md)の手順1（dev-standards取り込み）を実施する
 2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行する。上記の`tsconfig`・`vite.config.ts`（`preserveSymlinks`は後で必要になったら追加）・`eslint.config.js`を整える。バックエンドと組み合わせる場合は上記「npm workspacesでバックエンドと組み合わせる場合」に沿ってworkspaces構成にする
 3. `vitest`・`@testing-library/react`・`@testing-library/jest-dom`を導入する。`@testing-library/user-event`・`@vitest/coverage-v8`・`jsdom`も導入する。上記のテスト戦略に沿ってセットアップする
 4. 状態管理が必要なら`zustand`を導入し、上記のstore設計パターンに沿う
-5. 上記の「CI/CDの構成例」に沿って`.github/workflows/ci.yml`・`cd.yml`を用意する。ホスティングは`docs/static-hosting-pattern.md`に沿ってS3 + CloudFrontを構築する
+5. 上記の「CI/CDの構成例」に沿って`.github/workflows/ci.yml`・`cd.yml`を用意する。ホスティングは[`static-hosting-pattern.md`](static-hosting-pattern.md)に沿ってS3 + CloudFrontを構築する
 6. PWA対応・共有UIコンポーネントが必要になったら「PWA・共有UIコンポーネント導入時の注意点」を参照する

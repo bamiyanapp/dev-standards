@@ -1,12 +1,12 @@
 # 公開リポジトリのGitHub Actionsで秘密情報を露出させないパターン
 
-**前提**: `docs/public-repo-no-pii-pattern.md`と同じく、bamiyanapp配下のリポジトリは基本的に公開（Public）である。GitHub Actionsの実行履歴（ログ・Job Summary含む）は、公開リポジトリでは**未ログインの第三者でも閲覧できる**。同文書が「個人情報」を対象にしているのに対し、本書は「秘密情報・認証情報（トークン・パスワード・APIキー等）」を対象にする。
+**前提**: [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md)と同じく、bamiyanapp配下のリポジトリは基本的に公開（Public）である。GitHub Actionsの実行履歴（ログ・Job Summary含む）は、公開リポジトリでは**未ログインの第三者でも閲覧できる**。同文書が「個人情報」を対象にしているのに対し、本書は「秘密情報・認証情報（トークン・パスワード・APIキー等）」を対象にする。
 
-対象読者は、`docs/sandboxed-agent-production-data-pattern.md`のような`workflow_dispatch`＋Job Summaryパターンを使う全プロダクト。
+対象読者は、[`sandboxed-agent-production-data-pattern.md`](sandboxed-agent-production-data-pattern.md)のような`workflow_dispatch`＋Job Summaryパターンを使う全プロダクト。
 
 ## 原則: Job Summary・ログは公開リポジトリでは公開ページである
 
-`docs/sandboxed-agent-production-data-pattern.md`は、スマホオンリー環境（ローカルCLI操作ができない）向けの設計を積極的に推奨している。具体的には「`workflow_dispatch`はGitHubのWeb/モバイルアプリから実行でき、結果はJob Summaryでその場から確認できる」という設計である。この設計自体は有効だが、**Job Summaryへ出力してよいのは非機密情報（調査結果・処理件数・成否等）に限る**。秘密情報を一度でもJob Summaryへ平文出力すると、その実行履歴が残っている限り誰でも閲覧できてしまう。
+[`sandboxed-agent-production-data-pattern.md`](sandboxed-agent-production-data-pattern.md)は、スマホオンリー環境（ローカルCLI操作ができない）向けの設計を積極的に推奨している。具体的には「`workflow_dispatch`はGitHubのWeb/モバイルアプリから実行でき、結果はJob Summaryでその場から確認できる」という設計である。この設計自体は有効だが、**Job Summaryへ出力してよいのは非機密情報（調査結果・処理件数・成否等）に限る**。秘密情報を一度でもJob Summaryへ平文出力すると、その実行履歴が残っている限り誰でも閲覧できてしまう。
 
 ## アンチパターン: 人間にコピー&ペーストさせるためJob Summaryへ平文表示する
 
@@ -36,14 +36,14 @@ bamiyanapp/examination#514。E2Eテスト専用Cognitoユーザーの`refresh_to
 
 ## 既に平文表示してしまった秘密情報への対応
 
-過去の実行でJob Summary・ログへ平文出力してしまった秘密情報がある。これは**リポジトリのコミット履歴と同様に「後から消せない」前提で扱う**。`docs/public-repo-no-pii-pattern.md`「原則: 一度コミットした個人情報は『消せない』前提で運用する」と同じ考え方である。ワークフローの修正だけでは不十分で、以下をあわせて行う。
+過去の実行でJob Summary・ログへ平文出力してしまった秘密情報がある。これは**リポジトリのコミット履歴と同様に「後から消せない」前提で扱う**。[`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md)「原則: 一度コミットした個人情報は『消せない』前提で運用する」と同じ考え方である。ワークフローの修正だけでは不十分で、以下をあわせて行う。
 
 - 露出した認証情報自体を失効・再発行する（例: Cognitoの`AdminUserGlobalSignOut`でrefresh_tokenを無効化してから再発行する、APIキーをローテーションする等）
 - 可能であれば、過去に平文表示された実行履歴自体の削除も検討する
 
 ## `workflow_dispatch`＋Job Summaryパターン自体は禁止ではない
 
-`docs/sandboxed-agent-production-data-pattern.md`が提供する設計がある。「調査・修正ロジックをコード化しGitHub Actions側に委ねる」という設計であり、引き続き有効である。非機密情報（DynamoDBの調査結果、処理件数、成否等）をJob Summaryへ出力すること自体に問題はない。**出力する値が秘密情報かどうかを都度判断し、秘密情報であれば本書の安全なパターンへ切り替える**、という使い分けが要点である。
+[`sandboxed-agent-production-data-pattern.md`](sandboxed-agent-production-data-pattern.md)が提供する設計がある。「調査・修正ロジックをコード化しGitHub Actions側に委ねる」という設計であり、引き続き有効である。非機密情報（DynamoDBの調査結果、処理件数、成否等）をJob Summaryへ出力すること自体に問題はない。**出力する値が秘密情報かどうかを都度判断し、秘密情報であれば本書の安全なパターンへ切り替える**、という使い分けが要点である。
 
 ## チェックリスト
 
@@ -59,5 +59,5 @@ bamiyanapp/examination#514・PR #515。`.github/workflows/setup-e2e-test-fixture
 
 ## 関連ドキュメント
 
-- `docs/public-repo-no-pii-pattern.md`: 同じ「公開リポジトリ前提」の個人情報版
-- `docs/sandboxed-agent-production-data-pattern.md`: 本書が注意点を補足する対象の`workflow_dispatch`＋Job Summaryパターン
+- [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md): 同じ「公開リポジトリ前提」の個人情報版
+- [`sandboxed-agent-production-data-pattern.md`](sandboxed-agent-production-data-pattern.md): 本書が注意点を補足する対象の`workflow_dispatch`＋Job Summaryパターン

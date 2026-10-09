@@ -2,7 +2,7 @@
 
 ブラウザから直接WebSocketへ接続するクライアント（チャット・リアルタイム協調編集・対戦ゲーム等）で繰り返し必要になる、「接続を維持し続ける」ための設計知見をまとめる。karuta（[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)）のクイズ大会モードWebSocketクライアントがベースである。業務メッセージの内容（`type`ごとのディスパッチ処理等）を除いた、**接続管理そのものの設計判断**を切り出したものである。
 
-コードそのものの共有（symlink化）ではなく設計知見の共有が目的のため、`docs/serverless-spa-pattern.md`と同様に実装は参照側（karuta）を見る方式を取る。
+コードそのものの共有（symlink化）ではなく設計知見の共有が目的のため、[`serverless-spa-pattern.md`](serverless-spa-pattern.md)と同様に実装は参照側（karuta）を見る方式を取る。
 
 ## 解決する問題
 

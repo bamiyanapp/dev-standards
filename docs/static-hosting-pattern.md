@@ -1,8 +1,8 @@
 # S3 + CloudFrontによる静的サイト配信パターン
 
-全プロダクト共通の静的サイトホスティング構成。OSLS（`osls`パッケージ）でS3バケット・CloudFrontディストリビューションをコードとして定義する。パッケージ本体は[oss-serverless/osls](https://github.com/oss-serverless/osls)である。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」を参照。
+全プロダクト共通の静的サイトホスティング構成。OSLS（`osls`パッケージ）でS3バケット・CloudFrontディストリビューションをコードとして定義する。パッケージ本体は[oss-serverless/osls](https://github.com/oss-serverless/osls)である。詳細は[`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md)「OSLS vs Serverless Framework本家」を参照。
 
-`docs/serverless-static-site-pattern.md`（examination由来、Lambda@Edgeによるサイト全体ログイン保護込みの構成）がベースである。そこから認証ゲート部分を除いた、純粋なホスティング部分を切り出したものである。サイト全体をログイン必須にしたい場合（閲覧自体を保護したい場合）は、そちらのCognito + Lambda@Edge構成を検討すること。ログインが必要な場合の標準はAPI呼び出し単位の認証（`docs/standard-tech-stack.md`「2. ログイン」参照）であり、フロントエンド自体は誰でも閲覧できる前提とする。
+[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)（examination由来、Lambda@Edgeによるサイト全体ログイン保護込みの構成）がベースである。そこから認証ゲート部分を除いた、純粋なホスティング部分を切り出したものである。サイト全体をログイン必須にしたい場合（閲覧自体を保護したい場合）は、そちらのCognito + Lambda@Edge構成を検討すること。ログインが必要な場合の標準はAPI呼び出し単位の認証（[`standard-tech-stack.md`](standard-tech-stack.md)「2. ログイン」参照）であり、フロントエンド自体は誰でも閲覧できる前提とする。
 
 ## 全体構成
 
@@ -18,7 +18,7 @@
 - ハッシュ付きJS/CSS等のビルド成果物: `public, max-age=31536000, immutable`（内容が変われば名前自体が変わるため長期不変キャッシュにしてよい）
 - それ以外（`index.html`・`favicon`等、内容が変わってもファイル名が変わらないもの）: `no-cache`（使用前に必ずオリジンへ再検証させる）
 
-デプロイのたびに`aws cloudfront create-invalidation --paths "/*"`でCloudFrontのエッジキャッシュを無効化する。ただしこれはユーザーのブラウザ本体のキャッシュまでは無効化しない。そのためPWA化する場合はService Workerの更新パターン（`docs/service-worker-update-pattern.md`）と合わせて設計する。
+デプロイのたびに`aws cloudfront create-invalidation --paths "/*"`でCloudFrontのエッジキャッシュを無効化する。ただしこれはユーザーのブラウザ本体のキャッシュまでは無効化しない。そのためPWA化する場合はService Workerの更新パターン（[`service-worker-update-pattern.md`](service-worker-update-pattern.md)）と合わせて設計する。
 
 ## デプロイ
 
@@ -31,7 +31,7 @@ aws s3 sync dist/assets/ s3://<bucket-name>/assets/ --cache-control "public, max
 aws cloudfront create-invalidation --distribution-id <distribution-id> --paths "/*"
 ```
 
-`cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（`docs/standard-tech-stack.md`「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できる。ただし、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離する。`workspaces`構成のCI/CD入力（`docs/cicd-pipeline-specification.md`参照）でそれぞれデプロイする。
+`cd.yml`側の`deploy` jobとして、これらのステップを順に実行する。バックエンドAPIを別途構築する場合（[`standard-tech-stack.md`](standard-tech-stack.md)「3. バックエンドAPI」参照）も同じOSLSベースの構成を流用できる。ただし、ホスティング用スタックとバックエンドAPI用スタックは独立したServerless serviceとして分離する。`workspaces`構成のCI/CD入力（[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)参照）でそれぞれデプロイする。
 
 ### semantic-release後のcheckoutタイミングに関する注意
 
@@ -61,5 +61,5 @@ S3バケット名は全AWSアカウント間・リージョン内でグローバ
 
 ## この構成に無いもの
 
-- **サイト全体のログイン保護**（Lambda@Edgeによる全リクエスト認証ゲート）は対象外。`docs/serverless-static-site-pattern.md`を参照
-- ログイン・バックエンドAPIが必要な場合の構成自体は`docs/standard-tech-stack.md`「2. ログイン」「3. バックエンドAPI」を参照（本ドキュメントはホスティングのみを扱う）
+- **サイト全体のログイン保護**（Lambda@Edgeによる全リクエスト認証ゲート）は対象外。[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)を参照
+- ログイン・バックエンドAPIが必要な場合の構成自体は[`standard-tech-stack.md`](standard-tech-stack.md)「2. ログイン」「3. バックエンドAPI」を参照（本ドキュメントはホスティングのみを扱う）

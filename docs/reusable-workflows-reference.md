@@ -1,6 +1,6 @@
 # reusable workflow 導入・入力リファレンス
 
-`docs/cicd-pipeline-specification.md`はCI/CDパイプラインの仕様（各ジョブの実行内容・Architecture）を扱う。これに対し本ドキュメントは、参照側リポジトリでの**導入手順**を扱う。加えて、`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の**全入力パラメータのリファレンス**も扱う。
+[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)はCI/CDパイプラインの仕様（各ジョブの実行内容・Architecture）を扱う。これに対し本ドキュメントは、参照側リポジトリでの**導入手順**を扱う。加えて、`reusable-ci.yml` / `reusable-cd.yml` / `reusable-codeql.yml`の**全入力パラメータのリファレンス**も扱う。
 
 ## 参照側リポジトリでの導入
 
@@ -25,8 +25,8 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
     - 本リポジトリ側の `.gitignore` は**管理区間**（`# --- dev-standards managed: start ---` 〜 `# --- dev-standards managed: end ---` のマーカーで囲まれた区間）を持つ。`--check`/コピー元との一致判定はこの区間内のみが対象（issue #138）。マーカーが無い場合はファイル全体の完全一致が要求される従来の挙動にフォールバックする
     - 区間外（前後）にはプロジェクト固有のignoreエントリを自由に追記できる。乖離検知の対象外のため、ルート直下の `.gitignore` に直接追記してよい
     - 管理区間内の差分（本リポジトリ側の`.gitignore`更新への追従）は、`bootstrap.js`（`--check` 無し）を再実行すると区間外の追記を保持したまま自動的に再同期される
-  - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある。例えば `shared/pwa/` 配下のPWAキャッシュ更新パターンである（詳細は `docs/service-worker-update-pattern.md` 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述する。すると`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
-- `docs/cicd-pipeline-specification.md`: Claude Codeの `@import` 構文で解決可能なMarkdownである。そのためシンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
+  - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある。例えば `shared/pwa/` 配下のPWAキャッシュ更新パターンである（詳細は [`service-worker-update-pattern.md`](service-worker-update-pattern.md) 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述する。すると`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
+- [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): Claude Codeの `@import` 構文で解決可能なMarkdownである。そのためシンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
 
 ## `reusable-ci.yml`
 
@@ -57,7 +57,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `e2e_coverage_threshold` | `frontend-e2e-test`のE2EテストJSカバレッジ閾値（%） | `0` |
 | `e2e_coverage_metrics` | `e2e_coverage_threshold`のゲート判定対象指標（カンマ区切り、例: `"statements,functions,lines"`） | `""`（lines/statements/functions/branchesの全4種） |
 
-- いずれも**開発共通標準の目標値は80%以上**。新規導入時は実測値が無いため0から開始してよいが、その値のまま据え置かずテストケースを追加して段階的に80%へ近づける（詳細は`docs/cicd-pipeline-specification.md`参照）
+- いずれも**開発共通標準の目標値は80%以上**。新規導入時は実測値が無いため0から開始してよいが、その値のまま据え置かずテストケースを追加して段階的に80%へ近づける（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)参照）
 - `coverage_threshold`: 0以下（既定）の場合、`vitest run --coverage`に`--coverage.reporter=json-summary`を追加して`coverage/coverage-summary.json`を生成する。ただし`.github/actions/check-coverage-threshold`による閾値判定・Job Summaryへの表示ステップ自体はスキップする。0より大きい値を指定するとこのステップが実行される。`packages`のmatrix構成では各要素の`coverage_threshold`で上書きできる
 - `e2e_coverage_threshold`: `coverage_threshold`と同じ`check-coverage-threshold`複合アクションを使う。対象はPlaywright（monocart-reporter）が出力するE2E実行時のカバレッジで、`coverage_threshold`（ユニットテストカバレッジ）とは独立している（[bamiyanapp/karuta#576](https://github.com/bamiyanapp/karuta/issues/576)、[bamiyanapp/dev-standards#422](https://github.com/bamiyanapp/dev-standards/issues/422)）
 
@@ -81,12 +81,12 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `doc_duplication_paths` | ドキュメント重複検知の対象パス（ディレクトリまたはファイル） | `""` |
 | `enable_architecture_check` | `dependency-cruiser`によるアーキテクチャ違反検知（`architecture-check` job） | `false` |
 
-- `enable_duplication_check`: SonarCloud相当の静的解析をCIネイティブなツールで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。ESLintの`complexity`ルール・`eslint-plugin-sonarjs`はこのワークフローでは扱わず、参照側リポジトリのESLint設定へ直接追加する（推奨ルールセットは`docs/code-quality-conventions.md`参照）。`submodules: true`でcheckoutするため、参照側リポジトリのproduct codeが`shared/`と重複（symlink化し忘れ）していないかも検知できる（[bamiyanapp/dev-standards#621](https://github.com/bamiyanapp/dev-standards/issues/621)）。`sync-manifest.json`等に列挙済みのsymlink/copyの組は自動生成される除外リストにより誤検知しない
+- `enable_duplication_check`: SonarCloud相当の静的解析をCIネイティブなツールで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。ESLintの`complexity`ルール・`eslint-plugin-sonarjs`はこのワークフローでは扱わず、参照側リポジトリのESLint設定へ直接追加する（推奨ルールセットは[`code-quality-conventions.md`](code-quality-conventions.md)参照）。`submodules: true`でcheckoutするため、参照側リポジトリのproduct codeが`shared/`と重複（symlink化し忘れ）していないかも検知できる（[bamiyanapp/dev-standards#621](https://github.com/bamiyanapp/dev-standards/issues/621)）。`sync-manifest.json`等に列挙済みのsymlink/copyの組は自動生成される除外リストにより誤検知しない
 - `duplication_threshold`: 0以下（既定）の場合`jscpd`にゲート判定（`--threshold`）を渡さずJob Summaryへのレポート表示のみ行う。対象はリポジトリ全体のプロダクトコード（テストファイル・`e2e`ディレクトリ配下を除く）。**開発共通標準の目標値は5%以下**（[bamiyanapp/dev-standards#416](https://github.com/bamiyanapp/dev-standards/issues/416)）
 - `enable_doc_duplication_check`: `duplication-check`（コード向け）とは別ジョブで、CLAUDE.md・`SKILL.md`間の丸ごとコピペ重複（drift事故の原因）を検知する（[bamiyanapp/dev-standards#586](https://github.com/bamiyanapp/dev-standards/issues/586)）
 - `doc_duplication_threshold`: ドキュメント内の埋め込みコードサンプルも`jscpd`の自動判定により別フォーマットとして計上されうるため、意図的に複数の完全なコード例を並べているドキュメントがある場合はその分を許容できる値にすること
 - `doc_duplication_paths`: `text_lint_paths`等と異なりglobパターンではなく`jscpd`へそのまま位置引数として渡す。カンマまたは改行区切りで複数指定できる（例: `"docs\nREADME.md\nCLAUDE.md\n.claude/skills"`）
-- `enable_architecture_check`: 循環依存と、npm workspacesモノレポでの`frontend_dir`/`backend_dir`間の越境importを検知する（[bamiyanapp/dev-standards#523](https://github.com/bamiyanapp/dev-standards/issues/523)）。共有ルール（`dependency-cruiser.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのジョブの有効化のみでよい（詳細は`docs/code-quality-conventions.md`参照）
+- `enable_architecture_check`: 循環依存と、npm workspacesモノレポでの`frontend_dir`/`backend_dir`間の越境importを検知する（[bamiyanapp/dev-standards#523](https://github.com/bamiyanapp/dev-standards/issues/523)）。共有ルール（`dependency-cruiser.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのジョブの有効化のみでよい（詳細は[`code-quality-conventions.md`](code-quality-conventions.md)参照）
 
 ### ドキュメント品質
 
@@ -99,7 +99,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `enable_dead_link_check` | Markdown間の相対リンク切れを検証する（`dead-link-check` job） | `false` |
 | `dead_link_check_paths` | 検証対象Markdownのglobパターン | `""` |
 
-- `enable_mermaid_render`: GitHubのPR差分ビュー・API経由でのファイル取得等、mermaidがネイティブレンダリングされない場面向け（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`を一度だけ手動で埋め込んでおく。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）
+- `enable_mermaid_render`: GitHubのPR差分ビュー・API経由でのファイル取得等、mermaidがネイティブレンダリングされない場面向け（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`を一度だけ手動で埋め込んでおく。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）
 - `enable_text_lint`: ESLint・stylelintがコード向け、CodeQLがセキュリティ向けの静的解析であるのに対し、こちらはMarkdownドキュメントの文章品質（文体の不統一・表記ゆれ等）を検知する（[bamiyanapp/dev-standards#436](https://github.com/bamiyanapp/dev-standards/issues/436)）。共有設定（`textlint.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのjobの有効化と`text_lint_paths`の指定のみでよい
 - `enable_dead_link_check`: ドキュメントのリファクタリング・ファイル移動・リネームでリンク切れが発生しても、`text-lint`・`doc-duplication-check`では検知できないため別ジョブとして提供する（[bamiyanapp/dev-standards#603](https://github.com/bamiyanapp/dev-standards/issues/603)）。外部URL（`http`/`https`）は一時的な障害でCIが不安定になることを避けるため検証対象から除外し、相対パスのリンクのみを検証する
 
@@ -186,7 +186,7 @@ jobs:
 
 ## `reusable-rollback-to-stable.yml`
 
-ブルーグリーン（stable/canary）デプロイパターン（`docs/blue-green-stage-pattern.md`参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）をtrueに設定する。
+ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）をtrueに設定する。
 
 ```yaml
 on:

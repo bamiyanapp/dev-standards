@@ -1,6 +1,6 @@
 # サーバーレスAPI構成パターン（API Gateway + Lambda + DynamoDB + SAM）
 
-**デプロイツール（AWS SAM）自体は標準索引（`docs/standard-tech-stack.md`）からは外れた構成**。標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節の自社発行セッショントークン方式自体はデプロイツールと独立**している。OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効である（`docs/standard-tech-stack.md`「2. ログイン」参照）。
+**デプロイツール（AWS SAM）自体は標準索引（[`standard-tech-stack.md`](standard-tech-stack.md)）からは外れた構成**。標準ではバックエンドAPIのデプロイツールをOSLSに統一しており（「3. バックエンドAPI」参照）、本ドキュメントはAWS SAMによる実装例として残している。一方、**「認証パターン（Cognitoを使わない）」節の自社発行セッショントークン方式自体はデプロイツールと独立**している。OSLSベースのバックエンドと組み合わせて使う場合も標準構成として引き続き有効である（[`standard-tech-stack.md`](standard-tech-stack.md)「2. ログイン」参照）。
 
 Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークンをバックエンドで検証する。以降はバックエンドが自社発行する長期セッショントークンで認証する、より小規模なプロダクト向けの構成である。Camp-Stock（[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)）で検証済み。
 
@@ -109,7 +109,7 @@ sequenceDiagram
 
 ## CI/CDのデプロイ固有事項
 
-`docs/cicd-pipeline-specification.md`の`reusable-cd.yml`（semantic-releaseによるバージョニング）に続ける。参照側リポジトリ自身の`cd.yml`でプロダクト固有のデプロイジョブを実行する。
+[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)の`reusable-cd.yml`（semantic-releaseによるバージョニング）に続ける。参照側リポジトリ自身の`cd.yml`でプロダクト固有のデプロイジョブを実行する。
 
 - `sam build` → `sam deploy` → スタック出力（API・S3バケット名・CloudFront distribution ID等）取得、という順序で進める
 - 続けてフロントエンドビルド（`VITE_API_BASE_URL`にAPI出力を注入） → S3同期 → CloudFront invalidation、という順序で行う
@@ -134,7 +134,7 @@ sequenceDiagram
   ```
 
   `backend/e2e/testServer.js`は`createFakeAuthenticator()`をこのファイルからimportする。`frontend/e2e/auth.js`側のログイン用ヘルパーは`loginAsE2EUser`をそのままre-exportするか薄くラップする。実際にセッショントークン（またはGoogle IDトークン）を保持しているCookie名（プロダクトごとに異なる）を`cookieName`引数で渡す。
-- 詳細な呼び出し規約（スクリーンショット報告等）は`docs/cicd-pipeline-specification.md`「CIワークフロー」を参照
+- 詳細な呼び出し規約（スクリーンショット報告等）は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「CIワークフロー」を参照
 
 ## 参考実装
 

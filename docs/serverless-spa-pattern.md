@@ -2,7 +2,7 @@
 
 専用のバックエンドAPI・リアルタイム双方向通信（WebSocket等）が必要な、ログイン不要の小規模〜中規模プロダクト向けの構成。karuta（[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)）から、プロダクト固有の業務ロジックを除いた、他プロダクトでも再利用できるアーキテクチャ・設定パターンを切り出したもの。
 
-`docs/serverless-static-site-pattern.md`（S3 + CloudFront + Cognitoによる認証付き静的サイト配信）とは異なる系統。ログイン・独自ドメイン配信が不要な場合がある。代わりに「サーバー側で状態を持つ独自API」「複数クライアント間のリアルタイム同期」が必要な場合はこちらを選ぶ（使い分けは`docs/standard-tech-stack.md`参照）。
+[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)（S3 + CloudFront + Cognitoによる認証付き静的サイト配信）とは異なる系統。ログイン・独自ドメイン配信が不要な場合がある。代わりに「サーバー側で状態を持つ独自API」「複数クライアント間のリアルタイム同期」が必要な場合はこちらを選ぶ（使い分けは[`standard-tech-stack.md`](standard-tech-stack.md)参照）。
 
 コードそのものの共有（symlink化）ではなく、**モノレポ構成・インフラ構成・設計判断の共有**が目的。実際の完全な実装例はkarutaの`frontend/`・`backend/`を参照する。
 
@@ -21,11 +21,11 @@ npm workspaces構成のモノレポで、`frontend`（SPA）と`backend`（Serve
 - `.npmrc`に`install-strategy=nested`を指定する。Lambda関数を`package.individually: true`で個別zip化する構成（後述）と組み合わせるため、hoisted構成より確実にワークスペース単位で依存が解決される
 - `.nvmrc`でNode.jsバージョンをLambdaランタイム（例: `nodejs22.x`）と統一しておく。frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する
 
-`dev-standards`は`git submodule add -b main`でルートに取り込む。`sync-manifest.local.json`経由で横断的UIコンポーネント（`docs/shared-ui-components.md`）等をsymlink共有する。手順は`docs/standard-tech-stack.md`の立ち上げ手順を参照。
+`dev-standards`は`git submodule add -b main`でルートに取り込む。`sync-manifest.local.json`経由で横断的UIコンポーネント（[`shared-ui-components.md`](shared-ui-components.md)）等をsymlink共有する。手順は[`standard-tech-stack.md`](standard-tech-stack.md)の立ち上げ手順を参照。
 
 ## フロントエンド（`frontend/`）
 
-- **Vite + React 19**。UIフレームワークは**Bootstrap 5.3を`index.html`のCDN `<link>`で読み込む**。これは`docs/client-only-vite-spa-pattern.md`の標準フロントエンド構成と同じCSSフレームワークである。共通フォント・ダークモード対応・ボタン押下フィードバック等がある。これらは`shared/ui/bootstrap-theme.css`（`docs/shared-ui-components.md`）をsymlinkして`@import`する
+- **Vite + React 19**。UIフレームワークは**Bootstrap 5.3を`index.html`のCDN `<link>`で読み込む**。これは[`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)の標準フロントエンド構成と同じCSSフレームワークである。共通フォント・ダークモード対応・ボタン押下フィードバック等がある。これらは`shared/ui/bootstrap-theme.css`（[`shared-ui-components.md`](shared-ui-components.md)）をsymlinkして`@import`する
 - PWA化する場合は`vite-plugin-pwa`を使う。
 
   ```js
@@ -42,7 +42,7 @@ npm workspaces構成のモノレポで、`frontend`（SPA）と`backend`（Serve
 - ディレクトリ構成: `views/`＝画面単位のコンポーネント、`components/`＝画面内で再利用する部品、`hooks/`＝状態・副作用ロジック、`utils/`＝純関数。**テストは実装と同じディレクトリに`*.test.jsx`/`*.test.js`を併置**する
 - テストはvitest（jsdom環境）+ Testing Library。`vite.config.js`の`test.exclude`にE2E用ディレクトリ（例: `./e2e/**`）を追加し、vitestの既定`*.spec.js`マッチと衝突しないようにする
 - **E2Eテスト（Playwright）はモックを作らず、実際にデプロイ済みのバックエンドAPIへ直結して実行する**。ローカル確認用の`npm run preview`サーバーのみがローカル動作で、APIは常に実環境を使う。これにより「モックとの乖離」による見落としを避けられる。一方、外部要因（バックエンドのコールドスタート・依存する外部AI/合成API等のレイテンシ）に起因する既知のflakyが発生し得る前提を受け入れる必要がある（対応の実例は後述のCI/CD節参照）
-- E2Eの実行結果はスクリーンショット付きでPRへ自動投稿される（`docs/cicd-pipeline-specification.md`「1. CIワークフロー」参照）。開発環境がCLIから離れている（スマートフォンのみ等）場合でも、実装した画面をその場で目視確認できる
+- E2Eの実行結果はスクリーンショット付きでPRへ自動投稿される（[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）。開発環境がCLIから離れている（スマートフォンのみ等）場合でも、実装した画面をその場で目視確認できる
 
 ## バックエンド（`backend/`）
 
@@ -104,9 +104,9 @@ functions:
         AttributeName: ttl
         Enabled: true
   ```
-- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分には共通ロジックがある。内容は、接続取得、GSIによるルーム内接続一覧Queryである。加えて、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパーでもある。これは`shared/lambda/webSocketBroadcast.js`としてsymlink共有できる。`docs/shared-ui-components.md`と同様の索引は無いため、本ファイルから直接参照する。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外である。フロントエンド側の設計知見は`docs/websocket-client-reconnect-pattern.md`を参照
+- **リアルタイム双方向通信が必要な機能はAPI Gateway WebSocket**を使う（`$connect`/`$disconnect`ルート＋業務ルート）。接続ごとの状態（役割・所属ルーム等）はDynamoDBで管理し、ブロードキャストは接続一覧をQuery（GSI）した上で`ApiGatewayManagementApi`へ個別送信する。この接続管理・ブロードキャスト部分には共通ロジックがある。内容は、接続取得、GSIによるルーム内接続一覧Queryである。加えて、`GoneException`（410）時の接続レコード自動掃除を含む個別送信、複数接続への一括配信、役割ガード＋catch共通化のラッパーでもある。これは`shared/lambda/webSocketBroadcast.js`としてsymlink共有できる。[`shared-ui-components.md`](shared-ui-components.md)と同様の索引は無いため、本ファイルから直接参照する。業務メッセージの内容自体（`type`ごとのディスパッチ処理等）はこの共通化の対象外である。フロントエンド側の設計知見は[`websocket-client-reconnect-pattern.md`](websocket-client-reconnect-pattern.md)を参照
 - **IAMは`provider.iam.role.statements`に必要最小限のアクションのみ列挙する**。例えば`dynamodb:Scan/Query/GetItem/PutItem/UpdateItem`を用途ごとに区別する。他の関数を非同期起動する（`lambda:InvokeFunction`）等、循環参照が起きる権限は関数専用のIAMロールへ分離する
-- ハンドラーはフラット配置（`src/`を必ずしも作らない）でよい。REST用（`handler.js`）・WebSocket用（`xxxHandler.js`）・共通レスポンス生成程度の粒度に分ける。REST（HTTPプロキシ統合）ハンドラ向けの共通CORSレスポンス生成関数がある（`jsonResponse`/`badRequest`/`notFound`/`serverError`）。これらは`shared/lambda/httpResponse.js`としてsymlink共有できる。API Gateway側でCORSを設定する構成（`docs/serverless-api-dynamodb-pattern.md`）ではなく、Lambda側でCORSヘッダーを付与する構成向け
+- ハンドラーはフラット配置（`src/`を必ずしも作らない）でよい。REST用（`handler.js`）・WebSocket用（`xxxHandler.js`）・共通レスポンス生成程度の粒度に分ける。REST（HTTPプロキシ統合）ハンドラ向けの共通CORSレスポンス生成関数がある（`jsonResponse`/`badRequest`/`notFound`/`serverError`）。これらは`shared/lambda/httpResponse.js`としてsymlink共有できる。API Gateway側でCORSを設定する構成（[`serverless-api-dynamodb-pattern.md`](serverless-api-dynamodb-pattern.md)）ではなく、Lambda側でCORSヘッダーを付与する構成向け
 - 単体テストは**vitest + `aws-sdk-client-mock`**。
 
   ```js
@@ -140,11 +140,11 @@ functions:
     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
-フロントエンドは`.github/actions/deploy-github-pages`（`docs/standard-tech-stack.md`参照）でGitHub Pagesへデプロイする。`workspaces: true`を指定して同様にデプロイする。両方とも`reusable-cd.yml`の`release`ジョブ（semantic-release）に`needs`させ、新バージョンがリリースされた場合のみ実行する。
+フロントエンドは`.github/actions/deploy-github-pages`（[`standard-tech-stack.md`](standard-tech-stack.md)参照）でGitHub Pagesへデプロイする。`workspaces: true`を指定して同様にデプロイする。両方とも`reusable-cd.yml`の`release`ジョブ（semantic-release）に`needs`させ、新バージョンがリリースされた場合のみ実行する。
 
 ## CI/CD連携（`reusable-ci.yml`）
 
-`docs/cicd-pipeline-specification.md`の機能を、このアーキテクチャ向けに以下の入力で有効化する。
+[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)の機能を、このアーキテクチャ向けに以下の入力で有効化する。
 
 | 入力 | 値の目安 | 理由 |
 |---|---|---|
@@ -164,7 +164,7 @@ functions:
 `backend/serverless.yml`は環境変数・APIルート・DynamoDBテーブル定義等、プロダクトの構成情報を集約した単一の正（source of truth）である。これを手動でドキュメントへ転記すると、`serverless.yml`の変更に追従できず実態と乖離する（ドキュメントドリフト）。`serverless.yml`をパースしてMarkdownを自動生成し、`docs/generated/`へ出力する仕組みを設けると、この乖離を構造的に防げる。
 
 - **共通ローダー**: `js-yaml`の`CORE_SCHEMA`にカスタムスキーマを追加する。CloudFormation組み込み関数（`!GetAtt`・`!Sub`・`!Ref`等）のタグを`{ "Fn::<Tag>": <値> }`として素通しするだけの最小限のものである。これを使ってパースする（値の解決は行わない。静的なルート・テーブル定義の抽出が目的のため）。`${self:custom.xxx}`変数参照は`custom`セクションの実値へ解決する
-- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、用途ごとに必要な情報だけを抽出する。環境変数の一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等をMarkdownへ整形する。テーブル形式が向くもの（環境変数の一覧等）がある。Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）もある。両者は`docs/documentation-format-conventions.md`の基準で使い分ける
+- **個別の生成スクリプト**: 共通ローダーが返したオブジェクトから、用途ごとに必要な情報だけを抽出する。環境変数の一覧・HTTP APIルート一覧・WebSocketルート一覧・DynamoDBテーブル定義（属性・キースキーマ・GSI・TTL）等をMarkdownへ整形する。テーブル形式が向くもの（環境変数の一覧等）がある。Mermaid図（ER図・シーケンス図・フロー図）が向くもの（テーブル関連・API呼び出しフロー・アーキテクチャ図）もある。両者は[`documentation-format-conventions.md`](documentation-format-conventions.md)の基準で使い分ける
 - **出力先とワークフロー**: 生成先の`docs/generated/`配下に「手動編集禁止・再生成コマンドで上書きされる」旨を明記したREADMEを置く。`npm run docs:generate`のような単一コマンドで全生成スクリプトを実行できるようにする。`serverless.yml`を変更したPRではこのコマンドを実行してから生成物ごとコミットする運用にする
 
 コード自体はプロダクトごとに`serverless.yml`の構成（リソース名・関数名等）が異なるため、共通ローダー・生成スクリプトのsymlink共有はせず、このパターン記述と実装例の参照にとどめる。

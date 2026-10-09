@@ -67,4 +67,4 @@ PWA（ホーム画面に追加したアプリ、スタンドアロン表示）�
 - `prefers-color-scheme`メディアクエリで明暗テーマに追従させる。ビルド後のTailwind設定（`data-theme`属性等）とは独立した、ブラウザ標準のOSテーマ設定ベースの判定になるが、ローディング表示自体はごく短時間しか表示されないため実用上問題にならない
 - `aria-hidden="true"`を付け、スクリーンリーダーに読み上げさせない
 - このパターンは`index.html`という各アプリのビルド設定ファイルに直接埋め込む性質上、`shared/pwa/`のようなJSファイルのsymlink共有には向かない。プロダクトごとに`index.html`へ直接コピー＆調整する
-- Service Workerによるキャッシュ更新パターン（`docs/service-worker-update-pattern.md`）とは別の問題である。こちらはJS到達前の空白、あちらはHTML自体の到達・更新検知であり、混同しないこと。PWA起動時の体感速度改善としては、本パターンに加えてHTML到達自体の速度（ナビゲーションリクエストのキャッシュ戦略）も別途検討する余地がある。examinationでの検討例はexamination#175である
+- Service Workerによるキャッシュ更新パターン（[`service-worker-update-pattern.md`](service-worker-update-pattern.md)）とは別の問題である。こちらはJS到達前の空白、あちらはHTML自体の到達・更新検知であり、混同しないこと。PWA起動時の体感速度改善としては、本パターンに加えてHTML到達自体の速度（ナビゲーションリクエストのキャッシュ戦略）も別途検討する余地がある。examinationでの検討例はexamination#175である
