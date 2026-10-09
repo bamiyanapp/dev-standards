@@ -34,7 +34,7 @@ graph TD
 
 </details>
 
-![技術要素の採用パターン (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack.png?8a4a023421a033499da380e83517ce9ce69851ea)
+![技術要素の採用パターン (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack.png?d23c27bce976bc4563f861faf3061de4715cab7c)
 
 ## 個人情報の扱い（全プロジェクト共通）
 
