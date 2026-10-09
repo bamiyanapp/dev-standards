@@ -4,7 +4,7 @@
 
 ## 新規プロジェクトを始める
 
-[`docs/standard-tech-stack.md`](docs/standard-tech-stack.md)（標準技術スタックの索引・立ち上げ手順）から始める。
+技術選定がまだ決まっていない、アイデアをまずAI駆動で動かしてみたい場合は[`docs/ai-driven-app-curriculum.md`](docs/ai-driven-app-curriculum.md)（アイデア→アプリ化→モダナイズのカリキュラム）から始める。技術選定済みで構成を組み立てる段階になったら[`docs/standard-tech-stack.md`](docs/standard-tech-stack.md)（標準技術スタックの索引・立ち上げ手順）を参照する。
 
 ## AIが開発する際のルール
 
@@ -24,6 +24,7 @@
 
 ### 索引・導入
 
+- [`ai-driven-app-curriculum.md`](docs/ai-driven-app-curriculum.md): アイデア→アプリ化→dev-standards準拠のモダナイズというAI駆動開発の進め方（カリキュラム）
 - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス
 - [`repository-contents.md`](docs/repository-contents.md): このリポジトリに含まれるファイル・ディレクトリの一覧
