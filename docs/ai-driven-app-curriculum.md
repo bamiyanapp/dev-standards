@@ -78,6 +78,10 @@ dev-standardsには2種類の内容が含まれており、本カリキュラム
 | コード重複検知 | `enable_duplication_check`が有効化され、しきい値が設定されている | `docs/cicd-pipeline-specification.md` |
 | アーキテクチャ境界チェック | `enable_architecture_check`が有効化され、frontend/backend間の越境import・循環依存が検知される（複数パッケージ構成の場合） | `docs/cicd-pipeline-specification.md` |
 | セキュリティスキャン（CodeQL） | `.github/workflows/codeql.yml`が`reusable-codeql.yml`を呼び出し、PRで静的解析が実行される | `docs/cicd-pipeline-specification.md` |
+| ドキュメント運用 | `docs/*.md`等に対しtextlintが有効化され、エラー0件になっている | `docs/documentation-format-conventions.md` |
+| ドキュメントのmermaid図対応 | ドキュメント中のmermaid図が`enable_mermaid_render`・`mermaid_doc_paths`で画像化され、PR差分ビューでも図として確認できる（mermaid図を使う場合のみ） | `docs/documentation-format-conventions.md` |
+| E2Eスクリーンショットのスマートフォン表示対応 | Playwright E2Eが撮影したスクリーンショットが、Job Summary・PRコメントへ画像として直接埋め込まれる（採用する場合。スマートフォンではPlaywright HTMLレポート自体は閲覧しづらいため） | `docs/cicd-pipeline-specification.md` |
+| E2Eテスト結果のPR表示 | `enable_e2e_test`によりPlaywright E2Eの成否・カバレッジがPRコメント・Job Summaryへ投稿される（採用する場合） | `docs/cicd-pipeline-specification.md` |
 | 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | `docs/public-repo-no-pii-pattern.md` |
 | GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | `docs/public-repo-secrets-in-actions-pattern.md` |
 | 依存更新の運用・SBOM | Renovate等の依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | `docs/dependency-risk-judgment.md` |
