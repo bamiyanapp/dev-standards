@@ -1,3 +1,10 @@
+## [2.68.1](https://github.com/bamiyanapp/dev-standards/compare/v2.68.0...v2.68.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **deps:** update dependency pixelmatch to v8 ([#775](https://github.com/bamiyanapp/dev-standards/issues/775)) ([66c0950](https://github.com/bamiyanapp/dev-standards/commit/66c095030cf85bd689fefb3e04e656bfbc8724b1))
+
 # [2.68.0](https://github.com/bamiyanapp/dev-standards/compare/v2.67.0...v2.68.0) (2026-10-08)
 
 
