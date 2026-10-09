@@ -9,7 +9,7 @@ dev-standardsには2種類の内容が含まれており、本カリキュラム
 
 ## 本ドキュメントの位置づけ
 
-`docs/standard-tech-stack.md`は「技術構成の索引・組み立て手順」であり、採用する技術が既に決まっている前提で参照する。本ドキュメントは「決まっていない段階から、どういう順番で進めるか」というカリキュラムであり、`standard-tech-stack.md`より前の段階、かつフェーズ2で同ドキュメントを実際に参照しに行くまでの橋渡しを担う。両ドキュメントの内容は重複させない。
+[`standard-tech-stack.md`](standard-tech-stack.md)は「技術構成の索引・組み立て手順」であり、採用する技術が既に決まっている前提で参照する。本ドキュメントは「決まっていない段階から、どういう順番で進めるか」というカリキュラムであり、同ドキュメントより前の段階、かつフェーズ2で同ドキュメントを実際に参照しに行くまでの橋渡しを担う。両ドキュメントの内容は重複させない。
 
 ## 環境準備チェックリスト（フェーズ1に入る前に）
 
@@ -29,7 +29,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 ### 進め方
 
 1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これによりgit-workflow・commit等のSkillがフェーズ1から使える状態になる
-2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。`docs/static-hosting-pattern.md`（S3 + CloudFront）に沿って最小構成を一度組み立ててしまう。この時点では機能は空でよく、「実際のURLがスマートフォンのブラウザで開ける」状態を作ることが目的である。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
+2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。[`static-hosting-pattern.md`](static-hosting-pattern.md)（S3 + CloudFront）に沿って最小構成を一度組み立ててしまう。この時点では機能は空でよく、「実際のURLがスマートフォンのブラウザで開ける」状態を作ることが目的である。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
 3. アイデアをそのままClaude Codeへ伝え、最小限の画面・機能を一気に作ってもらう（後述のプロンプト例を参照）。ブランチ運用・コミットはgit-workflow/commit/git-conventions Skillに従って進む
 4. 実装してもらったら、手順2のURLへ反映した上で実際にスマートフォンのブラウザで開いて触り、違和感のある部分を言葉で伝えて直してもらう。デプロイ前の実装内容を確認したい場合は、スクリーンショットで提示してもらう（スマートフォンの画面からはローカルで動かしたものが見えないため）。CI gate・カバレッジ閾値等の技術的なモダナイズ観点はこの段階では要求しない
 5. 「人に見せられる」最小限の状態になったら、フェーズ2へ進む判断をする
@@ -65,7 +65,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 
 ### 進め方
 
-1. `docs/standard-tech-stack.md`「新規プロジェクトの立ち上げ手順」の手順2以降（フロントエンド雛形・ログイン・バックエンドAPI等、技術選定が必要な部分）を、フェーズ1で作った画面・機能に後から当てはめる形で適用する
+1. [`standard-tech-stack.md`](standard-tech-stack.md)「新規プロジェクトの立ち上げ手順」の手順2以降（フロントエンド雛形・ログイン・バックエンドAPI等、技術選定が必要な部分）を、フェーズ1で作った画面・機能に後から当てはめる形で適用する
 2. 以下の観点リストを順に確認し、完了条件を満たすまで進める
 3. 各観点は独立しており、プロダクトの性質に応じて不要な観点はスキップしてよい（例: バックエンドが無いならDB関連の観点は対象外）
 
@@ -73,27 +73,31 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 
 | 観点 | 達成条件 | 参照ドキュメント |
 |---|---|---|
-| CI有効化 | `.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出し、lint・testがPRで実行される | `docs/cicd-pipeline-specification.md` |
-| CD有効化 | `.github/workflows/cd.yml`が`reusable-cd.yml`を呼び出し、semantic-releaseでバージョン管理されている（採用する場合） | `docs/cicd-pipeline-specification.md` |
-| フロントエンド単体テスト | vitest + Testing Libraryで主要画面・フックにテストがあり、CIでカバレッジ閾値が設定されている | `docs/client-only-vite-spa-pattern.md` |
-| バックエンドAPIを持つ場合のテスト | バックエンドにも単体テストがあり、CIのカバレッジ閾値が設定されている（バックエンドが無い場合は対象外） | `docs/nextjs-static-lambda-pattern.md` |
-| E2Eテスト | Playwrightで主要な利用フローが検証されている（採用する場合） | `docs/e2e-coverage-pattern.md` |
-| lintルール整備 | 複雑度・sonarjs等のlintルールが有効化され、エラー0件 | `docs/code-quality-conventions.md` |
-| コード重複検知 | `enable_duplication_check`が有効化され、しきい値が設定されている | `docs/cicd-pipeline-specification.md` |
-| アーキテクチャ境界チェック | `enable_architecture_check`が有効化され、frontend/backend間の越境import・循環依存が検知される（複数パッケージ構成の場合） | `docs/cicd-pipeline-specification.md` |
-| セキュリティスキャン（CodeQL） | `.github/workflows/codeql.yml`が`reusable-codeql.yml`を呼び出し、PRで静的解析が実行される | `docs/cicd-pipeline-specification.md` |
-| 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | `docs/public-repo-no-pii-pattern.md` |
-| GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | `docs/public-repo-secrets-in-actions-pattern.md` |
-| 依存更新の運用・SBOM | Renovate等の依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | `docs/dependency-risk-judgment.md` |
-| 運用監視 | サイレント障害（Lambdaエラー等）をCloudWatch Alarm等で検知し通知する仕組みがある（バックエンドAPIを持つ場合） | `docs/ops-monitoring-pattern.md` |
-| フロントエンドエラー報告 | ErrorBoundaryが捕捉した例外をサーバーサイドへロギングする仕組みがある（採用する場合） | `docs/client-error-reporting-pattern.md` |
-| UI規約 | バージョン・更新日時の表示等、横断的なUI規約に従っている（採用する場合） | `docs/frontend-ui-conventions.md` |
-| ブルーグリーン（canary）デプロイ | 利用者が増え、本番への変更を段階的に検証したい場合、stable/canaryの重み付けルーティング・自動昇格を導入している（必要になった場合のみ採用。小規模なうちは不要） | `docs/blue-green-stage-pattern.md` |
+| CI有効化 | `.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出し、lint・testがPRで実行される | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| CD有効化 | `.github/workflows/cd.yml`が`reusable-cd.yml`を呼び出し、semantic-releaseでバージョン管理されている（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| フロントエンド単体テスト | vitest + Testing Libraryで主要画面・フックにテストがあり、CIでカバレッジ閾値が設定されている | [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md) |
+| バックエンドAPIを持つ場合のテスト | バックエンドにも単体テストがあり、CIのカバレッジ閾値が設定されている（バックエンドが無い場合は対象外） | [`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md) |
+| E2Eテスト | Playwrightで主要な利用フローが検証されている（採用する場合） | [`e2e-coverage-pattern.md`](e2e-coverage-pattern.md) |
+| lintルール整備 | 複雑度・sonarjs等のlintルールが有効化され、エラー0件 | [`code-quality-conventions.md`](code-quality-conventions.md) |
+| コード重複検知 | `enable_duplication_check`が有効化され、しきい値が設定されている | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| アーキテクチャ境界チェック | `enable_architecture_check`が有効化され、frontend/backend間の越境import・循環依存が検知される（複数パッケージ構成の場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| セキュリティスキャン（CodeQL） | `.github/workflows/codeql.yml`が`reusable-codeql.yml`を呼び出し、PRで静的解析が実行される | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| ドキュメント運用 | `docs/*.md`等に対しtextlintが有効化され、エラー0件になっている | [`documentation-format-conventions.md`](documentation-format-conventions.md) |
+| ドキュメントのmermaid図対応 | ドキュメント中のmermaid図が`enable_mermaid_render`・`mermaid_doc_paths`で画像化され、PR差分ビューでも図として確認できる（mermaid図を使う場合のみ） | [`documentation-format-conventions.md`](documentation-format-conventions.md) |
+| E2Eスクリーンショットのスマートフォン表示対応 | Playwright E2Eが撮影したスクリーンショットが、Job Summary・PRコメントへ画像として直接埋め込まれる（採用する場合。スマートフォンではPlaywright HTMLレポート自体は閲覧しづらいため） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| E2Eテスト結果のPR表示 | `enable_e2e_test`によりPlaywright E2Eの成否・カバレッジがPRコメント・Job Summaryへ投稿される（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md) |
+| GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md) |
+| 依存更新の運用・SBOM | Renovate等の依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | [`dependency-risk-judgment.md`](dependency-risk-judgment.md) |
+| 運用監視 | サイレント障害（Lambdaエラー等）をCloudWatch Alarm等で検知し通知する仕組みがある（バックエンドAPIを持つ場合） | [`ops-monitoring-pattern.md`](ops-monitoring-pattern.md) |
+| フロントエンドエラー報告 | ErrorBoundaryが捕捉した例外をサーバーサイドへロギングする仕組みがある（採用する場合） | [`client-error-reporting-pattern.md`](client-error-reporting-pattern.md) |
+| UI規約 | バージョン・更新日時の表示等、横断的なUI規約に従っている（採用する場合） | [`frontend-ui-conventions.md`](frontend-ui-conventions.md) |
+| ブルーグリーン（canary）デプロイ | 利用者が増え、本番への変更を段階的に検証したい場合、stable/canaryの重み付けルーティング・自動昇格を導入している（必要になった場合のみ採用。小規模なうちは不要） | [`blue-green-stage-pattern.md`](blue-green-stage-pattern.md) |
 
 すべての観点を一度に満たす必要はない。CIの有効化・基本的な単体テストから始め、プロダクトが育つにつれて残りの観点を段階的に適用していく進め方でよい。
 
 ## 関連ドキュメント
 
-- `docs/standard-tech-stack.md`: 技術構成の索引・新規プロジェクトの立ち上げ手順
-- `docs/cicd-pipeline-specification.md`: CI/CDパイプラインの詳細仕様
-- `docs/code-quality-conventions.md`: lintルールの推奨値
+- [`standard-tech-stack.md`](standard-tech-stack.md): 技術構成の索引・新規プロジェクトの立ち上げ手順
+- [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): CI/CDパイプラインの詳細仕様
+- [`code-quality-conventions.md`](code-quality-conventions.md): lintルールの推奨値
