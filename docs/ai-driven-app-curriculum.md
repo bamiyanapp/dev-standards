@@ -1,11 +1,11 @@
-# AI駆動アプリ開発カリキュラム（アイデア→アプリ化→モダナイズ）
+# AI駆動アプリ開発カリキュラム（アイデア→アプリ化→構成リファクタリング→モダナイズ）
 
-思いついたアイデアを、Claude Codeとの対話でアプリとして動かし、ある程度形になった段階でCI/CD・テスト・lint等の技術的な品質基準を適用して育てていく、2段階の進め方をまとめる。karuta等の実プロダクトが実際にこの順番で育った。
+思いついたアイデアを、Claude Codeとの対話でアプリとして動かし、ある程度形になった段階で構成を見直し、その後CI/CD・テスト・lint等の技術的な品質基準を適用して育てていく、3段階の進め方をまとめる。karuta等の実プロダクトが実際にこの順番で育った。構成の見直し（設計判断）とモダナイズ（品質基準の適用）は性質が異なるため、別フェーズとして扱う。
 
 dev-standardsには2種類の内容が含まれており、本カリキュラムではこれらを区別する。
 
 - **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: [`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)・[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ1から常に頼る**
-- **技術的なモダナイズ観点**: CI gate有効化・テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ1では後回しにしてよい**
+- **技術的なモダナイズ観点**: CI gate有効化・テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ3まで後回しにしてよい**
 
 ## 本ドキュメントの位置づけ
 
@@ -64,16 +64,58 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 
 このプロンプトの要点は4つある。dev-standardsの取り込み（Claude側の作業）と開発プロセス自体（ブランチ運用・コミット規約・issue起票）は最初から外さないこと。確認手段をスマートフォンで実際に使える形（実機のURL・スクリーンショット）に限定すること。「最速で動くもの」を優先させること。そして技術選定自体もミニマムにとどめ、最終形が決まった段階（フェーズ2）で見直す前提にすることである。後回しにしてよいのは、CI gate・カバレッジ閾値・lint厳格化等の技術的なモダナイズ観点のみであり、dev-standardsの取り込み・開発プロセス自体・確認手段は例外扱いにはしない。
 
-## フェーズ2: 技術的なモダナイズ
+## フェーズ2: 構成のリファクタリング
 
-アプリの方向性が固まり、継続して育てていく判断をしたら、CI gate・テストカバレッジ閾値・lint厳格化等の技術的なモダナイズ観点を適用していく（dev-standardsの取り込み自体はフェーズ1で既に済んでいる）。
+アプリの方向性が固まったら、フェーズ1のミニマムな構成（ログイン無し、最も簡単な配信先等）を見直し、必要な技術要素を本来の構成へ移行する。dev-standardsの取り込み自体はフェーズ1で既に済んでいるため、本フェーズは設計判断とその反映のみを扱う。
 
 ### 進め方
 
-1. **技術選定を見直す**。フェーズ1はミニマムな構成（ログイン無し、最も簡単な配信先等）で進めてきたはずなので、アプリの方向性が固まった今、[`standard-tech-stack.md`](standard-tech-stack.md)「選定の考え方」に沿ってログイン・バックエンドAPI・PWA等の要否を改めて判断する。ここで判断が変わった要素（例: ログインを追加する、フロントエンドをGitHub PagesからS3 + CloudFrontへ移行する）を洗い出す。この見直し作業自体もissueを起票してから進める
-2. [`standard-tech-stack.md`](standard-tech-stack.md)「新規プロジェクトの立ち上げ手順」の手順2以降（フロントエンド雛形・ログイン・バックエンドAPI等、技術選定が必要な部分）を、手順1で洗い出した見直し内容を反映しつつ、フェーズ1で作った画面・機能に後から当てはめる形で適用する
-3. 以下の観点リストを順に確認し、完了条件を満たすまで進める
-4. 各観点は独立しており、プロダクトの性質に応じて不要な観点はスキップしてよい（例: バックエンドが無いならDB関連の観点は対象外）
+1. **技術選定を見直す**。[`standard-tech-stack.md`](standard-tech-stack.md)「選定の考え方」に沿って、ログイン・バックエンドAPI・PWA等の要否を改めて判断する。判断が変わった要素（例: ログインを追加する、フロントエンドをGitHub PagesからS3 + CloudFrontへ移行する）を洗い出す
+2. 洗い出した要素ごとにissueを起票してから進める
+3. [`standard-tech-stack.md`](standard-tech-stack.md)「新規プロジェクトの立ち上げ手順」の手順2以降を、手順1で洗い出した見直し内容を反映しつつ、フェーズ1で作った画面・機能に後から当てはめる形で適用する
+4. 移行後も既存の画面・機能が同じように動くことを確認する。CI強化・テストカバレッジ等の品質基準はフェーズ3で扱うため、本フェーズでは構成の移行自体に集中する
+
+### プロンプトの例
+
+```
+アプリの方向性が固まったので、技術構成を見直したい。
+
+- 現状のミニマム構成（ログイン無し、GitHub Pages配信等）を振り返り、
+  dev-standards/docs/standard-tech-stack.mdの「選定の考え方」に沿って、
+  ログイン・バックエンドAPI・PWA等の要否を判断してほしい
+- 判断が変わった要素（例: ログインを追加する、フロントエンドをGitHub
+  PagesからS3 + CloudFrontへ移行する）があれば、それぞれissueを起票
+  してから進めてほしい
+- 既存の画面・機能は壊さないように、標準構成への移行後も同じように
+  動くことを確認してほしい
+- CI強化・テストカバレッジ等の品質基準はまだ次の段階（モダナイズ）で
+  考えるので、今回は構成の移行自体に集中してほしい
+```
+
+このプロンプトの要点は、技術選定の見直しとモダナイズを明確に分離し、本フェーズでは構成の移行のみに集中させることである。判断が変わった要素ごとにissueを起票する点は、フェーズ1・3のプロンプトと共通する原則である。
+
+## フェーズ3: モダナイズ
+
+構成のリファクタリングが完了したら、CI gate・テストカバレッジ閾値・lint厳格化等の技術的なモダナイズ観点を適用していく。
+
+### 進め方
+
+1. 以下の観点リストを順に確認し、完了条件を満たすまで進める
+2. 各観点は独立しており、プロダクトの性質に応じて不要な観点はスキップしてよい（例: バックエンドが無いならDB関連の観点は対象外）
+3. 観点ごとにissueを起票してから進める。一度に全部満たす必要はなく、段階的に進めてよい
+
+### プロンプトの例
+
+```
+アプリの構成が安定したので、dev-standards準拠のモダナイズを進めたい。
+
+- dev-standards/docs/ai-driven-app-curriculum.mdのモダナイズ観点リストを
+  順に確認し、CI有効化・基本的な単体テストの整備から始めてほしい
+- 観点ごとにissueを起票してから進めてほしい。一度に全部やらなくていい。
+  1つの観点が完了条件を満たしたら、次の観点へ進んでほしい
+- 各観点の達成条件（完了条件）を満たしたことを、実際にCIを実行して
+  確認してほしい
+```
 
 ### モダナイズ観点リストと達成条件
 
@@ -94,7 +136,8 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | E2Eテスト結果のPR表示 | `enable_e2e_test`によりPlaywright E2Eの成否・カバレッジがPRコメント・Job Summaryへ投稿される（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md) |
 | GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md) |
-| 依存更新の運用・SBOM | Renovate等の依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | [`dependency-risk-judgment.md`](dependency-risk-judgment.md) |
+| 依存更新の自動化（Renovate） | リポジトリルートに`renovate.json`があり、Renovate（GitHub App）が有効化され、依存更新PRが自動的に作成される | - |
+| 依存更新の運用・SBOM | 上記Renovate等が作成した依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | [`dependency-risk-judgment.md`](dependency-risk-judgment.md) |
 | 運用監視 | サイレント障害（Lambdaエラー等）をCloudWatch Alarm等で検知し通知する仕組みがある（バックエンドAPIを持つ場合） | [`ops-monitoring-pattern.md`](ops-monitoring-pattern.md) |
 | フロントエンドエラー報告 | ErrorBoundaryが捕捉した例外をサーバーサイドへロギングする仕組みがある（採用する場合） | [`client-error-reporting-pattern.md`](client-error-reporting-pattern.md) |
 | UI規約 | バージョン・更新日時の表示等、横断的なUI規約に従っている（採用する場合） | [`frontend-ui-conventions.md`](frontend-ui-conventions.md) |
