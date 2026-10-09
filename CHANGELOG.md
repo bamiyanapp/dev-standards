@@ -1,3 +1,10 @@
+# [2.69.0](https://github.com/bamiyanapp/dev-standards/compare/v2.68.1...v2.69.0) (2026-10-09)
+
+
+### Features
+
+* **textlint:** 他ドキュメントへの未リンク参照を検知するルールを追加する ([#787](https://github.com/bamiyanapp/dev-standards/issues/787)) ([2e7655c](https://github.com/bamiyanapp/dev-standards/commit/2e7655ce764c2dfa67eb23e5a71259e24d219155))
+
 ## [2.68.1](https://github.com/bamiyanapp/dev-standards/compare/v2.68.0...v2.68.1) (2026-10-09)
 
 
