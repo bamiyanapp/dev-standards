@@ -1,10 +1,10 @@
 # S3 + CloudFront + Cognito(Google) + Lambda@Edgeによる認証付き静的サイト配信パターン
 
-**標準索引（`docs/standard-tech-stack.md`）からは外れた構成**。dev-standardsの標準では、ログインが必要な場合もフロントエンド自体は誰でも閲覧できるAPI単位認証（「2. ログイン」参照）とする。ホスティングはログイン要否によらずS3 + CloudFront（`docs/static-hosting-pattern.md`）に統一している。本ドキュメントは、サイトの閲覧自体をログイン必須にしたい（トップページ等を含め非公開にしたい）場合の構成として残す。
+**標準索引（[`standard-tech-stack.md`](standard-tech-stack.md)）からは外れた構成**。dev-standardsの標準では、ログインが必要な場合もフロントエンド自体は誰でも閲覧できるAPI単位認証（「2. ログイン」参照）とする。ホスティングはログイン要否によらずS3 + CloudFront（[`static-hosting-pattern.md`](static-hosting-pattern.md)）に統一している。本ドキュメントは、サイトの閲覧自体をログイン必須にしたい（トップページ等を含め非公開にしたい）場合の構成として残す。
 
-ログインが必要な小規模な静的サイト（家族・チーム向けナレッジベース等、不特定多数への公開を想定しないもの）を、専用のバックエンドサーバーを持たずに構築するための構成。**OSLS**（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)）でAWSリソースをコードとして定義する。OSLSはServerless Framework v4のライセンス変更を受けて採用した、v3系のままオープンソースで開発が継続されているフォークである。詳細は`docs/nextjs-static-lambda-pattern.md`「OSLS vs Serverless Framework本家」を参照。examinationの`infra/`（[examination#6](https://github.com/bamiyanapp/examination/issues/6)）がベースである。そこからプロダクト固有の業務ロジック（LINE bot・面接の練習機能等）を除いた。他プロダクトでも再利用できるインフラ構成部分を切り出したものである。
+ログインが必要な小規模な静的サイト（家族・チーム向けナレッジベース等、不特定多数への公開を想定しないもの）を、専用のバックエンドサーバーを持たずに構築するための構成。**OSLS**（`osls`パッケージ、[oss-serverless/osls](https://github.com/oss-serverless/osls)）でAWSリソースをコードとして定義する。OSLSはServerless Framework v4のライセンス変更を受けて採用した、v3系のままオープンソースで開発が継続されているフォークである。詳細は[`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md)「OSLS vs Serverless Framework本家」を参照。examinationの`infra/`（[examination#6](https://github.com/bamiyanapp/examination/issues/6)）がベースである。そこからプロダクト固有の業務ロジック（LINE bot・面接の練習機能等）を除いた。他プロダクトでも再利用できるインフラ構成部分を切り出したものである。
 
-**examinationは、この構成（手順1のログイン必須化）から既に移行済み**。[examination#437](https://github.com/bamiyanapp/examination/issues/437)がある。これで下記「## 認証フロー」の手順1（サイト閲覧そのもののログイン必須化）を廃止した。フロントエンドは誰でも閲覧できるdev-standards統一標準（`docs/standard-tech-stack.md`「2. ログイン」）へ移行した。`auth-stack`（Cognito）・`site-stack`のLambda@Edge自体は引き続き使われている。ログインフロー（`/_login`・`/_callback`）や家族固有データを返す各APIのリクエスト単位認証（`/_me`等）の基盤としてである。手順2〜4（コールバック・トークン検証・ログアウト）やCSRF対策・セッション自動延長等の個別設計判断も、今なおexaminationが実装例である。ただし、「本パターン」の核である手順1（未認証時は静的コンテンツにも到達させない全リクエストゲート）は、examinationにはもう存在しない。サイト閲覧自体をログイン必須にしたい新規プロダクトは、このドキュメントの設計をそのまま採用する。実装の参照先には注意が必要である。examination#437より前のコミット（`infra/site-stack/functions/checkAuth.js`のリダイレクト分岐がまだ残っていた時点）を確認すること。
+**examinationは、この構成（手順1のログイン必須化）から既に移行済み**。[examination#437](https://github.com/bamiyanapp/examination/issues/437)がある。これで下記「## 認証フロー」の手順1（サイト閲覧そのもののログイン必須化）を廃止した。フロントエンドは誰でも閲覧できるdev-standards統一標準（[`standard-tech-stack.md`](standard-tech-stack.md)「2. ログイン」）へ移行した。`auth-stack`（Cognito）・`site-stack`のLambda@Edge自体は引き続き使われている。ログインフロー（`/_login`・`/_callback`）や家族固有データを返す各APIのリクエスト単位認証（`/_me`等）の基盤としてである。手順2〜4（コールバック・トークン検証・ログアウト）やCSRF対策・セッション自動延長等の個別設計判断も、今なおexaminationが実装例である。ただし、「本パターン」の核である手順1（未認証時は静的コンテンツにも到達させない全リクエストゲート）は、examinationにはもう存在しない。サイト閲覧自体をログイン必須にしたい新規プロダクトは、このドキュメントの設計をそのまま採用する。実装の参照先には注意が必要である。examination#437より前のコミット（`infra/site-stack/functions/checkAuth.js`のリダイレクト分岐がまだ残っていた時点）を確認すること。
 
 コードそのものの共有（symlink化）ではなく、**インフラ構成・設計判断の共有**が目的。実際の完全な実装例はexaminationの`infra/site-stack/`を参照する。
 
@@ -107,7 +107,7 @@ sequenceDiagram
 
 このフローに付随する個別の設計判断は、それぞれ独立したドキュメントに切り出してある。新規に実装する場合は必ず参照すること。
 
-- **ログインCSRF対策**: `state`のnonce検証をCookieに依存させると問題が起きる。Service Worker等のバックグラウンドリクエストによる上書きやITP（Safari）によるCookie破棄で「invalid state」が再発する。nonce自体をDynamoDBでサーバー側管理する（`docs/oauth-csrf-nonce-pattern.md`）
+- **ログインCSRF対策**: `state`のnonce検証をCookieに依存させると問題が起きる。Service Worker等のバックグラウンドリクエストによる上書きやITP（Safari）によるCookie破棄で「invalid state」が再発する。nonce自体をDynamoDBでサーバー側管理する（[`oauth-csrf-nonce-pattern.md`](oauth-csrf-nonce-pattern.md)）
 - **セッションの自動延長**: `id_token`失効後も`refresh_token`Cookieが有効な間はセッションを継続する。Googleへの完全な再ログインを経ずに、`grant_type=refresh_token`でトークンを再発行する
 - **許可メールアドレスの管理**: GitHub Secrets等の静的な設定ではなく、DynamoDBテーブル（パーティションキー: `email`）で管理する。既に許可されたユーザー自身がサイト上のUIから追加・削除できるようにする。Lambda@Edgeの実行環境はエッジロケーションごとに独立しているため、許可判定を短時間（例: 60秒）キャッシュする設計にすると全世界への反映に若干のタイムラグが生じる点を織り込む
 
@@ -119,7 +119,7 @@ Lambda@Edgeが処理する動的パス（コールバック・ログアウト・
 
 ## キャッシュヘッダー戦略
 
-`docs/static-hosting-pattern.md`「キャッシュヘッダー戦略」と同じ（ログイン要否に関わらずS3 + CloudFrontのキャッシュ戦略は共通のため、重複記載しない）。
+[`static-hosting-pattern.md`](static-hosting-pattern.md)「キャッシュヘッダー戦略」と同じ（ログイン要否に関わらずS3 + CloudFrontのキャッシュ戦略は共通のため、重複記載しない）。
 
 ## 別オリジンのバックエンドAPIが必要な場合
 
@@ -139,8 +139,8 @@ Lambda@Edgeが処理する動的パス（コールバック・ログアウト・
   ```
 
 - **リージョンの統一**: `site-stack`のLambda@Edgeは`us-east-1`デプロイが必須（CloudFrontの制約）。バックエンドAPI側にリージョン制約は無いが、クロススタックでテーブルを参照する場合はクロスリージョンアクセスを避けるため同じ`us-east-1`に統一する方がシンプル
-- **静的サイトのログインセッションとの接続**: ブラウザから別オリジンのバックエンドAPIへ直接fetchする場合を考える。`site-stack`のHttpOnly Cookie（`id_token`）はクロスオリジンでは自動送信されない。CognitoのJWTをそのまま渡すのではない。専用の短命Bearerトークンを`site-stack`側で発行する設計にする（`docs/short-lived-bearer-token-pattern.md`）
-- 課金・レート制限のある外部API呼び出しやトークン発行回数の上限管理が必要になる場合がある。その際は`docs/daily-rate-limit-pattern.md`（`shared/lambda/dailyRateLimit.js`）を使う
+- **静的サイトのログインセッションとの接続**: ブラウザから別オリジンのバックエンドAPIへ直接fetchする場合を考える。`site-stack`のHttpOnly Cookie（`id_token`）はクロスオリジンでは自動送信されない。CognitoのJWTをそのまま渡すのではない。専用の短命Bearerトークンを`site-stack`側で発行する設計にする（[`short-lived-bearer-token-pattern.md`](short-lived-bearer-token-pattern.md)）
+- 課金・レート制限のある外部API呼び出しやトークン発行回数の上限管理が必要になる場合がある。その際は[`daily-rate-limit-pattern.md`](daily-rate-limit-pattern.md)（`shared/lambda/dailyRateLimit.js`）を使う
 
 ## 必要なGitHub Secrets / Variablesの例
 

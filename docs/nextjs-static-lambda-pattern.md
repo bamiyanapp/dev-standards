@@ -1,6 +1,6 @@
 # Next.js静的サイト + GitHub Pages + Lambda（ログイン不要構成）パターン
 
-ログインを必要としない小規模なWebプロダクト（不特定多数への公開・大規模スケールは想定しない）を対象とする。`docs/serverless-static-site-pattern.md`（S3 + CloudFront + Cognito構成）よりも軽量に構築するための構成である。Electric-Chair-Arena（[bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena)）で検証済み。
+ログインを必要としない小規模なWebプロダクト（不特定多数への公開・大規模スケールは想定しない）を対象とする。[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)（S3 + CloudFront + Cognito構成）よりも軽量に構築するための構成である。Electric-Chair-Arena（[bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena)）で検証済み。
 
 コードそのものの共有（symlink化）ではなく、**技術選定・設計判断の共有**が目的。実際の完全な実装例はElectric-Chair-Arenaのリポジトリ全体を参照する。
 
@@ -14,16 +14,16 @@
 | バックエンド | AWS Lambda + API Gateway（HTTP API）+ DynamoDB |
 | バックエンドのIaC・デプロイ | OSLS（`osls`パッケージ）。Serverless Framework本家ではない。`.github/actions/deploy-serverless`複合actionで呼び出せる |
 | テスト | Vitest + Testing Library（frontend/backend共通のユニットテスト）、Playwright + monocart-reporter（E2E、CDPカバレッジ収集） |
-| 認証 | 無し。ログインが必要な場合は`docs/serverless-static-site-pattern.md`（S3 + CloudFront + Cognito構成）を選ぶこと |
+| 認証 | 無し。ログインが必要な場合は[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)（S3 + CloudFront + Cognito構成）を選ぶこと |
 
-## `docs/serverless-static-site-pattern.md`との使い分け
+## [`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)との使い分け
 
 | 観点 | 本パターン（Electric-Chair-Arena） | S3 + CloudFront + Cognito構成（examination） |
 |---|---|---|
 | ログイン | 不要 | 必要（Google OAuth） |
 | フロントエンドのホスティング | GitHub Pages（無料、リポジトリ内で完結） | S3 + CloudFront（独自ドメイン・CDN・アクセス制御が必要な場合） |
 | フロントエンドのビルド構成 | Next.js、npm workspacesモノレポ | Vite、ページごとに独立ビルド |
-| バックエンド | Lambda + API Gateway + DynamoDB（OSLS） | 同左（構成は共通）。詳細は`docs/serverless-static-site-pattern.md`「別オリジンのバックエンドAPIが必要な場合」参照 |
+| バックエンド | Lambda + API Gateway + DynamoDB（OSLS） | 同左（構成は共通）。詳細は[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)「別オリジンのバックエンドAPIが必要な場合」参照 |
 | 向いているケース | 不特定多数がアクセスしてよい、ログイン管理のインフラコストを避けたい小規模プロダクト | 家族・チーム等の限定公開で、閲覧制限が必須のプロダクト |
 
 両者は排他的ではない。GitHub Pages配信を採用しつつ、ログインが必要になった場合はCognito等を別途組み合わせることもできる。ただしその場合はLambda@Edgeによる全リクエストゲートが使えない（GitHub PagesはCloudFrontではない）ため、フロントエンド側での認証状態管理が別途必要になる点に注意する。
@@ -58,7 +58,7 @@ const basePath = isGithubActions ? `/${repoName}` : '';
 
 ## E2Eテスト・カバレッジ
 
-Playwright + monocart-reporterによるE2E・カバレッジ収集は、`reusable-ci.yml`の`frontend-e2e-test` jobの呼び出し規約に従う。スクリーンショットのJob Summary/PRコメントへの報告は既定の手順に従う。詳細は`docs/cicd-pipeline-specification.md`「1. CIワークフロー」（Electric-Chair-Arena#187）を参照。
+Playwright + monocart-reporterによるE2E・カバレッジ収集は、`reusable-ci.yml`の`frontend-e2e-test` jobの呼び出し規約に従う。スクリーンショットのJob Summary/PRコメントへの報告は既定の手順に従う。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」（Electric-Chair-Arena#187）を参照。
 
 本構成固有の追加事項は以下のとおり。
 
@@ -101,7 +101,7 @@ jobs:
       mermaid_doc_paths: "docs/architecture.md\nREADME.md"
 ```
 
-`cd.yml`のfrontendデプロイは`.github/actions/deploy-github-pages`を呼び出す。backendデプロイは`.github/actions/deploy-serverless`を呼び出す。両複合actionの詳細は`docs/cicd-pipeline-specification.md`「2. CDワークフロー」を参照。semantic-releaseによるバージョン管理が不要なプロダクトでは、`reusable-cd.yml`自体は呼び出さず、`cd.yml`にこれらの複合actionを直接組み込む構成でよい。
+`cd.yml`のfrontendデプロイは`.github/actions/deploy-github-pages`を呼び出す。backendデプロイは`.github/actions/deploy-serverless`を呼び出す。両複合actionの詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「2. CDワークフロー」を参照。semantic-releaseによるバージョン管理が不要なプロダクトでは、`reusable-cd.yml`自体は呼び出さず、`cd.yml`にこれらの複合actionを直接組み込む構成でよい。
 
 ## OSLS採用に伴う罠
 

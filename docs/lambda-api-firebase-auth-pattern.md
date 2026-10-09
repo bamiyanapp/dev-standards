@@ -1,8 +1,8 @@
 # Firebase Authentication + API Gateway/Lambda(OSLS) + DynamoDBによるバックエンドAPIパターン
 
-GitHub Pages等の静的ホスティングで配信するSPAを対象とする。専用の認証プロキシ層（`docs/serverless-static-site-pattern.md`のLambda@Edge構成）を持たない構成である。フロントエンドが直接IdP（Firebase Authentication）のID Tokenを取得し、バックエンドAPI側でその都度検証する。uchi-stock（[bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock)）がベースである。そこからプロダクト固有の業務ロジック（在庫管理等）を除いた。他プロダクトでも再利用できるバックエンドAPI・認証・CI/CDの構成部分を切り出したものである。
+GitHub Pages等の静的ホスティングで配信するSPAを対象とする。専用の認証プロキシ層（[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)のLambda@Edge構成）を持たない構成である。フロントエンドが直接IdP（Firebase Authentication）のID Tokenを取得し、バックエンドAPI側でその都度検証する。uchi-stock（[bamiyanapp/uchi-stock](https://github.com/bamiyanapp/uchi-stock)）がベースである。そこからプロダクト固有の業務ロジック（在庫管理等）を除いた。他プロダクトでも再利用できるバックエンドAPI・認証・CI/CDの構成部分を切り出したものである。
 
-対象は、家族・チーム等の限定的な範囲で使う小規模なWebプロダクト（`docs/standard-tech-stack.md`と同様）。**フロントエンドの配信方式・UIフレームワークは対象外**である。uchi-stockはGitHub Pages配信・Bootstrap構成だが、これらは他プロダクトのReact/Vite/daisyUI構成と独立に選択できる。ログインなしで使えるアプリの場合や、`docs/serverless-static-site-pattern.md`のようにサイト全体をログイン必須にしたい場合を考える。そちらのCognito + Lambda@Edge構成を検討すること。本パターンは「フロントエンド自体は誰でも閲覧でき、API呼び出し単位で認証する」構成に向く。
+対象は、家族・チーム等の限定的な範囲で使う小規模なWebプロダクト（[`standard-tech-stack.md`](standard-tech-stack.md)と同様）。**フロントエンドの配信方式・UIフレームワークは対象外**である。uchi-stockはGitHub Pages配信・Bootstrap構成だが、これらは他プロダクトのReact/Vite/daisyUI構成と独立に選択できる。ログインなしで使えるアプリの場合や、[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)のようにサイト全体をログイン必須にしたい場合を考える。そちらのCognito + Lambda@Edge構成を検討すること。本パターンは「フロントエンド自体は誰でも閲覧でき、API呼び出し単位で認証する」構成に向く。
 
 ## 全体構成
 
@@ -12,7 +12,7 @@ GitHub Pages等の静的ホスティングで配信するSPAを対象とする�
 | バックエンドAPI | API Gateway（REST API）+ AWS Lambda（`osls`でデプロイ、詳細は後述）。各ハンドラーで`firebase-admin` SDKによりID Tokenを検証し、UIDを取得する |
 | データストア | DynamoDB（`PAY_PER_REQUEST`、アクセスが無い間の実行コストがゼロに近い） |
 
-専用の認証プロキシ・セッションCookie管理を持たないため、`docs/serverless-static-site-pattern.md`のような2スタック分割・循環依存の解消手順は不要。バックエンドAPIは単一のServerless serviceとして構築できる。
+専用の認証プロキシ・セッションCookie管理を持たないため、[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)のような2スタック分割・循環依存の解消手順は不要。バックエンドAPIは単一のServerless serviceとして構築できる。
 
 ## PWA（ホーム画面追加）でのセッション永続化（iOS Safari ITP対策）
 
@@ -78,7 +78,7 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 
 `reusable-cd.yml`は「`base_branch`→`release_branch`の同期・`release_branch`上でのリリース」を前提とした構成である。semantic-releaseを`base_branch`（`main`）に対して直接実行する運用（`.releaserc.cjs`の`branches: ["main"]`）を選ぶプロダクトでは前提が一致しない。この場合`cd.yml`はプロダクト固有のワークフローとして自前で維持し、`reusable-ci.yml`のみを利用する。
 
-- semantic-releaseの実行・CHANGELOG生成をする。GitHub Pagesへのフロントエンドデプロイ（`docs/cicd-pipeline-specification.md`の`deploy-github-pages`複合action）がある。Lambdaへのバックエンドデプロイ（`osls deploy`）もある。それぞれ独立したjobとして`cd.yml`に定義する
+- semantic-releaseの実行・CHANGELOG生成をする。GitHub Pagesへのフロントエンドデプロイ（[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)の`deploy-github-pages`複合action）がある。Lambdaへのバックエンドデプロイ（`osls deploy`）もある。それぞれ独立したjobとして`cd.yml`に定義する
 - Lambdaデプロイ前にDynamoDBの破壊的変更チェック・バックアップを行う運用にする場合を考える。`FORCE_DEPLOY`のような手動フラグで例外的に強行できるようにしておく。これにより、意図した破壊的変更（テーブル構造の変更等）まで機械的にブロックしてしまう事故を避けられる
 
 ## 必要なGitHub Secretsの例

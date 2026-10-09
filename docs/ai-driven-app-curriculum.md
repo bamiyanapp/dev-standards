@@ -4,7 +4,7 @@
 
 dev-standardsには2種類の内容が含まれており、本カリキュラムではこれらを区別する。
 
-- **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: git-workflow・commit・git-conventions・code-review・safe-bash-commands等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ1から常に頼る**
+- **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: [`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)・[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ1から常に頼る**
 - **技術的なモダナイズ観点**: CI gate有効化・テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ1では後回しにしてよい**
 
 ## 本ドキュメントの位置づけ
@@ -28,9 +28,9 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 
 ### 進め方
 
-1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これによりgit-workflow・commit等のSkillがフェーズ1から使える状態になる
+1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これにより[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)等のSkillがフェーズ1から使える状態になる
 2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。[`static-hosting-pattern.md`](static-hosting-pattern.md)（S3 + CloudFront）に沿って最小構成を一度組み立ててしまう。この時点では機能は空でよく、「実際のURLがスマートフォンのブラウザで開ける」状態を作ることが目的である。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
-3. アイデアをそのままClaude Codeへ伝え、最小限の画面・機能を一気に作ってもらう（後述のプロンプト例を参照）。ブランチ運用・コミットはgit-workflow/commit/git-conventions Skillに従って進む
+3. アイデアをそのままClaude Codeへ伝え、最小限の画面・機能を一気に作ってもらう（後述のプロンプト例を参照）。ブランチ運用・コミットは[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)/[`commit`](../.claude/skills/commit/SKILL.md)/[`git-conventions`](../.claude/skills/git-conventions/SKILL.md) Skillに従って進む
 4. 実装してもらったら、手順2のURLへ反映した上で実際にスマートフォンのブラウザで開いて触り、違和感のある部分を言葉で伝えて直してもらう。デプロイ前の実装内容を確認したい場合は、スクリーンショットで提示してもらう（スマートフォンの画面からはローカルで動かしたものが見えないため）。CI gate・カバレッジ閾値等の技術的なモダナイズ観点はこの段階では要求しない
 5. 「人に見せられる」最小限の状態になったら、フェーズ2へ進む判断をする
 

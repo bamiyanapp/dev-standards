@@ -1,6 +1,6 @@
 # 公開リポジトリに個人情報を持ち込まないパターン
 
-**前提**: dev-standardsの標準構成（`docs/standard-tech-stack.md`「2. ログイン」）はフロントエンド自体を誰でも閲覧できる状態に保つ方針である。bamiyanapp配下のリポジトリも基本的に公開（Public）である。**「フロントエンドが公開」と「リポジトリが公開」は同じ前提の両面**であり、どちらか一方だけを意識しても個人情報は守れない。ソースコード・コミット履歴・PR・Issueを含むリポジトリ全体を「誰でも常に閲覧できるもの」として扱い、実在の個人情報を一切持ち込まない設計にする。
+**前提**: dev-standardsの標準構成（[`standard-tech-stack.md`](standard-tech-stack.md)「2. ログイン」）はフロントエンド自体を誰でも閲覧できる状態に保つ方針である。bamiyanapp配下のリポジトリも基本的に公開（Public）である。**「フロントエンドが公開」と「リポジトリが公開」は同じ前提の両面**であり、どちらか一方だけを意識しても個人情報は守れない。ソースコード・コミット履歴・PR・Issueを含むリポジトリ全体を「誰でも常に閲覧できるもの」として扱い、実在の個人情報を一切持ち込まない設計にする。
 
 対象読者はプロダクト固有のドメインロジックで実在の個人（家族・顧客・ユーザー）のデータを扱う全プロダクト（examination等）。
 
@@ -8,7 +8,7 @@
 
 - コンテンツファイル（Markdown等）・シードスクリプト・テストフィクスチャ・コード中の文字列リテラル・コードコメントがある。これらに実在の氏名・生年月日・住所・電話番号・学校名・園名・勤務先・医療情報等を直接書かない
 - 実データが必要な例・プレースホルダーには、汎用的なサンプル値（日本語の「山田太郎」「サンプル花子」等、英語圏の"John Doe"相当）のみを使う。実在すると誤認されない一般的な値を選ぶ
-- 個人単位で異なる実際の値（家族の氏名等）は、DB（DynamoDB等）へ保存する。認証済みAPI呼び出しで実行時に取得する設計にする（`docs/short-lived-bearer-token-pattern.md`のBearerトークンパターン等）。フロントエンドのビルド成果物（JSバンドル）自体には決して焼き込まない
+- 個人単位で異なる実際の値（家族の氏名等）は、DB（DynamoDB等）へ保存する。認証済みAPI呼び出しで実行時に取得する設計にする（[`short-lived-bearer-token-pattern.md`](short-lived-bearer-token-pattern.md)のBearerトークンパターン等）。フロントエンドのビルド成果物（JSバンドル）自体には決して焼き込まない
 - 静的サイト生成（MkDocs等）を使う場合も同様に、実際にビルドされるページに個人情報を含めない。個人情報を含む可能性のあるコンテンツソースは、ビルド対象そのものから除外する（`exclude_docs`等）か、そもそもリポジトリに置かず外部の非公開ストレージで管理する
 
 ## 原則: 一度コミットした個人情報は「消せない」前提で運用する
@@ -36,10 +36,10 @@ GitHubの公開リポジトリでは、個人情報を含むコミットを後�
 
 ## 関連ドキュメント
 
-- `docs/standard-tech-stack.md`「2. ログイン」: フロントエンド公開＋API単位認証の標準構成
-- `docs/short-lived-bearer-token-pattern.md`: 個人情報を返すAPIをリクエスト単位で認証する具体的な実装パターン
-- `docs/serverless-static-site-pattern.md`: サイト閲覧自体を非公開にしたい場合の代替構成（本パターンの対象外としたい場合の選択肢）
-- `docs/public-repo-secrets-in-actions-pattern.md`: 同じ「公開リポジトリ前提」の秘密情報（認証情報・トークン等）版。GitHub Actionsのログ・Job Summaryへ秘密情報を出力しないための指針
+- [`standard-tech-stack.md`](standard-tech-stack.md)「2. ログイン」: フロントエンド公開＋API単位認証の標準構成
+- [`short-lived-bearer-token-pattern.md`](short-lived-bearer-token-pattern.md): 個人情報を返すAPIをリクエスト単位で認証する具体的な実装パターン
+- [`serverless-static-site-pattern.md`](serverless-static-site-pattern.md): サイト閲覧自体を非公開にしたい場合の代替構成（本パターンの対象外としたい場合の選択肢）
+- [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md): 同じ「公開リポジトリ前提」の秘密情報（認証情報・トークン等）版。GitHub Actionsのログ・Job Summaryへ秘密情報を出力しないための指針
 
 ## 実例
 

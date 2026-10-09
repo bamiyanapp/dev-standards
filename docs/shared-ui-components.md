@@ -1,12 +1,12 @@
 # 共有UIコンポーネント（`shared/ui/`, `shared/pwa/`, `shared/sfx/`, `shared/hooks/`）
 
-複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）を対象とする。プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）・汎用Reactフック（`shared/hooks/`）と同様の扱いである。`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は`docs/service-worker-update-pattern.md`「セットアップ手順」を参照する（考え方は共通）。
+複数の独立ビルドフロントエンドアプリで同一サイトを構成するプロダクト（examination等）を対象とする。プロダクト固有の値を持たない、または小さなpropsで汎用化できる横断的UIコンポーネントを`shared/ui/`へ集約する。PWAキャッシュ更新パターン（`shared/pwa/`）・効果音（`shared/sfx/`）・汎用Reactフック（`shared/hooks/`）と同様の扱いである。`sync-manifest.local.json`経由でsymlink共有する。セットアップ手順は[`service-worker-update-pattern.md`](service-worker-update-pattern.md)「セットアップ手順」を参照する（考え方は共通）。
 
 ## 提供するコンポーネント
 
 ### `shared/ui/common-theme.css`
 
-フレームワーク非依存の共通テーマ（issue #236）。共通フォント（`docs/frontend-ui-conventions.md`）・フェードイン/アウトの共通ユーティリティ（`.fade-in`/`.fade-out`）を提供する。ボタン押下時の軽い触覚的フィードバックも提供する。Bootstrap・Tailwind等どのCSSフレームワークを使うプロダクトでも利用できる。Bootstrap固有のダークモード対応は含まない。それが必要な場合は下記`bootstrap-theme.css`を使う。
+フレームワーク非依存の共通テーマ（issue #236）。共通フォント（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)）・フェードイン/アウトの共通ユーティリティ（`.fade-in`/`.fade-out`）を提供する。ボタン押下時の軽い触覚的フィードバックも提供する。Bootstrap・Tailwind等どのCSSフレームワークを使うプロダクトでも利用できる。Bootstrap固有のダークモード対応は含まない。それが必要な場合は下記`bootstrap-theme.css`を使う。
 
 利用側のグローバルCSSへ`@import`する。
 
@@ -100,7 +100,7 @@ import resizeTextareaToFitContent from "./components/resizeTextareaToFitContent.
 
 現在のページをQRコードで表示し、URLをワンタップコピーできるボタン＋モーダル。スマートフォンオンリーの利用環境での画面共有を想定。
 
-**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになる。symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと。実例はCamp-Stock `frontend/src/components/ShareButton.jsx`（issue #393）である。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントには制約がある。異なるフレームワークの消費者に同時対応できないという制約である。そのため、新規にこの種のコンポーネントを追加・変更する際は`docs/consumer-repositories.md`で全消費側のCSSフレームワークを確認すること。
+**Bootstrap 5.3クラス実装（issue #328・PR #349）**。daisyUI（Tailwind）構成のプロダクトでは無スタイルになる。symlinkで共有せず、ロジックのみ流用してクラス名をdaisyUI用に書き換えたローカルコピーを持つこと。実例はCamp-Stock `frontend/src/components/ShareButton.jsx`（issue #393）である。特定のCSSフレームワークのクラスをハードコードする共有コンポーネントには制約がある。異なるフレームワークの消費者に同時対応できないという制約である。そのため、新規にこの種のコンポーネントを追加・変更する際は[`consumer-repositories.md`](consumer-repositories.md)で全消費側のCSSフレームワークを確認すること。
 
 ```jsx
 <ShareButton label="このページを共有" />
@@ -123,7 +123,7 @@ export default defineConfig({
 
 ### `shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`
 
-`docs/frontend-ui-conventions.md`「トップページの必須構成」（バージョン・更新日時の表示）を実装するための2つの関数。`getAppVersionDefine.js`はNode.js側（`vite.config.js`）で動く点が他の`shared/ui/`コンポーネントと異なる。ブラウザで動くReactコンポーネントではない。
+[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「トップページの必須構成」（バージョン・更新日時の表示）を実装するための2つの関数。`getAppVersionDefine.js`はNode.js側（`vite.config.js`）で動く点が他の`shared/ui/`コンポーネントと異なる。ブラウザで動くReactコンポーネントではない。
 
 `vite.config.js`:
 
@@ -187,7 +187,7 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 
 ### `shared/ui/ErrorBoundary.jsx`
 
-レンダリング中の未捕捉例外で画面が真っ白なまま操作不能になる事象への対策となるReact Error Boundary。`reportUrl`（任意）propを渡すと、捕捉した例外情報をサーバーサイドのログへ残すエンドポイントへfire-and-forgetで送信する。対になる`shared/lambda/clientErrorReporting.js`と合わせ、詳細は`docs/client-error-reporting-pattern.md`を参照。
+レンダリング中の未捕捉例外で画面が真っ白なまま操作不能になる事象への対策となるReact Error Boundary。`reportUrl`（任意）propを渡すと、捕捉した例外情報をサーバーサイドのログへ残すエンドポイントへfire-and-forgetで送信する。対になる`shared/lambda/clientErrorReporting.js`と合わせ、詳細は[`client-error-reporting-pattern.md`](client-error-reporting-pattern.md)を参照。
 
 ```jsx
 <ErrorBoundary reportUrl={`${API_BASE_URL}/report-client-error`}>

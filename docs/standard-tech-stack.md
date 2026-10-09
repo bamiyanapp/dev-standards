@@ -38,15 +38,15 @@ graph TD
 
 ## 個人情報の扱い（全プロジェクト共通）
 
-「2. ログイン」の通り、フロントエンド自体は誰でも閲覧できる状態を前提とする。bamiyanapp配下のリポジトリも基本的に公開（Public）であるため、**フロントエンドが公開であることとリポジトリが公開であることは同じ前提の両面**として扱う。実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトは、コンテンツ・コード・コミット履歴・PR/Issue本文のいずれにも実在の個人情報を一切持ち込まない設計にする。個人単位のデータは実行時にAPI経由（認証済み）で取得する形にとどめ、リポジトリには置かない。詳細な原則・チェックリストは`docs/public-repo-no-pii-pattern.md`を参照。
+「2. ログイン」の通り、フロントエンド自体は誰でも閲覧できる状態を前提とする。bamiyanapp配下のリポジトリも基本的に公開（Public）であるため、**フロントエンドが公開であることとリポジトリが公開であることは同じ前提の両面**として扱う。実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトは、コンテンツ・コード・コミット履歴・PR/Issue本文のいずれにも実在の個人情報を一切持ち込まない設計にする。個人単位のデータは実行時にAPI経由（認証済み）で取得する形にとどめ、リポジトリには置かない。詳細な原則・チェックリストは[`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md)を参照。
 
 ## 1. フロントエンド（全プロジェクトで採用）
 
-React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳細は`docs/client-only-vite-spa-pattern.md`を参照。
+React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳細は[`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)を参照。
 
-横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は`docs/shared-ui-components.md`を参照する。共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は`docs/frontend-ui-conventions.md`を参照する（いずれもプロダクトに応じて任意採用）。
+横断的UIコンポーネント・共通規約: ナビゲーション・PWA関連コンポーネント・Bootstrapテーマ等のsymlink共有は[`shared-ui-components.md`](shared-ui-components.md)を参照する。共通フォント・トップページ必須表示項目（バージョン・更新日時）等の規約は[`frontend-ui-conventions.md`](frontend-ui-conventions.md)を参照する（いずれもプロダクトに応じて任意採用）。
 
-テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は`docs/client-only-vite-spa-pattern.md`を参照。lintルール（複雑度・sonarjs等）の具体的な推奨値は`docs/code-quality-conventions.md`を参照。テストカバレッジ閾値・コード重複検知の目標値は`docs/cicd-pipeline-specification.md`を参照。
+テスト・lint: vitest + Testing Library（フロントエンド単体）、oxlint（lint）。バックエンドAPIを持つ場合はPlaywrightによる実バックエンド直結のE2Eも行う。詳細は[`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)を参照。lintルール（複雑度・sonarjs等）の具体的な推奨値は[`code-quality-conventions.md`](code-quality-conventions.md)を参照。テストカバレッジ閾値・コード重複検知の目標値は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照。
 
 ## 2. ログイン（認証）: 必要な場合のみ採用
 
@@ -54,10 +54,10 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 
 | 標準構成 | 詳細ドキュメント | 検証済みプロダクト |
 |---|---|---|
-| Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | `docs/lambda-api-firebase-auth-pattern.md` | uchi-stock |
-| Google OAuthのIDトークンをバックエンドで直接検証 + API Gateway + Lambda（OSLS）+ DynamoDB（「3. バックエンドAPI」の標準構成と組み合わせる） | 認証ロジックは`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」を参照（同ドキュメントの実装例自体はAWS SAMだが、認証ロジック自体はデプロイツールと独立している） | Camp-Stock |
+| Firebase Authentication（Google SSO）+ API Gateway + Lambda（OSLS）+ DynamoDB | [`lambda-api-firebase-auth-pattern.md`](lambda-api-firebase-auth-pattern.md) | uchi-stock |
+| Google OAuthのIDトークンをバックエンドで直接検証 + API Gateway + Lambda（OSLS）+ DynamoDB（「3. バックエンドAPI」の標準構成と組み合わせる） | 認証ロジックは[`serverless-api-dynamodb-pattern.md`](serverless-api-dynamodb-pattern.md)「認証パターン（Cognitoを使わない）」を参照（同ドキュメントの実装例自体はAWS SAMだが、認証ロジック自体はデプロイツールと独立している） | Camp-Stock |
 
-サイトの閲覧自体（トップページ含め）を非公開にしたい場合は標準構成の対象外。`docs/serverless-static-site-pattern.md`（Cognito + Lambda@Edgeによる全リクエスト認証ゲート）を個別に検討する。
+サイトの閲覧自体（トップページ含め）を非公開にしたい場合は標準構成の対象外。[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)（Cognito + Lambda@Edgeによる全リクエスト認証ゲート）を個別に検討する。
 
 ## 3. バックエンドAPI: 必要な場合のみ採用
 
@@ -65,27 +65,27 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 
 | 標準構成 | 詳細ドキュメント |
 |---|---|
-| OSLS + Lambda + API Gateway + DynamoDB（REST）。WebSocketによるリアルタイム双方向通信が必要な場合は、同じOSLSサービス内にAPI Gateway WebSocket APIを追加する | 基本構成: `docs/nextjs-static-lambda-pattern.md`「全体構成」のバックエンド部分。WebSocket追加: `docs/serverless-spa-pattern.md`「バックエンド」。Firebase Authenticationとの組み合わせ実装例: `docs/lambda-api-firebase-auth-pattern.md`。Google IDトークン直接検証との組み合わせ（認証ロジックのみ）: `docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」 |
+| OSLS + Lambda + API Gateway + DynamoDB（REST）。WebSocketによるリアルタイム双方向通信が必要な場合は、同じOSLSサービス内にAPI Gateway WebSocket APIを追加する | 基本構成: [`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md)「全体構成」のバックエンド部分。WebSocket追加: [`serverless-spa-pattern.md`](serverless-spa-pattern.md)「バックエンド」。Firebase Authenticationとの組み合わせ実装例: [`lambda-api-firebase-auth-pattern.md`](lambda-api-firebase-auth-pattern.md)。Google IDトークン直接検証との組み合わせ（認証ロジックのみ）: [`serverless-api-dynamodb-pattern.md`](serverless-api-dynamodb-pattern.md)「認証パターン（Cognitoを使わない）」 |
 
 バックエンド実装上の個別パターン（採用した構成に応じて任意で組み合わせる）は以下のとおり。
 
-- Node.js `https.request`のレスポンスボディ文字化け対策: `docs/https-response-buffer-encoding-pattern.md`
-- LLM APIのdual-format JSON応答: `docs/llm-dual-format-response-pattern.md`
-- 静的コンテンツのDynamoDB冪等同期: `docs/deterministic-seed-id-pattern.md`
-- 実認証情報の無いサンドボックスからの本番データ調査・修正: `docs/sandboxed-agent-production-data-pattern.md`
-- 日次利用回数の上限: `docs/daily-rate-limit-pattern.md`
+- Node.js `https.request`のレスポンスボディ文字化け対策: [`https-response-buffer-encoding-pattern.md`](https-response-buffer-encoding-pattern.md)
+- LLM APIのdual-format JSON応答: [`llm-dual-format-response-pattern.md`](llm-dual-format-response-pattern.md)
+- 静的コンテンツのDynamoDB冪等同期: [`deterministic-seed-id-pattern.md`](deterministic-seed-id-pattern.md)
+- 実認証情報の無いサンドボックスからの本番データ調査・修正: [`sandboxed-agent-production-data-pattern.md`](sandboxed-agent-production-data-pattern.md)
+- 日次利用回数の上限: [`daily-rate-limit-pattern.md`](daily-rate-limit-pattern.md)
 
 ## 4. ホスティング（全プロジェクトで採用）
 
-S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共通。詳細は`docs/static-hosting-pattern.md`を参照。
+S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共通。詳細は[`static-hosting-pattern.md`](static-hosting-pattern.md)を参照。
 
 ## 5. PWA: 必要な場合のみ採用
 
-初期ローディング表示は`docs/pwa-initial-loading-indicator.md`を参照。Service Workerのキャッシュ更新・反映パターンは`docs/service-worker-update-pattern.md`を参照。ホーム画面アイコンの生成手順は`docs/pwa-icon-generation-pattern.md`を参照。
+初期ローディング表示は[`pwa-initial-loading-indicator.md`](pwa-initial-loading-indicator.md)を参照。Service Workerのキャッシュ更新・反映パターンは[`service-worker-update-pattern.md`](service-worker-update-pattern.md)を参照。ホーム画面アイコンの生成手順は[`pwa-icon-generation-pattern.md`](pwa-icon-generation-pattern.md)を参照。
 
 ## 6. CI/CD（全プロジェクトで採用）
 
-reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release）。詳細な入力・仕様は`docs/cicd-pipeline-specification.md`を参照。
+reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release）。詳細な入力・仕様は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照。
 
 ## 7. コミット規約・開発フロー（全プロジェクトで採用）
 
@@ -100,45 +100,45 @@ reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic
    node dev-standards/scripts/bootstrap.js
    ```
 
-   `CLAUDE.md`を新規作成する。先頭で`@dev-standards/CLAUDE.md`をインポートする（`docs/reusable-workflows-reference.md`「参照側リポジトリでの導入」参照）。
+   `CLAUDE.md`を新規作成する。先頭で`@dev-standards/CLAUDE.md`をインポートする（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「参照側リポジトリでの導入」参照）。
 
    GitHubリポジトリのSettings > General > Pull Requestsで「Automatically delete head branches」を有効化する。この設定が無効だと、マージ済みPRのブランチが削除されずに残り続け、後から大量の不要ブランチを手動整理する手間が生じる。この設定はClaude Codeの利用するプロキシ経由でのリポジトリ設定変更がブロックされているため、人間が直接設定する必要がある。
 
 2. **フロントエンドの雛形を用意**
 
-   `docs/client-only-vite-spa-pattern.md`「新規プロジェクトでの始め方」に沿って構築する。現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる。
+   [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)「新規プロジェクトでの始め方」に沿って構築する。現時点ではコピー可能な雛形ディレクトリは無く、ドキュメント記載の設定を手動で組み立てる。
 
 3. **横断的UIコンポーネント・PWAパターンの適用**（「1. フロントエンド」共通規約・「5. PWA」が必要な場合のみ）
 
-   `sync-manifest.local.json`へエントリを追加する。`node dev-standards/scripts/bootstrap.js`を再実行する。参照先は`docs/shared-ui-components.md`・`docs/pwa-initial-loading-indicator.md`である。加えて`docs/service-worker-update-pattern.md`も参照。TypeScriptプロジェクトへ導入する場合は`docs/client-only-vite-spa-pattern.md`「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
+   `sync-manifest.local.json`へエントリを追加する。`node dev-standards/scripts/bootstrap.js`を再実行する。参照先は[`shared-ui-components.md`](shared-ui-components.md)・[`pwa-initial-loading-indicator.md`](pwa-initial-loading-indicator.md)である。加えて[`service-worker-update-pattern.md`](service-worker-update-pattern.md)も参照。TypeScriptプロジェクトへ導入する場合は[`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)「PWA・共有UIコンポーネント導入時の注意点」も併せて参照する。
 
 4. **「2. ログイン」が必要な場合、標準構成を導入**（不要なら本手順自体をスキップ）
 
-   - Firebase Authenticationを使う場合: `docs/lambda-api-firebase-auth-pattern.md`に沿って構築する。Firebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBの構成である
-   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合を考える。手順5の「3. バックエンドAPI」標準構成（OSLS）を構築する。その上で`docs/serverless-api-dynamodb-pattern.md`「認証パターン（Cognitoを使わない）」に沿って構築する。Google IDトークンをバックエンドで直接検証するミドルウェアを追加する
+   - Firebase Authenticationを使う場合: [`lambda-api-firebase-auth-pattern.md`](lambda-api-firebase-auth-pattern.md)に沿って構築する。Firebase Authentication + API Gateway + Lambda（OSLS）+ DynamoDBの構成である
+   - Cognito/Firebaseを使わず、独自のバックエンドAPI（DB読み書きを伴う業務ロジック）を持つ場合を考える。手順5の「3. バックエンドAPI」標準構成（OSLS）を構築する。その上で[`serverless-api-dynamodb-pattern.md`](serverless-api-dynamodb-pattern.md)「認証パターン（Cognitoを使わない）」に沿って構築する。Google IDトークンをバックエンドで直接検証するミドルウェアを追加する
 
 5. **「3. バックエンドAPI」が必要な場合、標準構成を導入**（手順4で導入済みの場合、または不要な場合は本手順自体をスキップ）
 
-   `docs/nextjs-static-lambda-pattern.md`に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合を考える。`docs/serverless-spa-pattern.md`のAPI Gateway WebSocket API追加方法も併せて参照する。フロントエンドはnpm workspaces構成にする。詳細は`docs/client-only-vite-spa-pattern.md`「npm workspacesでバックエンドと組み合わせる場合」を参照。
+   [`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md)に沿ってAWS Lambda + API Gateway + DynamoDB（OSLS）を構築する。WebSocketによるリアルタイム双方向通信も必要な場合を考える。[`serverless-spa-pattern.md`](serverless-spa-pattern.md)のAPI Gateway WebSocket API追加方法も併せて参照する。フロントエンドはnpm workspaces構成にする。詳細は[`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)「npm workspacesでバックエンドと組み合わせる場合」を参照。
 
 6. **「4. ホスティング」を構築**（共通）
 
-   `docs/static-hosting-pattern.md`に沿ってS3 + CloudFrontを構築する。
+   [`static-hosting-pattern.md`](static-hosting-pattern.md)に沿ってS3 + CloudFrontを構築する。
 
 7. **「6. CI/CD」を有効化**
 
-   `docs/cicd-pipeline-specification.md`に沿って構築する。`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`workspaces`（バックエンドと組み合わせる場合）・`enable_release`（semantic-release運用する場合）等がある。`enable_e2e_test`（Playwright E2Eを行う場合）等、プロダクトに応じた入力を選ぶ。
+   [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)に沿って構築する。`.github/workflows/ci.yml`・`cd.yml`から`reusable-ci.yml`・`reusable-cd.yml`を`uses:`で呼び出す。`workspaces`（バックエンドと組み合わせる場合）・`enable_release`（semantic-release運用する場合）等がある。`enable_e2e_test`（Playwright E2Eを行う場合）等、プロダクトに応じた入力を選ぶ。
 
 8. **各種lint/test/buildが通ることを確認してから最初のPRを作成する**
 
 ## 個人情報を扱うプロダクトのための参考実装
 
-実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトには参考実装がある。データはDBに置きAPI経由で取得し、コンテンツ・コミットへの個人情報混入を防ぐ具体的な仕組みを持つ。詳細は`docs/public-repo-no-pii-pattern.md`を参照。
+実在の個人（家族・顧客・ユーザー）のデータを扱うプロダクトには参考実装がある。データはDBに置きAPI経由で取得し、コンテンツ・コミットへの個人情報混入を防ぐ具体的な仕組みを持つ。詳細は[`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md)を参照。
 
 ## この索引に無いもの
 
 上記に当てはまらない個別の技術判断（特定の外部API連携の設計、プロダクト固有のドメインロジック等）は、この標準スタックの対象外。プロダクトごとの`infra/README.md`・`CLAUDE.md`（プロジェクト固有ルール）に記載する。
 
-既存プロダクトの中には、上記標準構成と異なるフロントエンドフレームワーク（Electric-Chair-ArenaのNext.js構成）・ホスティング（GitHub Pages）を使うものが存在する。ログイン方式（サイト全体保護、`docs/serverless-static-site-pattern.md`）が異なるものも存在する。examinationは元々Tailwind CSS v4 + daisyUI 5構成だったが、bamiyanapp/examination#308でBootstrap 5.3へ移行済み。これらへの遡及適用は本ドキュメントの対象外で、新規プロダクトの標準としてのみ上記構成を採用する。
+既存プロダクトの中には、上記標準構成と異なるフロントエンドフレームワーク（Electric-Chair-ArenaのNext.js構成）・ホスティング（GitHub Pages）を使うものが存在する。ログイン方式（サイト全体保護、[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)）が異なるものも存在する。examinationは元々Tailwind CSS v4 + daisyUI 5構成だったが、bamiyanapp/examination#308でBootstrap 5.3へ移行済み。これらへの遡及適用は本ドキュメントの対象外で、新規プロダクトの標準としてのみ上記構成を採用する。
 
 新しいプロダクトで得られた知見が複数プロダクトへ再利用できると判断した場合は、既存ドキュメントへの追記または新規ドキュメント追加を検討し、本ドキュメントの一覧へ追加する。

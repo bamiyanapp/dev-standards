@@ -12,7 +12,7 @@
 
 ## S3 + CloudFrontの最小インフラ
 
-独自ドメインを取得せず、CloudFrontの既定ドメイン（`*.cloudfront.net`）で静的サイトを配信する最小構成。`docs/serverless-static-site-pattern.md`のLambda@Edge認証付きパターンとは異なり、認証を持たない公開サイト向け。
+独自ドメインを取得せず、CloudFrontの既定ドメイン（`*.cloudfront.net`）で静的サイトを配信する最小構成。[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)のLambda@Edge認証付きパターンとは異なり、認証を持たない公開サイト向け。
 
 - S3バケットは単一。stable/canaryのビルド成果物をそれぞれ`stable/`・`canary/`プレフィックス配下に配置する
 - CloudFrontのデフォルトキャッシュビヘイビアはオリジンパスを空にする。リクエストパスがそのままS3のキーに対応し、ルーティング用のCloudFront Functions（後述）がプレフィックスを付与する
@@ -27,7 +27,7 @@ viewer-request/viewer-response関数と、ルーティング状態を保持す�
 - KVSに重み（既定キー`canary_weight`、未設定時は低い割合を既定にする）と強制切り替えフラグ（既定キー`force_stable`）を持たせる
 - viewer-request関数: `canary` Cookieが無い場合、KVSの重みに従ってstable/canaryを抽選し、URIへプレフィックスを付与する。`force_stable`がtrueの場合はCookieに関わらず常にstableにする
 - viewer-response関数: 新規抽選が発生した場合のみ（`force_stable`による強制時は発生しない）canary Cookie（例: Max-Age=1週間）を付与する
-- 明示的に`/stable/`または`/canary/`で始まるリクエストは重み付け抽選を行わずそのまま通す（手動切り替えリンクパターン、`docs/shared-ui-components.md`参照、との前方互換のため）
+- 明示的に`/stable/`または`/canary/`で始まるリクエストは重み付け抽選を行わずそのまま通す（手動切り替えリンクパターン、[`shared-ui-components.md`](shared-ui-components.md)参照、との前方互換のため）
 - KVSの初期値は、CloudFormationの`AWS::CloudFront::KeyValueStore`では設定できない（`ImportSource`はS3からの一括インポートのみに対応し、個別キーの初期値指定はできない）。スタックデプロイ後に`aws cloudfront-keyvaluestore` CLIで未設定のキーのみ初期値を設定する（既存の値は上書きしない）
 - 関数コードはCloudFormationテンプレート内に直接インラインで記述する。Serverless Framework系ツールの`${file(...)}`変数は拡張子が`.js`/`.cjs`のファイルをNode.jsモジュールとして`require()`してしまう。`module.exports`を持たない素のCloudFront Functionsハンドラでは、この結果空オブジェクトが設定される不具合を引き起こすため
 
