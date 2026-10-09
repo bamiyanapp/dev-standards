@@ -57,7 +57,7 @@ sequenceDiagram
 
 </details>
 
-![nonce発行〜検証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/oauth-csrf-nonce-pattern.png?37775fc56ff176250bda7fc65f68e59868ddbeed)
+![nonce発行〜検証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/oauth-csrf-nonce-pattern.png?93d33721fc47210bc68f45772e6250a6b6b484f1)
 
 ブラウザのCookieの生存・上書きに一切依存しないため、上記のどの要因からも影響を受けない。
 
