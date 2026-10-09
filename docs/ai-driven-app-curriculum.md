@@ -7,6 +7,8 @@ dev-standardsには2種類の内容が含まれており、本カリキュラム
 - **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: [`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)・[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ1から常に頼る**
 - **技術的なモダナイズ観点**: CI gate有効化・テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ3まで後回しにしてよい**
 
+dev-standards全体が提供する内容の一覧は[`README.md`](../README.md)「ドキュメント目次」を参照する。
+
 ## 本ドキュメントの位置づけ
 
 [`standard-tech-stack.md`](standard-tech-stack.md)は「技術構成の索引・組み立て手順」であり、採用する技術が既に決まっている前提で参照する。本ドキュメントは「決まっていない段階から、どういう順番で進めるか」というカリキュラムであり、同ドキュメントより前の段階、かつフェーズ2で同ドキュメントを実際に参照しに行くまでの橋渡しを担う。両ドキュメントの内容は重複させない。
@@ -17,9 +19,10 @@ dev-standardsには2種類の内容が含まれており、本カリキュラム
 
 | 項目 | 内容 |
 |---|---|
-| GitHubアカウント・新規リポジトリ | アイデアごとに1リポジトリを作る（既存プロダクトへの機能追加ではなく、新規アイデアを試す場合） |
-| Claude Code on the webの利用環境 | スマートフォンのブラウザからclaude.ai/codeを開き、上記GitHubリポジトリを対象にセッションを開始できる状態にしておく |
-| AWSアカウント・認証情報 | フェーズ1は最も簡単な配信先（GitHub Pages等）で足りるため、この段階では不要。バックエンドAPIが最初から必要と分かっている場合、またはフェーズ2で技術選定を見直した場合に、AWSアカウントとGitHub Secrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`）を準備する |
+| GitHubアカウント・新規リポジトリ | アイデアごとに1リポジトリを作る（既存プロダクトへの機能追加ではなく、新規アイデアを試す場合）。作成方法は[GitHub公式のクイックスタート](https://docs.github.com/en/repositories/creating-and-managing-repositories/quickstart-for-repositories)を参照 |
+| Claude Code on the webの利用環境 | スマートフォンのブラウザからclaude.ai/codeを開き、上記GitHubリポジトリを対象にセッションを開始できる状態にしておく。利用方法は[Claude Code on the web公式クイックスタート](https://code.claude.com/docs/en/web-quickstart)を参照 |
+| AWSアカウント・認証情報 | フェーズ1は最も簡単な配信先（GitHub Pages等）で足りるため、この段階では不要。バックエンドAPIが最初から必要と分かっている場合、またはフェーズ2で技術選定を見直した場合に、AWSアカウントとGitHub Secrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`）を準備する。アクセスキーの作成方法は[AWS公式のIAMアクセスキー管理ガイド](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)を参照 |
+| 費用の目安 | Claude Codeの利用料はサブスクリプションプラン（Pro/Max等）に依存する。AWS側は、個人の試作程度のアクセス量であればS3 + CloudFront・Lambda等は無料利用枠内、または月あたり数百円程度に収まることが多い。アクセスが増えた場合やPollyの音声合成等、課金が大きくなりうる機能を使う場合は、AWSの料金ページで事前に確認する |
 | アイデアの一言メモ | 技術選定は不要。「誰が」「何をするための」アプリかを1〜2文で言える状態にしておく（最初のプロンプトでそのまま使う）。何を作るか自体が決まっていない場合は、後述の「アイデアを決める（任意）」を先に行う |
 
 dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）はユーザーが準備する項目ではなく、**Claudeへ最初のプロンプトで依頼する作業**である。詳細は後述の「最初のプロンプトの例」を参照。この作業はClaude Code on the webのセッション（Claudeの仮想環境）内で完結し、スマートフォン側で何かを操作する必要は無い。また、dev-standardsは公開リポジトリであり`git submodule add`は読み取り専用のcloneにすぎないため、dev-standards自体への書き込み権限・フォークは一切不要である（書き込み権限が必要なのは、ユーザー自身が新規に作成したリポジトリ側のみ）。
@@ -49,7 +52,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 ### 進め方
 
 1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これにより[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)等のSkillがフェーズ1から使える状態になる
-2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。この時点ではAWSアカウント等を用意せず、GitHub Pages等、最も簡単に用意できる配信先を選ぶ。目的は「実際のURLがスマートフォンのブラウザで開ける」状態を作ることであり、配信先自体の良し悪しは問わない。S3 + CloudFront（[`static-hosting-pattern.md`](static-hosting-pattern.md)）等への移行は、フェーズ2の技術選定見直しで必要に応じて検討する。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
+2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。この時点ではAWSアカウント等を用意せず、GitHub Pages等、最も簡単に用意できる配信先を選ぶ。具体的な設定手順は汎用的なGitHub操作のため、このドキュメントには書かず、Claude Codeとのセッション内で「どう進めればよいか」を相談しながら対話的に進めてもらう。目的は「実際のURLがスマートフォンのブラウザで開ける」状態を作ることであり、配信先自体の良し悪しは問わない。S3 + CloudFront（[`static-hosting-pattern.md`](static-hosting-pattern.md)）等への移行は、フェーズ2の技術選定見直しで必要に応じて検討する。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
 3. アイデアをそのままClaude Codeへ伝え、最小限の画面・機能を一気に作ってもらう（後述のプロンプト例を参照）。ブランチ運用・コミットは[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)/[`commit`](../.claude/skills/commit/SKILL.md)/[`git-conventions`](../.claude/skills/git-conventions/SKILL.md) Skillに従って進む
 4. 実装してもらったら、手順2のURLへ反映した上で実際にスマートフォンのブラウザで開いて触り、違和感のある部分を言葉で伝えて直してもらう。デプロイ前の実装内容を確認したい場合は、スクリーンショットで提示してもらう（スマートフォンの画面からはローカルで動かしたものが見えないため）。CI gate・カバレッジ閾値等の技術的なモダナイズ観点はこの段階では要求しない
 5. 「人に見せられる」最小限の状態になったら、フェーズ2へ進む判断をする
