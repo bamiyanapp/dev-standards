@@ -284,7 +284,7 @@ flowchart TD
     I --> D
 ```
 
-![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?c776ba4ffed9b2fc124bd104a235d16ee3a7d678)
+![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?dc5c5fc1312b6cc7b39d9f9f77aecebad0793d54)
 
 ### `sync-manifest.local.json`への追加例
 
