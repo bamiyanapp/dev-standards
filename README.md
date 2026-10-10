@@ -62,6 +62,7 @@
 - [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
 - [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md)がある。フロントエンドError Boundary＋サーバーサイドロギング構成である。`shared/ui/ErrorBoundary.jsx`・`shared/lambda/clientErrorReporting.js`を使う
 - [`blue-green-stage-pattern.md`](docs/blue-green-stage-pattern.md): S3+CloudFront・CloudFront Functions重み付けルーティング・カナリア直列化・自動昇格・DynamoDBスキーマ互換性を組み合わせたブルーグリーン（stable/canary）デプロイパターン
+- [`blue-green-workflow-templates.md`](docs/blue-green-workflow-templates.md): `blue-green-stage-pattern.md`の運用workflow（自動昇格・状態可視化・ロールバック・実機検証・手動per-stageデプロイ）のコピー＆調整用テンプレート集
 
 ### CI/CD・運用
 

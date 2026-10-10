@@ -180,13 +180,22 @@ expand/contract方式でも後方互換を保てない変更は対象外とす�
 
 このような変更が必要になった場合、カナリア方式（stable/canary共存）をそのまま使うことはできない。明示的なメンテナンスウィンドウ（canaryを一時停止しstableのみでデータ移行する等）のようなアドホックな対応が必要になる。
 
+## 導入手順
+
+既存リポジトリへ本パターンを導入する場合、以下の順で組み込む。各ステップの詳細・コピー＆調整用のworkflowテンプレートは[`blue-green-workflow-templates.md`](blue-green-workflow-templates.md)を参照する。
+
+1. 上記「S3 + CloudFrontの最小インフラ」「CloudFront Functionsによる重み付けルーティング」を専用の固定スタックとして構築する
+2. 「backendの並行stageデプロイ」に沿って、backendをstageに依存しない構成へ調整する（必要な場合のみ）
+3. mainマージ時に`canary_queue_pending`をセットするだけのCD変更を加える（「canaryデプロイの日次バッチ化」参照）
+4. 自動昇格ワークフロー（`promote-canary.yml`）を導入する
+5. 管理者ロールバック（`rollback-to-stable.yml`）・canary_weight手動変更（`set-canary-weight.yml`）を導入する
+6. 運用状態の可視化ワークフロー（`canary-status.yml`）とルーティング実機検証ワークフロー（`verify-bg-routing.yml`）を導入する
+7. 緊急時向けの手動per-stageデプロイワークフロー（`deploy-backend-stage.yml`・`deploy-frontend-stage.yml`）を導入する
+
 ## 参考実装
 
-具体的なコードは[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)を参照。
+具体的なコードは[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)を参照。GitHub Actions workflow自体のコピー＆調整用テンプレートは[`blue-green-workflow-templates.md`](blue-green-workflow-templates.md)にまとめてある。
 
 - `infra/serverless.yml`: S3+CloudFront・CloudFront Functions
 - `.github/workflows/cd.yml`: canaryデプロイの日次バッチ化（キュー記録のみ）
-- `.github/workflows/promote-canary.yml`: 自動昇格・詰まりの自動解消
-- `.github/workflows/rollback-to-stable.yml`: 管理者ロールバック
-- `.github/workflows/set-canary-weight.yml`: canary_weightの手動変更
 - `docs/dynamodb-schema-compatibility-canary.md`: DynamoDBスキーマ互換性
