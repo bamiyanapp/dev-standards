@@ -61,7 +61,7 @@ stateDiagram-v2
     connected --> connecting: visibilitychange/online かつ readyState !== OPEN（即時・カウンタリセット）
 ```
 
-![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?d2b91be0e1db05f62a347d9d2807f81ae8b6aa7e)
+![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?b126dce417310c4fff76da70d268b32eed8620e7)
 
 ## 実例
 

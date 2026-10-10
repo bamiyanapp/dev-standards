@@ -135,7 +135,7 @@ flowchart TD
 
 </details>
 
-![pinned tag展開確認のロールアウト手順 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/SKILL.png?d2b91be0e1db05f62a347d9d2807f81ae8b6aa7e)
+![pinned tag展開確認のロールアウト手順 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/SKILL.png?b126dce417310c4fff76da70d268b32eed8620e7)
 
 **PRがマージされた・CIが成功した、というだけでは「実際に修正が反映された」ことを意味しない**。このような複数段階のロールアウトが必要な変更では、Issueをクローズする前・完了報告をする前に、実際にmain上の挙動・生成物を再検証する。例えば、生成されたファイルの形式・内容を実際に確認する、参照側リポジトリの`ci.yml`で実際に使われているタグを確認する等である。CIが緑であることや「マージできた」という報告だけを根拠に完了と判断してはならない。
 
