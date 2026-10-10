@@ -261,3 +261,30 @@ stableが緊急手動デプロイ等でcanaryより新しい場合、昇格を�
 | `output-directory` | `index.html`・`sw.js`の出力先ディレクトリ |
 
 生成される`index.html`内の`__NEW_URL__`は呼び出し元で実際のURLへ置換する（上記例では`deploy-github-pages`の`build-command`で`sed`置換している）。
+
+## `.github/actions/commit-via-pr`（複合action）
+
+作業ツリー上の変更を、可能なら対象ブランチへ直接pushし、Rulesets等で拒否された場合は「新ブランチへpush→PR作成→API経由でsquash merge」へ自動フォールバックしてコミットする（issue #830）。`reusable-ci.yml`の`render-mermaid-diagrams`ジョブ（自動生成ファイルのコミット）で使用している。ジョブ実行中に他のPRが対象ブランチへマージされていてもコンフリクトしたまま放置されないよう、ブランチを切る前に最新の対象ブランチへ`git rebase -X ours`する処理を内蔵している。
+
+```yaml
+- name: Commit generated files via commit-via-pr
+  uses: bamiyanapp/dev-standards/.github/actions/commit-via-pr@v1.0.0
+  with:
+    paths: docs/generated/report.md
+    commit-subject: "chore: 生成レポートを更新する [skip ci]"
+    push-token: ${{ secrets.BOT_TOKEN }}
+    github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `paths` | コミット対象ファイルのパス（スペース区切り、複数可） | （必須） |
+| `commit-subject` | コミットメッセージの1行目（subject） | （必須） |
+| `commit-body` | コミットメッセージの本文 | `""` |
+| `pr-title` / `pr-body` | フォールバック時に作成するPRのタイトル・本文 | `commit-subject` / `commit-body` |
+| `branch-prefix` | フォールバック時に作成する新ブランチ名のprefix | `chore/commit-via-pr` |
+| `base-branch` | コミット対象のブランチ | 現在のref |
+| `push-token` | 直接pushに使うトークン。未指定の場合は直接pushを試みず常にPRフォールバックを使う | `""` |
+| `github-token` | PR作成・squash merge・ブランチ削除に使うトークン | （必須） |
+
+対象ブランチへのpushで後続workflowをトリガーする必要がある場合、`push-token`には`secrets.GITHUB_TOKEN`ではなく`secrets.BOT_TOKEN`等を渡す（`GITHUB_TOKEN`によるpushは新たなworkflow実行を作らないため）。

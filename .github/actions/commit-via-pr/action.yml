@@ -1,0 +1,242 @@
+name: "Commit via PR (direct push with PR fallback)"
+description: >-
+  作業ツリー上の変更を、可能なら`base-branch`へ直接pushし、拒否された場合は
+  「新ブランチへpush→PR作成→API経由でsquash merge」へフォールバックして
+  コミットする複合アクション（issue #830）。`reusable-ci.yml`の
+  `render-mermaid-diagrams`ジョブが内蔵していた処理を共通化したもの。
+
+  `base-branch`が「変更は必ずPR経由」のリポジトリルール（Rulesets）で
+  保護されている場合、直接pushはGH013エラーで拒否される
+  （bamiyanapp/dev-standards#723）。Rulesetのbypass listへの対応では
+  解消しないことが実機で確認されている。そのため直接pushは失敗を許容し、
+  実際に反映されたかを確認したうえでフォールバックへ切り替える方式にしている。
+
+  ジョブ実行中に他のPRが`base-branch`へマージされていると、フォールバックで
+  作成したPRが作成直後からコンフリクトしたまま放置される事故が実際に発生した
+  （bamiyanapp/karuta#1488・#1498）。ブランチを切る前に最新の`base-branch`へ
+  `git rebase -X ours`することで、同じファイル・同じ行で衝突した場合は
+  本アクションが生成した変更側を優先しつつ回避する。
+
+inputs:
+  paths:
+    description: >-
+      コミット対象ファイルのパス（スペース区切り、複数可）。呼び出し元が
+      本アクション呼び出し前にファイルへ変更を書き込んでおく。変更が
+      無い場合（`git status --porcelain`が空）は何もコミットせず終了する
+    required: true
+  commit-subject:
+    description: "コミットメッセージの1行目（subject）"
+    required: true
+  commit-body:
+    description: "コミットメッセージの本文（body）。省略可"
+    required: false
+    default: ""
+  pr-title:
+    description: "フォールバック時に作成するPRのタイトル。省略時はcommit-subjectを使う"
+    required: false
+    default: ""
+  pr-body:
+    description: "フォールバック時に作成するPRの本文。省略時はcommit-bodyを使う"
+    required: false
+    default: ""
+  branch-prefix:
+    description: "フォールバック時に作成する新ブランチ名のprefix。実際のブランチ名は`<branch-prefix>-${{ github.run_id }}`になる"
+    required: false
+    default: "chore/commit-via-pr"
+  base-branch:
+    description: "コミット対象のブランチ。省略時は現在のref（`github.ref_name`）"
+    required: false
+    default: ${{ github.ref_name }}
+  push-token:
+    description: >-
+      直接pushに使うトークン。base_branchへのpushで後続のCI/CDワークフローが
+      トリガーされる必要がある場合、`secrets.GITHUB_TOKEN`ではなく
+      `secrets.BOT_TOKEN`を渡すことを推奨する（`GITHUB_TOKEN`によるpushは
+      新たなworkflow実行を作らないため）。未指定の場合は直接pushを試みず、
+      常にPRフォールバックを使う
+    required: false
+    default: ""
+  github-token:
+    description: "PR作成・squash merge・ブランチ削除に使うトークン。通常は`push-token`と同じ値を渡す"
+    required: true
+
+outputs:
+  committed:
+    description: "コミット対象の変更があったかどうか（true/false）"
+    value: ${{ steps.check-changes.outputs.changed }}
+  method:
+    description: "反映方法。direct-push・pr・none（変更無し）のいずれか"
+    value: ${{ steps.decide-method.outputs.method }}
+  pr-number:
+    description: "method=prの場合に作成・マージしたPR番号"
+    value: ${{ steps.create-and-merge-pr.outputs.pr-number }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check for changes to commit
+      id: check-changes
+      shell: bash
+      run: |
+        set -eu
+        if git status --porcelain -- ${{ inputs.paths }} | grep -q .; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Commit the changes
+      if: steps.check-changes.outputs.changed == 'true'
+      shell: bash
+      run: |
+        set -eu
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add -- ${{ inputs.paths }}
+        git commit -m "${{ inputs.commit-subject }}" -m "${{ inputs.commit-body }}"
+
+    # push-tokenが無い場合は直接pushを試みず、常にPRフォールバックへ進む
+    - name: Attempt a direct push to the base branch
+      id: push-direct
+      if: steps.check-changes.outputs.changed == 'true' && inputs.push-token != ''
+      continue-on-error: true
+      shell: bash
+      env:
+        PUSH_TOKEN: ${{ inputs.push-token }}
+      run: |
+        set -eu
+        git push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ inputs.base-branch }}"
+
+    - name: Check if the direct push actually succeeded
+      id: check-push
+      if: steps.check-changes.outputs.changed == 'true'
+      shell: bash
+      run: |
+        set -eu
+        if [ "${{ inputs.push-token }}" = "" ]; then
+          echo "needs_pr=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        git fetch origin "${{ inputs.base-branch }}"
+        LOCAL_SHA=$(git rev-parse HEAD)
+        REMOTE_SHA=$(git rev-parse "origin/${{ inputs.base-branch }}")
+        if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
+          echo "needs_pr=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "needs_pr=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Rebase the commit onto the latest base branch
+      if: steps.check-changes.outputs.changed == 'true' && steps.check-push.outputs.needs_pr == 'true'
+      shell: bash
+      run: |
+        set -eu
+        git fetch origin "${{ inputs.base-branch }}"
+        git rebase -X ours "origin/${{ inputs.base-branch }}"
+
+    # force pushにしているのは、過去の失敗試行で同名ブランチが残骸として残っていると、
+    # 通常のpushがnon-fast-forwardで拒否され以後の実行が恒久的に失敗し続けるため
+    - name: Push the commit to a new branch
+      id: push-new-branch
+      if: steps.check-changes.outputs.changed == 'true' && steps.check-push.outputs.needs_pr == 'true'
+      shell: bash
+      run: |
+        set -eu
+        BRANCH="${{ inputs.branch-prefix }}-${{ github.run_id }}"
+        git checkout -b "$BRANCH"
+        git push --force origin "$BRANCH"
+        echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+    - name: Create and merge the pull request
+      id: create-and-merge-pr
+      if: steps.check-changes.outputs.changed == 'true' && steps.check-push.outputs.needs_pr == 'true'
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const branch = "${{ steps.push-new-branch.outputs.branch }}";
+          const baseBranch = "${{ inputs.base-branch }}";
+          const title = "${{ inputs.pr-title }}" || "${{ inputs.commit-subject }}";
+          const body = "${{ inputs.pr-body }}" || "${{ inputs.commit-body }}";
+
+          // 過去の試行でこのブランチへのPRマージ自体が失敗し、PRがオープンのまま
+          // 残っている場合、createは「A pull request already exists」で422を返す。
+          // その場合は新規作成せず、既存のPRを引き継いでmergeへ進む
+          let pr;
+          try {
+            ({ data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: branch,
+              base: baseBranch,
+              title,
+              body,
+            }));
+            console.log(`Created PR #${pr.number}`);
+          } catch (error) {
+            if (!error.message.includes("A pull request already exists")) {
+              throw error;
+            }
+            const { data: existingPrs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: "open",
+            });
+            if (existingPrs.length === 0) {
+              throw error;
+            }
+            pr = existingPrs[0];
+            console.log(`Reusing existing PR #${pr.number}`);
+          }
+
+          core.setOutput("pr-number", String(pr.number));
+
+          // pushで作成したブランチ直後はGitHub側のmergeable判定が追いついていない
+          // ことがあるため、短い間隔でリトライする
+          const maxAttempts = 5;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: "squash",
+              });
+              console.log(`Successfully merged PR #${pr.number}`);
+              break;
+            } catch (error) {
+              if (attempt === maxAttempts) {
+                console.error(`Failed to merge PR #${pr.number}:`, error.message);
+                throw error;
+              }
+              console.log(`Merge attempt ${attempt} failed (${error.message}), retrying...`);
+              await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
+            }
+          }
+
+          try {
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `heads/${branch}`,
+            });
+          } catch (error) {
+            if (!(error.status === 422 || error.message.includes("Reference does not exist"))) {
+              console.error(`Failed to delete branch ${branch}:`, error.message);
+            }
+          }
+
+    - name: Decide the reflection method for outputs
+      id: decide-method
+      if: always()
+      shell: bash
+      run: |
+        set -eu
+        if [ "${{ steps.check-changes.outputs.changed }}" != "true" ]; then
+          echo "method=none" >> "$GITHUB_OUTPUT"
+        elif [ "${{ steps.check-push.outputs.needs_pr }}" = "false" ]; then
+          echo "method=direct-push" >> "$GITHUB_OUTPUT"
+        else
+          echo "method=pr" >> "$GITHUB_OUTPUT"
+        fi
