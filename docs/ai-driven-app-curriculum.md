@@ -146,6 +146,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | 観点 | 達成条件 | 参照ドキュメント |
 |---|---|---|
 | CI有効化（自動マージ含む） | `.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出し、lint・testがPRで実行される。自動マージ（`enable_auto_merge`）後にCDを起動させたい場合は、`BOT_TOKEN`シークレットの登録と、`ci.yml`/`cd.yml`での明示的な`secrets:`転送が必要（`GITHUB_TOKEN`によるpushはCDの新規workflow実行をトリガーしないため。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「共通の環境変数」を参照） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| ブランチ保護設定（Required status checks） | GitHub Settingsのブランチ保護ルールで、`commitlint`等の必須ジョブをRequired status checksとして指定している。これを設定しないと、CI完了を待たずに手動マージされてしまうケースを防げない（`reusable-ci.yml`自体はこの設定を強制できないため、各リポジトリ側での明示的な設定が必要） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | CD有効化 | `.github/workflows/cd.yml`が`reusable-cd.yml`を呼び出し、semantic-releaseでバージョン管理されている（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | フロントエンド単体テスト | vitest + Testing Libraryで主要画面・フックにテストがあり、CIでカバレッジ閾値が設定されている | [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md) |
 | バックエンドAPIを持つ場合のテスト | バックエンドにも単体テストがあり、CIのカバレッジ閾値が設定されている（バックエンドが無い場合は対象外） | [`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md) |
@@ -160,7 +161,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | E2Eテスト結果のPR表示 | `enable_e2e_test`によりPlaywright E2Eの成否・カバレッジがPRコメント・Job Summaryへ投稿される（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md) |
 | GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md) |
-| 依存更新の自動化（Renovate） | リポジトリルートに`renovate.json`があり、Renovate（GitHub App）が有効化され、依存更新PRが自動的に作成される | - |
+| 依存更新の自動化（Renovate） | リポジトリルートに`renovate.json`があり、`git-submodules`マネージャーが明示的に有効化されている（Renovateのデフォルトでは無効）。GitHub Appのインストール先はOrganization（個人アカウントだと効かない）。Mendダッシュボードの動作モードが「自動化されたPR」になっており、依存更新PRが自動的に作成される | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「dev-standards submoduleの自動更新（Renovate）について」 |
 | 依存更新の運用・SBOM | 上記Renovate等が作成した依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | [`dependency-risk-judgment.md`](dependency-risk-judgment.md) |
 | 運用監視 | サイレント障害（Lambdaエラー等）をCloudWatch Alarm等で検知し通知する仕組みがある（バックエンドAPIを持つ場合） | [`ops-monitoring-pattern.md`](ops-monitoring-pattern.md) |
 | フロントエンドエラー報告 | ErrorBoundaryが捕捉した例外をサーバーサイドへロギングする仕組みがある（採用する場合） | [`client-error-reporting-pattern.md`](client-error-reporting-pattern.md) |
