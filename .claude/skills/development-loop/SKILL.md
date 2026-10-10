@@ -20,6 +20,7 @@ description: 開発をGoal達成まで進めるための基本ループ（Observ
 ## Plan
 
 - 要件整理
+- **新規の機能・設計パターンに着手する前に、dev-standardsの[`README.md`](https://github.com/bamiyanapp/dev-standards/blob/main/README.md)「ドキュメント目次」を実装対象のキーワードで検索し、既存のゴールデンパス・コピー＆調整用テンプレートが無いか確認する**（issue #864）。既存ドキュメントが見つかった場合はそれに従って実装する。見つからない場合でも、実装後のReflectionで新規ドキュメント化すべきか検討する（CLAUDE.md「Reflection」節参照）
 - 設計決定
 - 設計がスマホのみの開発環境で実行・検証可能か確認する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照。CLIやデスクトップ限定の手動確認を前提としないこと）
 - ブランチ作成
