@@ -797,11 +797,12 @@ jobs:
 
 CloudFront Functionsの重み付けルーティング・sticky Cookie挙動を、実際にデプロイ済みのCloudFront URLへHTTPリクエストを送って自動検証する。サンドボックス環境のネットワーク制限等で直接検証できない場合でも、インターネットに到達可能なGitHub Actionsランナーから実行できる。
 
-検証する内容は以下3点。
+検証する内容は以下4点。
 
 1. Cookie無しでアクセスした場合、設定した重みのおおよその割合でcanaryが選ばれる
 2. 一度付与されたCookieの値通りに2回目以降のアクセスが固定される
 3. KVSの`force_stable`をtrueにすると、Cookieに関わらず常にstableになる
+4. `/stable/`への明示アクセスは常にstableの内容を返し、かつ以後のCookie無しアクセスもstableへ一時固定される（手動切り替えリンクパターンとの前方互換、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「CloudFront Functionsによる重み付けルーティング」のviewer-request関数仕様に対応）
 
 このworkflowは検証専用で、デプロイやKVSの既定値を変更する副作用を残さない（`force_stable`検証後は必ずfalseへ戻す）。レスポンス本文から変種を判別する`CANARY`・`STABLE`の文字列は、frontendのビルド時にモードに応じて埋め込むマーカー文字列に置き換える（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「主要画面へのバージョン表示」等、既存のモード判定の仕組みと合わせる）。
 
@@ -945,6 +946,47 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: "6. /stable/への明示アクセスは常にstableの内容を返す"
+        id: stable_content
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          BODY=$(curl -sS "https://${DOMAIN}/stable/index.html" --max-time 15)
+          if echo "$BODY" | grep -q "STABLE"; then
+            echo "content_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "content_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "7. /stable/への明示アクセスでCookieがstableへ固定される"
+        id: stable_cookie
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          JAR=$(mktemp)
+
+          # canary Cookieを持たない状態で/stable/へアクセスし、新たにstableへ
+          # 固定するCookieが発行されることを確認する
+          curl -sS "https://${DOMAIN}/stable/index.html" --max-time 15 -c "$JAR" >/dev/null
+          if grep -q "canary.*stable" "$JAR"; then
+            echo "set_cookie_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "set_cookie_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 発行されたCookieを使って通常のルートパス（"/"）へアクセスし、
+          # Cookie無し判定の重み付け抽選を経由せずstableへ固定されることを
+          # 確認する
+          N=5
+          NON_STABLE_COUNT=0
+          for i in $(seq 1 "$N"); do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "$JAR" -c "$JAR")
+            if ! echo "$BODY" | grep -q "STABLE"; then
+              NON_STABLE_COUNT=$((NON_STABLE_COUNT + 1))
+            fi
+          done
+          echo "non_stable_count=${NON_STABLE_COUNT}" >> "$GITHUB_OUTPUT"
+
       - name: Write summary
         if: always()
         run: |
@@ -961,6 +1003,11 @@ jobs:
             echo "### 3. force_stable強制切り替え"
             echo "KVS更新の反映: ${{ steps.force_stable_check.outputs.propagated == '1' && '確認できた' || '120秒待っても確認できなかった（要調査）' }}"
             echo "10回中stable以外になった回数: ${{ steps.force_stable_check.outputs.non_stable_count }}（0が正常）"
+            echo ""
+            echo "### 4. /stable/明示アクセスのstable固定"
+            echo "内容確認: ${{ steps.stable_content.outputs.content_ok == 'true' && '確認できた' || '確認できなかった' }}"
+            echo "Cookie発行: ${{ steps.stable_cookie.outputs.set_cookie_ok == 'true' && '確認できた' || '確認できなかった' }}"
+            echo "固定後の通常アクセス5回中stable以外になった回数: ${{ steps.stable_cookie.outputs.non_stable_count }}（0が正常）"
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
@@ -1122,6 +1169,6 @@ jobs:
 - `canary-status.yml`
 - `rollback-to-stable.yml`
 - `set-canary-weight.yml`
-- `verify-bg-routing.yml`
+- `verify-bg-routing.yml`（`verify-stable-fallback.yml`の検証項目を統合済み）
 - `deploy-backend-stage.yml`
 - `deploy-frontend-stage.yml`
