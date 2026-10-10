@@ -12,6 +12,7 @@
 | `<infra-shared-stack>` | S3+CloudFrontの固定インフラスタック名 | `karuta-infra-shared` |
 | `<frontend-workspace>` | frontendのnpm workspace名（npm workspaces構成でない場合は調整） | `frontend` |
 | `<backend-dir>` | backendのデプロイ対象ディレクトリ | `backend` |
+| `<write-endpoint-name>`・`<read-endpoint-name>`・`<field>`・`<shared-table-name>` | データ共有検証ワークフロー用。検証に使う書き込み/読み取りAPIのエンドポイント名・リクエストのフィールド名・対象DynamoDBテーブル名 | `post-comment`・`get-comments`・`comment`・`karuta-comments` |
 
 ## 自動昇格ワークフロー（promote-canary.yml）
 
@@ -868,6 +869,118 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
+## データ共有検証ワークフロー（verify-stage-data-sharing.yml）
+
+stable/canaryが同一のデータストアを共有していることは、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「DynamoDBスキーマ互換性ガイドライン（expand/contract方式）」の前提となる中核要件である。本workflowは、一方のステージへ書き込んだデータが、もう一方のステージから読み取れることを実際のAPI呼び出しで検証する。
+
+前提として、`deploy-backend-stage.yml`でstable・canary両方を先にデプロイしておくこと。検証対象が実際の本番データストアのため、検証用レコードには分かりやすいマーカーを付け、確認後に対象ストアから直接削除する（通常のAPIにはdelete相当のエンドポイントが無いことが多いため、AWS CLI/SDKで直接削除する）。
+
+```yaml
+name: Verify Stage Data Sharing
+run-name: Verify Stage Data Sharing (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ap-northeast-1
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install backend dependencies
+        working-directory: <backend-dir>
+        run: npm ci
+
+      - name: Resolve stable/canary endpoints
+        id: resolve
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          for STAGE in stable canary; do
+            INFO=$(npx osls info --stage "$STAGE" --verbose 2>/dev/null)
+            WRITE_URL=$(echo "$INFO" | grep -E "POST.*<write-endpoint-name>" | sed -E 's/.*(https:\/\/[^ ]+).*/\1/')
+            READ_URL=$(echo "$INFO" | grep -E "GET.*<read-endpoint-name>" | sed -E 's/.*(https:\/\/[^ ]+).*/\1/')
+            echo "${STAGE}_write_url=${WRITE_URL}" >> "$GITHUB_OUTPUT"
+            echo "${STAGE}_read_url=${READ_URL}" >> "$GITHUB_OUTPUT"
+            echo "${STAGE} write: ${WRITE_URL}"
+            echo "${STAGE} read: ${READ_URL}"
+          done
+
+      - name: "stable経由で書き込み→canary経由で読み取り、同一テーブルを共有していることを確認する"
+        id: stable_to_canary
+        run: |
+          set -eu
+          MARKER="bg-data-sharing-verify-$(date +%s)-$$"
+          curl -sS -X POST "${{ steps.resolve.outputs.stable_write_url }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"<field>\":\"[動作確認用。自動削除されます] ${MARKER}\"}" \
+            --max-time 15 >/dev/null
+
+          sleep 2
+          BODY=$(curl -sS "${{ steps.resolve.outputs.canary_read_url }}" --max-time 15)
+          if echo "$BODY" | grep -q "$MARKER"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "stable経由の書き込みをcanary経由で読み取れた（同一テーブル共有を確認）"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "stable経由の書き込みがcanary経由で見つからなかった" >&2
+          fi
+          echo "marker=${MARKER}" >> "$GITHUB_OUTPUT"
+
+      - name: マーカー付き検証用レコードをDynamoDBから直接削除する
+        if: always()
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          MARKER="${{ steps.stable_to_canary.outputs.marker }}"
+          if [ -z "$MARKER" ]; then
+            echo "マーカーが無いためスキップ"
+            exit 0
+          fi
+          node -e "
+            const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+            const { DynamoDBDocumentClient, ScanCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
+            const client = new DynamoDBClient({ region: 'ap-northeast-1' });
+            const docClient = DynamoDBDocumentClient.from(client);
+            (async () => {
+              const result = await docClient.send(new ScanCommand({ TableName: '<shared-table-name>' }));
+              const items = (result.Items || []).filter((i) => i.<field> && i.<field>.includes('${MARKER}'));
+              for (const item of items) {
+                await docClient.send(new DeleteCommand({ TableName: '<shared-table-name>', Key: { id: item.id } }));
+                console.log('削除した: ' + item.id);
+              }
+              if (items.length === 0) {
+                console.log('削除対象が見つからなかった（書き込み自体が失敗していた可能性）');
+              }
+            })();
+          "
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## データ共有検証結果（stable/canary間のDynamoDB共有）"
+            echo ""
+            echo "stable経由の書き込み→canary経由の読み取り: ${{ steps.stable_to_canary.outputs.found == 'true' && '成功（同一テーブルを共有している）' || '失敗' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## 手動per-stageデプロイワークフロー（deploy-backend-stage.yml / deploy-frontend-stage.yml）
 
 通常の変更はCDパイプライン（mainマージ→`canary_queue_pending`キューイング→`promote-canary.yml`での定期反映）経由で届く。緊急修正やstable/canaryいずれかだけの単純な再デプロイが必要な場合向けに、手動実行できるper-stageデプロイworkflowを用意する。
@@ -1026,5 +1139,6 @@ jobs:
 - `rollback-to-stable.yml`
 - `set-canary-weight.yml`
 - `verify-bg-routing.yml`
+- `verify-stage-data-sharing.yml`
 - `deploy-backend-stage.yml`
 - `deploy-frontend-stage.yml`
