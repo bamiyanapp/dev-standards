@@ -718,6 +718,155 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
+## 手動per-stageデプロイワークフロー（deploy-backend-stage.yml / deploy-frontend-stage.yml）
+
+通常の変更はCDパイプライン（mainマージ→`canary_queue_pending`キューイング→`promote-canary.yml`での定期反映）経由で届く。緊急修正やstable/canaryいずれかだけの単純な再デプロイが必要な場合向けに、手動実行できるper-stageデプロイworkflowを用意する。
+
+backend側はcanaryへの直接デプロイがキューイング設計を素通りしてしまう事故が実際に起きた。canaryの`LastUpdatedTime`が書き換わり、昇格猶予期間の起点が意図せず前進してしまう事故である。このため`stage=canary`への直接デプロイは既定で禁止し、占有中（スタックが存在し`force_stable`でない）であればデプロイを停止するガードを入れる。`force`入力をtrueにすれば緊急時のみ素通りできる。
+
+```yaml
+name: Deploy Backend Stage
+run-name: Deploy Backend Stage (manual, ${{ inputs.stage }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "デプロイ先のstage"
+        required: true
+        type: choice
+        options:
+          - stable
+          - canary
+      force:
+        description: "canaryが占有中（promote-canary.ymlの猶予期間カウント中）でも強制デプロイする"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      # 占有中のcanaryへ直接デプロイするとLastUpdatedTimeが書き換わり、
+      # 昇格猶予期間が意図せず延長される（前述）。force入力が無い限り停止する
+      - name: canaryの占有状態を確認する（stage=canaryのみ）
+        if: inputs.stage == 'canary' && inputs.force != true
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+        run: |
+          set -eu
+          npm ci
+          if ! aws cloudformation describe-stacks --stack-name <service>-canary >/dev/null 2>&1; then
+            echo "canaryスタックは存在しない（空き状態）ため、デプロイを続行する"
+            exit 0
+          fi
+          INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
+          KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          FORCE_STABLE=$(aws cloudfront-keyvaluestore get-key --region us-east-1 --kvs-arn "$KVS_ARN" --key "force_stable" --query Value --output text 2>/dev/null || echo "false")
+          if [ "$FORCE_STABLE" = "true" ]; then
+            echo "force_stable=trueのため、canaryは空き状態とみなしデプロイを続行する"
+            exit 0
+          fi
+          echo "::error::canaryは現在占有中（promote-canary.ymlの猶予期間カウント中）です。このworkflowで直接デプロイすると、canaryのLastUpdatedTimeが書き換わり昇格スケジュールが意図せず延長されます。通常の変更はcd.ymlのマージ経路（canary_queue_pending=true）でキューイングされ、canaryが空いた時点で反映されます。緊急時のみforce入力をtrueにして再実行してください。"
+          exit 1
+
+      - name: 🚀 Deploy Backend (osls, Serverless Framework v3 OSS fork)
+        uses: bamiyanapp/dev-standards/.github/actions/deploy-serverless@main
+        with:
+          working-directory: <backend-dir>
+          node-version: 22
+          deploy-command: npx osls deploy --stage ${{ inputs.stage }}
+          workspaces: true
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Show endpoints
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          INFO=$(npx osls info --stage ${{ inputs.stage }} --verbose 2>/dev/null)
+          echo "$INFO"
+          {
+            echo "## backend デプロイ結果（stage: ${{ inputs.stage }}）"
+            echo ""
+            echo '```'
+            echo "$INFO"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
+frontend側はS3プレフィックス同期のみの単純な操作で、canaryスタック自体を作成・削除しないためLastUpdatedTimeへの影響が無く、occupancyガードは不要。
+
+```yaml
+name: Deploy Frontend Stage
+run-name: Deploy Frontend Stage (manual, ${{ inputs.stage }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "デプロイ先のstage"
+        required: true
+        type: choice
+        options:
+          - stable
+          - canary
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Build frontend
+        working-directory: <frontend-workspace>
+        run: npm run build:${{ inputs.stage }}
+
+      - name: Deploy to S3 and invalidate CloudFront cache
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+        run: |
+          set -eu
+          OUTPUTS=$(aws cloudformation describe-stacks --stack-name <infra-shared-stack> --query "Stacks[0].Outputs" --output json)
+          BUCKET=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="FrontendBucketName") | .OutputValue')
+          DIST_ID=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="FrontendDistributionId") | .OutputValue')
+          aws s3 sync <frontend-workspace>/dist "s3://${BUCKET}/${{ inputs.stage }}/" --delete
+          # DefaultCacheBehaviorがCachingOptimized（オリジン側Cache-Controlに従う）
+          # のため、同期しただけでは最大24時間古いキャッシュが返り続ける。対象の
+          # プレフィックス配下のみを明示的に無効化する
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/${{ inputs.stage }}/*"
+          {
+            echo "## frontend デプロイ結果（stage: ${{ inputs.stage }}）"
+            echo ""
+            echo "S3バケット: ${BUCKET}"
+            echo "同期先プレフィックス: ${{ inputs.stage }}/"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## 参考実装
 
-具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の`.github/workflows/promote-canary.yml`・`canary-status.yml`・`verify-bg-routing.yml`を参照する。
+具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の各workflowファイルを参照する。対象は`.github/workflows/promote-canary.yml`・`canary-status.yml`・`verify-bg-routing.yml`・`deploy-backend-stage.yml`・`deploy-frontend-stage.yml`である。
