@@ -79,6 +79,8 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `enable_doc_duplication_check` | `jscpd`によるMarkdownドキュメント重複検知（`doc-duplication-check` job） | `false` |
 | `doc_duplication_threshold` | Markdownドキュメント重複率のしきい値（%） | `0` |
 | `doc_duplication_paths` | ドキュメント重複検知の対象パス（ディレクトリまたはファイル） | `""` |
+| `enable_workflow_duplication_check` | `jscpd`による参照側workflow/action⇔dev-standards reusable workflow/actionの重複検知（`workflow-duplication-check` job） | `false` |
+| `workflow_duplication_threshold` | workflow重複率のしきい値（%） | `0` |
 | `enable_architecture_check` | `dependency-cruiser`によるアーキテクチャ違反検知（`architecture-check` job） | `false` |
 
 - `enable_duplication_check`: SonarCloud相当の静的解析をCIネイティブなツールで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。ESLintの`complexity`ルール・`eslint-plugin-sonarjs`はこのワークフローでは扱わず、参照側リポジトリのESLint設定へ直接追加する（推奨ルールセットは[`code-quality-conventions.md`](code-quality-conventions.md)参照）。`submodules: true`でcheckoutするため、参照側リポジトリのproduct codeが`shared/`と重複（symlink化し忘れ）していないかも検知できる（[bamiyanapp/dev-standards#621](https://github.com/bamiyanapp/dev-standards/issues/621)）。`sync-manifest.json`等に列挙済みのsymlink/copyの組は自動生成される除外リストにより誤検知しない
@@ -86,6 +88,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 - `enable_doc_duplication_check`: `duplication-check`（コード向け）とは別ジョブで、CLAUDE.md・`SKILL.md`間の丸ごとコピペ重複（drift事故の原因）を検知する（[bamiyanapp/dev-standards#586](https://github.com/bamiyanapp/dev-standards/issues/586)）
 - `doc_duplication_threshold`: ドキュメント内の埋め込みコードサンプルも`jscpd`の自動判定により別フォーマットとして計上されうるため、意図的に複数の完全なコード例を並べているドキュメントがある場合はその分を許容できる値にすること
 - `doc_duplication_paths`: `text_lint_paths`等と異なりglobパターンではなく`jscpd`へそのまま位置引数として渡す。カンマまたは改行区切りで複数指定できる（例: `"docs\nREADME.md\nCLAUDE.md\n.claude/skills"`）
+- `enable_workflow_duplication_check`: 参照側リポジトリ独自のworkflowが、後からdev-standards側でreusable workflow・composite actionへ一般化されることがある。追従されず同じロジックが両方に残ったまま放置される事故を検知する（[bamiyanapp/dev-standards#874](https://github.com/bamiyanapp/dev-standards/issues/874)、実例: [bamiyanapp/karuta#1548](https://github.com/bamiyanapp/karuta/issues/1548)）。`duplication-check`（JS/TS専用）ではYAMLを対象外にしているため拾えない。`reusable-ci.yml`・`reusable-cd.yml`・`reusable-codeql.yml`自身は比較対象から除く（内部job間の構造的な類似による自己重複がノイズになるだけのため）
 - `enable_architecture_check`: 循環依存と、npm workspacesモノレポでの`frontend_dir`/`backend_dir`間の越境importを検知する（[bamiyanapp/dev-standards#523](https://github.com/bamiyanapp/dev-standards/issues/523)）。共有ルール（`dependency-cruiser.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのジョブの有効化のみでよい（詳細は[`code-quality-conventions.md`](code-quality-conventions.md)参照）
 
 ### ドキュメント品質

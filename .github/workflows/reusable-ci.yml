@@ -163,6 +163,26 @@ on:
           改行区切りで複数指定できる（例: "docs\nREADME.md\nCLAUDE.md\n.claude/skills"）
         type: string
         default: ""
+      enable_workflow_duplication_check:
+        description: >-
+          参照側リポジトリ自身のworkflow・composite action（`.github/workflows`・
+          `.github/actions`）と、dev-standards submodule配下のreusable workflow・
+          composite action（`reusable-ci.yml`・`reusable-cd.yml`・`reusable-codeql.yml`を
+          除く）の重複をjscpdで検知するジョブ（workflow-duplication-check）を
+          実行するかどうか（bamiyanapp/dev-standards#874）。独自実装した
+          workflowが後からdev-standards側で一般化されたのに参照側が追従していない
+          ケース（例: bamiyanapp/karuta#1548）を自動検知する。duplication-check
+          （JS/TS専用）とは別ジョブとする。dev-standards submoduleを持たない
+          リポジトリ（dev-standards自身の自己検証時等）でも安全に動作し、
+          submodule側のファイルが存在しない分だけ比較対象が減るのみ
+        type: boolean
+        default: false
+      workflow_duplication_threshold:
+        description: >-
+          workflow重複率のしきい値（%、0以下でゲート無効・レポート表示のみ）。
+          jscpdの`--threshold`へ渡す
+        type: number
+        default: 0
       enable_architecture_check:
         description: >-
           dependency-cruiserによるアーキテクチャ違反検知ジョブ（architecture-check）を
@@ -263,6 +283,7 @@ on:
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
           push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
           `standards-check`・`duplication-check`・`doc-duplication-check`・
+          `workflow-duplication-check`・
           `architecture-check`・`text-lint`・`dead-link-check`・
           `doc-reachability-check`を
           スキップし、`commitlint`・
@@ -290,7 +311,8 @@ on:
           いずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）
           は対象外（常に全ジョブを実行する。パッケージ単位の変更検出は未対応）。
           `standards-check`（symlink整合性チェック）・`text-lint`（Markdown文書チェック）・
-          `doc-duplication-check`（Markdownドキュメント重複検知）は
+          `doc-duplication-check`（Markdownドキュメント重複検知）・
+          `workflow-duplication-check`（workflow重複検知）は
           いずれも`frontend_dir`/`backend_dir`に限定されないリポジトリ全体のチェックの
           ため対象外（常に実行する）。
           変更検出自体が失敗した場合は安全側に倒し、全ジョブを実行する。
@@ -1519,6 +1541,62 @@ jobs:
         run: |
           if [ -f ./jscpd-doc-report/jscpd-report.md ]; then
             cat ./jscpd-doc-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # 参照側リポジトリ独自のworkflowが、後からdev-standards側でreusable workflow・
+  # composite actionへ一般化されたのに追従されず、同じロジックが両方に残ったまま
+  # 放置される事故を検知する（bamiyanapp/dev-standards#874、実例:
+  # bamiyanapp/karuta#1548でpromote-canary.yml等3ファイルの放置を発見）。
+  # duplication-check（JS/TS専用）ではYAMLを対象外にしているため拾えない。
+  # dev-standards側は`reusable-ci.yml`・`reusable-cd.yml`・`reusable-codeql.yml`を
+  # 比較対象から除く。これらは内部に多数のjobを持つ大きなオーケストレーターで
+  # あり、参照側がそのまま複製するような対象ではなく、むしろ内部のjob間で
+  # 構造が似る（checkout→setup-node→実処理）ことによる自己重複がノイズになる
+  # だけのため（実機検証で確認）
+  workflow-duplication-check:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_workflow_duplication_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Run jscpd (workflow duplication check)
+        run: |
+          set -eu
+          TARGETS=()
+          [ -d .github/workflows ] && TARGETS+=(.github/workflows)
+          [ -d .github/actions ] && TARGETS+=(.github/actions)
+          if [ -d dev-standards/.github/workflows ]; then
+            for f in dev-standards/.github/workflows/reusable-*.yml; do
+              [ -e "$f" ] || continue
+              case "$(basename "$f")" in
+                reusable-ci.yml|reusable-cd.yml|reusable-codeql.yml) continue ;;
+              esac
+              TARGETS+=("$f")
+            done
+          fi
+          [ -d dev-standards/.github/actions ] && TARGETS+=(dev-standards/.github/actions)
+          if [ ${#TARGETS[@]} -eq 0 ]; then
+            echo "No workflow/action files found; nothing to check."
+            exit 0
+          fi
+          npx --yes jscpd@5 "${TARGETS[@]}" \
+            -f yaml \
+            -k 20 -l 3 \
+            -r markdown,console \
+            -o ./jscpd-workflow-report \
+            ${{ inputs.workflow_duplication_threshold > 0 && format('-t {0}', inputs.workflow_duplication_threshold) || '' }}
+      - name: Show workflow duplication report in Job Summary
+        if: always()
+        run: |
+          if [ -f ./jscpd-workflow-report/jscpd-report.md ]; then
+            cat ./jscpd-workflow-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # ESLintのcomplexityルール・eslint-plugin-sonarjsが循環的複雑度、jscpdがコード重複を
@@ -2811,7 +2889,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, render-mermaid-diagrams, dependency-risk-summary]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, render-mermaid-diagrams, dependency-risk-summary]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -2847,6 +2925,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.doc-duplication-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.workflow-duplication-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
