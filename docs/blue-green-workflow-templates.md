@@ -575,10 +575,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install infra dependencies
-        working-directory: infra
-        run: npm ci
-
       - name: force_stableをtrueに設定する
         id: rollback
         working-directory: infra
@@ -587,6 +583,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           set -eu
+          npm ci
           INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
           KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
           echo "domain=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')" >> "$GITHUB_OUTPUT"
@@ -664,13 +661,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install infra dependencies
-        working-directory: infra
-        run: npm ci
-
       - name: 入力値を検証する
+        working-directory: infra
         run: |
           set -eu
+          npm ci
           WEIGHT="${{ inputs.weight }}"
           if ! echo "$WEIGHT" | grep -Eq '^[0-9]+$' || [ "$WEIGHT" -lt 0 ] || [ "$WEIGHT" -gt 100 ]; then
             echo "weightは0〜100の整数で指定すること（指定値: ${WEIGHT}）" >&2
