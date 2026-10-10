@@ -1,3 +1,10 @@
+# [2.72.0](https://github.com/bamiyanapp/dev-standards/compare/v2.71.2...v2.72.0) (2026-10-10)
+
+
+### Features
+
+* **ci:** README等から到達できない孤立ドキュメントを検知するCIチェックを追加する ([#849](https://github.com/bamiyanapp/dev-standards/issues/849)) ([e5cd615](https://github.com/bamiyanapp/dev-standards/commit/e5cd615e5592a582295d4945a5f1fe4c75e1ce3d))
+
 ## [2.71.2](https://github.com/bamiyanapp/dev-standards/compare/v2.71.1...v2.71.2) (2026-10-10)
 
 
