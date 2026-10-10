@@ -13,6 +13,102 @@
 | `<frontend-workspace>` | frontendのnpm workspace名（npm workspaces構成でない場合は調整） | `frontend` |
 | `<backend-dir>` | backendのデプロイ対象ディレクトリ | `backend` |
 
+## 共有インフラ初期デプロイワークフロー（deploy-infra.yml）
+
+導入時に最初に1回だけ実行する、S3+CloudFront共有スタック（固定の1つのスタックとして常時存在するもの、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「S3 + CloudFrontの最小インフラ」参照）の手動デプロイworkflow。CloudFrontディストリビューションの作成・更新は伝播に15〜20分程度かかるため、頻繁に走る通常のCDとは別の、専用の手動ワークフローとする。
+
+KVSの初期値（`canary_weight`・`force_stable`等）は「未設定のキーのみ」seedする。既存の値は上書きしない。これにより、運用中（例えば管理者ロールバックで`force_stable`をtrueにしている状態）に本ワークフローを再実行（CloudFrontディストリビューション設定の変更等）しても、その値を誤って既定値へ戻してしまうことを防ぐ。
+
+```yaml
+name: Deploy Infra (S3+CloudFront)
+run-name: Deploy Infra (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: 🚀 Deploy Infra (osls, Serverless Framework v3 OSS fork)
+        uses: bamiyanapp/dev-standards/.github/actions/deploy-serverless@main
+        with:
+          working-directory: infra
+          node-version: 22
+          deploy-command: npx osls deploy --config serverless.yml --stage shared
+          workspaces: true
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Show CloudFront domain name
+        id: domain
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -eu
+          DOMAIN=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')
+          echo "domain=${DOMAIN}" >> "$GITHUB_OUTPUT"
+          echo "CloudFront domain: https://${DOMAIN}"
+
+      - name: Seed KVS initial values
+        # canary_weight（既定10）・force_stableを始め、未設定のキーのみ初期値を
+        # 設定する。既に値がある場合は上書きしない（上記参照）
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -eu
+          # ARN自体が複数のコロンを含むため、`sed 's/.*: *//'`（greedy）だと最後の
+          # コロン以降しか残らずARNが壊れる（実機で発生: 本来
+          # `arn:aws:cloudfront::123456789012:key-value-store/<uuid>`のはずが
+          # `key-value-store/<uuid>`のみになり、aws cliが「KVS ARN must be a
+          # valid ARN」で失敗した）。キー名自体にはコロンが無いため、最初の
+          # コロンまでだけを取り除く
+          KVS_ARN=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          echo "KVS ARN: ${KVS_ARN}"
+
+          seed_default() {
+            KEY="$1"
+            DEFAULT_VALUE="$2"
+            if aws cloudfront-keyvaluestore get-key --region us-east-1 --kvs-arn "$KVS_ARN" --key "$KEY" >/dev/null 2>&1; then
+              echo "${KEY}: 既に設定済みのためスキップ"
+              return
+            fi
+            ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+            aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KEY" --value "$DEFAULT_VALUE" >/dev/null
+            echo "${KEY}: 初期値(${DEFAULT_VALUE})を設定した"
+          }
+
+          seed_default "canary_weight" "10"
+          seed_default "force_stable" "false"
+          # canary使用中に別の更新がマージされた際のキュー待ちフラグ
+          seed_default "canary_queue_pending" "false"
+          # canaryスタックが実際に存在するかどうか。promote-canary.ymlがcanaryの
+          # デプロイ・削除に合わせて更新する。canaryスタックが存在しない状態で
+          # /canary/へ明示アクセスした際のstableへのフォールバック判定に使う
+          seed_default "canary_exists" "false"
+
+      - name: Write deployment summary
+        run: |
+          set -eu
+          DOMAIN="${{ steps.domain.outputs.domain }}"
+          {
+            echo "## infra デプロイ結果"
+            echo ""
+            echo "CloudFront domain: https://${DOMAIN}"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## 自動昇格ワークフロー（promote-canary.yml）
 
 canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過し、`force_stable`によるロールバックが行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。同時に、canaryへの日次バッチ反映（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「canaryデプロイの日次バッチ化」参照）・緊急デプロイ後の自動最新化（「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、同じ定期実行の中で判定する。
@@ -1021,7 +1117,8 @@ jobs:
 
 具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の各workflowファイルを参照する。対象は以下である。
 
-- `.github/workflows/promote-canary.yml`
+- `.github/workflows/deploy-infra.yml`
+- `promote-canary.yml`
 - `canary-status.yml`
 - `rollback-to-stable.yml`
 - `set-canary-weight.yml`
