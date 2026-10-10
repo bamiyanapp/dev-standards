@@ -33,7 +33,7 @@ flowchart TD
 
 </details>
 
-![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment.png?9aca9f17f1329609db9947705a2bd67294398bcf)
+![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment.png?b4065500c9e5bd60a97a995b9e22298f823a34d5)
 
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
