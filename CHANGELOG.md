@@ -1,3 +1,10 @@
+# [2.71.0](https://github.com/bamiyanapp/dev-standards/compare/v2.70.0...v2.71.0) (2026-10-10)
+
+
+### Features
+
+* **skills:** サンドボックス到達不能時の調査手順をSkillとして新設する ([#823](https://github.com/bamiyanapp/dev-standards/issues/823)) ([0645ab3](https://github.com/bamiyanapp/dev-standards/commit/0645ab3333fadbce9791fff4be5bed232452db87))
+
 # [2.70.0](https://github.com/bamiyanapp/dev-standards/compare/v2.69.1...v2.70.0) (2026-10-10)
 
 
