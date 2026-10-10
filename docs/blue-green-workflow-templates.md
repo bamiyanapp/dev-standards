@@ -547,6 +547,156 @@ jobs:
             }
 ```
 
+## 管理者ロールバックワークフロー（rollback-to-stable.yml）
+
+管理者が問題を検知した際、再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVS（`force_stable`）をtrueに設定するだけの軽量なworkflow。
+
+誤って元に戻してしまう事故を避けるため、`force_stable`をfalse（通常運用）へ戻す機能は本workflowに持たせない。復帰は自動昇格ワークフロー経由、または必要に応じて別途手動でAWS CLIを実行する運用とする。
+
+```yaml
+name: Rollback to Stable (force_stable)
+run-name: Rollback to Stable (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: force_stableをtrueに設定する
+        id: rollback
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -eu
+          npm ci
+          INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
+          KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          echo "domain=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')" >> "$GITHUB_OUTPUT"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "force_stable" --value "true" >/dev/null
+
+      - name: 反映を確認する（KVS伝播待ち、既存canary Cookie保持者も含む）
+        id: verify
+        run: |
+          set -eu
+          DOMAIN="${{ steps.rollback.outputs.domain }}"
+          # KVS更新のCloudFrontエッジ拠点への伝播は非同期（実機検証で最大30秒
+          # 程度かかることを確認済み）。伝播を確認できるまで一定間隔でリトライ
+          # する（最大120秒）
+          MAX_WAIT_ATTEMPTS=12
+          WAIT_SECONDS=10
+          PROPAGATED=0
+          for attempt in $(seq 1 "$MAX_WAIT_ATTEMPTS"); do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "canary=canary")
+            VARIANT=$(echo "$BODY" | grep -o "CANARY\|STABLE" | head -1) # CANARY/STABLEはビルド時に埋め込むマーカー文字列に置き換える
+            if [ "$VARIANT" = "STABLE" ]; then
+              PROPAGATED=1
+              break
+            fi
+            sleep "$WAIT_SECONDS"
+          done
+          echo "propagated=${PROPAGATED}" >> "$GITHUB_OUTPUT"
+          if [ "$PROPAGATED" -ne 1 ]; then
+            echo "force_stable=trueが$((MAX_WAIT_ATTEMPTS * WAIT_SECONDS))秒経っても反映されなかった" >&2
+            exit 1
+          fi
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 管理者ロールバック実行結果"
+            echo ""
+            echo "force_stable: true に設定した"
+            echo "反映確認: ${{ steps.verify.outputs.propagated == '1' && '全アクセスがstableになることを確認した' || '確認できなかった（要調査）' }}"
+            echo ""
+            echo "通常運用への復帰（force_stableをfalseへ戻す）は、本workflowでは行わない。自動昇格ワークフロー経由、または別途手動対応が必要。"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
+## canary_weight手動変更ワークフロー（set-canary-weight.yml）
+
+検証目的で重みを一時的に変えたい場合に備え、`workflow_dispatch`で任意の%（0〜100）を指定してKVSの`canary_weight`を変更する。AWS CLIを手動実行せずスマートフォンからでも調整できる。
+
+```yaml
+name: Set Canary Weight
+run-name: Set Canary Weight (${{ inputs.weight }}%)
+
+on:
+  workflow_dispatch:
+    inputs:
+      weight:
+        description: "canaryへ振り分ける割合（0〜100の整数%）"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  set-weight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: 入力値を検証する
+        working-directory: infra
+        run: |
+          set -eu
+          npm ci
+          WEIGHT="${{ inputs.weight }}"
+          if ! echo "$WEIGHT" | grep -Eq '^[0-9]+$' || [ "$WEIGHT" -lt 0 ] || [ "$WEIGHT" -gt 100 ]; then
+            echo "weightは0〜100の整数で指定すること（指定値: ${WEIGHT}）" >&2
+            exit 1
+          fi
+
+      - name: canary_weightを設定する
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+        run: |
+          set -eu
+          INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
+          KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "canary_weight" --value "${{ inputs.weight }}" >/dev/null
+
+      - name: Write summary
+        run: |
+          set -eu
+          {
+            echo "## canary_weight 変更結果"
+            echo ""
+            echo "canary_weight を **${{ inputs.weight }}%** に設定した。"
+            echo ""
+            echo "KVS更新のCloudFrontエッジ拠点への伝播は非同期（最大数分）のため、反映までしばらく待つこと。確実にcanary版を見たい場合は、重みに関わらず\`/canary/\`へ直接アクセスする方法もある。"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## ルーティング実機検証ワークフロー（verify-bg-routing.yml）
 
 CloudFront Functionsの重み付けルーティング・sticky Cookie挙動を、実際にデプロイ済みのCloudFront URLへHTTPリクエストを送って自動検証する。サンドボックス環境のネットワーク制限等で直接検証できない場合でも、インターネットに到達可能なGitHub Actionsランナーから実行できる。
@@ -869,4 +1019,12 @@ jobs:
 
 ## 参考実装
 
-具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の各workflowファイルを参照する。対象は`.github/workflows/promote-canary.yml`・`canary-status.yml`・`verify-bg-routing.yml`・`deploy-backend-stage.yml`・`deploy-frontend-stage.yml`である。
+具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の各workflowファイルを参照する。対象は以下である。
+
+- `.github/workflows/promote-canary.yml`
+- `canary-status.yml`
+- `rollback-to-stable.yml`
+- `set-canary-weight.yml`
+- `verify-bg-routing.yml`
+- `deploy-backend-stage.yml`
+- `deploy-frontend-stage.yml`
