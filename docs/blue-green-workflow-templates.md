@@ -579,8 +579,8 @@ jobs:
         working-directory: infra
         run: npm ci
 
-      - name: Resolve CloudFront domain and KVS ARN
-        id: resolve
+      - name: force_stableをtrueに設定する
+        id: rollback
         working-directory: infra
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -588,19 +588,8 @@ jobs:
         run: |
           set -eu
           INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
-          DOMAIN=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')
           KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
-          echo "domain=${DOMAIN}" >> "$GITHUB_OUTPUT"
-          echo "kvs_arn=${KVS_ARN}" >> "$GITHUB_OUTPUT"
-
-      - name: force_stableをtrueに設定する
-        working-directory: infra
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          set -eu
-          KVS_ARN="${{ steps.resolve.outputs.kvs_arn }}"
+          echo "domain=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')" >> "$GITHUB_OUTPUT"
           ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
           aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "force_stable" --value "true" >/dev/null
 
@@ -608,7 +597,7 @@ jobs:
         id: verify
         run: |
           set -eu
-          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          DOMAIN="${{ steps.rollback.outputs.domain }}"
           # KVS更新のCloudFrontエッジ拠点への伝播は非同期（実機検証で最大30秒
           # 程度かかることを確認済み）。伝播を確認できるまで一定間隔でリトライ
           # する（最大120秒）
