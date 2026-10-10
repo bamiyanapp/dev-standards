@@ -1,3 +1,10 @@
+# [2.74.0](https://github.com/bamiyanapp/dev-standards/compare/v2.73.0...v2.74.0) (2026-10-10)
+
+
+### Features
+
+* **ci:** 参照側workflowとdev-standards reusable workflow/actionの重複を検知するCIチェックを追加する ([#875](https://github.com/bamiyanapp/dev-standards/issues/875)) ([f7adb10](https://github.com/bamiyanapp/dev-standards/commit/f7adb10bedf818872a5d2ee928070faee9e76bf0))
+
 # [2.73.0](https://github.com/bamiyanapp/dev-standards/compare/v2.72.0...v2.73.0) (2026-10-10)
 
 
