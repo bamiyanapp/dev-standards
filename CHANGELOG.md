@@ -1,3 +1,10 @@
+## [2.71.1](https://github.com/bamiyanapp/dev-standards/compare/v2.71.0...v2.71.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **skills:** PR作成後に手動マージを毎回依頼しないようgit-workflowを修正する ([#826](https://github.com/bamiyanapp/dev-standards/issues/826)) ([6f556d6](https://github.com/bamiyanapp/dev-standards/commit/6f556d65eb58d99e303eb0a4e2d7a9c83220f50b))
+
 # [2.71.0](https://github.com/bamiyanapp/dev-standards/compare/v2.70.0...v2.71.0) (2026-10-10)
 
 
