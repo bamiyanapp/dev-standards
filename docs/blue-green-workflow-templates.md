@@ -547,6 +547,177 @@ jobs:
             }
 ```
 
+## ルーティング実機検証ワークフロー（verify-bg-routing.yml）
+
+CloudFront Functionsの重み付けルーティング・sticky Cookie挙動を、実際にデプロイ済みのCloudFront URLへHTTPリクエストを送って自動検証する。サンドボックス環境のネットワーク制限等で直接検証できない場合でも、インターネットに到達可能なGitHub Actionsランナーから実行できる。
+
+検証する内容は以下3点。
+
+1. Cookie無しでアクセスした場合、設定した重みのおおよその割合でcanaryが選ばれる
+2. 一度付与されたCookieの値通りに2回目以降のアクセスが固定される
+3. KVSの`force_stable`をtrueにすると、Cookieに関わらず常にstableになる
+
+このworkflowは検証専用で、デプロイやKVSの既定値を変更する副作用を残さない（`force_stable`検証後は必ずfalseへ戻す）。レスポンス本文から変種を判別する`CANARY`・`STABLE`の文字列は、frontendのビルド時にモードに応じて埋め込むマーカー文字列に置き換える（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「主要画面へのバージョン表示」等、既存のモード判定の仕組みと合わせる）。
+
+```yaml
+name: Verify Blue-Green Routing
+run-name: Verify Blue-Green Routing (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install infra dependencies
+        working-directory: infra
+        run: npm ci
+
+      - name: Resolve CloudFront domain and KVS ARN
+        id: resolve
+        working-directory: infra
+        run: |
+          set -eu
+          INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
+          DOMAIN=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')
+          KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          echo "domain=${DOMAIN}" >> "$GITHUB_OUTPUT"
+          echo "kvs_arn=${KVS_ARN}" >> "$GITHUB_OUTPUT"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: "1. 重み付け抽選（Cookie無し、設定した重みの割合でcanaryになることを確認）"
+        id: weight
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          N=100
+          CANARY_COUNT=0
+          for i in $(seq 1 "$N"); do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15)
+            if echo "$BODY" | grep -q "CANARY"; then
+              CANARY_COUNT=$((CANARY_COUNT + 1))
+            fi
+          done
+          echo "canary_count=${CANARY_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "total=${N}" >> "$GITHUB_OUTPUT"
+
+      - name: "2. Cookie固定化（1回目の結果が2回目以降も維持されることを確認）"
+        id: sticky
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          JAR=$(mktemp)
+
+          FIRST_BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -c "$JAR")
+          FIRST_VARIANT=$(echo "$FIRST_BODY" | grep -o "CANARY\|STABLE" | head -1)
+
+          MISMATCH=0
+          for i in 1 2 3; do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "$JAR" -c "$JAR")
+            VARIANT=$(echo "$BODY" | grep -o "CANARY\|STABLE" | head -1)
+            if [ "$VARIANT" != "$FIRST_VARIANT" ]; then
+              MISMATCH=1
+            fi
+          done
+          echo "mismatch=${MISMATCH}" >> "$GITHUB_OUTPUT"
+          echo "first_variant=${FIRST_VARIANT}" >> "$GITHUB_OUTPUT"
+
+      - name: "3. force_stable強制切り替えの準備（KVSをtrueに設定）"
+        working-directory: infra
+        run: |
+          set -eu
+          KVS_ARN="${{ steps.resolve.outputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "force_stable" --value "true" >/dev/null
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: "4. force_stable=true時、Cookieに関わらず常にstableになることを確認"
+        id: force_stable_check
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          # KVSの更新はCloudFrontのエッジ拠点への伝播が非同期（AWSの文書では
+          # 通常数秒、最大で数分かかる場合があるとされる）。書き込み直後に
+          # 確認すると伝播が追いついておらず誤って「反映されていない」と
+          # 判定する可能性があるため、確認できるまで一定間隔でリトライする
+          # （最大120秒）
+          MAX_WAIT_ATTEMPTS=12
+          WAIT_SECONDS=10
+          PROPAGATED=0
+          for attempt in $(seq 1 "$MAX_WAIT_ATTEMPTS"); do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "canary=canary")
+            VARIANT=$(echo "$BODY" | grep -o "CANARY\|STABLE" | head -1)
+            if [ "$VARIANT" = "STABLE" ]; then
+              PROPAGATED=1
+              break
+            fi
+            sleep "$WAIT_SECONDS"
+          done
+          echo "propagated=${PROPAGATED}" >> "$GITHUB_OUTPUT"
+
+          N=10
+          NON_STABLE_COUNT=0
+          for i in $(seq 1 "$N"); do
+            # canary Cookieを明示的に持たせた状態でもforce_stableが優先され
+            # stableになることを確認する（curlの-bは'='を含む文字列を
+            # ファイル名ではなく生のCookieとして解釈する）
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "canary=canary")
+            VARIANT=$(echo "$BODY" | grep -o "CANARY\|STABLE" | head -1)
+            if [ "$VARIANT" != "STABLE" ]; then
+              NON_STABLE_COUNT=$((NON_STABLE_COUNT + 1))
+            fi
+          done
+          echo "non_stable_count=${NON_STABLE_COUNT}" >> "$GITHUB_OUTPUT"
+
+      - name: "5. force_stableを既定値(false)へ戻す"
+        if: always()
+        working-directory: infra
+        run: |
+          set -eu
+          KVS_ARN="${{ steps.resolve.outputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "force_stable" --value "false" >/dev/null
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 自動検証結果"
+            echo ""
+            echo "### 1. 重み付け抽選（Cookie無し）"
+            echo "${{ steps.weight.outputs.total }}回中${{ steps.weight.outputs.canary_count }}回がcanary"
+            echo ""
+            echo "### 2. Cookie固定化"
+            echo "1回目の結果: ${{ steps.sticky.outputs.first_variant }} / 以降不一致: ${{ steps.sticky.outputs.mismatch == '1' && 'あり（NG）' || 'なし（OK）' }}"
+            echo ""
+            echo "### 3. force_stable強制切り替え"
+            echo "KVS更新の反映: ${{ steps.force_stable_check.outputs.propagated == '1' && '確認できた' || '120秒待っても確認できなかった（要調査）' }}"
+            echo "10回中stable以外になった回数: ${{ steps.force_stable_check.outputs.non_stable_count }}（0が正常）"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## 参考実装
 
-具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の`.github/workflows/promote-canary.yml`・`canary-status.yml`を参照する。
+具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の`.github/workflows/promote-canary.yml`・`canary-status.yml`・`verify-bg-routing.yml`を参照する。
