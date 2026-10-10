@@ -1,3 +1,10 @@
+## [2.71.2](https://github.com/bamiyanapp/dev-standards/compare/v2.71.1...v2.71.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* **ci:** mermaidキャッシュバスティング用コミットをブランチ作成前にrebaseする ([#828](https://github.com/bamiyanapp/dev-standards/issues/828)) ([95e7eac](https://github.com/bamiyanapp/dev-standards/commit/95e7eac0b407e84b1081839eab9ad508dbc12c1e))
+
 ## [2.71.1](https://github.com/bamiyanapp/dev-standards/compare/v2.71.0...v2.71.1) (2026-10-10)
 
 
