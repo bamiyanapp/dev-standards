@@ -37,6 +37,12 @@ jobs:
       enable_doc_duplication_check: true
       doc_duplication_threshold: 1
       doc_duplication_paths: "docs\nREADME.md\nCLAUDE.md\n.claude/skills"
+      # issue #848: README.md・CLAUDE.mdから到達できない孤立ドキュメントを検知する。
+      # .claude/skills配下はREADME.mdのSkills節でskill名のみ列挙し個別リンクしない
+      # 運用のため対象外とする
+      enable_doc_reachability_check: true
+      doc_reachability_entry_points: "README.md\nCLAUDE.md"
+      doc_reachability_paths: "docs/**/*.md"
       # issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1（issue #646）:
       # dev-standards自身の依存更新PR（Renovate等）でもRisk Summaryコメントをdogfoodingする
       enable_dependency_risk_summary: true
