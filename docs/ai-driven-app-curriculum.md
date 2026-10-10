@@ -145,7 +145,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 
 | 観点 | 達成条件 | 参照ドキュメント |
 |---|---|---|
-| CI有効化 | `.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出し、lint・testがPRで実行される | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| CI有効化（自動マージ含む） | `.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出し、lint・testがPRで実行される。自動マージ（`enable_auto_merge`）後にCDを起動させたい場合は、`BOT_TOKEN`シークレットの登録と、`ci.yml`/`cd.yml`での明示的な`secrets:`転送が必要（`GITHUB_TOKEN`によるpushはCDの新規workflow実行をトリガーしないため。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「共通の環境変数」を参照） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | CD有効化 | `.github/workflows/cd.yml`が`reusable-cd.yml`を呼び出し、semantic-releaseでバージョン管理されている（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | フロントエンド単体テスト | vitest + Testing Libraryで主要画面・フックにテストがあり、CIでカバレッジ閾値が設定されている | [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md) |
 | バックエンドAPIを持つ場合のテスト | バックエンドにも単体テストがあり、CIのカバレッジ閾値が設定されている（バックエンドが無い場合は対象外） | [`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md) |
