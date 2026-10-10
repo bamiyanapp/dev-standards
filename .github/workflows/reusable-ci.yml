@@ -2194,7 +2194,9 @@ jobs:
 
       # issue #648（Phase 3）SBOM生成。--package-lock-onlyによりnode_modulesの実
       # インストール無しにpackage-lock.jsonのみから生成できる（実機確認済み）。
-      # このjobは他のステップでもnpm installを行わないため、この性質が重要。
+      # このステップ自体はnpm installを必要としない（issue #813でこのjobの後続に
+      # ブラスト半径用のnpm ciステップを追加したが、このSBOM生成ステップより後に
+      # 実行されるため影響しない）。
       # cyclonedx-npm自体はdev-standardsのスクリプトではないため、他のnpx経由
       # ツール（jscpd・dependency-cruiser等）と同じくメジャーバージョン固定で呼ぶ
       - name: Generate SBOM
@@ -2247,11 +2249,51 @@ jobs:
 
       # issue #689（業務影響度・ブラスト半径）: 変更された直接依存パッケージが
       # プロダクトコードのどこでimportされているかをdependency-cruiser（architecture-check
-      # と同じ設定・同じ対象ディレクトリ）で解析する。node_modulesの実インストールは
-      # 不要（dependency-cruiserはimportの記法だけでnpm依存を分類するため、
-      # architecture-check job自体がnpm install無しで動作していることからも実証済み）。
+      # と同じ設定・同じ対象ディレクトリ）で解析する。
+      #
+      # 【issue #813で判明した訂正】以前はここで「node_modulesの実インストールは不要」
+      # としていたが誤りだった。architecture-check（循環依存・frontend/backend越境import、
+      # いずれもローカルファイル同士のimport解決のみ）はnode_modules不要で正しく動作するが、
+      # ブラスト半径はnpm依存パッケージの解決（dependencyTypesが"npm"になるかどうか）が
+      # 本質的に必要であり、node_modulesが無い場合dependency-cruiserはこれらのエッジを
+      # "unknown"・couldNotResolve: trueとして出力してしまう（実機確認済み）。
+      # buildBlastRadiusMap()はdependencyTypesが"npm"のエッジのみを対象にするため、
+      # node_modulesが無い環境ではnpm依存の重要パス判定が常に空振りになっていた。
+      # そのため、このステップの直前でNode.jsセットアップ・依存インストールを行う
+      # （frontend-test/backend-testと同じworkspaces分岐パターン、issue #813）。
       # issue #701で、後述の「維持リスク」判定（Classify stale risk）もブラスト半径の
       # 結果を参照するようになったため、このステップはそれより前に実行する必要がある
+      - name: Use Node.js for blast radius (attempt 1/2)
+        id: setup-node-blast-radius-1
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+      - name: Wait before retrying Node.js setup for blast radius
+        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js for blast radius (attempt 2/2, retry after a transient failure)
+        id: setup-node-blast-radius-2
+        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+      - name: Install dependencies for blast radius
+        id: install-blast-radius
+        if: |
+          steps.dependency-info.outcome == 'success' &&
+          (steps.setup-node-blast-radius-1.outcome == 'success' || steps.setup-node-blast-radius-2.outcome == 'success')
+        continue-on-error: true
+        run: |
+          if [ "${{ inputs.workspaces }}" = "true" ]; then
+            npm ci
+          else
+            [ -f "${{ inputs.frontend_dir }}/package-lock.json" ] && npm ci --prefix "${{ inputs.frontend_dir }}"
+            [ -f "${{ inputs.backend_dir }}/package-lock.json" ] && npm ci --prefix "${{ inputs.backend_dir }}"
+          fi
       - name: Run dependency-cruiser for blast radius
         id: blast-radius-cruise
         if: steps.dependency-info.outcome == 'success'
