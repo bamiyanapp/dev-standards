@@ -95,6 +95,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - 更新したドキュメントが肥大化していないか確認する。`textlint`の`max-lines`ルール（実効行数、既定200行）が通っていても、巨大な表セルへ詰め込んだ場合は検知をすり抜ける既知の限界がある（[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「ドキュメント1本のボリューム上限」参照）。独立した話題として切り出せる内容があれば分割する
 - 新規にmermaid図を追加した場合、`mermaid_doc_paths`（`.github/workflows/ci.yml`）への登録・画像埋め込みリンクの追加をしたか確認する。詳細は[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照する。開発環境がスマホオンリーのためPRレビューは差分ビュー経由になり、未登録のままだと図として確認できない
 - 対応するissueの本文にTODO・検討事項・懸念点の列挙がある場合、今回の対応でそれぞれ解消したかを1つずつ確認する。解消していない項目があれば、フォローアップissueとして切り出す。または対応不要と判断した理由をissueに明記する。このいずれかを行ってからでなければ、元issueをクローズしない（一部だけ実装してTODOごとクローズしない）
+- 本リポジトリがdev-standardsを参照している場合（`@dev-standards/CLAUDE.md`等）、今回の作業で気づいたdev-standards共通のSkill・ドキュメント・ルールの不備や考慮漏れはないか考える。本プロダクト固有ではなく他の参照側リポジトリにも共通して当てはまりうる問題であれば、本リポジトリ内で個別対応するだけで終わらせず、[bamiyanapp/dev-standards](https://github.com/bamiyanapp/dev-standards)へissueとして起票する。起票時は、気づいた経緯（どの参照側リポジトリでの作業中に気づいたか）を本文に明記する
 
 # Skills (専門手順)
 
