@@ -1,3 +1,10 @@
+# [2.70.0](https://github.com/bamiyanapp/dev-standards/compare/v2.69.1...v2.70.0) (2026-10-10)
+
+
+### Features
+
+* **skills:** open PRを横断的に巡回しコンフリクトを解消・放置PRを報告するpr-sweep Skillを新設する ([#819](https://github.com/bamiyanapp/dev-standards/issues/819)) ([fdb7c1d](https://github.com/bamiyanapp/dev-standards/commit/fdb7c1de3ba0cd78681e487d46f5449692361b9f)), closes [#816](https://github.com/bamiyanapp/dev-standards/issues/816)
+
 ## [2.69.1](https://github.com/bamiyanapp/dev-standards/compare/v2.69.0...v2.69.1) (2026-10-10)
 
 
