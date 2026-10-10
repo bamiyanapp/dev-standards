@@ -24,6 +24,7 @@
 
 ### 索引・導入
 
+- [`claude-workflow-philosophy.md`](docs/claude-workflow-philosophy.md): Claudeがこのリポジトリ群でなぜ「残したいものは全てIssue化し、変更は必ずPRとして出す」という方針で動くのかを初学者向けに俯瞰する入口
 - [`ai-driven-app-curriculum.md`](docs/ai-driven-app-curriculum.md): アイデア→アプリ化→dev-standards準拠のモダナイズというAI駆動開発の進め方（カリキュラム）
 - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス

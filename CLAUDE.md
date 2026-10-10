@@ -61,6 +61,8 @@ Execution Loopは開発全体の抽象的な制御ループを示す。各ステ
 
 # Issue駆動の原則
 
+本節の背景（なぜ「残したいものは全てIssue化する」のか）は[`docs/claude-workflow-philosophy.md`](docs/claude-workflow-philosophy.md)を参照する。
+
 コード変更を伴う作業（実装・修正・リファクタリング・ドキュメント更新等）は、必ず対応するGitHub Issueに基づいて進める。
 
 - 対応するIssueが存在しない場合は、作業に着手する前に起票する。ユーザーからの口頭指示のみで、既存Issueへの言及がない場合も同様に、着手前にまず起票する
@@ -123,6 +125,8 @@ Claudeは開始時および中断復帰時に以下を把握する。
 `docs/`配下の各ドキュメントは、CLAUDE.md・各Skillの本文中で文脈に応じて個別に参照される。特定のルールがどのドキュメントに書かれているかを横断的に調べたい場合は、[`README.md`](README.md)「ドキュメント目次」の索引を使う（本ドキュメントでは重複記載しない）。新規ドキュメントを`docs/`配下へ追加した場合、README.md側の索引への追記を忘れないこと（Reflectionのチェック項目も参照）。
 
 # PR（MR）承認・マージ禁止
+
+本節の背景（なぜ変更を必ずPRとして出し、承認・マージを人間に委ねるのか）は[`docs/claude-workflow-philosophy.md`](docs/claude-workflow-philosophy.md)を参照する。
 
 Claudeは以下を一切行ってはならない。
 

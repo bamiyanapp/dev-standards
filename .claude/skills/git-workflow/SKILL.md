@@ -4,6 +4,8 @@ description: 作業開始から終了までのGitブランチ戦略および基�
 ---
 # Git Workflow
 
+本Skillの各手順がなぜこのような形になっているか（Issue駆動・PR経由でのアウトプットという前提）の背景は[`docs/claude-workflow-philosophy.md`](../../../docs/claude-workflow-philosophy.md)を参照する。
+
 ## 作業開始
 
 1. 対応するIssueの確認（CLAUDE.md「Issue駆動の原則」参照）。存在しなければ着手前に起票する。
