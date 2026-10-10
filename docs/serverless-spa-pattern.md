@@ -208,6 +208,205 @@ jobs:
           fi
 ```
 
+## 運用: CloudFormationリソースインポート（スタック分割・移管）
+
+Serverless Framework（`osls`）は、既存のAWSリソースを新しいCloudFormationスタックの管理下へ取り込む「IMPORT」操作に対応していない。ステートフルリソース（DynamoDBテーブル等）を既存の`serverless.yml`から専用スタックへ分離する場合（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)の導入等）、AWS CLIを直接オーケストレーションして実現する。
+
+危険な操作（既存リソースの取り込み）を伴うため、change set作成のみを行う`preview`と、実際に実行する`execute`の二段階に分ける。
+
+**事前準備（本workflow実行前）**:
+
+1. 元の`serverless.yml`から対象リソースの定義を削除したPRをマージし、CDで本番へデプロイしておく。`DeletionPolicy: Retain`により物理リソースは削除されず、スタックの管理対象から外れて孤立した状態になる。CloudFormationのIMPORTは、取り込み対象の物理リソースがどのスタックにも属していないことを要求するため、この手順が必要になる
+2. 新しい専用スタック定義（下記の`<data-stack-config>`、分離後のリソースのみを含む）を用意する
+
+```yaml
+name: Import Data Resources (CloudFormation IMPORT)
+run-name: Import Data Resources (manual, ${{ inputs.action }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "preview: change setを作成して内容を確認するのみ（安全）。execute: 作成済みのchange setを実行する（実際にリソースが移管される）"
+        required: true
+        type: choice
+        options:
+          - preview
+          - execute
+
+permissions:
+  contents: read
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ap-northeast-1
+  STACK_NAME: <data-stack-name>
+  CHANGE_SET_NAME: <data-stack-name>-import
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install backend dependencies
+        working-directory: <backend-dir>
+        run: npm ci
+
+      # 読み取り専用API（DescribeTable等）のみを使い、実際のAWSリソースの
+      # 現在の構成が新スタック定義と一致するかを事前確認する任意のスクリプト
+      # （プロダクト固有のため同梱しない）。不一致があればここで止まり、
+      # change set作成（実際のIMPORT操作）には進ませない
+      - name: Verify live resource configuration (preview only)
+        if: inputs.action == 'preview'
+        working-directory: <backend-dir>
+        run: |
+          set -eu -o pipefail
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          node <verify-script>.js "$ACCOUNT_ID" | tee verify-result.md
+          {
+            echo "## 実リソース構成の事前確認"
+            echo ""
+            cat verify-result.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate CloudFormation template (preview only)
+        if: inputs.action == 'preview'
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          npx osls package --config <data-stack-config> --stage shared --package .data-package
+
+          # osls（deploymentMethod: directでも）は常にデプロイ用S3バケット
+          # （ServerlessDeploymentBucket・そのバケットポリシー）をテンプレートへ
+          # 含めてしまう。CloudFormationのIMPORT（新規スタック作成）は、
+          # テンプレート内の全リソースがresources-to-importに列挙されていることを
+          # 要求するため、実在しないこの2リソースを含んだままでは失敗する。
+          # 取り込み対象外として事前に取り除く
+          node -e "
+            const fs = require('fs');
+            const path = '.data-package/cloudformation-template-update-stack.json';
+            const template = JSON.parse(fs.readFileSync(path, 'utf-8'));
+            delete template.Resources.ServerlessDeploymentBucket;
+            delete template.Resources.ServerlessDeploymentBucketPolicy;
+            delete template.Outputs;
+            fs.writeFileSync(path, JSON.stringify(template, null, 2));
+            console.log('Resources in template:', Object.keys(template.Resources));
+          "
+
+      - name: Build resources-to-import mapping (preview only)
+        if: inputs.action == 'preview'
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          cat > .data-package/resources-to-import.json <<EOF
+          [
+            {"ResourceType": "AWS::DynamoDB::Table", "LogicalResourceId": "<LogicalId1>", "ResourceIdentifier": {"TableName": "<table-name-1>"}},
+            {"ResourceType": "AWS::S3::Bucket", "LogicalResourceId": "<LogicalId2>", "ResourceIdentifier": {"BucketName": "<bucket-name>-${ACCOUNT_ID}"}}
+          ]
+          EOF
+
+      - name: Create change set (preview only)
+        if: inputs.action == 'preview'
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          aws cloudformation create-change-set \
+            --stack-name "$STACK_NAME" \
+            --change-set-name "$CHANGE_SET_NAME" \
+            --change-set-type IMPORT \
+            --template-body file://.data-package/cloudformation-template-update-stack.json \
+            --resources-to-import file://.data-package/resources-to-import.json
+
+          echo "change setの作成を待機中..."
+          aws cloudformation wait change-set-create-complete \
+            --stack-name "$STACK_NAME" \
+            --change-set-name "$CHANGE_SET_NAME" || true
+
+      - name: Describe change set (preview only)
+        if: inputs.action == 'preview'
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          aws cloudformation describe-change-set \
+            --stack-name "$STACK_NAME" \
+            --change-set-name "$CHANGE_SET_NAME" > change-set-result.json
+
+          STATUS=$(node -e "console.log(require('./change-set-result.json').Status)")
+          REASON=$(node -e "console.log(require('./change-set-result.json').StatusReason || '')")
+
+          echo "Status: ${STATUS}"
+          [ -n "$REASON" ] && echo "Reason: ${REASON}"
+
+          {
+            echo "## CloudFormation IMPORT change set プレビュー"
+            echo ""
+            echo "Status: \`${STATUS}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$REASON" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "理由: ${REASON}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          {
+            echo ""
+            echo "| リソース | Action | Replacement |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          node -e "
+            const result = require('./change-set-result.json');
+            for (const c of (result.Changes || [])) {
+              const rc = c.ResourceChange;
+              console.log(\`| \${rc.LogicalResourceId} | \${rc.Action} | \${rc.Replacement || '-'} |\`);
+            }
+          " >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "全リソースのActionが\`Import\`になっていることを確認してから、action: executeで実行すること。Add/Remove/Modify-replaceが含まれる場合は実行せず調査すること。" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$STATUS" != "CREATE_COMPLETE" ] && [ "$STATUS" != "REVIEW_IN_PROGRESS" ]; then
+            echo "change setの作成に失敗した可能性がある。Statusを確認すること" >&2
+            exit 1
+          fi
+
+      - name: Execute change set (execute only)
+        if: inputs.action == 'execute'
+        working-directory: <backend-dir>
+        run: |
+          set -eu
+          aws cloudformation execute-change-set \
+            --stack-name "$STACK_NAME" \
+            --change-set-name "$CHANGE_SET_NAME"
+
+          echo "スタックの更新完了を待機中..."
+          aws cloudformation wait stack-import-complete --stack-name "$STACK_NAME"
+
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" > stack-result.json
+          STATUS=$(node -e "console.log(require('./stack-result.json').Stacks[0].StackStatus)")
+
+          {
+            echo "## CloudFormation IMPORT 実行結果"
+            echo ""
+            echo "StackStatus: \`${STATUS}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$STATUS" != "IMPORT_COMPLETE" ]; then
+            echo "インポートが完了しなかった。AWSコンソールでスタックイベントを確認すること" >&2
+            exit 1
+          fi
+          echo "インポート成功。リソースが${STACK_NAME}スタックの管理下に入った。" >> "$GITHUB_STEP_SUMMARY"
+```
+
+change setは一定時間後に自動的に失効する。previewから時間を空けすぎた場合は再度previewから実行すること。
+
 ## CI/CD連携（`reusable-ci.yml`）
 
 [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)の機能を、このアーキテクチャ向けに以下の入力で有効化する。
