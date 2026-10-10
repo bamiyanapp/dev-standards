@@ -760,11 +760,8 @@ jobs:
         with:
           submodules: true
 
-      # このworkflowはpromote-canary.ymlの「canaryが空いていない限り新規変更を
-      # キューイングする」設計を素通りし、直接canaryスタックへデプロイしてしまう。
-      # これによりcanaryのLastUpdatedTimeが書き換わり、昇格猶予期間の起点が
-      # 意図せず前進する事故が起こりうる。canaryが占有中（スタックが存在し
-      # force_stableでない）場合は、force入力が無い限りデプロイを停止する
+      # 占有中のcanaryへ直接デプロイするとLastUpdatedTimeが書き換わり、
+      # 昇格猶予期間が意図せず延長される（前述）。force入力が無い限り停止する
       - name: canaryの占有状態を確認する（stage=canaryのみ）
         if: inputs.stage == 'canary' && inputs.force != true
         working-directory: infra
