@@ -1,3 +1,10 @@
+# [2.73.0](https://github.com/bamiyanapp/dev-standards/compare/v2.72.0...v2.73.0) (2026-10-10)
+
+
+### Features
+
+* **ci:** 「新ブランチ→PR→API squash merge」パターンを共通composite actionへ切り出す ([#868](https://github.com/bamiyanapp/dev-standards/issues/868)) ([72ef315](https://github.com/bamiyanapp/dev-standards/commit/72ef3158b49ea3009dca0f5c3746d093937205a8))
+
 # [2.72.0](https://github.com/bamiyanapp/dev-standards/compare/v2.71.2...v2.72.0) (2026-10-10)
 
 
