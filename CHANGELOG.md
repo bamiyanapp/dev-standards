@@ -1,3 +1,10 @@
+## [2.69.1](https://github.com/bamiyanapp/dev-standards/compare/v2.69.0...v2.69.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **ci:** ブラスト半径判定の前にnpm installを実行し重要パス検知の空振りを修正する ([#814](https://github.com/bamiyanapp/dev-standards/issues/814)) ([f9ecd2f](https://github.com/bamiyanapp/dev-standards/commit/f9ecd2f9015716df1f672b3d5cc8104de7eca413)), closes [#813](https://github.com/bamiyanapp/dev-standards/issues/813)
+
 # [2.69.0](https://github.com/bamiyanapp/dev-standards/compare/v2.68.1...v2.69.0) (2026-10-09)
 
 
