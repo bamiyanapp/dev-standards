@@ -4,16 +4,16 @@
 
 dev-standardsには2種類の内容が含まれており、本カリキュラムではこれらを区別する。
 
-- **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: [`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)・[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ1から常に頼る**
-- **技術的なモダナイズ観点**: CI gate有効化・テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ3まで後回しにしてよい**
+- **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: [`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)・[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ2から常に頼る**
+- **技術的なモダナイズ観点**: CI gate有効化・テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ4まで後回しにしてよい**
 
 dev-standards全体が提供する内容の一覧は[`README.md`](../README.md)「ドキュメント目次」を参照する。
 
 ## 本ドキュメントの位置づけ
 
-[`standard-tech-stack.md`](standard-tech-stack.md)は「技術構成の索引・組み立て手順」であり、採用する技術が既に決まっている前提で参照する。本ドキュメントは「決まっていない段階から、どういう順番で進めるか」というカリキュラムであり、同ドキュメントより前の段階、かつフェーズ2で同ドキュメントを実際に参照しに行くまでの橋渡しを担う。両ドキュメントの内容は重複させない。
+[`standard-tech-stack.md`](standard-tech-stack.md)は「技術構成の索引・組み立て手順」であり、採用する技術が既に決まっている前提で参照する。本ドキュメントは「決まっていない段階から、どういう順番で進めるか」というカリキュラムであり、同ドキュメントより前の段階、かつフェーズ3で同ドキュメントを実際に参照しに行くまでの橋渡しを担う。両ドキュメントの内容は重複させない。
 
-## 環境準備チェックリスト（フェーズ1に入る前に）
+## フェーズ0: 環境準備チェックリスト
 
 本カリキュラムは、スマートフォンのみでClaude Code on the webを使って進める前提で書く（CLAUDE.md「開発環境の制約（スマホオンリー）」）。ターミナル（CLI）・デスクトップアプリで進める場合も内容自体は同じだが、以降の手順説明はスマートフォン＋Claude Code on the webを前提に記述する。
 
@@ -21,14 +21,14 @@ dev-standards全体が提供する内容の一覧は[`README.md`](../README.md)�
 |---|---|
 | GitHubアカウント・新規リポジトリ | アイデアごとに1リポジトリを作る（既存プロダクトへの機能追加ではなく、新規アイデアを試す場合）。作成方法は[GitHub公式のクイックスタート](https://docs.github.com/en/repositories/creating-and-managing-repositories/quickstart-for-repositories)を参照 |
 | Claude Code on the webの利用環境 | スマートフォンのブラウザからclaude.ai/codeを開き、上記GitHubリポジトリを対象にセッションを開始できる状態にしておく。利用方法は[Claude Code on the web公式クイックスタート](https://code.claude.com/docs/en/web-quickstart)を参照 |
-| AWSアカウント・認証情報 | フェーズ1は最も簡単な配信先（GitHub Pages等）で足りるため、この段階では不要。バックエンドAPIが最初から必要と分かっている場合、またはフェーズ2で技術選定を見直した場合に、AWSアカウントとGitHub Secrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`）を準備する。アクセスキーの作成方法は[AWS公式のIAMアクセスキー管理ガイド](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)を参照 |
+| AWSアカウント・認証情報 | フェーズ2は最も簡単な配信先（GitHub Pages等）で足りるため、この段階では不要。バックエンドAPIが最初から必要と分かっている場合、またはフェーズ3で技術選定を見直した場合に、AWSアカウントとGitHub Secrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`）を準備する。アクセスキーの作成方法は[AWS公式のIAMアクセスキー管理ガイド](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)を参照 |
 | 費用の目安 | Claude Codeは最初はProプランで十分である。月次払いは$20/月、年次払いは$200/年（月あたり約$17相当）が目安（2026年時点、変動するため[claude.com/pricing](https://claude.com/pricing)で最新を確認する）。AWS側は、個人の試作程度のアクセス量であればS3 + CloudFront・Lambda等は無料利用枠内、または月あたり数百円程度に収まることが多い。アクセスが増えた場合やPollyの音声合成等、課金が大きくなりうる機能を使う場合は、AWSの料金ページで事前に確認する |
 
 dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）はユーザーが準備する項目ではなく、**Claudeへ最初のプロンプトで依頼する作業**である。詳細は後述の「最初のプロンプトの例」を参照。この作業はClaude Code on the webのセッション（Claudeの仮想環境）内で完結し、スマートフォン側で何かを操作する必要は無い。また、dev-standardsは公開リポジトリであり`git submodule add`は読み取り専用のcloneにすぎないため、dev-standards自体への書き込み権限・フォークは一切不要である（書き込み権限が必要なのは、ユーザー自身が新規に作成したリポジトリ側のみ）。
 
-## アイデアを決める
+## フェーズ1: アイデアを決める
 
-フェーズ1に入る前に、「誰が」「何をするための」アプリかを1〜2文で言える状態にしておく（最初のプロンプトでそのまま使う）。既に決まっている場合は本節をスキップし、フェーズ1へ進んでよい。技術選定はこの段階では不要である。
+「誰が」「何をするための」アプリかを1〜2文で言える状態にする（最初のプロンプトでそのまま使う）。既に決まっている場合は本フェーズをスキップし、フェーズ2へ進んでよい。技術選定はこの段階では不要である。
 
 決まっていない場合、以下のプロンプト例を使い、アイデア出し自体をClaudeとの対話で進める。
 
@@ -46,17 +46,17 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 提案を見てから1つ選ぶので、まずは候補の提案だけしてほしい。
 ```
 
-候補を見て1つに絞ったら、フェーズ1の最初のプロンプト（後述）の「想定ユーザー」「やりたいこと」へそのまま使う。
+候補を見て1つに絞ったら、フェーズ2の最初のプロンプト（後述）の「想定ユーザー」「やりたいこと」へそのまま使う。
 
-## フェーズ1: アイデアをアプリにする
+## フェーズ2: アイデアをアプリにする
 
 ### 進め方
 
-1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これにより[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)等のSkillがフェーズ1から使える状態になる
-2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。この時点ではAWSアカウント等を用意せず、GitHub Pages等、最も簡単に用意できる配信先を選ぶ。具体的な設定手順は汎用的なGitHub操作のため、このドキュメントには書かず、Claude Codeとのセッション内で「どう進めればよいか」を相談しながら対話的に進めてもらう。目的は「実際のURLがスマートフォンのブラウザで開ける」状態を作ることであり、配信先自体の良し悪しは問わない。S3 + CloudFront（[`static-hosting-pattern.md`](static-hosting-pattern.md)）等への移行は、フェーズ2の技術選定見直しで必要に応じて検討する。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
+1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これにより[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)等のSkillがフェーズ2から使える状態になる
+2. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。この時点ではAWSアカウント等を用意せず、GitHub Pages等、最も簡単に用意できる配信先を選ぶ。具体的な設定手順は汎用的なGitHub操作のため、このドキュメントには書かず、Claude Codeとのセッション内で「どう進めればよいか」を相談しながら対話的に進めてもらう。目的は「実際のURLがスマートフォンのブラウザで開ける」状態を作ることであり、配信先自体の良し悪しは問わない。S3 + CloudFront（[`static-hosting-pattern.md`](static-hosting-pattern.md)）等への移行は、フェーズ3の技術選定見直しで必要に応じて検討する。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
 3. アイデアをそのままClaude Codeへ伝え、最小限の画面・機能を一気に作ってもらう（後述のプロンプト例を参照）。ブランチ運用・コミットは[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)/[`commit`](../.claude/skills/commit/SKILL.md)/[`git-conventions`](../.claude/skills/git-conventions/SKILL.md) Skillに従って進む
 4. 実装してもらったら、手順2のURLへ反映した上で実際にスマートフォンのブラウザで開いて触り、違和感のある部分を言葉で伝えて直してもらう。デプロイ前の実装内容を確認したい場合は、スクリーンショットで提示してもらう（スマートフォンの画面からはローカルで動かしたものが見えないため）。CI gate・カバレッジ閾値等の技術的なモダナイズ観点はこの段階では要求しない
-5. 「人に見せられる」最小限の状態になったら、フェーズ2へ進む判断をする
+5. 「人に見せられる」最小限の状態になったら、フェーズ3へ進む判断をする
 
 ### 最初のプロンプトの例
 
@@ -72,7 +72,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 - 技術選定も今はミニマムでいい（例: ログイン無し、フロントエンドはGitHub Pages等
   の最も簡単な配信先）。最終形はまだ誰にも分からないので、後から変わる前提で
   一番簡単な構成を選んでほしい。ログイン追加やAWSへの移行等が必要になったら、
-  アプリの方向性が固まった段階（フェーズ2）で見直す
+  アプリの方向性が固まった段階（フェーズ3）で見直す
 - その前に、まずbamiyanapp/dev-standardsをgit submoduleとして取り込み、
   node dev-standards/scripts/bootstrap.jsを実行してほしい。CLAUDE.mdを作成し、
   先頭で@dev-standards/CLAUDE.mdをインポートしてほしい
@@ -86,18 +86,18 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 まず簡単な実装方針を示してから、実装してほしい。
 ```
 
-このプロンプトの要点は4つある。dev-standardsの取り込み（Claude側の作業）と開発プロセス自体（ブランチ運用・コミット規約・issue起票）は最初から外さないこと。確認手段をスマートフォンで実際に使える形（実機のURL・スクリーンショット）に限定すること。「最速で動くもの」を優先させること。そして技術選定自体もミニマムにとどめ、最終形が決まった段階（フェーズ2）で見直す前提にすることである。後回しにしてよいのは、CI gate・カバレッジ閾値・lint厳格化等の技術的なモダナイズ観点のみであり、dev-standardsの取り込み・開発プロセス自体・確認手段は例外扱いにはしない。
+このプロンプトの要点は4つある。dev-standardsの取り込み（Claude側の作業）と開発プロセス自体（ブランチ運用・コミット規約・issue起票）は最初から外さないこと。確認手段をスマートフォンで実際に使える形（実機のURL・スクリーンショット）に限定すること。「最速で動くもの」を優先させること。そして技術選定自体もミニマムにとどめ、最終形が決まった段階（フェーズ3）で見直す前提にすることである。後回しにしてよいのは、CI gate・カバレッジ閾値・lint厳格化等の技術的なモダナイズ観点のみであり、dev-standardsの取り込み・開発プロセス自体・確認手段は例外扱いにはしない。
 
-## フェーズ2: 構成のリファクタリング
+## フェーズ3: 構成のリファクタリング
 
-アプリの方向性が固まったら、フェーズ1のミニマムな構成（ログイン無し、最も簡単な配信先等）を見直し、必要な技術要素を本来の構成へ移行する。dev-standardsの取り込み自体はフェーズ1で既に済んでいるため、本フェーズは設計判断とその反映のみを扱う。
+アプリの方向性が固まったら、フェーズ2のミニマムな構成（ログイン無し、最も簡単な配信先等）を見直し、必要な技術要素を本来の構成へ移行する。dev-standardsの取り込み自体はフェーズ2で既に済んでいるため、本フェーズは設計判断とその反映のみを扱う。
 
 ### 進め方
 
 1. **技術選定を見直す**。[`standard-tech-stack.md`](standard-tech-stack.md)「選定の考え方」に沿って、ログイン・バックエンドAPI・PWA等の要否を改めて判断する。判断が変わった要素（例: ログインを追加する、フロントエンドをGitHub PagesからS3 + CloudFrontへ移行する）を洗い出す
 2. 洗い出した要素ごとにissueを起票してから進める
-3. [`standard-tech-stack.md`](standard-tech-stack.md)「新規プロジェクトの立ち上げ手順」の手順2以降を、手順1で洗い出した見直し内容を反映しつつ、フェーズ1で作った画面・機能に後から当てはめる形で適用する
-4. 移行後も既存の画面・機能が同じように動くことを確認する。CI強化・テストカバレッジ等の品質基準はフェーズ3で扱うため、本フェーズでは構成の移行自体に集中する
+3. [`standard-tech-stack.md`](standard-tech-stack.md)「新規プロジェクトの立ち上げ手順」の手順2以降を、手順1で洗い出した見直し内容を反映しつつ、フェーズ2で作った画面・機能に後から当てはめる形で適用する
+4. 移行後も既存の画面・機能が同じように動くことを確認する。CI強化・テストカバレッジ等の品質基準はフェーズ4で扱うため、本フェーズでは構成の移行自体に集中する
 
 ### プロンプトの例
 
@@ -116,9 +116,9 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
   考えるので、今回は構成の移行自体に集中してほしい
 ```
 
-このプロンプトの要点は、技術選定の見直しとモダナイズを明確に分離し、本フェーズでは構成の移行のみに集中させることである。判断が変わった要素ごとにissueを起票する点は、フェーズ1・3のプロンプトと共通する原則である。
+このプロンプトの要点は、技術選定の見直しとモダナイズを明確に分離し、本フェーズでは構成の移行のみに集中させることである。判断が変わった要素ごとにissueを起票する点は、フェーズ2・4のプロンプトと共通する原則である。
 
-## フェーズ3: モダナイズ
+## フェーズ4: モダナイズ
 
 構成のリファクタリングが完了したら、CI gate・テストカバレッジ閾値・lint厳格化等の技術的なモダナイズ観点を適用していく。
 
