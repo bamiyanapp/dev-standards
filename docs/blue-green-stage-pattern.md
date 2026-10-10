@@ -184,7 +184,7 @@ expand/contract方式でも後方互換を保てない変更は対象外とす�
 
 既存リポジトリへ本パターンを導入する場合、以下の順で組み込む。各ステップの詳細・コピー＆調整用のworkflowテンプレートは[`blue-green-workflow-templates.md`](blue-green-workflow-templates.md)を参照する。
 
-1. 上記「S3 + CloudFrontの最小インフラ」「CloudFront Functionsによる重み付けルーティング」を専用の固定スタックとして構築する
+1. 上記「S3 + CloudFrontの最小インフラ」「CloudFront Functionsによる重み付けルーティング」を専用の固定スタックとして構築する（共有インフラ初期デプロイワークフロー`deploy-infra.yml`を導入する）
 2. 「backendの並行stageデプロイ」に沿って、backendをstageに依存しない構成へ調整する（必要な場合のみ）
 3. mainマージ時に`canary_queue_pending`をセットするだけのCD変更を加える（「canaryデプロイの日次バッチ化」参照）
 4. 自動昇格ワークフロー（`promote-canary.yml`）を導入する

@@ -47,6 +47,7 @@
 - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証の認証ロジック（デプロイツール自体はAWS SAMの実装例、標準はOSLS）
 - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
 - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
+- [`async-job-polling-pattern.md`](docs/async-job-polling-pattern.md): API Gatewayタイムアウトを超える重い処理をLambda非同期Invoke＋S3ステートレス状態管理で実現する「開始→ポーリング」パターン
 - [`websocket-client-reconnect-pattern.md`](docs/websocket-client-reconnect-pattern.md): WebSocketクライアントの再接続エンジン設計パターン
 - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md)がある。S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成である。標準索引からは除外している。サイト全体ログイン保護が必要な場合の追加パターンである
 - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理。`serverless-static-site-pattern.md`向け）

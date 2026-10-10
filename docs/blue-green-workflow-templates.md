@@ -14,6 +14,102 @@
 | `<backend-dir>` | backendのデプロイ対象ディレクトリ | `backend` |
 | `<write-endpoint-name>`・`<read-endpoint-name>`・`<field>`・`<shared-table-name>` | データ共有検証ワークフロー用。検証に使う書き込み/読み取りAPIのエンドポイント名・リクエストのフィールド名・対象DynamoDBテーブル名 | `post-comment`・`get-comments`・`comment`・`karuta-comments` |
 
+## 共有インフラ初期デプロイワークフロー（deploy-infra.yml）
+
+導入時に最初に1回だけ実行する、S3+CloudFront共有スタック（固定の1つのスタックとして常時存在するもの、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「S3 + CloudFrontの最小インフラ」参照）の手動デプロイworkflow。CloudFrontディストリビューションの作成・更新は伝播に15〜20分程度かかるため、頻繁に走る通常のCDとは別の、専用の手動ワークフローとする。
+
+KVSの初期値（`canary_weight`・`force_stable`等）は「未設定のキーのみ」seedする。既存の値は上書きしない。これにより、運用中（例えば管理者ロールバックで`force_stable`をtrueにしている状態）に本ワークフローを再実行（CloudFrontディストリビューション設定の変更等）しても、その値を誤って既定値へ戻してしまうことを防ぐ。
+
+```yaml
+name: Deploy Infra (S3+CloudFront)
+run-name: Deploy Infra (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: 🚀 Deploy Infra (osls, Serverless Framework v3 OSS fork)
+        uses: bamiyanapp/dev-standards/.github/actions/deploy-serverless@main
+        with:
+          working-directory: infra
+          node-version: 22
+          deploy-command: npx osls deploy --config serverless.yml --stage shared
+          workspaces: true
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Show CloudFront domain name
+        id: domain
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -eu
+          DOMAIN=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')
+          echo "domain=${DOMAIN}" >> "$GITHUB_OUTPUT"
+          echo "CloudFront domain: https://${DOMAIN}"
+
+      - name: Seed KVS initial values
+        # canary_weight（既定10）・force_stableを始め、未設定のキーのみ初期値を
+        # 設定する。既に値がある場合は上書きしない（上記参照）
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -eu
+          # ARN自体が複数のコロンを含むため、`sed 's/.*: *//'`（greedy）だと最後の
+          # コロン以降しか残らずARNが壊れる（実機で発生: 本来
+          # `arn:aws:cloudfront::123456789012:key-value-store/<uuid>`のはずが
+          # `key-value-store/<uuid>`のみになり、aws cliが「KVS ARN must be a
+          # valid ARN」で失敗した）。キー名自体にはコロンが無いため、最初の
+          # コロンまでだけを取り除く
+          KVS_ARN=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          echo "KVS ARN: ${KVS_ARN}"
+
+          seed_default() {
+            KEY="$1"
+            DEFAULT_VALUE="$2"
+            if aws cloudfront-keyvaluestore get-key --region us-east-1 --kvs-arn "$KVS_ARN" --key "$KEY" >/dev/null 2>&1; then
+              echo "${KEY}: 既に設定済みのためスキップ"
+              return
+            fi
+            ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+            aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KEY" --value "$DEFAULT_VALUE" >/dev/null
+            echo "${KEY}: 初期値(${DEFAULT_VALUE})を設定した"
+          }
+
+          seed_default "canary_weight" "10"
+          seed_default "force_stable" "false"
+          # canary使用中に別の更新がマージされた際のキュー待ちフラグ
+          seed_default "canary_queue_pending" "false"
+          # canaryスタックが実際に存在するかどうか。promote-canary.ymlがcanaryの
+          # デプロイ・削除に合わせて更新する。canaryスタックが存在しない状態で
+          # /canary/へ明示アクセスした際のstableへのフォールバック判定に使う
+          seed_default "canary_exists" "false"
+
+      - name: Write deployment summary
+        run: |
+          set -eu
+          DOMAIN="${{ steps.domain.outputs.domain }}"
+          {
+            echo "## infra デプロイ結果"
+            echo ""
+            echo "CloudFront domain: https://${DOMAIN}"
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## 自動昇格ワークフロー（promote-canary.yml）
 
 canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過し、`force_stable`によるロールバックが行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。同時に、canaryへの日次バッチ反映（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「canaryデプロイの日次バッチ化」参照）・緊急デプロイ後の自動最新化（「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、同じ定期実行の中で判定する。
@@ -702,11 +798,12 @@ jobs:
 
 CloudFront Functionsの重み付けルーティング・sticky Cookie挙動を、実際にデプロイ済みのCloudFront URLへHTTPリクエストを送って自動検証する。サンドボックス環境のネットワーク制限等で直接検証できない場合でも、インターネットに到達可能なGitHub Actionsランナーから実行できる。
 
-検証する内容は以下3点。
+検証する内容は以下4点。
 
 1. Cookie無しでアクセスした場合、設定した重みのおおよその割合でcanaryが選ばれる
 2. 一度付与されたCookieの値通りに2回目以降のアクセスが固定される
 3. KVSの`force_stable`をtrueにすると、Cookieに関わらず常にstableになる
+4. `/stable/`への明示アクセスは常にstableの内容を返し、かつ以後のCookie無しアクセスもstableへ一時固定される（手動切り替えリンクパターンとの前方互換、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「CloudFront Functionsによる重み付けルーティング」のviewer-request関数仕様に対応）
 
 このworkflowは検証専用で、デプロイやKVSの既定値を変更する副作用を残さない（`force_stable`検証後は必ずfalseへ戻す）。レスポンス本文から変種を判別する`CANARY`・`STABLE`の文字列は、frontendのビルド時にモードに応じて埋め込むマーカー文字列に置き換える（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「主要画面へのバージョン表示」等、既存のモード判定の仕組みと合わせる）。
 
@@ -850,6 +947,47 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - name: "6. /stable/への明示アクセスは常にstableの内容を返す"
+        id: stable_content
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          BODY=$(curl -sS "https://${DOMAIN}/stable/index.html" --max-time 15)
+          if echo "$BODY" | grep -q "STABLE"; then
+            echo "content_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "content_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "7. /stable/への明示アクセスでCookieがstableへ固定される"
+        id: stable_cookie
+        run: |
+          set -eu
+          DOMAIN="${{ steps.resolve.outputs.domain }}"
+          JAR=$(mktemp)
+
+          # canary Cookieを持たない状態で/stable/へアクセスし、新たにstableへ
+          # 固定するCookieが発行されることを確認する
+          curl -sS "https://${DOMAIN}/stable/index.html" --max-time 15 -c "$JAR" >/dev/null
+          if grep -q "canary.*stable" "$JAR"; then
+            echo "set_cookie_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "set_cookie_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 発行されたCookieを使って通常のルートパス（"/"）へアクセスし、
+          # Cookie無し判定の重み付け抽選を経由せずstableへ固定されることを
+          # 確認する
+          N=5
+          NON_STABLE_COUNT=0
+          for i in $(seq 1 "$N"); do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "$JAR" -c "$JAR")
+            if ! echo "$BODY" | grep -q "STABLE"; then
+              NON_STABLE_COUNT=$((NON_STABLE_COUNT + 1))
+            fi
+          done
+          echo "non_stable_count=${NON_STABLE_COUNT}" >> "$GITHUB_OUTPUT"
+
       - name: Write summary
         if: always()
         run: |
@@ -866,6 +1004,11 @@ jobs:
             echo "### 3. force_stable強制切り替え"
             echo "KVS更新の反映: ${{ steps.force_stable_check.outputs.propagated == '1' && '確認できた' || '120秒待っても確認できなかった（要調査）' }}"
             echo "10回中stable以外になった回数: ${{ steps.force_stable_check.outputs.non_stable_count }}（0が正常）"
+            echo ""
+            echo "### 4. /stable/明示アクセスのstable固定"
+            echo "内容確認: ${{ steps.stable_content.outputs.content_ok == 'true' && '確認できた' || '確認できなかった' }}"
+            echo "Cookie発行: ${{ steps.stable_cookie.outputs.set_cookie_ok == 'true' && '確認できた' || '確認できなかった' }}"
+            echo "固定後の通常アクセス5回中stable以外になった回数: ${{ steps.stable_cookie.outputs.non_stable_count }}（0が正常）"
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
@@ -1134,11 +1277,12 @@ jobs:
 
 具体的な実装の経緯・issue番号は[bamiyanapp/karuta](https://github.com/bamiyanapp/karuta)の各workflowファイルを参照する。対象は以下である。
 
-- `.github/workflows/promote-canary.yml`
+- `.github/workflows/deploy-infra.yml`
+- `promote-canary.yml`
 - `canary-status.yml`
 - `rollback-to-stable.yml`
 - `set-canary-weight.yml`
-- `verify-bg-routing.yml`
+- `verify-bg-routing.yml`（`verify-stable-fallback.yml`の検証項目を統合済み）
 - `verify-stage-data-sharing.yml`
 - `deploy-backend-stage.yml`
 - `deploy-frontend-stage.yml`
