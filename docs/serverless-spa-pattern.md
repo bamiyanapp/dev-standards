@@ -142,6 +142,72 @@ functions:
 
 フロントエンドは`.github/actions/deploy-github-pages`（[`standard-tech-stack.md`](standard-tech-stack.md)参照）でGitHub Pagesへデプロイする。`workspaces: true`を指定して同様にデプロイする。両方とも`reusable-cd.yml`の`release`ジョブ（semantic-release）に`needs`させ、新バージョンがリリースされた場合のみ実行する。
 
+## 運用: オンデマンドバックアップワークフロー
+
+PITR（Point-in-Time Recovery、過去35日間の任意の時点への復旧用、常時有効）とは別に、スキーマ移行・リソースインポート等の破壊的な作業の直前に「このタイミングの状態を明示的に残す」ための追加の保険として、手動実行できるオンデマンドバックアップworkflowを用意する。`workflow_dispatch`のみのため、スマートフォンのGitHub Web/モバイルアプリのActionsタブから実行できる。
+
+```yaml
+name: Backup DynamoDB Tables
+run-name: Backup DynamoDB Tables (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-northeast-1 # backend/serverless.ymlのprovider.regionと統一する
+    steps:
+      - name: Create on-demand backups
+        run: |
+          set -u
+
+          # テーブル名はbackend/serverless.ymlのcustom.*TableNameと一致させる。
+          # テーブル追加・リネーム時はこの配列も更新すること
+          TABLES=(
+            "<table-name-1>"
+            "<table-name-2>"
+          )
+
+          TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          FAILED=0
+
+          echo "## DynamoDB バックアップ結果 (${TIMESTAMP})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| テーブル | 結果 | Backup ARN |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+
+          for TABLE in "${TABLES[@]}"; do
+            BACKUP_NAME="${TABLE}-manual-${TIMESTAMP}"
+            if RESULT=$(aws dynamodb create-backup \
+              --table-name "$TABLE" \
+              --backup-name "$BACKUP_NAME" \
+              --output json 2>&1); then
+              ARN=$(echo "$RESULT" | jq -r '.BackupDetails.BackupArn')
+              echo "✅ ${TABLE}: ${ARN}"
+              echo "| ${TABLE} | ✅ 成功 | \`${ARN}\` |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ ${TABLE}: ${RESULT}" >&2
+              echo "| ${TABLE} | ❌ 失敗 | ${RESULT} |" >> "$GITHUB_STEP_SUMMARY"
+              FAILED=1
+            fi
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "一部のテーブルでバックアップに失敗した。上記サマリーを確認すること" >&2
+            exit 1
+          fi
+```
+
 ## 運用: CloudFormationリソースインポート（スタック分割・移管）
 
 Serverless Framework（`osls`）は、既存のAWSリソースを新しいCloudFormationスタックの管理下へ取り込む「IMPORT」操作に対応していない。ステートフルリソース（DynamoDBテーブル等）を既存の`serverless.yml`から専用スタックへ分離する場合（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)の導入等）、AWS CLIを直接オーケストレーションして実現する。
