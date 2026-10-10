@@ -231,12 +231,40 @@ on:
           または改行区切りで複数指定できる。
         type: string
         default: ""
+      enable_doc_reachability_check:
+        description: >-
+          入口ドキュメント（doc_reachability_entry_points）からMarkdownリンクを
+          辿って到達できない「孤立ドキュメント」を検知する`doc-reachability-check`
+          jobを実行するかどうか（bamiyanapp/dev-standards#848）。dead-link-check
+          （issue #603）はリンク先が実在するかを検証するが、逆方向（実在する
+          ファイルがどこからもリンクされていない）は検知できない。本チェックは
+          入口から到達できた実在ファイルの集合と、doc_reachability_pathsで
+          指定した対象ファイルの集合を比較し、差分（未到達ファイル）があれば
+          失敗する。中間ハブドキュメント（例: karutaの`docs/generated/README.md`
+          が個別の生成ドキュメントへのリンク一覧を持つ）経由の間接到達も
+          正しく到達可能と判定する。
+        type: boolean
+        default: false
+      doc_reachability_entry_points:
+        description: >-
+          enable_doc_reachability_check: trueの場合の探索の起点とするファイル
+          （リポジトリルート基準）。カンマまたは改行区切りで複数指定できる。
+        type: string
+        default: "README.md"
+      doc_reachability_paths:
+        description: >-
+          enable_doc_reachability_check: trueの場合に、到達可能であることを
+          要求する対象ファイルのglobパターン（リポジトリルート基準、`**`対応）。
+          dead_link_check_paths等と同様、カンマまたは改行区切りで複数指定できる。
+        type: string
+        default: ""
       skip_verification_on_push:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
           push-to-main等）では`frontend-test`・`backend-test`・`package-test`・
           `standards-check`・`duplication-check`・`doc-duplication-check`・
-          `architecture-check`・`text-lint`・`dead-link-check`を
+          `architecture-check`・`text-lint`・`dead-link-check`・
+          `doc-reachability-check`を
           スキップし、`commitlint`・
           `frontend-e2e-test`・`render-mermaid-diagrams`（有効な場合）のみ実行する
           （bamiyanapp/dev-standards#187「CI/CD実行回数・実行時間削減バックログ」③）。
@@ -1667,6 +1695,223 @@ jobs:
           done
           exit $status
 
+  # dead-link-check（リンク先が実在するか）とは逆方向の検証。入口ドキュメント
+  # （doc_reachability_entry_points）からMarkdownリンクを辿って到達できる
+  # 実在ファイルの集合を求め、doc_reachability_pathsで指定した対象ファイルの
+  # 集合との差分（未到達ファイル）を検知する（bamiyanapp/dev-standards#848）。
+  # スクリプト本体はnpmパッケージとして配布せず、このjob内にインライン展開する
+  # （text-lint・dead-link-check等と同様、参照側リポジトリ側の追加設定は不要）
+  doc-reachability-check:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_doc_reachability_check &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Use Node.js (attempt 1/2)
+        id: setup-node-1
+        continue-on-error: true
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Wait before retrying Node.js setup
+        if: steps.setup-node-1.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+        if: steps.setup-node-1.outcome == 'failure'
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Run doc-reachability-check
+        shell: bash
+        env:
+          DOC_REACHABILITY_ENTRY_POINTS: ${{ inputs.doc_reachability_entry_points }}
+          DOC_REACHABILITY_PATHS: ${{ inputs.doc_reachability_paths }}
+        run: |
+          cat > /tmp/check-doc-reachability.js <<'SCRIPT_EOF'
+          "use strict";
+
+          const fs = require("fs");
+          const path = require("path");
+
+          function parseList(value) {
+            return value
+              .split(/[\n,]/)
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0);
+          }
+
+          function expandGlob(pattern) {
+            if (!pattern.includes("*")) {
+              return fs.existsSync(pattern) && fs.statSync(pattern).isFile()
+                ? [pattern]
+                : [];
+            }
+            const parts = pattern.split("/");
+            const starIndex = parts.findIndex((p) => p.includes("*"));
+            const base = parts.slice(0, starIndex).join("/") || ".";
+            const rest = parts.slice(starIndex);
+            const results = [];
+
+            function walk(dir, segments) {
+              if (segments.length === 0) return;
+              const [seg, ...restSegments] = segments;
+              if (seg === "**") {
+                walkRecursive(dir, restSegments);
+                return;
+              }
+              let entries;
+              try {
+                entries = fs.readdirSync(dir, { withFileTypes: true });
+              } catch {
+                return;
+              }
+              const regex = globSegmentToRegex(seg);
+              for (const entry of entries) {
+                if (!regex.test(entry.name)) continue;
+                const full = path.join(dir, entry.name);
+                if (restSegments.length === 0) {
+                  if (entry.isFile()) results.push(full);
+                } else if (entry.isDirectory()) {
+                  walk(full, restSegments);
+                }
+              }
+            }
+
+            function walkRecursive(dir, remainingSegments) {
+              if (remainingSegments.length === 0) {
+                collectAllFiles(dir);
+                return;
+              }
+              walk(dir, remainingSegments);
+              let entries;
+              try {
+                entries = fs.readdirSync(dir, { withFileTypes: true });
+              } catch {
+                return;
+              }
+              for (const entry of entries) {
+                if (entry.isDirectory()) {
+                  walkRecursive(path.join(dir, entry.name), remainingSegments);
+                }
+              }
+            }
+
+            function collectAllFiles(dir) {
+              let entries;
+              try {
+                entries = fs.readdirSync(dir, { withFileTypes: true });
+              } catch {
+                return;
+              }
+              for (const entry of entries) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                  collectAllFiles(full);
+                } else {
+                  results.push(full);
+                }
+              }
+            }
+
+            function globSegmentToRegex(seg) {
+              const escaped = seg.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+              return new RegExp(`^${escaped.replace(/\*/g, ".*")}$`);
+            }
+
+            walk(base, rest);
+            return results;
+          }
+
+          const LINK_REGEX = /\]\(([^)]+)\)/g;
+
+          function extractLocalMdLinks(content) {
+            const links = [];
+            let match;
+            while ((match = LINK_REGEX.exec(content)) !== null) {
+              let target = match[1].trim();
+              target = target.split(/\s+"/, 1)[0];
+              if (/^[a-z]+:\/\//i.test(target) || target.startsWith("mailto:")) {
+                continue;
+              }
+              target = target.split("#")[0];
+              if (!target || !target.endsWith(".md")) continue;
+              links.push(target);
+            }
+            return links;
+          }
+
+          function resolveLink(fromFile, target) {
+            const baseDir = path.dirname(fromFile);
+            if (target.startsWith("/")) {
+              return path.normalize(target.slice(1));
+            }
+            return path.normalize(path.join(baseDir, target));
+          }
+
+          function main() {
+            const entryPoints = parseList(process.env.DOC_REACHABILITY_ENTRY_POINTS || "README.md");
+            const targetPatterns = parseList(process.env.DOC_REACHABILITY_PATHS || "");
+
+            if (targetPatterns.length === 0) {
+              console.log("DOC_REACHABILITY_PATHS is empty; nothing to check.");
+              return;
+            }
+
+            const targetFiles = new Set();
+            for (const pattern of targetPatterns) {
+              for (const file of expandGlob(pattern)) {
+                targetFiles.add(path.normalize(file));
+              }
+            }
+
+            const visited = new Set();
+            const queue = entryPoints.filter((f) => fs.existsSync(f)).map((f) => path.normalize(f));
+
+            while (queue.length > 0) {
+              const current = queue.shift();
+              if (visited.has(current)) continue;
+              visited.add(current);
+              if (!fs.existsSync(current)) continue;
+              const content = fs.readFileSync(current, "utf8");
+              for (const link of extractLocalMdLinks(content)) {
+                const resolved = resolveLink(current, link);
+                if (fs.existsSync(resolved) && !visited.has(resolved)) {
+                  queue.push(resolved);
+                }
+              }
+            }
+
+            const unreached = [...targetFiles].filter((f) => !visited.has(f)).sort();
+
+            if (unreached.length > 0) {
+              console.error(
+                `以下の${unreached.length}件のドキュメントは、入口ドキュメント（${entryPoints.join("、")}）からリンクを辿って到達できません。`,
+              );
+              for (const file of unreached) {
+                console.error(`  - ${file}`);
+              }
+              console.error(
+                "\n該当ドキュメントへのリンクを入口ドキュメント、または入口から到達可能な別のドキュメントへ追加してください。",
+              );
+              process.exitCode = 1;
+              return;
+            }
+
+            console.log(
+              `すべての対象ドキュメント（${targetFiles.size}件）が入口ドキュメントから到達可能であることを確認した。`,
+            );
+          }
+
+          main();
+          SCRIPT_EOF
+          node /tmp/check-doc-reachability.js
+
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され
   # 図として確認できない（bamiyanapp/karuta#824）。mermaid_doc_pathsで指定した
@@ -2677,7 +2922,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, render-mermaid-diagrams, dependency-risk-summary]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, render-mermaid-diagrams, dependency-risk-summary]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -2716,6 +2961,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.doc-reachability-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
       (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
