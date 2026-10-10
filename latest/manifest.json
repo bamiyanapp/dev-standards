@@ -85,6 +85,11 @@
     "fileName": "dependency-risk-judgment.png"
   },
   {
+    "sourceFile": "docs/async-job-polling-pattern.md",
+    "index": 1,
+    "fileName": "async-job-polling-pattern.png"
+  },
+  {
     "sourceFile": ".claude/skills/git-workflow/SKILL.md",
     "index": 1,
     "fileName": "SKILL.png"
