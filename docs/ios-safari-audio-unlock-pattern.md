@@ -29,7 +29,7 @@ sequenceDiagram
     Note over Audio: 解錠済みのため非同期文脈でも再生が許可される
 ```
 
-![解錠〜再生フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ios-safari-audio-unlock-pattern.png?dc5c5fc1312b6cc7b39d9f9f77aecebad0793d54)
+![解錠〜再生フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ios-safari-audio-unlock-pattern.png?81925b4f5468fef4be4208048d9040dec855e249)
 
 ## 実装
 
