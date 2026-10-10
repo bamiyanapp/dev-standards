@@ -1876,6 +1876,22 @@ jobs:
             echo "needs_pr=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # issue #821: ローカルのコミットはこのjob起動時点（トリガーとなったpushイベントの
+      # コミット）をベースにしており、「Check if the direct push succeeded」の時点で
+      # origin/<base_branch>をfetchしているだけで、ローカルのコミット自体はまだ古い
+      # ベースのままになっている。このjob実行中に他のPRがmain（README.md・
+      # docs/generated/配下等、本コミットが変更する同じファイル）へマージされていると、
+      # 後続で作成するPRが作成直後からコンフリクト（mergeable_state: dirty）した状態
+      # になり、人間による承認待ちの間ずっと放置される（bamiyanapp/karuta#1488・#1498で
+      # 実際に発生）。ブランチを切る前に最新のbase_branchへrebaseしておく。本コミットは
+      # 画像URLのクエリ文字列（キャッシュバスティング用SHA）の付け替えのみであり、
+      # 同じファイル・同じ行で衝突した場合も自分側（今回検知した最新のSHA）を
+      # 優先してよい（canary-status.ymlの同種対策・bamiyanapp/karuta#1507と同じ方針）
+      - name: Rebase the cache-bust commit onto the latest base branch
+        if: steps.check-push.outputs.needs_pr == 'true'
+        run: |
+          git rebase -X ours "origin/${{ github.ref_name }}"
+
       # ローカルに作成済みのキャッシュバスティングコミットを新しいブランチへpushする
       # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。force push
       # にしているのは、過去の失敗試行で同名ブランチが残骸として残っていると、通常の
