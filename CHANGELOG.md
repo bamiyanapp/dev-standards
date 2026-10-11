@@ -1,3 +1,10 @@
+# [2.76.0](https://github.com/bamiyanapp/dev-standards/compare/v2.75.5...v2.76.0) (2026-10-11)
+
+
+### Features
+
+* **ci:** PR差分の秘密情報検知（secret-scan）を追加する ([#894](https://github.com/bamiyanapp/dev-standards/issues/894)) ([8452a4b](https://github.com/bamiyanapp/dev-standards/commit/8452a4b7463fd12a57b88a24853b73326d0f98dd))
+
 ## [2.75.5](https://github.com/bamiyanapp/dev-standards/compare/v2.75.4...v2.75.5) (2026-10-11)
 
 
