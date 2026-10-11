@@ -4,7 +4,7 @@ description: 作業開始から終了までのGitブランチ戦略および基�
 ---
 # Git Workflow
 
-本Skillの各手順がなぜこのような形になっているか（Issue駆動・PR経由でのアウトプットという前提）の背景は[`docs/claude-workflow-philosophy.md`](../../../docs/claude-workflow-philosophy.md)を参照する。
+本Skillの各手順がなぜこのような形になっているか（Issue駆動・PR経由でのアウトプットという前提）の背景は[`docs/claude-workflow-philosophy.md`](https://github.com/bamiyanapp/dev-standards/blob/main/docs/claude-workflow-philosophy.md)を参照する。
 
 ## 作業開始
 
