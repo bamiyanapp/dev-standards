@@ -1,3 +1,10 @@
+## [2.75.1](https://github.com/bamiyanapp/dev-standards/compare/v2.75.0...v2.75.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **ci:** reusable-promote-canary.ymlでstableがcanaryを追い越した場合、キュー待ちの有無に関わらずcanaryを強制リフレッシュする ([#879](https://github.com/bamiyanapp/dev-standards/issues/879)) ([cfad6c2](https://github.com/bamiyanapp/dev-standards/commit/cfad6c24897e5bbe82f8abcfbda9fc2b10cb211c))
+
 # [2.75.0](https://github.com/bamiyanapp/dev-standards/compare/v2.74.0...v2.75.0) (2026-10-11)
 
 
