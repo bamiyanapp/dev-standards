@@ -240,6 +240,8 @@ falseへ戻す操作（通常運用への復帰）は本ワークフローの対
 
 stableが緊急手動デプロイ等でcanaryより新しい場合、昇格を安全側にスキップしJob Summaryへ警告を出す（karuta issue #1411）。カナリア直列化（同時1件制限）を使わない場合は`backend_deploy_command_canary`を省略すればキュー処理自体が無効化される。
 
+stableがcanaryより新しいと判定した場合（上記）、キュー待ちの有無に関わらずcanaryを強制的に最新化する（karuta issue #1448、[bamiyanapp/dev-standards#878](https://github.com/bamiyanapp/dev-standards/issues/878)）。これにより、緊急デプロイ後にcanaryが古い内容のまま詰まり続ける状態を自動的に解消する。
+
 `canary_exists_kvs_key`を指定した場合、昇格・canaryスタック削除後はこのキーをfalseへ、キュー待ち更新をcanaryへ反映した後はtrueへ更新する。`/canary/`への明示アクセス時、CloudFront Functions側でcanaryスタックが存在しない状態への誤ルーティングを避けstableへフォールバックさせる用途を想定する（karuta issue #1489）。
 
 ## `.github/actions/github-pages-migration-page`（複合action）

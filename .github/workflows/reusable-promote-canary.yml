@@ -259,6 +259,17 @@ jobs:
           fi
           echo "canaryの空き状況: ${FREE}"
 
+          # stableがcanaryより新しい（緊急手動デプロイ等でcanaryを追い越している）
+          # 場合、canaryは古くて意味の無いトライアルであり、キュー待ちの有無に
+          # 関わらず強制的に最新化する（karuta issue #1448）。これを無条件化
+          # しないと、canaryスタックが存在し続けfree=falseのまま、昇格・
+          # リフレッシュどちらにも進めず永久に詰まり続けてしまう
+          if [ "${{ steps.check.outputs.stable_ahead_of_canary }}" = "true" ]; then
+            echo "stableがcanaryより新しいため、キュー待ちの有無に関わらず強制的に最新化する"
+            echo "process=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           PENDING=false
           if [ "$FREE" = "true" ]; then
             PENDING=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --key "canary_queue_pending" --query Value --output text 2>/dev/null || echo "false")
