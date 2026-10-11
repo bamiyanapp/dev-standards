@@ -43,6 +43,8 @@ jobs:
       enable_doc_reachability_check: true
       doc_reachability_entry_points: "README.md\nCLAUDE.md"
       doc_reachability_paths: "docs/**/*.md"
+      # issue #892: dev-standards自身の秘密情報検知もdogfoodingする
+      enable_secret_scan: true
       # issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1（issue #646）:
       # dev-standards自身の依存更新PR（Renovate等）でもRisk Summaryコメントをdogfoodingする
       enable_dependency_risk_summary: true

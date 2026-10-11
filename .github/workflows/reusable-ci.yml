@@ -278,6 +278,19 @@ on:
           dead_link_check_paths等と同様、カンマまたは改行区切りで複数指定できる。
         type: string
         default: ""
+      enable_secret_scan:
+        description: >-
+          PR差分に誤ってコミットされた認証情報（APIキー・トークン・秘密鍵等）を
+          検知する`secret-scan` jobを実行するかどうか（bamiyanapp/dev-standards#892）。
+          CodeQL（SAST）はコードの脆弱性パターンを検知するものであり、ハードコード
+          された具体的な秘密情報の検出とは別物のため、別ジョブとして提供する。
+          `gitleaks/gitleaks-action`を使い、PRのbase_branchとの差分のみを対象に
+          スキャンする（リポジトリ全履歴を毎回スキャンすると、既存履歴に残る
+          過去の誤検知で詰まるため）。誤検知を許可する場合は、参照側リポジトリの
+          ルートに`.gitleaks.toml`を置いてallowlistを設定する
+          （https://github.com/gitleaks/gitleaks#configuration）。
+        type: boolean
+        default: false
       skip_verification_on_push:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
@@ -2040,6 +2053,29 @@ jobs:
           SCRIPT_EOF
           node /tmp/check-doc-reachability.js
 
+  secret-scan:
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_secret_scan &&
+      github.event_name == 'pull_request' &&
+      !(inputs.skip_verification_on_push && github.event_name == 'push') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      # PRのbase_branchとの差分のみを対象にスキャンする（GITLEAKS_CONFIGで
+      # 全履歴スキャンに切り替えることも可能だが、既存履歴に残る過去の誤検知
+      # で詰まるリスクを避けるため、既定では差分のみとする）
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_NOTIFY_USER_LIST: ""
+
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され
   # 図として確認できない（bamiyanapp/karuta#824）。mermaid_doc_pathsで指定した
@@ -2938,7 +2974,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, render-mermaid-diagrams, dependency-risk-summary]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -2979,6 +3015,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.doc-reachability-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
       (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
