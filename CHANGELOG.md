@@ -1,3 +1,10 @@
+## [2.75.2](https://github.com/bamiyanapp/dev-standards/compare/v2.75.1...v2.75.2) (2026-10-11)
+
+
+### Bug Fixes
+
+* **ci:** doc-reachability-checkのglob展開がsymlinkされたディレクトリを辿れない不具合を修正する ([#882](https://github.com/bamiyanapp/dev-standards/issues/882)) ([fca09f7](https://github.com/bamiyanapp/dev-standards/commit/fca09f77e4652b08d770481617bcdfc1def2ef4c))
+
 ## [2.75.1](https://github.com/bamiyanapp/dev-standards/compare/v2.75.0...v2.75.1) (2026-10-11)
 
 
