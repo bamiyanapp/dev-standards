@@ -40,7 +40,7 @@ inputs:
     required: false
     default: ""
   branch-prefix:
-    description: "フォールバック時に作成する新ブランチ名のprefix。実際のブランチ名は`<branch-prefix>-${{ github.run_id }}`になる"
+    description: "フォールバック時に作成する新ブランチ名のprefix。実際のブランチ名は<branch-prefix>-<実行時のrun_id>になる"
     required: false
     default: "chore/commit-via-pr"
   base-branch:
