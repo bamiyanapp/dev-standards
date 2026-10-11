@@ -1,3 +1,10 @@
+## [2.75.3](https://github.com/bamiyanapp/dev-standards/compare/v2.75.2...v2.75.3) (2026-10-11)
+
+
+### Bug Fixes
+
+* **docs:** symlinkされたSKILL.mdのdocs/への相対リンクを絶対URLへ修正する ([#883](https://github.com/bamiyanapp/dev-standards/issues/883)) ([074b4e9](https://github.com/bamiyanapp/dev-standards/commit/074b4e98cfb875e4130fa7a965acebffd0f44c42))
+
 ## [2.75.2](https://github.com/bamiyanapp/dev-standards/compare/v2.75.1...v2.75.2) (2026-10-11)
 
 
