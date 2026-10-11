@@ -1,3 +1,10 @@
+## [2.75.5](https://github.com/bamiyanapp/dev-standards/compare/v2.75.4...v2.75.5) (2026-10-11)
+
+
+### Bug Fixes
+
+* **ci:** commit-via-pr自己参照をv2.75.4へ固定する ([#889](https://github.com/bamiyanapp/dev-standards/issues/889)) ([4581ac2](https://github.com/bamiyanapp/dev-standards/commit/4581ac2386afb49bc425669d118cc84b8c84e376))
+
 ## [2.75.4](https://github.com/bamiyanapp/dev-standards/compare/v2.75.3...v2.75.4) (2026-10-11)
 
 
