@@ -176,7 +176,8 @@ mainのHEADには、canaryへは反映済みだがまだstableへ昇格してい
 AWS CLIへ到達できないスマホオンリーの開発環境では、KVS・CloudFormationスタックの状態（重み・猶予期間の残り等）を都度AWSコンソール・CLIで確認できない。この観点を欠くと、カナリアが詰まっている・昇格が延長され続けている等の異常に気付けないまま運用し続けてしまう。以下の2点を推奨プラクティスとする。具体的なworkflowテンプレートは[`blue-green-workflow-templates.md`](blue-green-workflow-templates.md)「運用状態の可視化ワークフロー（canary-status.yml）」を参照する。
 
 - **運用状態の定期可視化**: スケジュール実行のworkflowが、KVS・CloudFormationスタックの状態をJob Summaryへ出力する。同時に、Git管理下のMarkdownファイル（例: `docs/generated/canary-status.md`）へ自動コミットする。これにより、GitHubのファイルビュー・コミット履歴だけで最新状態を確認できる。AWS CLIへの到達性を持たないスマホオンリーの開発環境でも、運用状態の継続監視が成立する
-- **各stageへのバージョン応答エンドポイントの用意**: canary/stable各stageのバックエンドに、現在配信中のビルドバージョンを返すエンドポイント（例: `/get-version`）を用意する。前者の定期可視化workflowからこのエンドポイントを呼び出し、結果を同じレポートへ含める。これにより、frontend/backendの一方だけが古いビルドのまま取り残される、デプロイ内容の不整合（例: 手動per-stageデプロイワークフローの誤用によるもの）を早期に検知できる
+- **各stageへのバージョン応答エンドポイントの用意**: canary/stable各stageのバックエンドに、現在配信中のビルドバージョンを返すエンドポイント（例: `/get-version`）を用意する。前者の定期可視化workflowからこのエンドポイントを呼び出し、結果を同じレポートへ含める
+- **フロントエンドのビルド時バージョンの外部公開**: 上記のバックエンド向けエンドポイントだけでは、frontend/backendの一方だけが古いビルドのまま取り残される不整合を検知できない（手動per-stageデプロイワークフローの誤用等が原因となる）。実際にbackendのみを見ており検知できていなかった事例が、karuta#1565で発覚した。`shared/ui/createVersionJsonPlugin.js`（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「バージョン情報の外部公開」参照）でビルド後に書き出す`version.json`を、定期可視化workflowが各stageのフロントエンド配信URLから取得する。バックエンドのバージョンと分けて同じレポートへ含めることで、frontend/backend双方の不整合を早期に検知できる
 
 ## DynamoDBスキーマ互換性ガイドライン（expand/contract方式）
 

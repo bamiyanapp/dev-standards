@@ -153,6 +153,24 @@ function AppHeader() {
 }
 ```
 
+### `shared/ui/createVersionJsonPlugin.js`
+
+[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「バージョン情報の外部公開（任意、ブルーグリーン運用等向け）」を実装するためのVite複合プラグイン。`getAppVersionDefine.js`と同様、Node.js側（`vite.config.js`）で動く。`__APP_VERSION__`はJSバンドルへ直接埋め込まれるだけで`index.html`には現れないため、`curl`のみで外部から取得できる専用の静的ファイル（`dist/version.json`）をビルド後に書き出す。
+
+`vite.config.js`:
+
+```js
+import createVersionJsonPlugin from "./createVersionJsonPlugin.js"; // symlink
+
+export default defineConfig({
+  plugins: [
+    createVersionJsonPlugin(new URL("../package.json", import.meta.url)),
+  ],
+});
+```
+
+`getAppVersionDefine.js`と同じディレクトリへsymlinkし、同じ`package.json`パスを渡す。必須構成ではなく、stable/canary等の複数stageを並行デプロイするプロダクトが運用状態の可視化に使う任意機能である。
+
 ### `shared/sfx/wadodon.mp3`
 
 太鼓のイントロ音（issue #786）。クイズ・ゲーム系プロダクトで「出題の合図」等に使える汎用的な効果音で、karuta（`bamiyanapp/karuta`）から切り出したもの。プロダクト固有の値は無いプレーンな音声ファイルのため、propsやAPIは無く、利用側で`new Audio("wadodon.mp3")`のように直接参照するだけでよい。
