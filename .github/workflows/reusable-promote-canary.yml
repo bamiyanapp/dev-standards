@@ -92,6 +92,15 @@ on:
         description: "KVS操作APIが存在するAWSリージョン。"
         type: string
         default: "us-east-1"
+      canary_exists_kvs_key:
+        description: >-
+          canaryスタックの存否をCloudFront Functions側へ伝えるKVSキー名
+          （bamiyanapp/dev-standards#876、karuta issue #1489）。`/canary/`への
+          明示アクセス時、canaryスタックが存在しない状態でもルーティングを試みて
+          失敗することを避け、stableへフォールバックさせる用途を想定する。
+          省略時（既定の空文字列）はこのキーの更新を一切行わない後方互換の挙動になる
+        type: string
+        default: ""
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -223,6 +232,15 @@ jobs:
           aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG2" --key "force_stable" --value "false" >/dev/null
           echo "KVSを既定値（canary_weight=10, force_stable=false）へリセットした"
 
+      - name: canary_exists_kvs_keyをfalseへ更新する（canaryスタックを削除したため）
+        if: steps.check.outputs.eligible == 'true' && inputs.canary_exists_kvs_key != ''
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "${{ inputs.canary_exists_kvs_key }}" --value "false" >/dev/null
+          echo "${{ inputs.canary_exists_kvs_key }} を false へ更新した"
+
       - name: 5. canaryが空いているか・キュー待ちの更新が無いかを確認する
         id: queue
         if: inputs.backend_deploy_command_canary != ''
@@ -272,6 +290,15 @@ jobs:
           ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
           aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "canary_queue_pending" --value "false" >/dev/null
           echo "canary_queue_pending を false へリセットした"
+
+      - name: canary_exists_kvs_keyをtrueへ更新する（canaryを実際にデプロイしたため）
+        if: steps.queue.outputs.process == 'true' && inputs.canary_exists_kvs_key != ''
+        run: |
+          set -eu
+          KVS_ARN="${{ inputs.kvs_arn }}"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "${{ inputs.canary_exists_kvs_key }}" --value "true" >/dev/null
+          echo "${{ inputs.canary_exists_kvs_key }} を true へ更新した"
 
       - name: Write summary
         if: always()
