@@ -1836,6 +1836,32 @@ jobs:
             const rest = parts.slice(starIndex);
             const results = [];
 
+            // 参照側リポジトリでは.claude/skills/<name>のようにディレクトリ単位の
+            // symlinkが使われる。Dirent#isDirectory/isFileはsymlinkを辿らず
+            // （lstat相当）常にfalseを返すため、symlinkの場合は実体をstatSyncで
+            // 確認する（bamiyanapp/dev-standards#881）
+            function isDirEntry(full, entry) {
+              if (entry.isSymbolicLink()) {
+                try {
+                  return fs.statSync(full).isDirectory();
+                } catch {
+                  return false;
+                }
+              }
+              return entry.isDirectory();
+            }
+
+            function isFileEntry(full, entry) {
+              if (entry.isSymbolicLink()) {
+                try {
+                  return fs.statSync(full).isFile();
+                } catch {
+                  return false;
+                }
+              }
+              return entry.isFile();
+            }
+
             function walk(dir, segments) {
               if (segments.length === 0) return;
               const [seg, ...restSegments] = segments;
@@ -1854,8 +1880,8 @@ jobs:
                 if (!regex.test(entry.name)) continue;
                 const full = path.join(dir, entry.name);
                 if (restSegments.length === 0) {
-                  if (entry.isFile()) results.push(full);
-                } else if (entry.isDirectory()) {
+                  if (isFileEntry(full, entry)) results.push(full);
+                } else if (isDirEntry(full, entry)) {
                   walk(full, restSegments);
                 }
               }
@@ -1874,8 +1900,9 @@ jobs:
                 return;
               }
               for (const entry of entries) {
-                if (entry.isDirectory()) {
-                  walkRecursive(path.join(dir, entry.name), remainingSegments);
+                const full = path.join(dir, entry.name);
+                if (isDirEntry(full, entry)) {
+                  walkRecursive(full, remainingSegments);
                 }
               }
             }
@@ -1889,9 +1916,9 @@ jobs:
               }
               for (const entry of entries) {
                 const full = path.join(dir, entry.name);
-                if (entry.isDirectory()) {
+                if (isDirEntry(full, entry)) {
                   collectAllFiles(full);
-                } else {
+                } else if (isFileEntry(full, entry)) {
                   results.push(full);
                 }
               }
