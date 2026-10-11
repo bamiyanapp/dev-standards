@@ -1,3 +1,10 @@
+# [2.75.0](https://github.com/bamiyanapp/dev-standards/compare/v2.74.0...v2.75.0) (2026-10-11)
+
+
+### Features
+
+* **ci:** reusable-promote-canary.ymlへcanary_exists KVSキー管理を追加する ([#877](https://github.com/bamiyanapp/dev-standards/issues/877)) ([3e8e6b7](https://github.com/bamiyanapp/dev-standards/commit/3e8e6b7f6958b9eaf3d2aa40d35426af7a918946))
+
 # [2.74.0](https://github.com/bamiyanapp/dev-standards/compare/v2.73.0...v2.74.0) (2026-10-10)
 
 
