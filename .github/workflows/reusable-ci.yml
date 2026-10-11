@@ -1528,9 +1528,28 @@ jobs:
           node-version: "24"
       - name: Run jscpd (doc duplication check)
         run: |
-          mapfile -t targets < <(printf '%s' "${{ inputs.doc_duplication_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
-          if [ ${#targets[@]} -eq 0 ]; then
+          mapfile -t patterns < <(printf '%s' "${{ inputs.doc_duplication_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
+          if [ ${#patterns[@]} -eq 0 ]; then
             echo "doc_duplication_paths is empty; nothing to check."
+            exit 0
+          fi
+          # ディレクトリ指定（元々の想定用途）と、*を含むglobパターン（拡張子で
+          # 絞り込みたい場合、issue #885）の両方をサポートする。ディレクトリ・
+          # 既存ファイルはそのまま位置引数として渡し、globパターンはシェルに
+          # 展開させてから個々のファイルを渡す（jscpd自身はglobを展開しない）
+          shopt -s globstar nullglob
+          targets=()
+          for pattern in "${patterns[@]}"; do
+            if [ -e "$pattern" ]; then
+              targets+=("$pattern")
+              continue
+            fi
+            for file in $pattern; do
+              [ -e "$file" ] && targets+=("$file")
+            done
+          done
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "No files matched doc_duplication_paths; nothing to check."
             exit 0
           fi
           npx --yes jscpd@5 "${targets[@]}" \
@@ -1722,8 +1741,12 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
+      # submodules: trueが無いと、参照側リポジトリのdev-standards submodule配下への
+      # 正当な相対リンクが常にファイル不在でリンク切れ判定されてしまう（issue #884）
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          submodules: true
       - name: Use Node.js (attempt 1/2)
         id: setup-node-1
         continue-on-error: true
