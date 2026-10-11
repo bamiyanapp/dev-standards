@@ -18,6 +18,24 @@
 
 `version`はビルド時に埋め込む。Viteを使うプロダクトは`shared/ui/getAppVersionDefine.js`・`shared/ui/formatBuildTime.js`を利用する。詳細は[`shared-ui-components.md`](shared-ui-components.md)を参照。`package.json`の読み込み・`define`埋め込み・表示用の日時整形を個別実装せず共有する。更新日時の具体的な取得元（デプロイ日時・最終リリース日時・最終コミット日時等）は各プロダクトの実装に委ねる。実際にデプロイされているバージョンの更新時点を正しく表すものとする（上記共有ヘルパーはビルド時刻を使う）。
 
+## バージョン情報の外部公開（任意、ブルーグリーン運用等向け）
+
+`getAppVersionDefine.js`が埋め込む`__APP_VERSION__`はViteの`define`でJSバンドルへ直接埋め込まれる値であり、`index.html`自体には一切現れない。そのため`curl`等JSを実行しない方法では外部から取得できない。
+
+[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)のようにstable/canary等、複数stageを並行デプロイする構成では、各stageで実際にデプロイされているフロントエンドのバージョンを外部から検証したい場合がある（運用状態の可視化ワークフロー等）。この場合、`shared/ui/createVersionJsonPlugin.js`を利用し、ビルド時に`dist`直下へ`version.json`（`{version, buildTime}`）を書き出す。
+
+```js
+// vite.config.js
+import createVersionJsonPlugin from "./createVersionJsonPlugin.js"; // symlink
+export default defineConfig({
+  plugins: [
+    createVersionJsonPlugin(new URL("../package.json", import.meta.url)),
+  ],
+});
+```
+
+デプロイ後、`https://<フロントエンド配信URL>/version.json`として`curl`のみで取得できる。これは必須構成ではなく、複数stage並行デプロイ構成を採るプロダクトのみが対象の任意機能である。
+
 ## 各プロダクトへの適用
 
 このドキュメントはdev-standards側での規約を明文化するものである。共通フォント（`shared/ui/common-theme.css`等）は共有コードとして提供している。トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）も共有コードとして提供している。提供元は[`shared-ui-components.md`](shared-ui-components.md)側である。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。

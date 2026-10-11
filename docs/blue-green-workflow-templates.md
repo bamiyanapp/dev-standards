@@ -367,7 +367,7 @@ jobs:
         working-directory: infra
         run: npm ci
 
-      - name: KVS ARNを解決する
+      - name: KVS ARN・フロントエンド配信ドメインを解決する
         id: kvs
         working-directory: infra
         run: |
@@ -375,6 +375,10 @@ jobs:
           INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
           KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
           echo "kvs_arn=${KVS_ARN}" >> "$GITHUB_OUTPUT"
+          # フロントエンドの実際のデプロイ済みバージョンをversion.json経由で
+          # 取得するために配信ドメインを解決する
+          FRONTEND_DOMAIN=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')
+          echo "frontend_domain=${FRONTEND_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: 現在の運用状態を取得する
         id: status
@@ -468,15 +472,20 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # issue #1511のような不整合（canaryが古いバージョンを配信し続ける）の早期検知に
-      # 役立つ。各stageのバージョン応答エンドポイント（frontend-ui-conventions.md
-      # 「主要画面へのバージョン表示」参照）を叩き、配信中のバージョンを取得する。
-      # 疎通不可の場合も他の取得処理と同様にエラーにせず「取得できなかった」旨を
-      # 表示する
+      # 役立つ。backendは各stageのバージョン応答エンドポイント
+      # （frontend-ui-conventions.md「主要画面へのバージョン表示」参照）を叩く。
+      # frontendは`__APP_VERSION__`がVite defineでJSバンドルへ直接埋め込まれる値で
+      # あり、index.html自体には一切現れずcurlのみでは取得できないため、
+      # `shared/ui/createVersionJsonPlugin.js`（frontend-ui-conventions.md
+      # 「バージョン情報の外部公開」参照）がビルド時に書き出すversion.jsonを
+      # 各stageの配信ドメイン（FrontendDistributionDomainName）から取得する。
+      # いずれも疎通不可の場合は他の取得処理と同様にエラーにせず
+      # 「取得できなかった」旨を表示する
       - name: canary/stableの配信中バージョンを取得する
         id: version
         run: |
           set -eu
-          fetch_version() {
+          fetch_backend_version() {
             local url="$1"
             local body
             if ! body=$(curl -fsS --max-time 10 "${url}/get-version" 2>/dev/null); then
@@ -487,10 +496,27 @@ jobs:
             version=$(echo "$body" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).version||'（取得できなかった）')}catch{console.log('（取得できなかった）')}})")
             echo "$version"
           }
-          CANARY_VERSION=$(fetch_version "$(grep -oE 'https://[^ ]+' <frontend-workspace>/.env.canary | head -1)")
-          STABLE_VERSION=$(fetch_version "$(grep -oE 'https://[^ ]+' <frontend-workspace>/.env.stable | head -1)")
-          echo "canary_version=${CANARY_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "stable_version=${STABLE_VERSION}" >> "$GITHUB_OUTPUT"
+          fetch_frontend_version() {
+            local url="$1"
+            local body
+            if ! body=$(curl -fsS --max-time 10 "${url}" 2>/dev/null); then
+              echo "（取得できなかった）"
+              return
+            fi
+            local version
+            version=$(echo "$body" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).version||'（取得できなかった）')}catch{console.log('（取得できなかった）')}})")
+            echo "$version"
+          }
+          CANARY_BACKEND_VERSION=$(fetch_backend_version "$(grep -oE 'https://[^ ]+' <frontend-workspace>/.env.canary | head -1)")
+          STABLE_BACKEND_VERSION=$(fetch_backend_version "$(grep -oE 'https://[^ ]+' <frontend-workspace>/.env.stable | head -1)")
+          echo "canary_backend_version=${CANARY_BACKEND_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "stable_backend_version=${STABLE_BACKEND_VERSION}" >> "$GITHUB_OUTPUT"
+
+          FRONTEND_DOMAIN="${{ steps.kvs.outputs.frontend_domain }}"
+          CANARY_FRONTEND_VERSION=$(fetch_frontend_version "https://${FRONTEND_DOMAIN}/canary/version.json")
+          STABLE_FRONTEND_VERSION=$(fetch_frontend_version "https://${FRONTEND_DOMAIN}/stable/version.json")
+          echo "canary_frontend_version=${CANARY_FRONTEND_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "stable_frontend_version=${STABLE_FRONTEND_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: 次回promote-canary.yml実行予定を計算する
         id: schedule
@@ -527,9 +553,11 @@ jobs:
           if [ "${{ steps.status.outputs.canary_exists }}" = "true" ]; then
             {
               echo "| stableの最終更新 | ${{ steps.status.outputs.stable_last_updated || '（stableスタックが存在しない）' }} |"
-              echo "| stableの配信中バージョン | ${{ steps.version.outputs.stable_version }} |"
+              echo "| stableの配信中バージョン（backend） | ${{ steps.version.outputs.stable_backend_version }} |"
+              echo "| stableの配信中バージョン（frontend） | ${{ steps.version.outputs.stable_frontend_version }} |"
               echo "| canaryの最終更新 | ${{ steps.status.outputs.canary_last_updated }} |"
-              echo "| canaryの配信中バージョン | ${{ steps.version.outputs.canary_version }} |"
+              echo "| canaryの配信中バージョン（backend） | ${{ steps.version.outputs.canary_backend_version }} |"
+              echo "| canaryの配信中バージョン（frontend） | ${{ steps.version.outputs.canary_frontend_version }} |"
               echo "| 本番昇格の条件を満たす日時 | ${{ steps.status.outputs.promotion_eligible_at }}以降 |"
               echo "| 次回の定期チェック予定 | ${{ steps.schedule.outputs.next_promote_run_at }} |"
               echo ""
