@@ -236,8 +236,11 @@ falseへ戻す操作（通常運用への復帰）は本ワークフローの対
 | `infra_stack_name` | S3バケット名・CloudFront distribution IDを取得するCloudFormationスタック名 | （`frontend_build_command_stable`使用時は必須） |
 | `frontend_bucket_output_key` / `frontend_distribution_id_output_key` | 上記スタックのOutputKey名 | `FrontendBucketName` / `FrontendDistributionId` |
 | `node_version` / `workspaces` | ビルド・デプロイに使うNode.jsバージョン・npm workspaces構成かどうか | `22` / `true` |
+| `canary_exists_kvs_key` | canaryスタックの存否を伝えるKVSキー名（[bamiyanapp/dev-standards#876](https://github.com/bamiyanapp/dev-standards/issues/876)） | （省略可、空文字列でこのキーの更新を無効化） |
 
 stableが緊急手動デプロイ等でcanaryより新しい場合、昇格を安全側にスキップしJob Summaryへ警告を出す（karuta issue #1411）。カナリア直列化（同時1件制限）を使わない場合は`backend_deploy_command_canary`を省略すればキュー処理自体が無効化される。
+
+`canary_exists_kvs_key`を指定した場合、昇格・canaryスタック削除後はこのキーをfalseへ、キュー待ち更新をcanaryへ反映した後はtrueへ更新する。`/canary/`への明示アクセス時、CloudFront Functions側でcanaryスタックが存在しない状態への誤ルーティングを避けstableへフォールバックさせる用途を想定する（karuta issue #1489）。
 
 ## `.github/actions/github-pages-migration-page`（複合action）
 
