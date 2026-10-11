@@ -1,3 +1,10 @@
+## [2.75.4](https://github.com/bamiyanapp/dev-standards/compare/v2.75.3...v2.75.4) (2026-10-11)
+
+
+### Bug Fixes
+
+* **ci:** dead-link-checkのsubmodules未指定・doc-duplication-checkのglob未展開を修正する ([#886](https://github.com/bamiyanapp/dev-standards/issues/886)) ([1c14bfd](https://github.com/bamiyanapp/dev-standards/commit/1c14bfdc9790c0c76b80d4f71a78ca78e7c708ee))
+
 ## [2.75.3](https://github.com/bamiyanapp/dev-standards/compare/v2.75.2...v2.75.3) (2026-10-11)
 
 
