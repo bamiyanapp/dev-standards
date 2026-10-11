@@ -1,3 +1,10 @@
+## [2.77.1](https://github.com/bamiyanapp/dev-standards/compare/v2.77.0...v2.77.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **ci:** commit-via-pr/action.ymlのdescription内のgithubコンテキスト参照を除去する ([#903](https://github.com/bamiyanapp/dev-standards/issues/903)) ([ff99310](https://github.com/bamiyanapp/dev-standards/commit/ff99310d75496b1c64ff53d344480c5b1307138a))
+
 # [2.77.0](https://github.com/bamiyanapp/dev-standards/compare/v2.76.0...v2.77.0) (2026-10-11)
 
 
