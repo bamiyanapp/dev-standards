@@ -101,10 +101,12 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `text_lint_paths` | lint対象Markdownのglobパターン | `""` |
 | `enable_dead_link_check` | Markdown間の相対リンク切れを検証する（`dead-link-check` job） | `false` |
 | `dead_link_check_paths` | 検証対象Markdownのglobパターン | `""` |
+| `enable_secret_scan` | PR差分に誤ってコミットされた認証情報を検知する（`secret-scan` job） | `false` |
 
 - `enable_mermaid_render`: GitHubのPR差分ビュー・API経由でのファイル取得等、mermaidがネイティブレンダリングされない場面向け（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`を一度だけ手動で埋め込んでおく。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）
 - `enable_text_lint`: ESLint・stylelintがコード向け、CodeQLがセキュリティ向けの静的解析であるのに対し、こちらはMarkdownドキュメントの文章品質（文体の不統一・表記ゆれ等）を検知する（[bamiyanapp/dev-standards#436](https://github.com/bamiyanapp/dev-standards/issues/436)）。共有設定（`textlint.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのjobの有効化と`text_lint_paths`の指定のみでよい
 - `enable_dead_link_check`: ドキュメントのリファクタリング・ファイル移動・リネームでリンク切れが発生しても、`text-lint`・`doc-duplication-check`では検知できないため別ジョブとして提供する（[bamiyanapp/dev-standards#603](https://github.com/bamiyanapp/dev-standards/issues/603)）。外部URL（`http`/`https`）は一時的な障害でCIが不安定になることを避けるため検証対象から除外し、相対パスのリンクのみを検証する
+- `enable_secret_scan`: CodeQL（SAST）はコードの脆弱性パターンを検知するものであり、誤ってコミットされた具体的な秘密情報（APIキー・トークン等）の検出とは別物のため、別ジョブとして提供する（[bamiyanapp/dev-standards#892](https://github.com/bamiyanapp/dev-standards/issues/892)）。`gitleaks/gitleaks-action`を使い、PRのbase_branchとの差分のみを対象にスキャンする。誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`を置いてallowlistを設定する
 
 ### CI実行回数削減
 
