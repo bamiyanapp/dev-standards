@@ -1,3 +1,10 @@
+# [2.77.0](https://github.com/bamiyanapp/dev-standards/compare/v2.76.0...v2.77.0) (2026-10-11)
+
+
+### Features
+
+* **ui:** フロントエンドのビルド時バージョンをversion.jsonとして公開する共通ヘルパーを追加する ([#897](https://github.com/bamiyanapp/dev-standards/issues/897)) ([8b8d45c](https://github.com/bamiyanapp/dev-standards/commit/8b8d45cc4584c16b6f8e6ec8cfd3d0b3448179da)), closes [#896](https://github.com/bamiyanapp/dev-standards/issues/896)
+
 # [2.76.0](https://github.com/bamiyanapp/dev-standards/compare/v2.75.5...v2.76.0) (2026-10-11)
 
 
