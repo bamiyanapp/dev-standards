@@ -2221,17 +2221,16 @@ jobs:
       # のルール自体を満たすため、bypass設定に依存しない
       # issue #830: 「直接push→（拒否時）新ブランチ→PR→API経由squash merge」の
       # パターンを共通composite actionへ切り出した。ブランチを切る前の
-      # 最新base_branchへのrebase（issue #821）も内蔵している。他の
-      # 「Checkout dev-standards」ステップと異なりまだ特定のリリースタグへ
-      # 固定できていない（本PRで新規追加するactionのため、過去のタグには
-      # 存在しない）。次のリリースが出たら、そのタグへ固定するフォローアップを
-      # 行うこと
-      - name: Checkout dev-standards (for commit-via-pr, not yet pinned to a release tag)
+      # 最新base_branchへのrebase（issue #821）も内蔵している。v2.73.0で
+      # リリース済みとなったため、issue #888のフォローアップでそのタグへ
+      # 固定した（以降、このactionに変更を加えた場合は新リリース後に
+      # 本ステップの参照タグも更新すること）
+      - name: Checkout dev-standards (for commit-via-pr)
         if: steps.cache-bust.outputs.changed == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: main
+          ref: v2.75.4
           path: .dev-standards-actions-commit-via-pr
 
       - name: Commit cache-busted doc links via commit-via-pr
