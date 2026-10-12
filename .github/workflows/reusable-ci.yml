@@ -2260,13 +2260,16 @@ jobs:
       # 最新base_branchへのrebase（issue #821）も内蔵している。v2.73.0で
       # リリース済みとなったため、issue #888のフォローアップでそのタグへ
       # 固定した（以降、このactionに変更を加えた場合は新リリース後に
-      # 本ステップの参照タグも更新すること）
+      # 本ステップの参照タグも更新すること）。issue #905: #903
+      # （description内githubコンテキスト参照バグ修正、v2.77.1でリリース）の
+      # 際にこの更新を一度見落とし、dev-standards自身のrender-mermaid-diagrams
+      # ジョブが連続して失敗する事態になった
       - name: Checkout dev-standards (for commit-via-pr)
         if: steps.cache-bust.outputs.changed == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.75.4
+          ref: v2.77.1
           path: .dev-standards-actions-commit-via-pr
 
       - name: Commit cache-busted doc links via commit-via-pr
