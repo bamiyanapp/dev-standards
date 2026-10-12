@@ -1,3 +1,10 @@
+## [2.77.2](https://github.com/bamiyanapp/dev-standards/compare/v2.77.1...v2.77.2) (2026-10-12)
+
+
+### Bug Fixes
+
+* **ci:** commit-via-pr自己参照タグをv2.77.1へ更新する ([#906](https://github.com/bamiyanapp/dev-standards/issues/906)) ([7d75f18](https://github.com/bamiyanapp/dev-standards/commit/7d75f18730a6a05f21358ddbf397178b50e2eb31)), closes [#905](https://github.com/bamiyanapp/dev-standards/issues/905) [#903](https://github.com/bamiyanapp/dev-standards/issues/903)
+
 ## [2.77.1](https://github.com/bamiyanapp/dev-standards/compare/v2.77.0...v2.77.1) (2026-10-11)
 
 
