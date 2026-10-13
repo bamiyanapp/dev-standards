@@ -1,3 +1,10 @@
+# [2.78.0](https://github.com/bamiyanapp/dev-standards/compare/v2.77.2...v2.78.0) (2026-10-13)
+
+
+### Features
+
+* **ci:** reusable-promote-canary.ymlの猶予期間を時間単位でも指定可能にする ([#917](https://github.com/bamiyanapp/dev-standards/issues/917)) ([bd6878a](https://github.com/bamiyanapp/dev-standards/commit/bd6878a93572449baaebb6902c64c79949a75100)), closes [#916](https://github.com/bamiyanapp/dev-standards/issues/916)
+
 ## [2.77.2](https://github.com/bamiyanapp/dev-standards/compare/v2.77.1...v2.77.2) (2026-10-12)
 
 
