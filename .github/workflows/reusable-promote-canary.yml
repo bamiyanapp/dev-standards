@@ -16,6 +16,12 @@ name: Reusable Promote Canary to Stable
 # デプロイコマンド・ビルドコマンドはプロダクトのツールチェイン（Serverless
 # Framework/osls、Vite等）に依存するため、inputsとして文字列をそのまま渡す
 # 構成にする。
+#
+# issue #916: GitHub Actionsのscheduleトリガーは発火時刻が数時間単位でずれる
+# ことがあり、grace_period_daysの日単位（24時間単位）の判定では、前回更新
+# からの経過時間がわずかに1日分へ届かず昇格が1サイクル分遅延するケースが
+# あった。grace_period_hoursで時間単位の猶予期間も指定できるようにする
+# （既定は0で、未指定ならgrace_period_daysを時間換算して使う後方互換動作）。
 
 on:
   workflow_call:
@@ -33,9 +39,19 @@ on:
         type: string
         required: true
       grace_period_days:
-        description: "canaryデプロイからこの日数が経過し、かつforce_stableが設定されていなければ昇格対象とする。"
+        description: "canaryデプロイからこの日数が経過し、かつforce_stableが設定されていなければ昇格対象とする。grace_period_hoursが指定された場合はそちらが優先される。"
         type: number
         default: 7
+      grace_period_hours:
+        description: >-
+          猶予期間を時間単位で指定する（issue #916）。0（既定）の場合は
+          grace_period_days * 24時間を使う。GitHub Actionsのscheduleトリガーは
+          発火時刻が数時間単位でずれることがあり、grace_period_daysの日単位
+          （24時間単位）の判定では、前回更新からの経過時間がわずかに24時間へ
+          届かず1サイクル分（1日）昇格が遅延するケースがあったため、より
+          細かい時間単位で猶予期間を調整できるようにする。
+        type: number
+        default: 0
       node_version:
         description: "デプロイ・ビルドに使うNode.jsのバージョン。"
         type: string
@@ -143,6 +159,14 @@ jobs:
           CANARY_STACK="${{ inputs.canary_stack_name }}"
           STABLE_STACK="${{ inputs.stable_stack_name }}"
           GRACE_PERIOD_DAYS="${{ inputs.grace_period_days }}"
+          GRACE_PERIOD_HOURS_INPUT="${{ inputs.grace_period_hours }}"
+          # issue #916: grace_period_hoursが指定されていれば時間単位で、
+          # 未指定（0）ならgrace_period_daysを時間換算して使う
+          if [ "$GRACE_PERIOD_HOURS_INPUT" -gt 0 ]; then
+            GRACE_PERIOD_HOURS="$GRACE_PERIOD_HOURS_INPUT"
+          else
+            GRACE_PERIOD_HOURS=$(( GRACE_PERIOD_DAYS * 24 ))
+          fi
 
           if ! aws cloudformation describe-stacks --stack-name "$CANARY_STACK" >/dev/null 2>&1; then
             echo "canaryスタックが存在しないため対象外"
@@ -156,11 +180,11 @@ jobs:
           fi
           LAST_UPDATED_EPOCH=$(date -d "$LAST_UPDATED" +%s)
           NOW_EPOCH=$(date -u +%s)
-          ELAPSED_DAYS=$(( (NOW_EPOCH - LAST_UPDATED_EPOCH) / 86400 ))
-          echo "canaryスタックの最終更新から${ELAPSED_DAYS}日経過（${LAST_UPDATED}）"
+          ELAPSED_HOURS=$(( (NOW_EPOCH - LAST_UPDATED_EPOCH) / 3600 ))
+          echo "canaryスタックの最終更新から${ELAPSED_HOURS}時間経過（${LAST_UPDATED}）"
 
-          if [ "$ELAPSED_DAYS" -lt "$GRACE_PERIOD_DAYS" ]; then
-            echo "猶予期間（${GRACE_PERIOD_DAYS}日）未経過のため対象外"
+          if [ "$ELAPSED_HOURS" -lt "$GRACE_PERIOD_HOURS" ]; then
+            echo "猶予期間（${GRACE_PERIOD_HOURS}時間）未経過のため対象外"
             echo "eligible=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
