@@ -1,3 +1,10 @@
+## [2.78.1](https://github.com/bamiyanapp/dev-standards/compare/v2.78.0...v2.78.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **ci:** canaryが実際に検証したコミットのみをstableへ昇格する ([#920](https://github.com/bamiyanapp/dev-standards/issues/920)) ([895718e](https://github.com/bamiyanapp/dev-standards/commit/895718e55c42fbd573602b15a537bb44a2e22d15)), closes [#919](https://github.com/bamiyanapp/dev-standards/issues/919)
+
 # [2.78.0](https://github.com/bamiyanapp/dev-standards/compare/v2.77.2...v2.78.0) (2026-10-13)
 
 
