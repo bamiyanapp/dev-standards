@@ -22,6 +22,19 @@ name: Reusable Promote Canary to Stable
 # からの経過時間がわずかに1日分へ届かず昇格が1サイクル分遅延するケースが
 # あった。grace_period_hoursで時間単位の猶予期間も指定できるようにする
 # （既定は0で、未指定ならgrace_period_daysを時間換算して使う後方互換動作）。
+#
+# issue #919: 本ワークフローはジョブ先頭で1回だけcheckoutし（main最新HEAD）、
+# 「2. canaryのコードでstableへ昇格する」ステップと「5. キュー待ち分を新しい
+# canaryへデプロイする」ステップの両方でこの同じcheckoutを使い回していた。
+# 結果、「canaryのコードで昇格する」はずが実際には「ジョブ開始時点のmain
+# 最新HEAD」を昇格しており、canaryで一度も検証されていないキュー待ち
+# コミットがcanaryを経由せず直接stableへ昇格されてしまっていた。
+#
+# これを修正するため、canaryへ実際にデプロイしたコミットをgitタグ
+# （canary_tag_name）で記録する。昇格時はこのタグのコミットをgit worktreeで
+# 別途checkoutし、そちらをstableへデプロイする（main最新HEADではなく）。
+# タグが存在しない場合（初回実行等）は、記録が無いため従来通りmain最新
+# HEADにフォールバックする。
 
 on:
   workflow_call:
@@ -117,6 +130,14 @@ on:
           省略時（既定の空文字列）はこのキーの更新を一切行わない後方互換の挙動になる
         type: string
         default: ""
+      canary_tag_name:
+        description: >-
+          canaryへ実際にデプロイしたコミットを記録するgitタグ名（issue #919）。
+          昇格時はこのタグのコミットをstableへデプロイする（main最新HEADでは
+          なく）ことで、canaryで検証されていないコミットが直接stableへ昇格
+          されることを防ぐ。
+        type: string
+        default: "canary-deployed"
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -124,7 +145,7 @@ on:
         required: true
 
 permissions:
-  contents: read
+  contents: write # issue #919: canary_tag_nameのgitタグをpushするために必要
 
 jobs:
   promote:
@@ -150,6 +171,43 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ inputs.workspaces && '.' || inputs.backend_working_directory }}
+        run: npm ci
+
+      # issue #919: canaryが実際にデプロイしたコミット（canary_tag_name）を
+      # 解決する。タグが存在し、かつ現在のmain最新HEADと異なる場合のみ、
+      # そのコミットをgit worktreeで別途checkoutし、stableへの昇格に使う。
+      # タグが無い場合（初回実行等、検証履歴が無い）はmain最新HEADへ
+      # フォールバックする（従来の挙動）
+      - name: canaryが実際に検証したコミットを解決する
+        id: canary_commit
+        run: |
+          set -eu
+          TAG="${{ inputs.canary_tag_name }}"
+          CURRENT_SHA=$(git rev-parse HEAD)
+          if git fetch origin "refs/tags/${TAG}:refs/tags/${TAG}" 2>/dev/null; then
+            CANARY_SHA=$(git rev-parse "refs/tags/${TAG}")
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            if [ "$CANARY_SHA" = "$CURRENT_SHA" ]; then
+              echo "canaryの検証済みコミット（${CANARY_SHA}）は現在のmain最新HEADと同一のため、worktreeは不要"
+              echo "use_worktree=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "canaryの検証済みコミット: ${CANARY_SHA}（main最新HEAD ${CURRENT_SHA} とは異なる）"
+              echo "use_worktree=true" >> "$GITHUB_OUTPUT"
+              echo "sha=${CANARY_SHA}" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "canary_tag_name（${TAG}）が見つからないため、main最新HEADへフォールバックする"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "use_worktree=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: canaryが実際に検証したコミットのworktreeを用意する
+        if: steps.canary_commit.outputs.use_worktree == 'true'
+        run: git worktree add --detach canary-validated "${{ steps.canary_commit.outputs.sha }}"
+
+      - name: canaryが実際に検証したコミット向けの依存関係をインストールする
+        if: steps.canary_commit.outputs.use_worktree == 'true'
+        working-directory: ${{ inputs.workspaces && 'canary-validated' || format('canary-validated/{0}', inputs.backend_working_directory) }}
         run: npm ci
 
       - name: 昇格対象かどうかを判定する
@@ -226,11 +284,14 @@ jobs:
 
       - name: "2. canaryのコードでbackend stableスタックを再デプロイする（昇格）"
         if: steps.check.outputs.eligible == 'true'
-        working-directory: ${{ inputs.backend_working_directory }}
+        # issue #919: canaryが実際に検証したコミット（worktree）が解決できて
+        # いればそちらを、無ければmain最新HEAD（従来の挙動）を使う
+        working-directory: ${{ steps.canary_commit.outputs.use_worktree == 'true' && format('canary-validated/{0}', inputs.backend_working_directory) || inputs.backend_working_directory }}
         run: ${{ inputs.backend_deploy_command_stable }}
 
       - name: "2. canaryのビルドでfrontend stable/を再デプロイする（昇格）"
         if: steps.check.outputs.eligible == 'true' && inputs.frontend_build_command_stable != ''
+        working-directory: ${{ steps.canary_commit.outputs.use_worktree == 'true' && 'canary-validated' || '.' }}
         run: |
           set -eu
           ${{ inputs.frontend_build_command_stable }}
@@ -334,6 +395,18 @@ jobs:
           ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
           aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "${{ inputs.canary_exists_kvs_key }}" --value "true" >/dev/null
           echo "${{ inputs.canary_exists_kvs_key }} を true へ更新した"
+
+      # issue #919: 新しいcanaryのデプロイに成功した時点のコミットを記録する。
+      # 次回昇格時、このタグのコミット（＝canaryが実際に検証したコミット）を
+      # stableへデプロイすることで、未検証のコミットが直接stableへ昇格される
+      # ことを防ぐ
+      - name: canary_tag_nameをcanaryへデプロイしたコミットへ更新する
+        if: steps.queue.outputs.process == 'true'
+        run: |
+          set -eu
+          TAG="${{ inputs.canary_tag_name }}"
+          git tag -f "$TAG" HEAD
+          git push origin "refs/tags/${TAG}" --force
 
       - name: Write summary
         if: always()
