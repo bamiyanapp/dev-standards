@@ -1,3 +1,10 @@
+# [2.82.0](https://github.com/bamiyanapp/dev-standards/compare/v2.81.0...v2.82.0) (2026-10-15)
+
+
+### Features
+
+* **ci:** kill switchの戻し忘れを検知する複合actionを追加する ([#951](https://github.com/bamiyanapp/dev-standards/issues/951)) ([5990e7e](https://github.com/bamiyanapp/dev-standards/commit/5990e7e4470ae90f423b5a1f07220950569a580a)), closes [#950](https://github.com/bamiyanapp/dev-standards/issues/950)
+
 # [2.81.0](https://github.com/bamiyanapp/dev-standards/compare/v2.80.0...v2.81.0) (2026-10-15)
 
 
