@@ -33,9 +33,13 @@ jobs:
       enable_text_lint: true
       text_lint_paths: "docs/*.md\nREADME.md\nCLAUDE.md\n.claude/skills/**/*.md"
       # issue #586: CLAUDE.md・SKILL.md間の丸ごとコピペ重複（drift事故の原因）を検知する。
-      # 実測値（0.13%、意図的なコード例2種の重複のみ）に対し8倍程度の余裕を持たせる
+      # issue #935でdocs/blue-green-workflow-templates.mdのworkflow YAMLテンプレート
+      # 9件をdocs/examples/配下へ分離した結果、各テンプレート間で意図的に共通する
+      # ボイラープレート（checkout・KVS ETag更新等）がjscpdの重複として計上される
+      # ようになり、実測値が0.13%から1.09%へ上昇した。実測値に対し2倍程度の
+      # 余裕を持たせる
       enable_doc_duplication_check: true
-      doc_duplication_threshold: 1
+      doc_duplication_threshold: 2
       doc_duplication_paths: "docs\nREADME.md\nCLAUDE.md\n.claude/skills"
       # issue #848: README.md・CLAUDE.mdから到達できない孤立ドキュメントを検知する。
       # .claude/skills配下はREADME.mdのSkills節でskill名のみ列挙し個別リンクしない

@@ -1,0 +1,58 @@
+# 手動per-stageデプロイワークフロー（deploy-frontend-stage.yml）
+# 詳細は ../blue-green-workflow-templates.md を参照。
+name: Deploy Frontend Stage
+run-name: Deploy Frontend Stage (manual, ${{ inputs.stage }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "デプロイ先のstage"
+        required: true
+        type: choice
+        options:
+          - stable
+          - canary
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Build frontend
+        working-directory: <frontend-workspace>
+        run: npm run build:${{ inputs.stage }}
+
+      - name: Deploy to S3 and invalidate CloudFront cache
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+        run: |
+          set -eu
+          OUTPUTS=$(aws cloudformation describe-stacks --stack-name <infra-shared-stack> --query "Stacks[0].Outputs" --output json)
+          BUCKET=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="FrontendBucketName") | .OutputValue')
+          DIST_ID=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="FrontendDistributionId") | .OutputValue')
+          aws s3 sync <frontend-workspace>/dist "s3://${BUCKET}/${{ inputs.stage }}/" --delete
+          # DefaultCacheBehaviorがCachingOptimized（オリジン側Cache-Controlに従う）
+          # のため、同期しただけでは最大24時間古いキャッシュが返り続ける。対象の
+          # プレフィックス配下のみを明示的に無効化する
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/${{ inputs.stage }}/*"
+          {
+            echo "## frontend デプロイ結果（stage: ${{ inputs.stage }}）"
+            echo ""
+            echo "S3バケット: ${BUCKET}"
+            echo "同期先プレフィックス: ${{ inputs.stage }}/"
+          } >> "$GITHUB_STEP_SUMMARY"
