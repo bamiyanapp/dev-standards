@@ -212,6 +212,20 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
+### `.github/actions/check-rollback-staleness`（戻し忘れの検知）
+
+kill switch（`force_stable`相当のKVSフラグ）をtrueに設定したまま長時間放置される事故（karuta#1663）を防ぐための複合アクション。KVS自体には設定時刻が無いため、「trueを設定するworkflow」「falseへ戻すworkflow」それぞれの直近の成功実行履歴（GitHub Actions run history）を比較し、trueの実行の方が新しければ放置中と判定する（dev-standards#950）。kill switch自体は管理者が対処するまで持続させる設計のため、本アクションは検知のみを行い、自動でfalseへ戻す操作は行わない。1日1回のスケジュール実行（canary運用状態のドキュメント生成等）に組み込み、`stale`が`true`の場合はJob Summary・ドキュメントへ警告を表示する運用を想定する。
+
+```yaml
+- name: Check rollback staleness
+  uses: bamiyanapp/dev-standards/.github/actions/check-rollback-staleness@v1.0.0
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    set-true-workflow: rollback-to-stable.yml
+    set-false-workflow: clear-force-stable.yml
+    max-age-hours: "24"
+```
+
 | 入力 | 説明 | デフォルト |
 |---|---|---|
 | `kvs_arn` | stableへ強制的に固定するフラグを保持するCloudFront KeyValueStoreのARN | （必須） |
