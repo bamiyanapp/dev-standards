@@ -1,3 +1,10 @@
+# [2.79.0](https://github.com/bamiyanapp/dev-standards/compare/v2.78.2...v2.79.0) (2026-10-15)
+
+
+### Features
+
+* **ci:** バンドルサイズ予算チェックを追加し、2件のドキュメント不備を解消する ([#940](https://github.com/bamiyanapp/dev-standards/issues/940)) ([1e67c88](https://github.com/bamiyanapp/dev-standards/commit/1e67c8818aaadd5d34af76496c945852aaaa2e01)), closes [#893](https://github.com/bamiyanapp/dev-standards/issues/893) [#887](https://github.com/bamiyanapp/dev-standards/issues/887) [#904](https://github.com/bamiyanapp/dev-standards/issues/904)
+
 ## [2.78.2](https://github.com/bamiyanapp/dev-standards/compare/v2.78.1...v2.78.2) (2026-10-15)
 
 
