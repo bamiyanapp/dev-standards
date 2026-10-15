@@ -1,3 +1,10 @@
+# [2.81.0](https://github.com/bamiyanapp/dev-standards/compare/v2.80.0...v2.81.0) (2026-10-15)
+
+
+### Features
+
+* **ci:** reusable-rollback-to-stable.ymlへvalue inputを追加し復帰にも使えるようにする ([#948](https://github.com/bamiyanapp/dev-standards/issues/948)) ([4ea4fd0](https://github.com/bamiyanapp/dev-standards/commit/4ea4fd06f79015fc43dae1189b1201827265e6af)), closes [karuta#1662](https://github.com/karuta/issues/1662)
+
 # [2.80.0](https://github.com/bamiyanapp/dev-standards/compare/v2.79.0...v2.80.0) (2026-10-15)
 
 
