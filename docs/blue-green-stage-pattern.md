@@ -57,6 +57,9 @@ DynamoDBテーブル等のステートフルリソースを専用スタックへ
 ## 自動昇格・管理者ロールバック・詰まりの自動解消
 
 - 自動昇格ワークフロー: 定期実行（例: 毎日）で、canaryデプロイからの経過日数（猶予期間）と`force_stable`を確認する。猶予期間を過ぎていれば`canary_weight`を100%にしてから`stable`側へ昇格し、canaryスタックを削除してKVSを既定値へリセットする。猶予期間の既定値は運用しながら調整する。最初は1週間程度で始め、確認サイクルを速めたい場合は1日程度まで短縮できる
+- **canaryが実際に検証したコミットのみを昇格する**: 自動昇格ワークフローは、ジョブ先頭で1回だけcheckoutした「その時点のmain最新HEAD」を安易にstableへ昇格してはならない。日次バッチ化（キュー処理）とタイミングが重なると、canaryで一度も検証されていないキュー待ちコミットが、canaryを経由せず直接stableへ昇格されてしまう事故につながる（karuta#1616、dev-standards#919）。canaryへ実際にデプロイしたコミットをgitタグで記録し、昇格時はこのタグのコミットを`git worktree add --detach`で別途checkoutして、そちらをstableへデプロイする
+  - **`git worktree add`はサブモジュールを自動初期化しない**。メインのcheckoutステップ（`actions/checkout@v7`の`submodules: true`）とは異なり、worktree内ではサブモジュール配下のファイル（共有コードへのシンボリックリンク先等）が空のままになり、ビルドが解決エラーで失敗する。worktree作成直後に明示的な`git submodule update --init --recursive`を実行すること（dev-standards#927で実際に発生した障害）
+  - デプロイステップには`timeout-minutes`を設定する。ビルド失敗後もデプロイツールのプロセスが終了せず無応答のままハングし、GitHub Actionsの既定ジョブタイムアウト（360分）まで本番の異常状態（`canary_weight=100%`固定等）が残留する事故が実際に発生した（dev-standards#927）
 - 管理者ロールバック: KVSの`force_stable`を手動でtrueに設定するワークフロー。トラフィックを即座にstable側へ固定し、canaryでの問題発覚時に使う
 - **緊急デプロイ後の退行防止と自動最新化**: 本番障害等でstableへ緊急手動デプロイした場合、その内容はcanaryを経由していない。この状態で自動昇格が発火すると、canaryの古いコードでstableが上書きされ退行してしまう。これを防ぐため、昇格可否の判定に「stableの最終更新時刻がcanaryより新しいか」のチェックを加える。stableがcanaryを追い越している場合、昇格は安全側にスキップされる。ここで**スキップするだけで終わらせてはならない**。解消する手段が無いと、一度この状態になった時点で昇格が永続的にスキップされ続け、キュー待ちの更新も処理されない詰まりが起きる（実際にこの詰まりで新機能が本番に反映されない事態が発生した）。stableがcanaryより新しいと判定した場合は、キュー待ちの有無に関わらず**canaryを最新main HEADで強制的に最新化する**。canaryの内容は古くて意味の無いトライアルになっているため、上書きしても実害は無く、次回以降のサイクルで正しく検証・昇格が進むようになる
 - **canary_weightの手動変更**: 検証目的で重みを一時的に変えたい場合に備え、`workflow_dispatch`で任意の%（0〜100）を指定してKVSの`canary_weight`を変更する専用ワークフローを用意しておくと、AWS CLIを手動実行せずスマートフォンからでも調整できる。入力値が0〜100の整数であることを検証してから書き込む
@@ -78,6 +81,7 @@ mainのHEADには、canaryへは反映済みだがまだstableへ昇格してい
 AWS CLIへ到達できないスマホオンリーの開発環境では、KVS・CloudFormationスタックの状態（重み・猶予期間の残り等）を都度AWSコンソール・CLIで確認できない。この観点を欠くと、カナリアが詰まっている・昇格が延長され続けている等の異常に気付けないまま運用し続けてしまう。以下の2点を推奨プラクティスとする。具体的なworkflowテンプレートは[`blue-green-workflow-templates.md`](blue-green-workflow-templates.md)「運用状態の可視化ワークフロー（canary-status.yml）」を参照する。
 
 - **運用状態の定期可視化**: スケジュール実行のworkflowが、KVS・CloudFormationスタックの状態をJob Summaryへ出力する。同時に、Git管理下のMarkdownファイル（例: `docs/generated/canary-status.md`）へ自動コミットする。これにより、GitHubのファイルビュー・コミット履歴だけで最新状態を確認できる。AWS CLIへの到達性を持たないスマホオンリーの開発環境でも、運用状態の継続監視が成立する
+  - 定期可視化workflowは、自動昇格ワークフロー（`promote-canary.yml`）の完了（成功・失敗問わず）にも`workflow_run`トリガーで反応させる。スケジュールのみだと、自動昇格の実行結果（成否・ハング等の異常）が次の定期実行（最大1日後）まで反映されず、異常発生中の状態確認に手動実行が必要になる（karuta#1633）
 - **各stageへのバージョン応答エンドポイントの用意**: canary/stable各stageのバックエンドに、現在配信中のビルドバージョンを返すエンドポイント（例: `/get-version`）を用意する。前者の定期可視化workflowからこのエンドポイントを呼び出し、結果を同じレポートへ含める
 - **フロントエンドのビルド時バージョンの外部公開**: 上記のバックエンド向けエンドポイントだけでは、frontend/backendの一方だけが古いビルドのまま取り残される不整合を検知できない（手動per-stageデプロイワークフローの誤用等が原因となる）。実際にbackendのみを見ており検知できていなかった事例が、karuta#1565で発覚した。`shared/ui/createVersionJsonPlugin.js`（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「バージョン情報の外部公開」参照）でビルド後に書き出す`version.json`を、定期可視化workflowが各stageのフロントエンド配信URLから取得する。バックエンドのバージョンと分けて同じレポートへ含めることで、frontend/backend双方の不整合を早期に検知できる
 
