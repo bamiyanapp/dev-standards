@@ -291,6 +291,22 @@ on:
           （https://github.com/gitleaks/gitleaks#configuration）。
         type: boolean
         default: false
+      enable_bundle_size_check:
+        description: >-
+          trueの場合、frontendのビルド後JSバンドルサイズを`size-limit`で計測し、
+          結果をPRコメント・Job Summaryへ投稿する`bundle-size-check` jobを
+          実行するかどうか（bamiyanapp/dev-standards#893）。依存追加・コード肥大化
+          によるバンドルサイズの退行は、コードカバレッジ・lint等の既存チェックでは
+          検知できない。PWA・モバイル中心のプロダクトではバンドルサイズの肥大化が
+          ロード時間に直結するため、継続的な監視が有効。有効化する参照側リポジトリは
+          `frontend_dir`配下に`size-limit`パッケージ（devDependency）と、
+          計測対象・固定の上限（バイト数）を宣言する設定（`package.json`の
+          `size-limit`フィールド、または`.size-limit.json`。
+          https://github.com/ai/size-limit 参照）を用意しておく必要がある。
+          本jobは`continue-on-error: true`のため、このjobの失敗が`merge` jobを
+          ブロックすることはない。
+        type: boolean
+        default: false
       skip_verification_on_push:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
@@ -2320,6 +2336,109 @@ jobs:
               body,
             });
 
+  # frontendのビルド後JSバンドルサイズをsize-limitで計測し、結果をPRコメント・
+  # Job Summaryへ投稿する（issue #893）。依存追加・コード肥大化によるバンドルサイズの
+  # 退行は、コードカバレッジ・lint等の既存チェックでは検知できない。計測対象・
+  # 固定の上限（バイト数）は参照側リポジトリのsize-limit設定（package.jsonの
+  # size-limitフィールド、または.size-limit.json）に委ね、本job自体は閾値を
+  # 一切持たない。あくまで情報提供であり、マージ判断そのものには関与しないため、
+  # 各ステップはcontinue-on-error: trueとし、このジョブの失敗がmergeジョブを
+  # ブロックしないようにする（dependency-risk-summaryと同じ方針）
+  bundle-size-check:
+    needs: [commitlint, detect-changes]
+    if: |
+      always() &&
+      inputs.enable_bundle_size_check &&
+      github.event_name == 'pull_request' &&
+      (!inputs.enable_path_filtering || needs.detect-changes.outputs.frontend == 'true') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: ${{ inputs.enable_standards_check }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
+        continue-on-error: true
+        run: npm ci
+
+      # size-limit自身がbuild（size-limitのbuildフックまたは事前のnpm run build）を
+      # 要求する構成が一般的だが、ビルドコマンドはプロダクトごとに異なるため、ここでは
+      # 参照側リポジトリのpackage.jsonのsize-limit設定が自己完結している前提とし、
+      # 明示的なbuildステップは設けない（README参照: size-limitは`.size-limit.json`の
+      # 各エントリに`"path"`としてビルド後の成果物を直接指定する運用を想定する）
+      - name: Run size-limit
+        id: size-limit
+        working-directory: ${{ inputs.frontend_dir }}
+        continue-on-error: true
+        run: |
+          set -eu
+          npx size-limit --json > /tmp/size-limit-result.json 2>/tmp/size-limit-stderr.log || echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat /tmp/size-limit-stderr.log >&2 || true
+
+      - name: Build summary from size-limit result
+        id: summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## バンドルサイズチェック（size-limit）"
+            echo ""
+          } > /tmp/bundle-size-summary.md
+          if [ ! -s /tmp/size-limit-result.json ]; then
+            {
+              echo "size-limitの実行に失敗した（設定ファイル未配置、またはビルド成果物が存在しない可能性がある）。"
+              echo ""
+              echo "参照側リポジトリの\`${{ inputs.frontend_dir }}\`配下に\`size-limit\`パッケージと計測対象を宣言する設定（package.jsonのsize-limitフィールド等）を用意すること。"
+            } >> /tmp/bundle-size-summary.md
+          else
+            {
+              echo "| 対象 | サイズ | 上限 | 判定 |"
+              echo "|---|---|---|---|"
+            } >> /tmp/bundle-size-summary.md
+            node -e "
+              const results = JSON.parse(require('fs').readFileSync('/tmp/size-limit-result.json', 'utf-8'));
+              for (const r of results) {
+                const name = r.name || (Array.isArray(r.files) ? r.files.join(', ') : '(unnamed)');
+                const size = r.size != null ? r.size : (r.gzip != null ? r.gzip : '-');
+                const limit = r.limit != null ? r.limit : r.sizeLimit;
+                const passed = limit == null || size <= limit;
+                console.log(\`| \${name} | \${size} bytes | \${limit != null ? limit + ' bytes' : '(未設定)'} | \${passed ? '✅' : '❌ 超過'} |\`);
+              }
+            " >> /tmp/bundle-size-summary.md
+          fi
+          cat /tmp/bundle-size-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      # package-lock.json変更が無い等、無関係なPRへ毎回コメントが付く煩わしさを避けるため、
+      # frontendの変更が無いPRでは本jobのif条件（detect-changes.outputs.frontend）で
+      # そもそもスキップされる。実行された場合は常に結果をコメントする
+      - name: Comment result on the pull request
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/bundle-size-summary.md', 'utf-8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+
   # Renovate等が作成した依存更新PRに対し、更新されたパッケージごとのupdate type
   # （major/minor/patch）・直接/間接依存かをまとめたRisk SummaryをPRコメントとして
   # 投稿する（issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1、
@@ -2977,7 +3096,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -3021,6 +3140,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
       (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
     runs-on: ubuntu-latest
     permissions:

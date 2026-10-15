@@ -76,6 +76,8 @@ mainのHEADには、canaryへは反映済みだがまだstableへ昇格してい
 2. 修正後、そのブランチのまま`deploy-backend-stage.yml`/`deploy-frontend-stage.yml`（stage=stable）を実行し、即時にstableへ反映する。workflow_dispatchは実行時に選択したブランチの内容をそのままデプロイするため、mainを経由せずに反映できる
 3. 同じ修正を、通常のブランチ作成→PR→mainへのマージという通常のフローで**別途mainへも取り込む**（forward-fix）。これを省略すると、次回の自動昇格サイクルでこの緊急修正が失われる
 
+上記の正式な手順でhotfixブランチをstableの現在稼働中のコミットから切った場合、`deploy-backend-stage.yml`での直接デプロイはmainを経由しない。semantic-releaseのバージョン採番はmainへのpush時のみ発生するため、この直接デプロイでは**stableの表示バージョン番号が変わらない**（旧バージョンのまま）。後続のforward-fixでmain側に新しい番号が振られて初めて、stableの表示も更新される（karuta#1558）。
+
 ## 運用状態の可視化とバージョン不整合検知
 
 AWS CLIへ到達できないスマホオンリーの開発環境では、KVS・CloudFormationスタックの状態（重み・猶予期間の残り等）を都度AWSコンソール・CLIで確認できない。この観点を欠くと、カナリアが詰まっている・昇格が延長され続けている等の異常に気付けないまま運用し続けてしまう。以下の2点を推奨プラクティスとする。具体的なworkflowテンプレートは[`blue-green-workflow-templates.md`](blue-green-workflow-templates.md)「運用状態の可視化ワークフロー（canary-status.yml）」を参照する。
@@ -84,6 +86,7 @@ AWS CLIへ到達できないスマホオンリーの開発環境では、KVS・C
   - 定期可視化workflowは、自動昇格ワークフロー（`promote-canary.yml`）の完了（成功・失敗問わず）にも`workflow_run`トリガーで反応させる。スケジュールのみだと、自動昇格の実行結果（成否・ハング等の異常）が次の定期実行（最大1日後）まで反映されず、異常発生中の状態確認に手動実行が必要になる（karuta#1633）
 - **各stageへのバージョン応答エンドポイントの用意**: canary/stable各stageのバックエンドに、現在配信中のビルドバージョンを返すエンドポイント（例: `/get-version`）を用意する。前者の定期可視化workflowからこのエンドポイントを呼び出し、結果を同じレポートへ含める
 - **フロントエンドのビルド時バージョンの外部公開**: 上記のバックエンド向けエンドポイントだけでは、frontend/backendの一方だけが古いビルドのまま取り残される不整合を検知できない（手動per-stageデプロイワークフローの誤用等が原因となる）。実際にbackendのみを見ており検知できていなかった事例が、karuta#1565で発覚した。`shared/ui/createVersionJsonPlugin.js`（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「バージョン情報の外部公開」参照）でビルド後に書き出す`version.json`を、定期可視化workflowが各stageのフロントエンド配信URLから取得する。バックエンドのバージョンと分けて同じレポートへ含めることで、frontend/backend双方の不整合を早期に検知できる
+- **バージョン番号は人間向けの参考情報であり、drift検知の判定根拠ではない**: canaryがstableより先行しているかの判定は、デプロイ時刻（git log・CloudFormationの`LastUpdatedTime`）に基づく。バージョン番号を一切参照しないため、上記「stable緊急修正時のhotfixブランチ切り出し元」のような番号の振られ方の違いがあっても、自動化のロジックは正しく動作する。一方、人間がレポート上のバージョン番号を見て「新しい番号＝それより古い番号の内容を全て含む」と判断するのは誤り（karuta#1558の調査で発覚）
 
 ## DynamoDBスキーマ互換性ガイドライン（expand/contract方式）
 
