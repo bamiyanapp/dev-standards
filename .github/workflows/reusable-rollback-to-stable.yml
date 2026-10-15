@@ -9,14 +9,18 @@ name: Reusable Rollback to Stable
 # AWS認証情報（secrets、このワークフロー内でのみ利用可能）が必要なため、誰でも
 # 実行できるわけではない。
 #
-# false（通常運用）へ戻す操作は、本ワークフローの対象外とする。誤ってtoggleして
-# しまう事故を避けるため、本ワークフローには「戻す」機能を持たせない。復帰は
-# 自動昇格ワークフロー（reusable-promote-canary.yml）経由、または必要に応じて
-# 別途手動でAWS CLIを実行する運用とする。
-#
 # KVS ARNの解決方法（Serverless Framework/osls等のinfo出力、CloudFormation
 # スタック出力等）はプロダクトによって異なるため、本ワークフロー自身では解決せず、
 # 呼び出し元が解決したKVS ARNをinputsで直接渡す構成にする。
+#
+# karuta issue #1662: 当初はfalse（通常運用）へ戻す操作を本ワークフローの対象外と
+# していた（誤ってtoggleしてしまう事故を避ける意図）。しかし`reusable-
+# promote-canary.yml`はforce_stable=trueの間は昇格判定自体をforce_stableチェックで
+# 必ず弾くため、「復帰は自動昇格ワークフロー経由」という想定は成立せず、戻す手段が
+# 無いまま詰まる事故が実際に発生した。`value`inputを追加し、呼び出し元が明示的に
+# "true"・"false"いずれかを指定する形にする。既定値は既存の呼び出し元（true固定）
+# との後方互換のため"true"のまま維持する。誤toggle対策は、値を明示指定させる
+# （既定値に頼らせない）設計自体と、workflow_dispatch実行権限という既存の抑制に委ねる
 
 on:
   workflow_call:
@@ -29,6 +33,10 @@ on:
         description: "stableへ強制的に固定するためのKVSキー名。"
         type: string
         default: "force_stable"
+      value:
+        description: "kvs_keyへ設定する値。\"true\"でstableへ強制固定、\"false\"で通常運用（canary_weightによる分散ルーティング）へ戻す。"
+        type: string
+        default: "true"
       kvs_region:
         description: "KVSが存在するAWSリージョン（CloudFront関連のKVS操作APIはus-east-1固定であることが多い）。"
         type: string
@@ -49,24 +57,24 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
-      - name: "${{ inputs.kvs_key }}をtrueに設定する"
+      - name: "${{ inputs.kvs_key }}を${{ inputs.value }}に設定する"
         run: |
           set -eu
           KVS_ARN="${{ inputs.kvs_arn }}"
           KVS_KEY="${{ inputs.kvs_key }}"
+          VALUE="${{ inputs.value }}"
           ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
-          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KVS_KEY" --value "true" >/dev/null
-          echo "${KVS_KEY} を true に設定した"
+          aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KVS_KEY" --value "$VALUE" >/dev/null
+          echo "${KVS_KEY} を ${VALUE} に設定した"
 
       - name: Write summary
         if: always()
         run: |
           set -eu
           {
-            echo "## 管理者ロールバック実行結果"
+            echo "## 管理者ロールバック/復帰 実行結果"
             echo ""
-            echo "${{ inputs.kvs_key }}: true に設定した"
+            echo "${{ inputs.kvs_key }}: ${{ inputs.value }} に設定した"
             echo ""
-            echo "通常運用への復帰（${{ inputs.kvs_key }}をfalseへ戻す）は、本ワークフローでは行わない。自動昇格ワークフロー経由、または別途手動対応が必要。"
             echo "KVS更新のCloudFrontエッジ拠点への伝播は非同期のため、実際の反映確認は呼び出し元リポジトリ側で行うこと。"
           } >> "$GITHUB_STEP_SUMMARY"
