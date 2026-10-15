@@ -1,0 +1,68 @@
+name: "Check rollback staleness"
+description: >-
+  `reusable-rollback-to-stable.yml`で設定するkill switch（force_stable相当の
+  KVSフラグ）がtrueのまま長時間放置されていないかを検知する（dev-standards#950、
+  karuta#1662・karuta#1663）。KVS自体には設定時刻が無いため、「trueを設定する
+  consumer側workflow」「falseへ戻すconsumer側workflow」それぞれの直近の成功実行
+  履歴（GitHub Actions run history）を比較し、trueの実行の方が新しければ
+  「trueのまま放置中」と判定する。kill switch自体は管理者が対処するまで持続する
+  設計のため、本actionはあくまで検知のみを行い、自動でfalseへ戻す操作は行わない。
+
+inputs:
+  github-token:
+    description: "workflow run履歴の取得に使うトークン（actions: readで十分。通常はsecrets.GITHUB_TOKEN）"
+    required: true
+  set-true-workflow:
+    description: "kill switchをtrueに設定するconsumer側workflowのファイル名（例: rollback-to-stable.yml）"
+    required: true
+  set-false-workflow:
+    description: "kill switchをfalseへ戻すconsumer側workflowのファイル名（例: clear-force-stable.yml）"
+    required: true
+  max-age-hours:
+    description: "trueが設定されてからこの時間（時間単位）を超えたら放置とみなす"
+    required: false
+    default: "24"
+
+outputs:
+  stale:
+    description: "trueが放置許容時間を超えて設定され続けている場合true"
+    value: ${{ steps.check.outputs.stale }}
+  since:
+    description: "trueに設定された直近の実行のISO 8601タイムスタンプ（現在trueでない場合は空）"
+    value: ${{ steps.check.outputs.since }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check rollback staleness
+      id: check
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const { evaluateStaleness, formatSummary } = require(
+            "${{ github.action_path }}/staleness.js"
+          );
+
+          async function latestSuccessTimestamps(workflowFile) {
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowFile,
+              status: "success",
+              per_page: 10,
+            });
+            return data.workflow_runs.map((run) => run.created_at);
+          }
+
+          const trueRuns = await latestSuccessTimestamps("${{ inputs.set-true-workflow }}");
+          const falseRuns = await latestSuccessTimestamps("${{ inputs.set-false-workflow }}");
+          const maxAgeHours = Number("${{ inputs.max-age-hours }}");
+
+          const result = evaluateStaleness(trueRuns, falseRuns, maxAgeHours, new Date().toISOString());
+          const summary = formatSummary(result, maxAgeHours);
+
+          console.log(summary);
+          core.summary.addRaw(summary).write();
+          core.setOutput("stale", String(result.stale));
+          core.setOutput("since", result.sinceIso || "");
