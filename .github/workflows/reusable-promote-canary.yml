@@ -205,6 +205,16 @@ jobs:
         if: steps.canary_commit.outputs.use_worktree == 'true'
         run: git worktree add --detach canary-validated "${{ steps.canary_commit.outputs.sha }}"
 
+      # dev-standards issue #927: `git worktree add`はサブモジュールを自動
+      # 初期化しない。メインのcheckoutステップ（submodules: true）とは異なり、
+      # worktree内ではサブモジュール配下のファイル（共有Lambdaコード等への
+      # シンボリックリンク先）が空のままになり、ビルドが解決エラーで失敗する。
+      # worktree作成直後に明示的にサブモジュールを初期化する
+      - name: canary-validated worktree内のサブモジュールを初期化する
+        if: steps.canary_commit.outputs.use_worktree == 'true'
+        working-directory: canary-validated
+        run: git submodule update --init --recursive
+
       - name: canaryが実際に検証したコミット向けの依存関係をインストールする
         if: steps.canary_commit.outputs.use_worktree == 'true'
         working-directory: ${{ inputs.workspaces && 'canary-validated' || format('canary-validated/{0}', inputs.backend_working_directory) }}
@@ -286,11 +296,17 @@ jobs:
         if: steps.check.outputs.eligible == 'true'
         # issue #919: canaryが実際に検証したコミット（worktree）が解決できて
         # いればそちらを、無ければmain最新HEAD（従来の挙動）を使う
+        # dev-standards issue #927: ビルド失敗後にosls/esbuildのプロセスが
+        # 終了せず無応答でハングし、GitHub Actionsの既定ジョブタイムアウト
+        # （360分）まで本番の異常状態（canary_weight=100%）が残留する事故が
+        # あったため、デプロイの明示的なタイムアウトを設定し早期に失敗させる
+        timeout-minutes: 15
         working-directory: ${{ steps.canary_commit.outputs.use_worktree == 'true' && format('canary-validated/{0}', inputs.backend_working_directory) || inputs.backend_working_directory }}
         run: ${{ inputs.backend_deploy_command_stable }}
 
       - name: "2. canaryのビルドでfrontend stable/を再デプロイする（昇格）"
         if: steps.check.outputs.eligible == 'true' && inputs.frontend_build_command_stable != ''
+        timeout-minutes: 15
         working-directory: ${{ steps.canary_commit.outputs.use_worktree == 'true' && 'canary-validated' || '.' }}
         run: |
           set -eu
