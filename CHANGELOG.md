@@ -1,3 +1,10 @@
+## [2.78.2](https://github.com/bamiyanapp/dev-standards/compare/v2.78.1...v2.78.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* **ci:** canary-validated worktreeのサブモジュール未初期化・デプロイハングを修正する ([#928](https://github.com/bamiyanapp/dev-standards/issues/928)) ([2f42e1f](https://github.com/bamiyanapp/dev-standards/commit/2f42e1f98be9f878fc8ada226ff8968112289173)), closes [#927](https://github.com/bamiyanapp/dev-standards/issues/927)
+
 ## [2.78.1](https://github.com/bamiyanapp/dev-standards/compare/v2.78.0...v2.78.1) (2026-10-13)
 
 
