@@ -114,7 +114,9 @@ jobs:
 
 canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過し、`force_stable`によるロールバックが行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。同時に、canaryへの日次バッチ反映（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「canaryデプロイの日次バッチ化」参照）・緊急デプロイ後の自動最新化（「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、同じ定期実行の中で判定する。
 
-**推奨: 以下のスタンドアロン版テンプレートより、`bamiyanapp/dev-standards/.github/workflows/reusable-promote-canary.yml`（`workflow_call`で呼び出すreusable workflow）を優先する。** 判定・昇格・キュー処理ロジックは後からこのreusable workflowへ一般化され（dev-standards#757）、「canaryが実際に検証したコミットのみを昇格する」仕組み（git worktree + `canary_tag_name`、dev-standards#919）やそれに伴うサブモジュール初期化・`timeout-minutes`設定（dev-standards#927、「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、reusable workflow側にのみ反映されている。以下のスタンドアロン版はこれらの修正を含まない古いテンプレートであり、新規導入では使わないこと。
+**推奨: 以下のスタンドアロン版テンプレートより、`bamiyanapp/dev-standards/.github/workflows/reusable-promote-canary.yml`（`workflow_call`で呼び出すreusable workflow）を優先する。**
+
+判定・昇格・キュー処理ロジックは後からこのreusable workflowへ一般化された（dev-standards#757）。「canaryが実際に検証したコミットのみを昇格する」仕組み（git worktree + `canary_tag_name`、dev-standards#919）は、このreusable workflow側にのみ存在する。そのworktree使用に伴うサブモジュール初期化・`timeout-minutes`設定（dev-standards#927、「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も同様である。以下のスタンドアロン版はこれらの修正を含まない古いテンプレートであり、新規導入では使わないこと。
 
 ```yaml
 name: Promote Canary to Stable
