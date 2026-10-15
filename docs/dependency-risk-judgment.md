@@ -111,6 +111,22 @@ SBOM生成:           実施済み ─┘   （SBOMはRisk判定へは渡らな�
 
 このPRを適用せず現行バージョンに留まる場合のLow/Medium/High判定（更新前バージョンのCVE/KEVを見る、[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。業務影響度に該当する場合はlowからmediumへ1段階昇格する。維持リスクのhighへの昇格は既知のCVE/KEVのみを根拠とする設計のため、ブラスト半径単独ではhighへ昇格しない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。
 
+## 判定結果マトリクス（適用リスク×維持リスク）
+
+以下の節で説明する個別のロジックを、最終結果の一覧として整理したもの。
+
+| 適用リスク ＼ 維持リスク | Low | Medium | High |
+|---|---|---|---|
+| **Low** | 自動適用（通常のCI判定） | 自動適用（通常のCI判定） | 自動適用（通常のCI判定） |
+| **Medium** | 自動適用（通常のCI判定） | 自動適用（通常のCI判定） | 自動適用（通常のCI判定） |
+| **High** | スキップ（自動クローズ）\*1 | 人が判定（自動マージ停止）\*2 | 自動適用\*3 または 人が判定（自動マージ停止）\*2 |
+
+\*1 bot作成PRのみ対象（「適用リスクHigh・維持リスクLowのPRの自動クローズ」参照）。人間作成PRは対象外で、通常のCI判定に委ねる。
+\*2 「新旧どちらも選べない」ケース（major update・CI失敗・supply chain異常・ブラスト半径由来のHigh）。自動マージを停止し、人間の判断を待つ。
+\*3 `vulnerability_only_high`（Highの理由がCVE/KEV残存のみであること）の場合のみ。放置の方が危険なため自動マージを止めない（「merge gateとの連携」参照）。
+
+適用リスクLow/Medium行が常に「自動適用（通常のCI判定）」なのは、本仕組みが適用リスクHighの場合のみ介入する設計のため（他のCI条件自体で失敗すれば、当然マージされない）。
+
 ## merge gateとの連携（`enable_dependency_risk_gating`）
 
 適用リスク（risk_level、Low/Medium/High）がhighのPRでは`merge` jobによる自動マージを行わない（[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「Phase 2」Task 3）。対象をHighのみへ縮小した経緯は[#685](https://github.com/bamiyanapp/dev-standards/issues/685)を参照。
