@@ -1,3 +1,10 @@
+# [2.80.0](https://github.com/bamiyanapp/dev-standards/compare/v2.79.0...v2.80.0) (2026-10-15)
+
+
+### Features
+
+* **ci:** Lighthouse CIによるパフォーマンス・PWAスコア計測jobを追加する ([#943](https://github.com/bamiyanapp/dev-standards/issues/943)) ([652aa2b](https://github.com/bamiyanapp/dev-standards/commit/652aa2b44d0b11cb95426374eadfdb270cba8df7))
+
 # [2.79.0](https://github.com/bamiyanapp/dev-standards/compare/v2.78.2...v2.79.0) (2026-10-15)
 
 
