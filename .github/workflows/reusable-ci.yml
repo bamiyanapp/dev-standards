@@ -307,6 +307,21 @@ on:
           ブロックすることはない。
         type: boolean
         default: false
+      enable_lighthouse_ci:
+        description: >-
+          trueの場合、ビルド済みのfrontendを`npm run preview`等でローカルにホストし、
+          Lighthouse CI（`@lhci/cli`）でパフォーマンス・PWA・アクセシビリティ・SEOスコアを
+          計測し、結果をPRコメント・Job Summaryへ投稿する`lighthouse-ci` jobを
+          実行するかどうか（bamiyanapp/dev-standards#942の前段、karuta#1562）。
+          退行検知（前回比較または固定閾値）の方針は参照側リポジトリの
+          `lighthouserc.json`（`.assertions`）に委ね、本job自体は閾値を持たない。
+          有効化する参照側リポジトリは`frontend_dir`配下に`@lhci/cli`
+          （devDependency）と、計測対象URL・起動コマンドを宣言する
+          `lighthouserc.json`（https://github.com/GoogleChrome/lighthouse-ci 参照）を
+          用意しておく必要がある。本jobは`continue-on-error: true`のため、
+          このjobの失敗が`merge` jobをブロックすることはない。
+        type: boolean
+        default: false
       skip_verification_on_push:
         description: >-
           trueの場合、pushイベント（base_branchへの直接push、squash merge後の
@@ -2439,6 +2454,95 @@ jobs:
               body,
             });
 
+  # Lighthouse CIによるパフォーマンス・PWA・アクセシビリティ・SEOスコアの継続監視
+  # （bamiyanapp/dev-standards#942の前段、karuta#1562）。退行検知の閾値方式・
+  # 計測対象URLは参照側リポジトリの`lighthouserc.json`に委ね、本job自体は
+  # 閾値を持たない。bundle-size-check・dependency-risk-summaryと同じ方針で、
+  # 各ステップをcontinue-on-error: trueとしmergeジョブをブロックしない
+  lighthouse-ci:
+    needs: [commitlint, detect-changes]
+    if: |
+      always() &&
+      inputs.enable_lighthouse_ci &&
+      github.event_name == 'pull_request' &&
+      (!inputs.enable_path_filtering || needs.detect-changes.outputs.frontend == 'true') &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: ${{ inputs.enable_standards_check }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
+        continue-on-error: true
+        run: npm ci
+
+      # Lighthouse CIは`lighthouserc.json`の`collect.startServerCommand`で
+      # 計測対象サーバー自体を起動する運用を想定するため、本jobでは明示的な
+      # buildステップは設けない（README参照: 通常は`npm run build && npm run preview`
+      # 等をstartServerCommandに指定する）
+      - name: Run Lighthouse CI
+        id: lhci
+        working-directory: ${{ inputs.frontend_dir }}
+        continue-on-error: true
+        run: |
+          set -eu
+          npx lhci autorun --output-path=/tmp/lhci-result.json > /tmp/lhci-stdout.log 2>&1 || echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat /tmp/lhci-stdout.log
+
+      - name: Build summary from Lighthouse CI result
+        id: summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## Lighthouse CI"
+            echo ""
+          } > /tmp/lighthouse-summary.md
+          if [ ! -f /tmp/lhci-stdout.log ] || [ ! -s /tmp/lhci-stdout.log ]; then
+            {
+              echo "Lighthouse CIの実行に失敗した（設定ファイル未配置の可能性がある）。"
+              echo ""
+              echo "参照側リポジトリの\`${{ inputs.frontend_dir }}\`配下に\`@lhci/cli\`パッケージと\`lighthouserc.json\`（計測対象URL・起動コマンド・assertions）を用意すること。"
+            } >> /tmp/lighthouse-summary.md
+          else
+            {
+              echo '```'
+              cat /tmp/lhci-stdout.log
+              echo '```'
+            } >> /tmp/lighthouse-summary.md
+          fi
+          cat /tmp/lighthouse-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      # frontendの変更が無いPRでは本jobのif条件（detect-changes.outputs.frontend）で
+      # そもそもスキップされる。実行された場合は常に結果をコメントする
+      - name: Comment result on the pull request
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/lighthouse-summary.md', 'utf-8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+
   # Renovate等が作成した依存更新PRに対し、更新されたパッケージごとのupdate type
   # （major/minor/patch）・直接/間接依存かをまとめたRisk SummaryをPRコメントとして
   # 投稿する（issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1、
@@ -3096,7 +3200,7 @@ jobs:
             });
 
   merge:
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -3141,6 +3245,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
+      !contains(fromJSON('["failure", "cancelled"]'), needs.lighthouse-ci.result) &&
       (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
     runs-on: ubuntu-latest
     permissions:
