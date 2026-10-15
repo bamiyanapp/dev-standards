@@ -114,6 +114,10 @@ jobs:
 
 canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過し、`force_stable`によるロールバックが行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。同時に、canaryへの日次バッチ反映（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「canaryデプロイの日次バッチ化」参照）・緊急デプロイ後の自動最新化（「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、同じ定期実行の中で判定する。
 
+**推奨: 以下のスタンドアロン版テンプレートより、`bamiyanapp/dev-standards/.github/workflows/reusable-promote-canary.yml`（`workflow_call`で呼び出すreusable workflow）を優先する。**
+
+判定・昇格・キュー処理ロジックは後からこのreusable workflowへ一般化された（dev-standards#757）。「canaryが実際に検証したコミットのみを昇格する」仕組み（git worktree + `canary_tag_name`、dev-standards#919）は、このreusable workflow側にのみ存在する。そのworktree使用に伴うサブモジュール初期化・`timeout-minutes`設定（dev-standards#927、「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も同様である。以下のスタンドアロン版はこれらの修正を含まない古いテンプレートであり、新規導入では使わないこと。
+
 ```yaml
 name: Promote Canary to Stable
 run-name: Promote Canary to Stable (${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }})
@@ -339,6 +343,12 @@ on:
   schedule:
     - cron: "6 * * * *" # 1時間おき（分を0からずらし、他ワークフローとの同時実行集中を避ける）
   workflow_dispatch: {}
+  # 自動昇格ワークフロー（promote-canary.yml）の完了（成功・失敗問わず）にも反応させる。
+  # スケジュールのみだと、自動昇格の実行結果（成否・ハング等の異常）が次の定期実行
+  # まで反映されず、異常発生中の状態確認に手動実行が必要になる（karuta#1633）
+  workflow_run:
+    workflows: ["Promote Canary to Stable"]
+    types: [completed]
 
 permissions:
   contents: write
