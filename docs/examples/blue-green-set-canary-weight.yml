@@ -1,0 +1,62 @@
+# canary_weight手動変更ワークフロー（set-canary-weight.yml）
+# 詳細は ../blue-green-workflow-templates.md を参照。
+name: Set Canary Weight
+run-name: Set Canary Weight (${{ inputs.weight }}%)
+
+on:
+  workflow_dispatch:
+    inputs:
+      weight:
+        description: "canaryへ振り分ける割合（0〜100の整数%）"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  set-weight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: 入力値を検証する
+        working-directory: infra
+        run: |
+          set -eu
+          npm ci
+          WEIGHT="${{ inputs.weight }}"
+          if ! echo "$WEIGHT" | grep -Eq '^[0-9]+$' || [ "$WEIGHT" -lt 0 ] || [ "$WEIGHT" -gt 100 ]; then
+            echo "weightは0〜100の整数で指定すること（指定値: ${WEIGHT}）" >&2
+            exit 1
+          fi
+
+      - name: canary_weightを設定する
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+        run: |
+          set -eu
+          INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
+          KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "canary_weight" --value "${{ inputs.weight }}" >/dev/null
+
+      - name: Write summary
+        run: |
+          set -eu
+          {
+            echo "## canary_weight 変更結果"
+            echo ""
+            echo "canary_weight を **${{ inputs.weight }}%** に設定した。"
+            echo ""
+            echo "KVS更新のCloudFrontエッジ拠点への伝播は非同期（最大数分）のため、反映までしばらく待つこと。確実にcanary版を見たい場合は、重みに関わらず\`/canary/\`へ直接アクセスする方法もある。"
+          } >> "$GITHUB_STEP_SUMMARY"

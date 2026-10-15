@@ -1,0 +1,76 @@
+# 管理者ロールバックワークフロー（rollback-to-stable.yml）
+# 詳細は ../blue-green-workflow-templates.md を参照。
+name: Rollback to Stable (force_stable)
+run-name: Rollback to Stable (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: force_stableをtrueに設定する
+        id: rollback
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -eu
+          npm ci
+          INFO=$(npx osls info --config serverless.yml --stage shared --verbose 2>/dev/null)
+          KVS_ARN=$(echo "$INFO" | grep "RoutingKeyValueStoreArn" | sed -E 's/^[^:]*: *//')
+          echo "domain=$(echo "$INFO" | grep "FrontendDistributionDomainName" | sed -E 's/^[^:]*: *//')" >> "$GITHUB_OUTPUT"
+          ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region us-east-1 --kvs-arn "$KVS_ARN" --query ETag --output text)
+          aws cloudfront-keyvaluestore put-key --region us-east-1 --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "force_stable" --value "true" >/dev/null
+
+      - name: 反映を確認する（KVS伝播待ち、既存canary Cookie保持者も含む）
+        id: verify
+        run: |
+          set -eu
+          DOMAIN="${{ steps.rollback.outputs.domain }}"
+          # KVS更新のCloudFrontエッジ拠点への伝播は非同期（実機検証で最大30秒
+          # 程度かかることを確認済み）。伝播を確認できるまで一定間隔でリトライ
+          # する（最大120秒）
+          MAX_WAIT_ATTEMPTS=12
+          WAIT_SECONDS=10
+          PROPAGATED=0
+          for attempt in $(seq 1 "$MAX_WAIT_ATTEMPTS"); do
+            BODY=$(curl -sS "https://${DOMAIN}/" --max-time 15 -b "canary=canary")
+            VARIANT=$(echo "$BODY" | grep -o "CANARY\|STABLE" | head -1) # CANARY/STABLEはビルド時に埋め込むマーカー文字列に置き換える
+            if [ "$VARIANT" = "STABLE" ]; then
+              PROPAGATED=1
+              break
+            fi
+            sleep "$WAIT_SECONDS"
+          done
+          echo "propagated=${PROPAGATED}" >> "$GITHUB_OUTPUT"
+          if [ "$PROPAGATED" -ne 1 ]; then
+            echo "force_stable=trueが$((MAX_WAIT_ATTEMPTS * WAIT_SECONDS))秒経っても反映されなかった" >&2
+            exit 1
+          fi
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 管理者ロールバック実行結果"
+            echo ""
+            echo "force_stable: true に設定した"
+            echo "反映確認: ${{ steps.verify.outputs.propagated == '1' && '全アクセスがstableになることを確認した' || '確認できなかった（要調査）' }}"
+            echo ""
+            echo "通常運用への復帰（force_stableをfalseへ戻す）は、本workflowでは行わない。自動昇格ワークフロー経由、または別途手動対応が必要。"
+          } >> "$GITHUB_STEP_SUMMARY"
