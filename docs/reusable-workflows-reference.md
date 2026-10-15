@@ -191,7 +191,7 @@ jobs:
 
 ## `reusable-rollback-to-stable.yml`
 
-ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）をtrueに設定する。
+ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）を`value`（既定`"true"`）へ設定する。`value: "false"`を指定すれば、通常運用（`canary_weight`による分散ルーティング）への復帰にも使える（karuta#1662）。呼び出し元は「ロールバック用」「復帰用」の2つの`workflow_dispatch`として、それぞれ固定の`value`を指定する別々のworkflowを用意するとよい（誤って逆の値を指定する事故を避けるため）。
 
 ```yaml
 on:
