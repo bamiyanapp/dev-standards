@@ -10,56 +10,7 @@ PWA（ホーム画面に追加したアプリ、スタンドアロン表示）�
 
 コード共有ではなく、コピー可能なスニペット＋手順としてのレシピ。JSバンドルの読み込みを待たずにブラウザがHTML/CSSだけで表示できるよう、ローディング表示（スピナー）を`index.html`の`<div id="root">`の**中身**として直接書く。`createRoot(document.getElementById("root")).render(<App />)`はマウント時に`#root`の中身を丸ごと置き換える。そのため、追加のJSコードなしにReactマウント完了と同時に自動的に消える。
 
-```html
-<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>アプリ名</title>
-    <style>
-      #initial-loading {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #ffffff;
-        color: #1f2937;
-      }
-      #initial-loading div {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 4px solid rgba(127, 127, 127, 0.3);
-        border-top-color: currentColor;
-        animation: initial-loading-spin 0.8s linear infinite;
-      }
-      @keyframes initial-loading-spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      @media (prefers-color-scheme: dark) {
-        #initial-loading {
-          background: #1d232a;
-          color: #a6adbb;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root">
-      <div id="initial-loading" aria-hidden="true">
-        <div></div>
-      </div>
-    </div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
-```
-
-導入時は、色（`background`/`color`）・タイトルをプロダクトに合わせて変更する。
+コピー＆調整用テンプレート: [`examples/pwa-initial-loading-indicator.html`](examples/pwa-initial-loading-indicator.html)（導入時は、色（`background`/`color`）・タイトルをプロダクトに合わせて変更する）。
 
 ## 設計上の要点
 
