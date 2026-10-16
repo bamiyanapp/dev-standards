@@ -1,3 +1,10 @@
+## [2.82.3](https://github.com/bamiyanapp/dev-standards/compare/v2.82.2...v2.82.3) (2026-10-16)
+
+
+### Bug Fixes
+
+* **ci:** 失敗状態で残ったcanaryスタックを自動削除しFREEとみなす ([#960](https://github.com/bamiyanapp/dev-standards/issues/960)) ([940393f](https://github.com/bamiyanapp/dev-standards/commit/940393f8960b12b668095211c3427b67c140fb8a)), closes [karuta#1676](https://github.com/karuta/issues/1676)
+
 ## [2.82.2](https://github.com/bamiyanapp/dev-standards/compare/v2.82.1...v2.82.2) (2026-10-16)
 
 
