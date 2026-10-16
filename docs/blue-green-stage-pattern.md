@@ -72,10 +72,8 @@ DynamoDBテーブル等のステートフルリソースを専用スタックへ
 |---|---|---|---|---|---|
 | 無し | - | - | - | 有り | canary新規デプロイ |
 | 無し | - | - | - | 無し | 何もしない |
-| 有り | 未経過 | false | false | 有り | **canary更新** |
-| 有り | 未経過 | false | false | 無し | 待機 |
-| 有り | 未経過 | **true** | - | 有り | **canary更新** |
-| 有り | 未経過 | **true** | - | 無し | 待機 |
+| 有り | 未経過 | false/true | - | 有り | **canary更新** |
+| 有り | 未経過 | false/true | - | 無し | 待機 |
 | 有り | 経過 | false | false | 有り | stable昇格、canary更新 |
 | 有り | 経過 | false | false | 無し | stable昇格、canary削除 |
 | 有り | 経過 | true | - | - | stable更新なし |
