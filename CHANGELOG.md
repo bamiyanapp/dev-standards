@@ -1,3 +1,10 @@
+## [2.82.1](https://github.com/bamiyanapp/dev-standards/compare/v2.82.0...v2.82.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **ci:** check-rollback-stalenessをジョブ単位の成否で判定する ([#954](https://github.com/bamiyanapp/dev-standards/issues/954)) ([29e9b4c](https://github.com/bamiyanapp/dev-standards/commit/29e9b4ca786a7c10d84cdd7bd1ac70dc10ae54a8)), closes [#953](https://github.com/bamiyanapp/dev-standards/issues/953)
+
 # [2.82.0](https://github.com/bamiyanapp/dev-standards/compare/v2.81.0...v2.82.0) (2026-10-15)
 
 
