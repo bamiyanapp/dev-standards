@@ -378,10 +378,32 @@ jobs:
           echo "キュー待ちの更新: ${PENDING}"
           echo "process=$([ "$FREE" = "true" ] && [ "$PENDING" = "true" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
+      # karuta issue #1676: canaryスタックを削除した直後に新規スタックとして
+      # 作り直すため、新しいIAMロールがIAM側へ完全に伝播する前にLambda関数が
+      # そのロールの割り当てを試み、「The role defined for the function cannot
+      # be assumed by Lambda」で作成に失敗する事象が実機で発生した。これはAWS
+      # 側のIAMロール結果整合性（eventual consistency）に起因する既知の一時的
+      # 事象で、AWS自身もこのエラーでの再試行を推奨している。このエラーを検知
+      # した場合のみ、短い待機を挟んで再試行する（最大3回、15秒間隔）
       - name: "5. キュー待ちのbackendを新しいcanaryとしてデプロイする"
         if: steps.queue.outputs.process == 'true'
         working-directory: ${{ inputs.backend_working_directory }}
-        run: ${{ inputs.backend_deploy_command_canary }}
+        run: |
+          set -eu
+          MAX_ATTEMPTS=3
+          WAIT_SECONDS=15
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            if OUTPUT=$(${{ inputs.backend_deploy_command_canary }} 2>&1); then
+              echo "$OUTPUT"
+              break
+            fi
+            echo "$OUTPUT"
+            if [ "$attempt" -eq "$MAX_ATTEMPTS" ] || ! echo "$OUTPUT" | grep -q "cannot be assumed by Lambda"; then
+              exit 1
+            fi
+            echo "IAMロールの伝播待ちによる既知の一時的エラーを検知した（${attempt}回目）。${WAIT_SECONDS}秒待機して再試行する"
+            sleep "$WAIT_SECONDS"
+          done
 
       - name: "5. キュー待ちのfrontendを新しいcanaryとしてデプロイする"
         if: steps.queue.outputs.process == 'true' && inputs.frontend_build_command_canary != ''
