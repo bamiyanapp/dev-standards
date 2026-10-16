@@ -1,3 +1,10 @@
+## [2.82.4](https://github.com/bamiyanapp/dev-standards/compare/v2.82.3...v2.82.4) (2026-10-16)
+
+
+### Bug Fixes
+
+* **ci:** canaryスタック自動削除の対象にUPDATE_ROLLBACK_COMPLETEを追加する ([#964](https://github.com/bamiyanapp/dev-standards/issues/964)) ([bb52968](https://github.com/bamiyanapp/dev-standards/commit/bb52968a747df3fe400b117131ca2bcc7210f064)), closes [karuta#1676](https://github.com/karuta/issues/1676)
+
 ## [2.82.3](https://github.com/bamiyanapp/dev-standards/compare/v2.82.2...v2.82.3) (2026-10-16)
 
 
