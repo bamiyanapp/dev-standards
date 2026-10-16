@@ -1,3 +1,10 @@
+## [2.82.2](https://github.com/bamiyanapp/dev-standards/compare/v2.82.1...v2.82.2) (2026-10-16)
+
+
+### Bug Fixes
+
+* **ci:** canaryデプロイのIAMロール伝播待ちエラーをリトライで吸収する ([#956](https://github.com/bamiyanapp/dev-standards/issues/956)) ([5bc82e2](https://github.com/bamiyanapp/dev-standards/commit/5bc82e2f58f01235d6a7734f3887a46f0e362ec8)), closes [karuta#1676](https://github.com/karuta/issues/1676)
+
 ## [2.82.1](https://github.com/bamiyanapp/dev-standards/compare/v2.82.0...v2.82.1) (2026-10-16)
 
 
