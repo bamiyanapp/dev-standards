@@ -44,7 +44,7 @@ sequenceDiagram
 
 </details>
 
-![トークン発行〜検証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/short-lived-bearer-token-pattern.png?29e9b4ca786a7c10d84cdd7bd1ac70dc10ae54a8)
+![トークン発行〜検証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/short-lived-bearer-token-pattern.png?5bc82e2f58f01235d6a7734f3887a46f0e362ec8)
 
 ### 発行側（CloudFront Lambda@Edge）
 
