@@ -7,6 +7,9 @@ description: >-
   履歴（GitHub Actions run history）を比較し、trueの実行の方が新しければ
   「trueのまま放置中」と判定する。kill switch自体は管理者が対処するまで持続する
   設計のため、本actionはあくまで検知のみを行い、自動でfalseへ戻す操作は行わない。
+  「成功実行」はワークフロー全体の結論ではなく、run内のいずれかのジョブが成功した
+  ことで判定する（dev-standards#953。KVS設定自体は成功しても、無関係な後続ジョブの
+  失敗でワークフロー全体がfailure扱いになるケースがあるため）。
 
 inputs:
   github-token:
@@ -40,19 +43,36 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const { evaluateStaleness, formatSummary } = require(
+          const { evaluateStaleness, formatSummary, anyJobSucceeded } = require(
             "${{ github.action_path }}/staleness.js"
           );
 
+          // dev-standards#953: ワークフロー全体の結論（conclusion）でrunを絞り込むと、
+          // KVSへの値設定自体は成功していても、無関係な後続ジョブ（例: 反映確認の
+          // verifyジョブ）が失敗していた場合にワークフロー全体がfailure扱いとなり、
+          // 「成功実行」として検出されない（karuta#1668で実際に発生し、誤った
+          // staleness警告を引き起こした）。そのため、ワークフロー全体の結論では
+          // 絞り込まず、各run内のジョブを個別に見て、いずれかのジョブが成功していれば
+          // そのrunの開始時刻を候補として採用する
           async function latestSuccessTimestamps(workflowFile) {
             const { data } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: workflowFile,
-              status: "success",
               per_page: 10,
             });
-            return data.workflow_runs.map((run) => run.created_at);
+            const timestamps = [];
+            for (const run of data.workflow_runs) {
+              const { data: jobsData } = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.id,
+              });
+              if (anyJobSucceeded(jobsData.jobs)) {
+                timestamps.push(run.created_at);
+              }
+            }
+            return timestamps;
           }
 
           const trueRuns = await latestSuccessTimestamps("${{ inputs.set-true-workflow }}");
