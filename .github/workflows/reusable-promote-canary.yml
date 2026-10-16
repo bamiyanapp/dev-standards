@@ -344,11 +344,13 @@ jobs:
 
       # karuta issue #1676: canaryスタックを削除した直後に新規スタックとして
       # 作り直す際、新しいIAMロールの伝播待ちでLambda関数の作成が失敗し、
-      # スタックがCREATE_FAILED（最終的にROLLBACK_COMPLETE等）状態のまま残る
-      # ことがある。この状態でもdescribe-stacksは成功を返すため、以降は
-      # 永久にFREE=falseと判定され、キュー処理・新canaryデプロイが止まり
-      # 続ける詰まった状態になる。このような失敗状態のスタックは実質機能
-      # しておらず、自動で削除してFREEとみなしてよい
+      # スタックがCREATE_FAILED・ROLLBACK_COMPLETE・UPDATE_ROLLBACK_COMPLETE
+      # 等の状態のまま残ることがある（実機で確認した実際の値は
+      # UPDATE_ROLLBACK_COMPLETE。既存スタックへの更新デプロイが失敗し
+      # ロールバックした場合にこの状態になる）。この状態でもdescribe-stacks
+      # は成功を返すため、以降は永久にFREE=falseと判定され、キュー処理・
+      # 新canaryデプロイが止まり続ける詰まった状態になる。このような失敗
+      # 状態のスタックは実質機能しておらず、自動で削除してFREEとみなしてよい
       - name: 5. canaryが空いているか・キュー待ちの更新が無いかを確認する
         id: queue
         if: inputs.backend_deploy_command_canary != ''
@@ -359,7 +361,7 @@ jobs:
           FREE=false
           if ! STATUS=$(aws cloudformation describe-stacks --stack-name "$CANARY_STACK" --query "Stacks[0].StackStatus" --output text 2>/dev/null); then
             FREE=true
-          elif echo "$STATUS" | grep -qE "^(CREATE_FAILED|ROLLBACK_COMPLETE|ROLLBACK_FAILED|DELETE_FAILED|UPDATE_ROLLBACK_FAILED)$"; then
+          elif echo "$STATUS" | grep -qE "^(CREATE_FAILED|ROLLBACK_COMPLETE|ROLLBACK_FAILED|DELETE_FAILED|UPDATE_ROLLBACK_FAILED|UPDATE_ROLLBACK_COMPLETE)$"; then
             echo "canaryスタックが失敗状態（${STATUS}）のまま残っているため、削除してFREEとみなす"
             (cd "${{ inputs.backend_working_directory }}" && ${{ inputs.backend_remove_canary_command }})
             FREE=true
