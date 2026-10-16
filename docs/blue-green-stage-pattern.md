@@ -70,16 +70,16 @@ DynamoDBテーブル等のステートフルリソースを専用スタックへ
 
 | canaryスタック | 猶予期間 | force_stable | stableがcanaryより新しい | キュー待ち | 実際の動作 |
 |---|---|---|---|---|---|
-| 無し | - | - | - | 有り | 新しいcanaryとしてデプロイする |
+| 無し | - | - | - | 有り | canary新規デプロイ |
 | 無し | - | - | - | 無し | 何もしない |
-| 有り | 未経過 | false | false | 有り | **canaryを新しい内容で上書きする** |
-| 有り | 未経過 | false | false | 無し | 何もしない（待機） |
-| 有り | 未経過 | **true** | - | 有り | **canaryを新しい内容で上書きする** |
-| 有り | 未経過 | **true** | - | 無し | 何もしない（待機） |
-| 有り | 経過 | false | false | 有り | stableへ昇格し、canaryを削除した直後に新しいcanaryとしてデプロイする |
-| 有り | 経過 | false | false | 無し | stableへ昇格し、canaryを削除する |
-| 有り | 経過 | true | - | - | 昇格しない（ロールバック中のため対象外） |
-| 有り | - | - | **true** | - | 昇格せず、canaryを最新main HEADで強制的に最新化する |
+| 有り | 未経過 | false | false | 有り | **canary更新** |
+| 有り | 未経過 | false | false | 無し | 待機 |
+| 有り | 未経過 | **true** | - | 有り | **canary更新** |
+| 有り | 未経過 | **true** | - | 無し | 待機 |
+| 有り | 経過 | false | false | 有り | stable昇格、canary更新 |
+| 有り | 経過 | false | false | 無し | stable昇格、canary削除 |
+| 有り | 経過 | true | - | - | stable更新なし |
+| 有り | - | - | **true** | - | stable更新なし、canary更新 |
 
 上書き（表中の太字2行）が発生すると、猶予期間の起点（判定に使うLastUpdatedTime）もリセットされる。
 
