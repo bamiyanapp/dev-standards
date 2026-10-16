@@ -31,6 +31,15 @@ function evaluateStaleness(trueRunTimestamps, falseRunTimestamps, maxAgeHours, n
   };
 }
 
+// dev-standards#953: ワークフロー全体の結論ではなく、run内のいずれかのジョブが
+// 成功していればそのrunを「成功実行」として扱うための判定関数。KVSへの値設定
+// ジョブ自体が成功していても、無関係な後続ジョブ（例: 反映確認のverifyジョブ）が
+// 失敗していると、ワークフロー全体の結論はfailureになる（karuta#1668で実際に
+// 発生し、誤った放置警告を引き起こした）
+function anyJobSucceeded(jobs) {
+  return jobs.some((job) => job.conclusion === "success");
+}
+
 function latestTimestamp(isoStrings) {
   if (!isoStrings || isoStrings.length === 0) {
     return null;
@@ -52,4 +61,4 @@ function formatSummary(result, maxAgeHours) {
   return `kill switchは${result.sinceIso}からtrueだが、放置許容時間（${maxAgeHours}時間）以内（経過: ${hours}時間）。`;
 }
 
-module.exports = { evaluateStaleness, formatSummary };
+module.exports = { evaluateStaleness, formatSummary, anyJobSucceeded };

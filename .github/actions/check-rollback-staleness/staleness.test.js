@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { evaluateStaleness, formatSummary } = require("./staleness.js");
+const { evaluateStaleness, formatSummary, anyJobSucceeded } = require("./staleness.js");
 
 const NOW = "2026-10-16T12:00:00.000Z";
 
@@ -61,4 +61,29 @@ test("formatSummary explains when the flag is not currently true", () => {
   const result = evaluateStaleness([], [], 24, NOW);
   const summary = formatSummary(result, 24);
   assert.match(summary, /現在trueに設定されていない/);
+});
+
+// dev-standards#953: KVS設定ジョブ自体は成功しても、無関係な後続ジョブ
+// （例: 反映確認のverifyジョブ）が失敗していると、ワークフロー全体の
+// 結論はfailureになる。run全体の結論ではなく、ジョブ単位の成否で
+// 「成功実行」と判定できることを確認する
+test("anyJobSucceeded is true when the KVS-setting job succeeded even if another job in the same run failed", () => {
+  const jobs = [
+    { name: "resolve", conclusion: "success" },
+    { name: "clear / rollback", conclusion: "success" },
+    { name: "verify", conclusion: "failure" },
+  ];
+  assert.equal(anyJobSucceeded(jobs), true);
+});
+
+test("anyJobSucceeded is false when every job in the run failed", () => {
+  const jobs = [
+    { name: "resolve", conclusion: "failure" },
+    { name: "clear / rollback", conclusion: "cancelled" },
+  ];
+  assert.equal(anyJobSucceeded(jobs), false);
+});
+
+test("anyJobSucceeded is false for a run with no jobs", () => {
+  assert.equal(anyJobSucceeded([]), false);
 });
