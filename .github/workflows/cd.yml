@@ -48,9 +48,9 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
-      - name: Deploy to GitHub Pages
+      - name: GitHub Pagesへデプロイする
         id: deploy
         uses: ./.github/actions/deploy-github-pages
         with:

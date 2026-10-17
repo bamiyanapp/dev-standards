@@ -68,7 +68,7 @@ jobs:
           aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KVS_KEY" --value "$VALUE" >/dev/null
           echo "${KVS_KEY} を ${VALUE} に設定した"
 
-      - name: Write summary
+      - name: 概要を出力する
         if: always()
         run: |
           set -eu
