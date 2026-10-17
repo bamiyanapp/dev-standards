@@ -57,7 +57,7 @@ flowchart TD
 
 </details>
 
-![ID生成方式の選択フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/deterministic-seed-id-pattern.png?3af3c9029cd5fccf6a709d4db5002294543af254)
+![ID生成方式の選択フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/deterministic-seed-id-pattern.png?70568a992124409b5015a7696607f1fea05384db)
 
 ```js
 const DETERMINISTIC_ID_PATTERN = /^[0-9a-f]{32}$/;
