@@ -1,3 +1,10 @@
+# [2.88.0](https://github.com/bamiyanapp/dev-standards/compare/v2.87.0...v2.88.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** lighthouse-ci jobへ日本語要約を組み込む ([#989](https://github.com/bamiyanapp/dev-standards/issues/989)) ([04ea5d4](https://github.com/bamiyanapp/dev-standards/commit/04ea5d4f6bc80e4a4af5757475243e8a173041a1))
+
 # [2.87.0](https://github.com/bamiyanapp/dev-standards/compare/v2.86.0...v2.87.0) (2026-10-17)
 
 
