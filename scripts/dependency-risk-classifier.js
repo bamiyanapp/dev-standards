@@ -63,6 +63,7 @@ function classifyRisk({
   installScriptAnomalies = [],
   maintainerAnomalies = [],
   blastRadiusImpact = false,
+  deprecationInfo = [],
 }) {
   let level = "low";
   const reasons = [];
@@ -144,6 +145,16 @@ function classifyRisk({
     }
   }
 
+  // issue #945。新バージョンがnpm registry上でdeprecated（非推奨）であることは
+  // 「このPRを適用すること自体」の危険度を示すものではない（deprecatedでも
+  // 内容的には安全な更新であることが多い）ため、Risk判定のエスカレーションには
+  // 使わずreasonのみに留める（自動マージをブロックしない）。放置（維持）側の
+  // リスクはclassifyStaleRisk側のoldVersion判定で評価する
+  const deprecatedNew = deprecationInfo.filter((d) => d.newDeprecated);
+  for (const d of deprecatedNew) {
+    reasons.push(`更新後バージョンの${d.name}はnpm registry上でdeprecated（非推奨）です（自動マージはブロックしません）: ${d.newDeprecated}`);
+  }
+
   if (reasons.length === 0) {
     reasons.push("patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした");
   }
@@ -179,10 +190,11 @@ function main() {
     installScriptAnomaliesPath,
     maintainerAnomaliesPath,
     blastRadiusInfoPath,
+    deprecationInfoPath,
   ] = process.argv;
   if (!updateInfoPath) {
     console.error(
-      "Usage: node dependency-risk-classifier.js <dependency-update-info.json> [vulnerability-info.json] [exploit-info.json] [fanout-count] [install-script-anomalies.json] [maintainer-anomalies.json] [blast-radius-info.json]",
+      "Usage: node dependency-risk-classifier.js <dependency-update-info.json> [vulnerability-info.json] [exploit-info.json] [fanout-count] [install-script-anomalies.json] [maintainer-anomalies.json] [blast-radius-info.json] [deprecation-info.json]",
     );
     process.exitCode = 1;
     return;
@@ -207,6 +219,7 @@ function main() {
     fanOutCount: Number.isFinite(fanOutCount) ? fanOutCount : null,
     installScriptAnomalies: readJsonFileIfExists(installScriptAnomaliesPath) ?? [],
     maintainerAnomalies: readJsonFileIfExists(maintainerAnomaliesPath) ?? [],
+    deprecationInfo: readJsonFileIfExists(deprecationInfoPath) ?? [],
     directDependencyThreshold: policy.directDependencyThreshold,
   });
 

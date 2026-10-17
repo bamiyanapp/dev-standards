@@ -94,6 +94,32 @@ test("classifyStaleRisk: blastRadiusImpactを省略（既定false）した場合
   assert.ok(!result.reasons.some((r) => r.includes("重要パス")));
 });
 
+test("classifyStaleRisk: 現行バージョンがdeprecatedならhigh（issue #945）", () => {
+  const result = classifyStaleRisk({
+    oldVulnerabilityInfo: [],
+    oldExploitInfo: [],
+    securityDataAvailable: true,
+    deprecationInfo: [{ name: "aws-sdk", oldVersion: "2.1691.0", newVersion: "2.1692.0", oldDeprecated: "maintenance mode" }],
+  });
+  assert.equal(result.level, "high");
+  assert.ok(result.reasons.some((r) => r.includes("deprecated") && r.includes("aws-sdk")));
+});
+
+test("classifyStaleRisk: deprecationInfoにnewDeprecatedのみ（oldは非deprecated）の場合は昇格しない", () => {
+  const result = classifyStaleRisk({
+    oldVulnerabilityInfo: [],
+    oldExploitInfo: [],
+    securityDataAvailable: true,
+    deprecationInfo: [{ name: "foo", oldVersion: "1.0.0", newVersion: "2.0.0", newDeprecated: "use bar" }],
+  });
+  assert.equal(result.level, "low");
+});
+
+test("classifyStaleRisk: deprecationInfoを省略（既定[]）した場合は昇格しない（後方互換）", () => {
+  const result = classifyStaleRisk({ oldVulnerabilityInfo: [], oldExploitInfo: [], securityDataAvailable: true });
+  assert.equal(result.level, "low");
+});
+
 test("CLI: 引数無しの場合はUsageを表示して終了コード1", () => {
   assert.throws(() => {
     execFileSync("node", [path.join(__dirname, "dependency-stale-risk-classifier.js")], { stdio: "pipe" });
@@ -135,4 +161,34 @@ test("CLI: blast-radius-info.json（hasCriticalPathImpact: true）を渡すとlo
 
   const result = JSON.parse(stdout);
   assert.equal(result.level, "medium");
+});
+
+test("CLI: deprecation-info.json（oldDeprecatedあり）を渡すとhighへ昇格する", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "stale-risk-cli-test-"));
+  const oldVulnerabilityInfoPath = path.join(tmpDir, "old-vulnerability-info.json");
+  const oldExploitInfoPath = path.join(tmpDir, "old-exploit-info.json");
+  const blastRadiusInfoPath = path.join(tmpDir, "blast-radius-info.json");
+  const deprecationInfoPath = path.join(tmpDir, "deprecation-info.json");
+  fs.writeFileSync(oldVulnerabilityInfoPath, "[]");
+  fs.writeFileSync(oldExploitInfoPath, "[]");
+  fs.writeFileSync(blastRadiusInfoPath, JSON.stringify({ hasCriticalPathImpact: false, hits: [] }));
+  fs.writeFileSync(
+    deprecationInfoPath,
+    JSON.stringify([{ name: "aws-sdk", oldVersion: "2.1691.0", newVersion: "2.1692.0", oldDeprecated: "maintenance mode" }]),
+  );
+
+  const stdout = execFileSync(
+    "node",
+    [
+      path.join(__dirname, "dependency-stale-risk-classifier.js"),
+      oldVulnerabilityInfoPath,
+      oldExploitInfoPath,
+      blastRadiusInfoPath,
+      deprecationInfoPath,
+    ],
+    { encoding: "utf-8" },
+  );
+
+  const result = JSON.parse(stdout);
+  assert.equal(result.level, "high");
 });
