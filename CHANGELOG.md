@@ -1,3 +1,10 @@
+# [2.92.0](https://github.com/bamiyanapp/dev-standards/compare/v2.91.0...v2.92.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** reusable-promote-canary.ymlの残りステップ名を日本語化する ([#999](https://github.com/bamiyanapp/dev-standards/issues/999)) ([5041060](https://github.com/bamiyanapp/dev-standards/commit/50410600a1185cab4a177a12a1f89b3695a521b5))
+
 # [2.91.0](https://github.com/bamiyanapp/dev-standards/compare/v2.90.0...v2.91.0) (2026-10-17)
 
 
