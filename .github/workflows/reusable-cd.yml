@@ -71,7 +71,7 @@ jobs:
       version: ${{ steps.check-release.outputs.version }}
       release_commit_sha: ${{ steps.release-commit-sha.outputs.sha }}
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -81,7 +81,7 @@ jobs:
 
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Setup Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
@@ -89,26 +89,26 @@ jobs:
           node-version: ${{ inputs.semantic_release_node_version }}
           cache: "npm"
 
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
 
-      - name: Setup Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.semantic_release_node_version }}
           cache: "npm"
 
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         run: npm ci
 
       # semantic-releaseの`extends`はplugins配列を連結してしまい同名プラグインが
       # 重複実行されるため使用せず、release-config.cjsを参照側にコピーして
       # .releaserc.cjsから素のrequire()で読み込む構成にしている（詳細は
       # release-config.cjs冒頭のコメントを参照）。
-      - name: Copy shareable semantic-release config
+      - name: 共有可能なsemantic-release設定をコピーする
         if: inputs.enable_shared_release_config
         uses: bamiyanapp/dev-standards/.github/actions/copy-release-config@v2.78.1
 
@@ -117,11 +117,11 @@ jobs:
       # 存在せずsemantic-releaseのprepareCmdが失敗する。そのため、dev-standards
       # 本体が持つ実体ファイル（scripts/convert-changelog-to-json.js）を
       # このジョブ内で参照側リポジトリへコピーし、参照側に実体を持たせない。
-      - name: Copy changelog-to-JSON conversion script
+      - name: changelogをJSONへ変換するスクリプトをコピーする
         if: inputs.enable_changelog_json
         uses: bamiyanapp/dev-standards/.github/actions/copy-changelog-script@v2.78.1
 
-      - name: Record pre-release commit
+      - name: リリース前のコミットを記録する
         id: pre-release
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -142,7 +142,7 @@ jobs:
       # リリース自体を失敗させないようジョブ全体をcontinue-on-errorにする。このステップが
       # 丸ごと失敗しても、後続のappend-dependency-risk-history.jsは/tmpファイルの
       # 欠落を検知して「データ無し」として安全にスキップする
-      - name: Compute dependency risk info for this release (best-effort, dev-standards itself only)
+      - name: このリリースの依存Risk情報を計算する（ベストエフォート、dev-standards自身のみ）
         if: github.repository == 'bamiyanapp/dev-standards'
         continue-on-error: true
         run: |
@@ -184,7 +184,7 @@ jobs:
       # push・PR作成・APIでのマージという「PR経由」の手段でbase_branchへ反映する
       # （base_branchが保護されていないリポジトリでは直接pushがそのまま成功するため、
       # 後述のフォールバック処理は実行されず不要なPRは作られない）。
-      - name: Semantic Release (prepare; direct push to a protected base_branch is expected to fail here)
+      - name: Semantic Releaseを実行する（prepare。保護されたbase_branchへの直接pushはここで失敗することを想定している）
         id: semantic-release
         continue-on-error: true
         env:
@@ -218,7 +218,7 @@ jobs:
       # package.jsonには新バージョンが既に書き込まれているため、これを信頼できる
       # 取得元として使う（直接pushが成功した場合も内容は同一のため、どちらの
       # ケースでも正しく動作する）。
-      - name: Check if a release was prepared locally
+      - name: ローカルでリリースが準備されたか確認する
         id: check-release
         run: |
           AFTER_SHA=$(git rev-parse HEAD)
@@ -264,7 +264,7 @@ jobs:
       # 恒久的に失敗し続けるため（dev-standards#481で実際に発生）。このブランチは
       # 常に「直前に作成した使い捨てのリリース用コミット」を指すべきであり、
       # 過去の内容を保持する意味は無いためforce pushで安全に上書きする
-      - name: Push the prepared release commit to a new branch
+      - name: 準備済みのリリースコミットを新しいブランチへpushする
         if: steps.check-release.outputs.release_needs_pr == 'true'
         id: push-release-branch
         env:
@@ -277,7 +277,7 @@ jobs:
 
       # 新しいブランチからbase_branchへのPRを作成し、API経由でsquash mergeする。
       # 「PR経由の変更」としてリポジトリルールを満たしたうえでbase_branchへ反映する。
-      - name: Create and merge the release pull request
+      - name: リリースPRを作成してマージする
         if: steps.check-release.outputs.release_needs_pr == 'true'
         id: merge-release-pr
         uses: actions/github-script@v9
@@ -363,7 +363,7 @@ jobs:
       # 置き換わる（タグが指すコミットはbase_branchの祖先ではなくなる）ため、
       # タグをsquash後のコミットへ付け替える（tagはrefs/tags/以下でありrefs/heads/への
       # 変更を対象とするリポジトリルールの影響を受けない）。
-      - name: Retarget release tag to the squashed commit
+      - name: リリースタグをsquash後のコミットへ付け替える
         if: steps.check-release.outputs.release_needs_pr == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
@@ -388,7 +388,7 @@ jobs:
       # 衝突した）。`gh release create`はタグ名が既存のReleaseと重複すると
       # HTTP 422で失敗するため、まずeditを試し、対象が存在しない通常ケースでは
       # editが失敗するのでcreateにフォールバックする。
-      - name: Create GitHub Release
+      - name: GitHub Releaseを作成する
         if: steps.check-release.outputs.release_needs_pr == 'true' || steps.check-release.outputs.release_pushed_directly == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
@@ -415,7 +415,7 @@ jobs:
       # フォールバック、squash mergeコミット）・release_pushed_directly（直接push、
       # semantic-release実行直後のHEAD）のいずれの経路かに応じて求め、後続の
       # デプロイジョブがcheckout対象として使えるよう出力する
-      - name: Determine the actual release commit SHA on base_branch
+      - name: base_branch上の実際のリリースコミットSHAを特定する
         id: release-commit-sha
         run: |
           if [ "${{ steps.check-release.outputs.release_needs_pr }}" = "true" ]; then
