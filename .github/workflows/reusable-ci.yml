@@ -2565,13 +2565,24 @@ jobs:
       # scripts/lighthouse-ci-summary.jsはdev-standards自身のスクリプトのため、
       # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
       # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
-      # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと
+      # 以前はrefをハードコードしており、参照側リポジトリがreusable-ci.yml自体の
+      # バージョンを更新しても、このチェックアウトだけが古いバージョン（v2.87.0）
+      # に固定され続ける不具合があった（dev-standards#1022/#1023参照、karuta側で
+      # Lighthouseサマリーの修正が何度版を上げても反映されない実害が発生した）。
+      # `GITHUB_WORKFLOW_REF`（このreusable workflow自体が呼び出された際のref。
+      # 例: `owner/repo/.github/workflows/reusable-ci.yml@refs/tags/vX.Y.Z`）から
+      # ref部分を抜き出すことで、呼び出し側が参照しているタグと常に一致させる
+      - name: dev-standardsの自己参照refを解決する
+        if: always()
+        id: resolve_self_ref
+        run: echo "ref=${GITHUB_WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
+
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.87.0
+          ref: ${{ steps.resolve_self_ref.outputs.ref }}
           path: .dev-standards-actions
 
       - name: Lighthouse CIの結果から概要を組み立てる
