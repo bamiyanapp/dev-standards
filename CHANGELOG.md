@@ -1,3 +1,10 @@
+# [2.84.0](https://github.com/bamiyanapp/dev-standards/compare/v2.83.0...v2.84.0) (2026-10-17)
+
+
+### Features
+
+* **risk:** 更新PRの有無に関わらず依存のdeprecated状態を定期スキャンする ([#972](https://github.com/bamiyanapp/dev-standards/issues/972)) ([61e3a53](https://github.com/bamiyanapp/dev-standards/commit/61e3a53a081c2410afd707229a9b893a04ef1e17))
+
 # [2.83.0](https://github.com/bamiyanapp/dev-standards/compare/v2.82.4...v2.83.0) (2026-10-17)
 
 
