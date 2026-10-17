@@ -55,7 +55,7 @@ jobs:
   # base_branchへの実際のpushイベント上で実行すれば、GITHUB_REFは素直に
   # refs/heads/<base_branch>になり、上記の問題が起きない。
   release:
-    name: Release
+    name: "リリース"
     if: inputs.enable_release
     runs-on: ubuntu-latest
     permissions:

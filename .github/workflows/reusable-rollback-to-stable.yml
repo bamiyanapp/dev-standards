@@ -52,6 +52,7 @@ permissions:
 
 jobs:
   rollback:
+    name: "stableへロールバック"
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
