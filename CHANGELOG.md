@@ -1,3 +1,10 @@
+# [2.85.0](https://github.com/bamiyanapp/dev-standards/compare/v2.84.0...v2.85.0) (2026-10-17)
+
+
+### Features
+
+* **risk:** dependency-risk-summary jobへdeprecated検知を組み込む ([#975](https://github.com/bamiyanapp/dev-standards/issues/975)) ([d7824ac](https://github.com/bamiyanapp/dev-standards/commit/d7824ac5bcf4edd3db484fece6ed30fdeee8bef6))
+
 # [2.84.0](https://github.com/bamiyanapp/dev-standards/compare/v2.83.0...v2.84.0) (2026-10-17)
 
 
