@@ -90,6 +90,11 @@
     "fileName": "async-job-polling-pattern.png"
   },
   {
+    "sourceFile": "docs/blue-green-stage-pattern.md",
+    "index": 1,
+    "fileName": "blue-green-stage-pattern.png"
+  },
+  {
     "sourceFile": ".claude/skills/git-workflow/SKILL.md",
     "index": 1,
     "fileName": "SKILL.png"
