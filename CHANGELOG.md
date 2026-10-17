@@ -1,3 +1,10 @@
+# [2.86.0](https://github.com/bamiyanapp/dev-standards/compare/v2.85.1...v2.86.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** Lighthouse CI結果を日本語で要約するパーサーを追加する ([#983](https://github.com/bamiyanapp/dev-standards/issues/983)) ([6face46](https://github.com/bamiyanapp/dev-standards/commit/6face46b7d58958bdf177df177e4469b9d59fed5))
+
 ## [2.85.1](https://github.com/bamiyanapp/dev-standards/compare/v2.85.0...v2.85.1) (2026-10-17)
 
 
