@@ -1,3 +1,11 @@
+# [2.91.0](https://github.com/bamiyanapp/dev-standards/compare/v2.90.0...v2.91.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** reusable-cd.ymlのステップ名を日本語化する ([#997](https://github.com/bamiyanapp/dev-standards/issues/997)) ([22b9461](https://github.com/bamiyanapp/dev-standards/commit/22b94619f35849d095075b53d42da32d5849d7a0))
+* **ci:** reusable-dependency-deprecation-scan.ymlのステップ名を日本語化する ([#996](https://github.com/bamiyanapp/dev-standards/issues/996)) ([d33b6b7](https://github.com/bamiyanapp/dev-standards/commit/d33b6b769e8ce9ab76a4fb0d72687377c7d4223d))
+
 # [2.90.0](https://github.com/bamiyanapp/dev-standards/compare/v2.89.0...v2.90.0) (2026-10-17)
 
 
