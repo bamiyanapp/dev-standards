@@ -160,17 +160,17 @@ jobs:
       stable_ahead_of_canary: ${{ steps.check.outputs.stable_ahead_of_canary }}
       queue_processed: ${{ steps.queue.outputs.process }}
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
 
-      - name: Setup Node.js
+      - name: Node.jsをセットアップする
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || inputs.backend_working_directory }}
         run: npm ci
 
@@ -460,7 +460,7 @@ jobs:
           git tag -f "$TAG" HEAD
           git push origin "refs/tags/${TAG}" --force
 
-      - name: Write summary
+      - name: 概要を出力する
         if: always()
         run: |
           set -eu
