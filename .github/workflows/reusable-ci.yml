@@ -1008,13 +1008,13 @@ jobs:
       # submoduleも取得する（frontend-test/backend-testジョブと同じ理由。
       # examination#169: 未取得のまま`npm test`/buildするとsymlinkの参照先が
       # 存在せず"Failed to resolve import"等で失敗する）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
@@ -1022,31 +1022,31 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
         run: npm ci
-      - name: Install Playwright Browsers
+      - name: Playwrightブラウザをインストールする
         working-directory: ${{ inputs.frontend_dir }}
         run: npx playwright install chromium --with-deps
-      - name: Build
+      - name: ビルドする
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run build
       # 参照側リポジトリ固有のsecrets（ログイン等の対話的な同意画面を伴うE2Eで、事前に
       # 取得した実アクセストークン等をテストへ渡す用途を想定）を$GITHUB_ENVへ展開する
       # （issue #371）。JSON全体を1つのsecretとして登録するだけでは個々の値がログの
       # マスク対象にならないため、値ごとに::add-mask::で個別に登録してから書き出す
-      - name: Load E2E secrets
+      - name: E2E用シークレットを読み込む
         if: env.E2E_SECRETS_JSON != ''
         env:
           E2E_SECRETS_JSON: ${{ secrets.E2E_SECRETS_JSON }}
@@ -1060,7 +1060,7 @@ jobs:
               fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
             }
           '
-      - name: Run E2E tests
+      - name: E2Eテストを実行する
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run test:e2e
       # E2EテストのJSカバレッジ算出結果をログ・Job Summaryへ出力する（issue #541）。
@@ -1076,14 +1076,14 @@ jobs:
       # 顕在化した不具合の発生源そのもの（if: always()で必ず実行されるため、
       # coverage_thresholdが0のfrontend-test/backend-testでは潜在化していた同じ
       # 不具合が最初に表面化した）
-      - name: Checkout dev-standards (for the local composite action)
+      - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: v2.6.1
           path: .dev-standards-actions
-      - name: Show E2E coverage
+      - name: E2Eカバレッジを表示する
         if: always()
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
@@ -1112,7 +1112,7 @@ jobs:
       # frontend/e2e/screenshot.jsのcaptureScreenshot()がこのディレクトリへ
       # PNGを書き出す（テストが1件もスクリーンショットを撮っていない場合は
       # ディレクトリ自体が存在しないため、以降のステップはスキップされる）
-      - name: Check for E2E screenshots
+      - name: E2Eスクリーンショットの有無を確認する
         id: screenshots
         if: always()
         working-directory: ${{ inputs.frontend_dir }}
@@ -1125,7 +1125,7 @@ jobs:
       # 補助的な機能であり、このステップの失敗（ブランチ保護やトークン権限の問題等）が
       # 実際のE2Eテスト結果（成功/失敗）の判定を上書きしてはならないため
       # continue-on-error: trueにする
-      - name: Publish E2E screenshots to a dedicated branch
+      - name: E2Eスクリーンショットを専用ブランチへ公開する
         id: publish-screenshots
         if: always() && steps.screenshots.outputs.found == 'true'
         continue-on-error: true
@@ -1145,7 +1145,7 @@ jobs:
       # 変わったスクリーンショットだけをPRへ添付できるようにする。keep_files: trueだが
       # 同名ファイルはpublish_dirの内容で上書きされるため、"latest"は常に直近のmain時点の
       # 内容になる（名前が変わった・削除されたテストの古いファイルが残り続ける点は許容する）
-      - name: Publish E2E screenshots as the latest baseline
+      - name: E2Eスクリーンショットを最新ベースラインとして公開する
         if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'push'
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v4
@@ -1159,7 +1159,7 @@ jobs:
       # チェックアウトする。e2e-screenshotsブランチ自体がまだ存在しない（初回実行等）
       # 場合はこのステップ自体が失敗するが、continue-on-errorにより後続はベースライン
       # 無し（全件"new"扱い＝従来どおり全件表示）にフォールバックする
-      - name: Checkout previous E2E screenshot baseline
+      - name: 直前のE2Eスクリーンショットベースラインをチェックアウトする
         id: baseline-checkout
         if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'pull_request'
         continue-on-error: true
@@ -1178,7 +1178,7 @@ jobs:
       # 「Show E2E coverage」で既にdev-standards自身を.dev-standards-actionsへ
       # チェックアウト済み（このジョブ内、if: always()）のため、ここでは再度
       # チェックアウトしない
-      - name: Compare E2E screenshots against the previous baseline
+      - name: E2Eスクリーンショットを直前のベースラインと比較する
         id: compare-screenshots
         if: >-
           always() && steps.screenshots.outputs.found == 'true' &&
@@ -1196,7 +1196,7 @@ jobs:
       # 突き合わせて関連の有無を判定する。pull_request以外のイベントでは
       # 変更ファイル一覧を取得できないため、後段は常にフォールバック（全展開）
       # 動作になる
-      - name: Determine PR changed files
+      - name: PRの変更ファイルを特定する
         id: changed-files
         if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'pull_request'
         continue-on-error: true
@@ -1215,7 +1215,7 @@ jobs:
               path.join('${{ inputs.frontend_dir }}', 'changed-files.json'),
               JSON.stringify(files.map((f) => f.filename))
             );
-      - name: Build E2E screenshots summary
+      - name: E2Eスクリーンショットの概要を組み立てる
         id: screenshots-summary
         if: always() && steps.publish-screenshots.outcome == 'success'
         continue-on-error: true
@@ -1324,7 +1324,7 @@ jobs:
 
             fs.writeFileSync(path.join(frontendDir, 'screenshots-summary.md'), body, 'utf-8');
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body);
-      - name: Comment E2E screenshots on the pull request
+      - name: E2Eスクリーンショットをプルリクエストへコメントする
         if: always() && steps.screenshots-summary.outcome == 'success' && github.event_name == 'pull_request'
         continue-on-error: true
         uses: actions/github-script@v9
@@ -2389,19 +2389,19 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.enable_standards_check }}
 
-      - name: Use Node.js
+      - name: Node.jsをセットアップする
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
 
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
         continue-on-error: true
         run: npm ci
@@ -2411,7 +2411,7 @@ jobs:
       # 参照側リポジトリのpackage.jsonのsize-limit設定が自己完結している前提とし、
       # 明示的なbuildステップは設けない（README参照: size-limitは`.size-limit.json`の
       # 各エントリに`"path"`としてビルド後の成果物を直接指定する運用を想定する）
-      - name: Run size-limit
+      - name: size-limitを実行する
         id: size-limit
         working-directory: ${{ inputs.frontend_dir }}
         continue-on-error: true
@@ -2420,7 +2420,7 @@ jobs:
           npx size-limit --json > /tmp/size-limit-result.json 2>/tmp/size-limit-stderr.log || echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           cat /tmp/size-limit-stderr.log >&2 || true
 
-      - name: Build summary from size-limit result
+      - name: size-limitの結果から概要を組み立てる
         id: summary
         if: always()
         run: |
@@ -2456,7 +2456,7 @@ jobs:
       # package-lock.json変更が無い等、無関係なPRへ毎回コメントが付く煩わしさを避けるため、
       # frontendの変更が無いPRでは本jobのif条件（detect-changes.outputs.frontend）で
       # そもそもスキップされる。実行された場合は常に結果をコメントする
-      - name: Comment result on the pull request
+      - name: 結果をプルリクエストへコメントする
         if: always()
         continue-on-error: true
         uses: actions/github-script@v9
@@ -2490,19 +2490,19 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.enable_standards_check }}
 
-      - name: Use Node.js
+      - name: Node.jsをセットアップする
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
 
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
         continue-on-error: true
         run: npm ci
@@ -2511,7 +2511,7 @@ jobs:
       # 計測対象サーバー自体を起動する運用を想定するため、本jobでは明示的な
       # buildステップは設けない（README参照: 通常は`npm run build && npm run preview`
       # 等をstartServerCommandに指定する）
-      - name: Run Lighthouse CI
+      - name: Lighthouse CIを実行する
         id: lhci
         working-directory: ${{ inputs.frontend_dir }}
         continue-on-error: true
@@ -2524,7 +2524,7 @@ jobs:
       # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
       # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
       # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと
-      - name: Checkout dev-standards (for the local script)
+      - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always()
         uses: actions/checkout@v7
         with:
@@ -2532,7 +2532,7 @@ jobs:
           ref: v2.87.0
           path: .dev-standards-actions
 
-      - name: Build summary from Lighthouse CI result
+      - name: Lighthouse CIの結果から概要を組み立てる
         id: summary
         if: always()
         run: |
@@ -2564,7 +2564,7 @@ jobs:
 
       # frontendの変更が無いPRでは本jobのif条件（detect-changes.outputs.frontend）で
       # そもそもスキップされる。実行された場合は常に結果をコメントする
-      - name: Comment result on the pull request
+      - name: 結果をプルリクエストへコメントする
         if: always()
         continue-on-error: true
         uses: actions/github-script@v9
