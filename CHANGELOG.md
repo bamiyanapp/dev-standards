@@ -1,3 +1,10 @@
+## [2.85.1](https://github.com/bamiyanapp/dev-standards/compare/v2.85.0...v2.85.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** reusable-dependency-deprecation-scan.ymlの自己参照refを修正する ([#978](https://github.com/bamiyanapp/dev-standards/issues/978)) ([0d0160b](https://github.com/bamiyanapp/dev-standards/commit/0d0160b9c08a54cd4e2a3df4e70ed9f3b07f821a))
+
 # [2.85.0](https://github.com/bamiyanapp/dev-standards/compare/v2.84.0...v2.85.0) (2026-10-17)
 
 
