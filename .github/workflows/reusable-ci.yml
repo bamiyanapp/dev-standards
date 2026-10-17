@@ -2565,24 +2565,30 @@ jobs:
       # scripts/lighthouse-ci-summary.jsはdev-standards自身のスクリプトのため、
       # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
       # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
-      # 以前はrefをハードコードしており、参照側リポジトリがreusable-ci.yml自体の
-      # バージョンを更新しても、このチェックアウトだけが古いバージョン（v2.87.0）
-      # に固定され続ける不具合があった（dev-standards#1022/#1023参照、karuta側で
+      # 以前はrefをv2.87.0にハードコードしており、参照側リポジトリがreusable-ci.yml
+      # 自体のバージョンを更新しても、このチェックアウトだけが古いバージョンに
+      # 固定され続ける不具合があった（dev-standards#1022/#1023参照、karuta側で
       # Lighthouseサマリーの修正が何度版を上げても反映されない実害が発生した）。
-      # `GITHUB_WORKFLOW_REF`（このreusable workflow自体が呼び出された際のref。
-      # 例: `owner/repo/.github/workflows/reusable-ci.yml@refs/tags/vX.Y.Z`）から
-      # ref部分を抜き出すことで、呼び出し側が参照しているタグと常に一致させる
-      - name: dev-standardsの自己参照refを解決する
-        if: always()
-        id: resolve_self_ref
-        run: echo "ref=${GITHUB_WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
-
+      #
+      # `GITHUB_WORKFLOW_REF`から動的に解決する方式を一度試したが（dev-standards#1029/
+      # PR #1031）、この変数は実行中の「ルート（呼び出し元）ワークフロー」のrefを指し、
+      # pull_requestイベントでは`refs/pull/<PR番号>/merge`になる。ネストされた
+      # reusable workflow自体が呼び出し側からどのタグで参照されたかを示す値では
+      # ないため、karuta側のPRマージrefをdev-standardsリポジトリに対して
+      # チェックアウトしようとして失敗した（dev-standards#1033）。GitHub Actionsには
+      # reusable workflowが自分自身の呼び出しrefを取得する標準的な組み込み
+      # コンテキスト変数が存在しないため、この方式は採用できない。
+      #
+      # そのため、hardcode方式へ戻す。このrefを更新する際は、scripts/
+      # lighthouse-ci-summary.jsを変更した同じPRで必ず更新すること。
+      # スクリプトの入出力仕様を変更していなくても、定期的に最新タグへ追従させる
+      # ことが望ましい（dev-standards#1030で横展開・改善案を検討中）
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: ${{ steps.resolve_self_ref.outputs.ref }}
+          ref: v2.97.4
           path: .dev-standards-actions
 
       - name: Lighthouse CIの結果から概要を組み立てる
