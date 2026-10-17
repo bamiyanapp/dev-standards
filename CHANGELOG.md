@@ -1,3 +1,10 @@
+# [2.98.0](https://github.com/bamiyanapp/dev-standards/compare/v2.97.7...v2.98.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** Lighthouse CIサマリーへカテゴリ別スコアを追加する ([#1048](https://github.com/bamiyanapp/dev-standards/issues/1048)) ([70568a9](https://github.com/bamiyanapp/dev-standards/commit/70568a992124409b5015a7696607f1fea05384db))
+
 ## [2.97.7](https://github.com/bamiyanapp/dev-standards/compare/v2.97.6...v2.97.7) (2026-10-17)
 
 
