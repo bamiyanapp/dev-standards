@@ -59,7 +59,7 @@ sequenceDiagram
 
 </details>
 
-![2スタック循環依存解消のデプロイ手順 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-static-site-pattern-1.png?075e2e8824364c37cdb85dad3885761cbb0ec16b)
+![2スタック循環依存解消のデプロイ手順 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-static-site-pattern-1.png?ea0997e1a1d9290d30177b9efe9b4acc5082cc27)
 
 ## 認証フロー（Lambda@Edge、`viewer-request`イベント）
 
@@ -103,7 +103,7 @@ sequenceDiagram
 
 </details>
 
-![認証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-static-site-pattern-2.png?075e2e8824364c37cdb85dad3885761cbb0ec16b)
+![認証フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-static-site-pattern-2.png?ea0997e1a1d9290d30177b9efe9b4acc5082cc27)
 
 このフローに付随する個別の設計判断は、それぞれ独立したドキュメントに切り出してある。新規に実装する場合は必ず参照すること。
 
