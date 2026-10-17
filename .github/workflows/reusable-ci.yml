@@ -1359,7 +1359,7 @@ jobs:
     env:
       HAS_BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' }}
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
@@ -1381,17 +1381,17 @@ jobs:
           # pushステップでのみ個別に使う
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
@@ -1402,12 +1402,12 @@ jobs:
       # 人間の判断が必要なもの）はreport-onlyのまま残す設計になっている
       # （issue #591で安全性が確立済み）。そのためこのステップを常に実行しても、
       # 意図しない上書きは起きない
-      - name: Bootstrap dev-standards symlinks (auto-fix safely-resolvable drift)
+      - name: dev-standardsのsymlinkをbootstrapする（安全に解決できるドリフトを自動修復）
         run: node dev-standards/scripts/bootstrap.js || true
       # git diff --quietは追跡対象ファイルの変更しか検知せず、bootstrap.jsが
       # 新規作成するsymlink等の未追跡ファイルを見逃すため、git status --porcelain
       # で未追跡・変更の両方を検知する
-      - name: Check whether the bootstrap step modified any files
+      - name: bootstrapステップがファイルを変更したか確認する
         id: drift
         run: |
           if [ -z "$(git status --porcelain)" ]; then
@@ -1417,7 +1417,7 @@ jobs:
           fi
       # 自動修復されたファイルが無い場合は、従来通り--checkで合否を判定する
       # （安全に直せないdrift・BLOCKEDが残っていれば、ここで失敗する）
-      - name: Check dev-standards symlinks / .gitignore drift (no auto-fixable drift found)
+      - name: dev-standardsのsymlink・.gitignoreドリフトを確認する（自動修復可能なドリフトは無し）
         if: steps.drift.outputs.changed == 'false'
         run: node dev-standards/scripts/bootstrap.js --check
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
@@ -1426,7 +1426,7 @@ jobs:
       # いても値自体が無効（期限切れ等）な場合はpush自体が失敗しうるため、
       # continue-on-errorでjob全体を止めず、結果を後段の失敗メッセージへ反映する
       # （issue #610）
-      - name: Push auto-fixed files back to the PR branch
+      - name: 自動修復されたファイルをPRブランチへpushする
         if: steps.drift.outputs.changed == 'true' && github.event_name == 'pull_request' && env.HAS_BOT_TOKEN == 'true'
         id: push
         continue-on-error: true
@@ -1446,7 +1446,7 @@ jobs:
       # 検証をやり直す。同一実行内の他jobの結果（古いコミットに対する検証結果）を
       # 使ってmerge jobが誤ってマージしてしまう競合状態を避けるため、この実行では
       # 常に失敗させる
-      - name: Fail this run so a fresh CI run re-validates the auto-fixed commit
+      - name: 自動修復コミットを新しいCI実行で再検証させるため、この実行を失敗させる
         if: steps.drift.outputs.changed == 'true'
         run: |
           if [ "${{ steps.push.outcome }}" = "failure" ]; then
@@ -1473,23 +1473,23 @@ jobs:
       # リポジトリのproduct codeがshared/と重複（symlink化し忘れ）していないかを
       # 検知できるようにする（issue #621）。duplication-check単体ではdev-standards
       # 自身（submoduleが存在しない）でも安全に動作し、何もスキップしない
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
@@ -1500,7 +1500,7 @@ jobs:
       # 除外しないと「意図したsymlink/copyの組」自体が重複として誤検知されてしまう。
       # dev-standardsをsubmoduleとして持たないリポジトリ（dev-standards自身）では
       # 空文字列になり、以降の除外リストに何も追加しない
-      - name: Compute dev-standards sync-manifest excludes
+      - name: dev-standardsのsync-manifest除外対象を計算する
         id: sync-manifest-excludes
         run: |
           IGNORE_LIST=$(node dev-standards/scripts/sync-manifest-targets.js 2>/dev/null || true)
@@ -1515,7 +1515,7 @@ jobs:
       # プロダクトコードのみを判定対象にする（bamiyanapp/karuta#833。テストコードの
       # 重複はセットアップ・アサーションの意図的な繰り返しであることが多く、
       # プロダクトコードの重複とは性質・対応の要否が異なるため）
-      - name: Run jscpd (duplication check)
+      - name: jscpdを実行する（コード重複チェック）
         run: |
           IGNORE="**/*.test.js,**/*.test.jsx,**/*.test.ts,**/*.test.tsx,**/*.spec.js,**/*.spec.jsx,**/*.spec.ts,**/*.spec.tsx,**/e2e/**"
           SYNC_MANIFEST_IGNORE="${{ steps.sync-manifest-excludes.outputs.ignore }}"
@@ -1528,7 +1528,7 @@ jobs:
             -r markdown,console \
             -o ./jscpd-report \
             ${{ inputs.duplication_threshold > 0 && format('-t {0}', inputs.duplication_threshold) || '' }}
-      - name: Show duplication report in Job Summary
+      - name: 重複レポートをJob Summaryへ表示する
         if: always()
         run: |
           if [ -f ./jscpd-report/jscpd-report.md ]; then
@@ -1558,28 +1558,28 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Run jscpd (doc duplication check)
+      - name: jscpdを実行する（ドキュメント重複チェック）
         run: |
           mapfile -t patterns < <(printf '%s' "${{ inputs.doc_duplication_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
           if [ ${#patterns[@]} -eq 0 ]; then
@@ -1608,7 +1608,7 @@ jobs:
           npx --yes jscpd@5 "${targets[@]}" \
             -o ./jscpd-doc-report \
             ${{ inputs.doc_duplication_threshold > 0 && format('-t {0}', inputs.doc_duplication_threshold) || '' }}
-      - name: Show doc duplication report in Job Summary
+      - name: ドキュメント重複レポートをJob Summaryへ表示する
         if: always()
         run: |
           if [ -f ./jscpd-doc-report/jscpd-report.md ]; then
@@ -2154,7 +2154,7 @@ jobs:
     env:
       HAS_BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' }}
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
 
       # 無関係なPRで毎回Chromiumのセットアップ・レンダリングを行う無駄、および無関係な
@@ -2162,7 +2162,7 @@ jobs:
       # mermaid_doc_pathsで指定したファイルが実際に変更されたかを判定する。判定できない
       # 場合（push イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを
       # 避けるため常に実行する側にフォールバックする
-      - name: Determine whether target docs changed
+      - name: 対象ドキュメントが変更されたか判定する
         id: gate
         uses: actions/github-script@v9
         with:
@@ -2187,7 +2187,7 @@ jobs:
               core.setOutput('should_run', 'true');
             }
 
-      - name: Use Node.js
+      - name: Node.jsをセットアップする
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/setup-node@v7
         with:
@@ -2197,7 +2197,7 @@ jobs:
       # v2.11.2で、render-mermaid-diagramsに解像度向上・余白追加（文字の潰れ・
       # GitHubモバイルアプリでの見切れ対策）を追加した（dev-standards#388）ため、
       # その修正を含むタグへ更新した
-      - name: Checkout dev-standards (for the local composite action)
+      - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
@@ -2205,14 +2205,14 @@ jobs:
           ref: v2.11.2
           path: .dev-standards-actions
 
-      - name: Render mermaid diagrams
+      - name: mermaid図をレンダリングする
         if: steps.gate.outputs.should_run == 'true'
         uses: ./.dev-standards-actions/.github/actions/render-mermaid-diagrams
         with:
           markdown-paths: ${{ inputs.mermaid_doc_paths }}
           output-dir: mermaid-diagrams
 
-      - name: Check for rendered diagrams
+      - name: レンダリング結果の有無を確認する
         id: diagrams
         if: steps.gate.outputs.should_run == 'true'
         run: |
@@ -2224,7 +2224,7 @@ jobs:
 
       # 補助的な機能であり、このステップの失敗（ブランチ保護やトークン権限の問題等）が
       # このジョブ自体の成否判定を上書きしてはならないためcontinue-on-error: trueにする
-      - name: Publish rendered diagrams to a dedicated branch
+      - name: レンダリング結果を専用ブランチへ公開する
         id: publish-diagrams
         if: steps.diagrams.outputs.found == 'true'
         continue-on-error: true
@@ -2242,7 +2242,7 @@ jobs:
       # 直後）から常に最新の画像として参照できる安定URLにする（issue
       # bamiyanapp/karuta#824のフィードバックで判明: PRコメントだけでは
       # 「ドキュメント本体に組み込まれていない」ため実質見に行けない）
-      - name: Publish rendered diagrams as the latest baseline
+      - name: レンダリング結果を最新版として公開する
         id: publish-latest
         if: steps.diagrams.outputs.found == 'true' && github.event_name == 'push'
         continue-on-error: true
@@ -2261,7 +2261,7 @@ jobs:
       # （issue #723、ユーザーが実機で確認）。再レンダリングのたびにimageリンクへ
       # キャッシュバスティング用のクエリ文字列（コミットSHA）を付与し直すことで、
       # camo側に新しいURL＝新しいキャッシュエントリとして認識させる
-      - name: Cache-bust latest diagram links in the referencing docs
+      - name: ドキュメント内の最新図リンクをキャッシュバスティングする
         id: cache-bust
         if: steps.publish-latest.outcome == 'success' && env.HAS_BOT_TOKEN == 'true'
         continue-on-error: true
@@ -2311,7 +2311,7 @@ jobs:
       # （description内githubコンテキスト参照バグ修正、v2.77.1でリリース）の
       # 際にこの更新を一度見落とし、dev-standards自身のrender-mermaid-diagrams
       # ジョブが連続して失敗する事態になった
-      - name: Checkout dev-standards (for commit-via-pr)
+      - name: dev-standardsをチェックアウトする（commit-via-pr用）
         if: steps.cache-bust.outputs.changed == 'true'
         uses: actions/checkout@v7
         with:
@@ -2319,7 +2319,7 @@ jobs:
           ref: v2.77.1
           path: .dev-standards-actions-commit-via-pr
 
-      - name: Commit cache-busted doc links via commit-via-pr
+      - name: キャッシュバスティング済みリンクをcommit-via-pr経由でコミットする
         id: commit-via-pr
         if: steps.cache-bust.outputs.changed == 'true'
         uses: ./.dev-standards-actions-commit-via-pr/.github/actions/commit-via-pr
@@ -2331,7 +2331,7 @@ jobs:
           push-token: ${{ secrets.BOT_TOKEN }}
           github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Build mermaid diagrams summary
+      - name: mermaid図の概要を作成する
         id: diagrams-summary
         if: steps.publish-diagrams.outcome == 'success'
         continue-on-error: true
@@ -2351,7 +2351,7 @@ jobs:
             fs.writeFileSync('mermaid-diagrams-summary.md', body, 'utf-8');
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body);
 
-      - name: Comment rendered diagrams on the pull request
+      - name: レンダリング結果をPRへコメントする
         if: >-
           steps.diagrams-summary.outcome == 'success' && github.event_name == 'pull_request'
         continue-on-error: true
