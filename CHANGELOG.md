@@ -1,3 +1,10 @@
+## [2.97.4](https://github.com/bamiyanapp/dev-standards/compare/v2.97.3...v2.97.4) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** Lighthouseサマリー用dev-standards自己チェックアウトのref固定を解消する ([#1031](https://github.com/bamiyanapp/dev-standards/issues/1031)) ([075e2e8](https://github.com/bamiyanapp/dev-standards/commit/075e2e8824364c37cdb85dad3885761cbb0ec16b)), closes [dev-standards#1017](https://github.com/dev-standards/issues/1017) [#1029](https://github.com/bamiyanapp/dev-standards/issues/1029)
+
 ## [2.97.3](https://github.com/bamiyanapp/dev-standards/compare/v2.97.2...v2.97.3) (2026-10-17)
 
 
