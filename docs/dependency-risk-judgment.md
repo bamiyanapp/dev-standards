@@ -33,7 +33,7 @@ flowchart TD
 
 </details>
 
-![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment.png?320dd146fda1a9894977387689c88da2c02b6367)
+![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-1.png)
 
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
@@ -87,9 +87,19 @@ SBOMはRisk判定そのものには使わない。**「何が入っているか�
 
 依存関係を記録しておくことで、将来新たなCVEが公表された際に影響範囲を逆引きできる。
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart LR
+    App[Application] --> A[library A] --> B[library B] --> C[library C]
 ```
-Application → library A → library B → library C
-```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+
+</details>
+
+![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-2.png)
 
 上記の依存関係が分かっていれば、`library C`に新規CVEが公表された場合、`library B`・`library A`経由で`Application`まで影響が及ぶことを即座に追跡できる。
 
@@ -97,11 +107,22 @@ Application → library A → library B → library C
 
 install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力され、検知された場合は無条件でHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart LR
+    I1["install script検知: NEW"] --> R["classifyRisk()"]
+    I2["メンテナ変更検知: CHANGED"] --> R
+    R --> O["適用リスク（Low/Medium/High）"]
+    I3["SBOM生成: 実施済み"] -.->|Risk判定へは渡らない、証跡として別表示のみ| S[証跡表示のみ]
 ```
-install script検知: NEW      ─┐
-メンテナ変更検知:   CHANGED  ─┼─→ classifyRisk() → 適用リスク（Low/Medium/High）
-SBOM生成:           実施済み ─┘   （SBOMはRisk判定へは渡らない。証跡として別表示のみ）
-```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+
+</details>
+
+![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-3.png)
 
 ## deprecated（サポート終了）検知（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）
 
