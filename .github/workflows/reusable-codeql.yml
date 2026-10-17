@@ -26,7 +26,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze (${{ matrix.language }})
+    name: "CodeQL解析 (${{ matrix.language }})"
     runs-on: ubuntu-latest
     permissions:
       # 解析結果（SARIF）をGitHubのSecurityタブへアップロードするために必要

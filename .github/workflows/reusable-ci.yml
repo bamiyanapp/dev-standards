@@ -466,6 +466,7 @@ jobs:
   # infra_failureか否かの分類自体を誤りにくくすることが目的で、根本的な対策
   # （CI完了前のマージを防ぐ）は各リポジトリのブランチ保護設定側の責務とする。
   commitlint:
+    name: "コミットメッセージ検証"
     runs-on: ubuntu-latest
     outputs:
       infra_failure: ${{ steps.result.outputs.infra_failure }}
@@ -573,6 +574,7 @@ jobs:
   # このジョブ自体を実行しない（後続ジョブ側の`inputs.packages != ''`分岐で
   # 「常に全ジョブ実行」にフォールバックする）。
   detect-changes:
+    name: "変更検出"
     if: inputs.enable_path_filtering && inputs.packages == ''
     runs-on: ubuntu-latest
     outputs:
@@ -599,6 +601,7 @@ jobs:
               - '.github/workflows/**'
 
   frontend-test:
+    name: "フロントエンドテスト"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -723,6 +726,7 @@ jobs:
         run: npm run build
 
   backend-test:
+    name: "バックエンドテスト"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -893,6 +897,7 @@ jobs:
           check-per-file: ${{ inputs.coverage_check_per_file }}
 
   package-test:
+    name: "パッケージテスト"
     needs: commitlint
     # packages: '[]'（空配列）はinputs.packages != ''を満たしてしまい、matrix展開が
     # 0件のままif:trueでジョブが「実行されるべきだったが1つも実行されなかった」状態になる。
@@ -984,6 +989,7 @@ jobs:
         run: npm run build
 
   frontend-e2e-test:
+    name: "フロントエンドE2Eテスト"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -1338,6 +1344,7 @@ jobs:
             });
 
   standards-check:
+    name: "標準化チェック"
     needs: commitlint
     if: |
       always() &&
@@ -1452,6 +1459,7 @@ jobs:
           exit 1
 
   duplication-check:
+    name: "コード重複チェック"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -1541,6 +1549,7 @@ jobs:
   # 複数の完全なコード例を並べているドキュメントがある場合はその分の重複が閾値に
   # 乗る点に注意（doc_duplication_thresholdで許容する）。
   doc-duplication-check:
+    name: "ドキュメント重複チェック"
     needs: commitlint
     if: |
       always() &&
@@ -1617,6 +1626,7 @@ jobs:
   # 構造が似る（checkout→setup-node→実処理）ことによる自己重複がノイズになる
   # だけのため（実機検証で確認）
   workflow-duplication-check:
+    name: "ワークフロー重複チェック"
     needs: commitlint
     if: |
       always() &&
@@ -1672,6 +1682,7 @@ jobs:
   # （dependency-cruiser.config.cjs）はdev-standardsからsymlinkで配布するため、
   # 参照側リポジトリはこのジョブの有効化のみでよい
   architecture-check:
+    name: "アーキテクチャチェック"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -1727,6 +1738,7 @@ jobs:
   # 追加する必要はない（npx経由でこのjob内に閉じて取得する。stylelintのような
   # 参照側リポジトリ個別のnpm scripts追加が不要な、より共通化された導入方式）
   text-lint:
+    name: "文章チェック"
     needs: commitlint
     if: |
       always() &&
@@ -1777,6 +1789,7 @@ jobs:
   # （http/https）は一時的な障害でCIが不安定になることを避けるため検証対象から
   # 除外し、相対パスのドキュメント内リンクの検証に限定する。
   dead-link-check:
+    name: "リンク切れチェック"
     needs: commitlint
     if: |
       always() &&
@@ -1847,6 +1860,7 @@ jobs:
   # スクリプト本体はnpmパッケージとして配布せず、このjob内にインライン展開する
   # （text-lint・dead-link-check等と同様、参照側リポジトリ側の追加設定は不要）
   doc-reachability-check:
+    name: "ドキュメント到達性チェック"
     needs: commitlint
     if: |
       always() &&
@@ -2085,6 +2099,7 @@ jobs:
           node /tmp/check-doc-reachability.js
 
   secret-scan:
+    name: "シークレットスキャン"
     needs: commitlint
     if: |
       always() &&
@@ -2116,6 +2131,7 @@ jobs:
   # （スマートフォンのブラウザからも閲覧可能）。Markdown側のmermaidソース自体は
   # このジョブでは一切書き換えない
   render-mermaid-diagrams:
+    name: "mermaid図レンダリング"
     needs: commitlint
     if: |
       always() &&
@@ -2360,6 +2376,7 @@ jobs:
   # 各ステップはcontinue-on-error: trueとし、このジョブの失敗がmergeジョブを
   # ブロックしないようにする（dependency-risk-summaryと同じ方針）
   bundle-size-check:
+    name: "バンドルサイズチェック"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -2460,6 +2477,7 @@ jobs:
   # 閾値を持たない。bundle-size-check・dependency-risk-summaryと同じ方針で、
   # 各ステップをcontinue-on-error: trueとしmergeジョブをブロックしない
   lighthouse-ci:
+    name: "Lighthouse CI実行"
     needs: [commitlint, detect-changes]
     if: |
       always() &&
@@ -2551,6 +2569,7 @@ jobs:
   # マージ判断そのものには関与しないため、各ステップはcontinue-on-error: trueとし、
   # このジョブの失敗がmergeジョブをブロックしないようにする
   dependency-risk-summary:
+    name: "依存更新Risk Summary"
     # frontend-test等のtest系・architecture-check等のstatic analysis系jobの結果を
     # needsコンテキスト経由でAPI呼び出し無しに取得するため、これらをneedsに含める
     # （issue #646 Task E）。これによりこのjobの実行はCI全体の完了を待つ形になるが、
@@ -3213,6 +3232,7 @@ jobs:
             });
 
   merge:
+    name: "自動マージ"
     needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を

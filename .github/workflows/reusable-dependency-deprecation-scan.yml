@@ -43,6 +43,7 @@ permissions:
 
 jobs:
   scan:
+    name: "依存deprecatedスキャン"
     runs-on: ubuntu-latest
     permissions:
       issues: write

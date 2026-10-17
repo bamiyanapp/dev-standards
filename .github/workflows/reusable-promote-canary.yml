@@ -149,6 +149,7 @@ permissions:
 
 jobs:
   promote:
+    name: "カナリア昇格"
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
