@@ -297,6 +297,7 @@ useValueChange(connectionStatus, (current, previous) => {
 useWakeLock(isPlayingQuiz);
 ```
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -313,9 +314,10 @@ flowchart TD
     I --> D
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 

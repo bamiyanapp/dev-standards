@@ -4,6 +4,7 @@
 
 以下は、判定フロー全体を分岐を含む処理フローとして可視化したもの（[bamiyanapp/dev-standards#695](https://github.com/bamiyanapp/dev-standards/issues/695)）。本ドキュメントの各節がどこに対応するかの目次としても使える。個別の昇格ルールの詳細は本ドキュメントの各節、および`scripts/dependency-risk-classifier.js`のコードコメントを正本とし、ここでは全体構造のみを示す。
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -33,9 +34,10 @@ flowchart LR
     M -->|それ以外| O[自動マージ継続]
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-1.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 
@@ -81,6 +83,7 @@ SBOMはRisk判定そのものには使わない。**「何が入っているか�
 
 依存関係を記録しておくことで、将来新たなCVEが公表された際に影響範囲を逆引きできる。
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -89,9 +92,10 @@ flowchart LR
     App[Application] --> A[library A] --> B[library B] --> C[library C]
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-2.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 
@@ -101,6 +105,7 @@ flowchart LR
 
 install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力され、検知された場合は無条件でHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -112,9 +117,10 @@ flowchart LR
     I3["SBOM生成: 実施済み"] -.->|Risk判定へは渡らない、証跡として別表示のみ| S[証跡表示のみ]
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-3.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 
@@ -189,6 +195,7 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 
 適用リスク（risk_level、Low/Medium/High）がhighのPRでは`merge` jobによる自動マージを行わない（[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「Phase 2」Task 3）。対象をHighのみへ縮小した経緯は[#685](https://github.com/bamiyanapp/dev-standards/issues/685)を参照。
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -200,9 +207,10 @@ flowchart TD
     B -->|No: major update・CI失敗・<br/>supply chain異常が理由| D[自動マージを止める]
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![merge gate判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-4.png)
 

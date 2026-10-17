@@ -10,6 +10,7 @@ API Gatewayの統合タイムアウト（29秒固定、変更不可）を超え�
 2. **ワーカー**: 実際の重い処理を実行し、結果（成功時の出力、失敗時のエラー内容）をS3へ書き込む。API Gateway経由では呼ばれない
 3. **ステータス確認用ハンドラ**: jobIdを受け取り、S3上の成功/エラーオブジェクトの有無から都度ステータスを導出する。専用の状態保存テーブルは持たない（ステートレス）
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -33,9 +34,10 @@ sequenceDiagram
     end
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![開始→ポーリングの一連の流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/async-job-polling-pattern.png)
 
