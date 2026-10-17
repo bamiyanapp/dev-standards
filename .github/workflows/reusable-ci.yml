@@ -2620,7 +2620,7 @@ jobs:
       # submodules: true（issue #689、業務影響度・ブラスト半径判定用）: dependency-cruiser
       # の実行にはdependency-cruiser.config.cjs（dev-standards submodule配下からの
       # symlink、architecture-checkと同じ）が必要
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
@@ -2632,7 +2632,7 @@ jobs:
       # 場合）は見落としを避けるため常に実行する側にフォールバックする。
       # action_filesはgithub-actions-update-info.js（issue #666）へそのまま渡すための
       # 変更ファイル一覧（JSON配列文字列）
-      - name: Determine whether package-lock.json / GitHub Actions references changed
+      - name: package-lock.json / GitHub Actions参照が変更されたか判定する
         id: gate
         uses: actions/github-script@v9
         with:
@@ -2663,7 +2663,7 @@ jobs:
       # PR head（デフォルトのcheckoutで取得済み）のpackage-lock.jsonと比較するため、
       # base側のpackage-lock.jsonだけを別途取得する。履歴全体をfetchする
       # （fetch-depth: 0）よりも該当コミット単体の取得の方が軽量
-      - name: Fetch base package-lock.json
+      - name: base側のpackage-lock.jsonを取得する
         id: fetch-base
         if: steps.gate.outputs.package_lock_changed == 'true'
         continue-on-error: true
@@ -2674,7 +2674,7 @@ jobs:
       # GitHub Actions/reusable workflow参照の変更分（action_files）について、
       # base側の内容だけを別途取得する。head側はこのjobのデフォルトcheckoutに
       # 既に存在するため不要（issue #666）
-      - name: Fetch base GitHub Actions / workflow files
+      - name: base側のGitHub Actions / workflowファイルを取得する
         id: fetch-actions-base
         if: steps.gate.outputs.actions_changed == 'true'
         continue-on-error: true
@@ -2719,7 +2719,7 @@ jobs:
       # （npm registryのdeprecatedフラグ検知、dependency-deprecation-info.js追加・
       # dependency-risk-classifier.js・dependency-stale-risk-classifier.jsへの
       # deprecationInfo引数追加）を含むタグへ更新した
-      - name: Checkout dev-standards (for the local script)
+      - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
@@ -2727,7 +2727,7 @@ jobs:
           ref: v2.84.0
           path: .dev-standards-actions
 
-      - name: Generate dependency update info
+      - name: 依存パッケージ更新情報を生成する
         id: dependency-info
         if: steps.fetch-base.outcome == 'success'
         continue-on-error: true
@@ -2736,7 +2736,7 @@ jobs:
       # GitHub Actions/reusable workflow参照のバージョン更新情報（issue #666）。
       # fetch-actions-baseが取得したbase側のファイル内容と、head側（デフォルトcheckoutの
       # 現在の作業ツリー）の内容をgithub-actions-update-info.jsのCLIへ渡す
-      - name: Generate GitHub Actions update info
+      - name: GitHub Actions更新情報を生成する
         id: actions-info
         if: steps.fetch-actions-base.outcome == 'success'
         continue-on-error: true
@@ -2747,7 +2747,7 @@ jobs:
       # Risk判定結果（docs/generated/dependency-risk-history.json）を取得し、
       # プロダクト側での重複判定を避けるための注記を作る。ネットワーク呼び出しを
       # 伴うため、取得失敗時は何も出力しない安全側の動作とする（スクリプト側で保証）
-      - name: Look up dev-standards' own risk history for this version bump
+      - name: このバージョン更新に対するdev-standards自身のrisk履歴を照会する
         id: dev-standards-risk-history
         if: steps.actions-info.outcome == 'success'
         continue-on-error: true
@@ -2756,7 +2756,7 @@ jobs:
       # issue #648（Phase 3）package script/diff検査: 新規にinstall scriptを持つ
       # ようになったパッケージを検知する。package-lock.jsonのみの比較で外部通信が
       # 不要なため、ネットワーク依存の他のSupply Chainチェックより前に実行する
-      - name: Generate package script anomaly info
+      - name: パッケージスクリプト異常情報を生成する
         id: package-anomaly
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2765,7 +2765,7 @@ jobs:
       # issue #648（Phase 3）メンテナ/所有権異常の検知。npm registryへの問い合わせを
       # 伴う（osv.dev等と同様、このサンドボックスでは疎通確認済みだが、実際の
       # GitHub Actions実行環境での動作は初めて検証される）
-      - name: Generate maintainer anomaly info
+      - name: メンテナ異常情報を生成する
         id: maintainer-anomaly
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2775,7 +2775,7 @@ jobs:
       # いずれもdependency-update-info.jsのchangesに含まれているため、1回の呼び出しで
       # 両方を判定する（dependency-vulnerability-info.jsのようにversionFieldで
       # 呼び分ける必要は無い）
-      - name: Generate deprecation info
+      - name: deprecated情報を生成する
         id: deprecation-info
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2788,7 +2788,7 @@ jobs:
       # 実行されるため影響しない）。
       # cyclonedx-npm自体はdev-standardsのスクリプトではないため、他のnpx経由
       # ツール（jscpd・dependency-cruiser等）と同じくメジャーバージョン固定で呼ぶ
-      - name: Generate SBOM
+      - name: SBOMを生成する
         id: sbom
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2798,7 +2798,7 @@ jobs:
       # 閲覧に適さないため。要約のみをコメントへ載せる、後続のGenerate SBOM summary
       # 参照）。90日はこのリポジトリの他のartifact（E2Eスクリーンショット等）と
       # 揃える必要が無いため、GitHub Actionsのデフォルト保持期間に委ねる
-      - name: Upload SBOM artifact
+      - name: SBOMをartifactとしてアップロードする
         if: steps.sbom.outcome == 'success'
         continue-on-error: true
         uses: actions/upload-artifact@v7
@@ -2806,7 +2806,7 @@ jobs:
           name: sbom-pr${{ github.event.pull_request.number }}
           path: /tmp/sbom.json
 
-      - name: Generate SBOM summary
+      - name: SBOM概要を生成する
         id: sbom-summary
         if: steps.sbom.outcome == 'success'
         continue-on-error: true
@@ -2818,19 +2818,19 @@ jobs:
       # できていない（egressプロキシでブロックされる）。GitHub Actions実行環境
       # （インターネット到達可能）で初めて実地検証される。失敗してもRisk Summary
       # コメント自体は投稿したいため、他のステップと同様continue-on-error: trueとする
-      - name: Generate vulnerability info (CVE/CVSS via OSV.dev)
+      - name: 脆弱性情報を生成する（CVE/CVSS、OSV.dev経由）
         id: vulnerability-info
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-vulnerability-info.js /tmp/dependency-update-info.json > /tmp/vulnerability-info.json
 
-      - name: Generate exploit info (KEV/EPSS)
+      - name: 実exploit情報を生成する（KEV/EPSS）
         id: exploit-info
         if: steps.vulnerability-info.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-exploit-info.js /tmp/vulnerability-info.json > /tmp/exploit-info.json
 
-      - name: Generate security summary section
+      - name: セキュリティ概要セクションを生成する
         id: security-summary
         if: steps.exploit-info.outcome == 'success'
         continue-on-error: true
@@ -2852,25 +2852,25 @@ jobs:
       # （frontend-test/backend-testと同じworkspaces分岐パターン、issue #813）。
       # issue #701で、後述の「維持リスク」判定（Classify stale risk）もブラスト半径の
       # 結果を参照するようになったため、このステップはそれより前に実行する必要がある
-      - name: Use Node.js for blast radius (attempt 1/2)
+      - name: ブラスト半径判定用にNode.jsをセットアップする（1回目/2回）
         id: setup-node-blast-radius-1
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
-      - name: Wait before retrying Node.js setup for blast radius
+      - name: ブラスト半径判定用Node.jsセットアップの再試行前に待機する
         if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js for blast radius (attempt 2/2, retry after a transient failure)
+      - name: ブラスト半径判定用にNode.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         id: setup-node-blast-radius-2
         if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
-      - name: Install dependencies for blast radius
+      - name: ブラスト半径判定用に依存パッケージをインストールする
         id: install-blast-radius
         if: |
           steps.dependency-info.outcome == 'success' &&
@@ -2883,7 +2883,7 @@ jobs:
             [ -f "${{ inputs.frontend_dir }}/package-lock.json" ] && npm ci --prefix "${{ inputs.frontend_dir }}"
             [ -f "${{ inputs.backend_dir }}/package-lock.json" ] && npm ci --prefix "${{ inputs.backend_dir }}"
           fi
-      - name: Run dependency-cruiser for blast radius
+      - name: ブラスト半径判定用にdependency-cruiserを実行する
         id: blast-radius-cruise
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2900,7 +2900,7 @@ jobs:
       # 重要パス（決済・認証等）の宣言は参照側リポジトリ自身の責務。リポジトリルートに
       # dependency-risk-critical-paths.jsonが無い場合はdependency-blast-radius.js側で
       # 空配列へ安全側にフォールバックし、Risk判定への影響は無い（issue #689初期スコープ）
-      - name: Classify blast radius
+      - name: ブラスト半径を分類する
         id: classify-blast-radius
         if: steps.blast-radius-cruise.outcome == 'success'
         continue-on-error: true
@@ -2910,13 +2910,13 @@ jobs:
       # 現行バージョンに留まった場合の危険度）を判定するため、oldVersion（更新前）向けに
       # 同じvulnerability-info.js/exploit-info.jsを再実行する。versionFieldの第2引数で
       # 新旧を切り替える（ロジック自体はnewVersion向けと共通）
-      - name: Generate old-version vulnerability info (CVE/CVSS via OSV.dev)
+      - name: 旧バージョンの脆弱性情報を生成する（CVE/CVSS、OSV.dev経由）
         id: old-vulnerability-info
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-vulnerability-info.js /tmp/dependency-update-info.json oldVersion > /tmp/old-vulnerability-info.json
 
-      - name: Generate old-version exploit info (KEV/EPSS)
+      - name: 旧バージョンの実exploit情報を生成する（KEV/EPSS）
         id: old-exploit-info
         if: steps.old-vulnerability-info.outcome == 'success'
         continue-on-error: true
@@ -2925,7 +2925,7 @@ jobs:
       # issue #701。blast-radius-info.jsonを3rd引数で渡し、重要パスに該当する場合は
       # 維持リスクをlow→mediumへ1段階昇格する（high昇格はCVE/KEVのみを根拠とする設計を
       # 維持するため対象外。dependency-stale-risk-classifier.jsのコメント参照）
-      - name: Classify stale risk
+      - name: 維持リスクを分類する
         id: classify-stale
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2938,7 +2938,7 @@ jobs:
       # （.dev-standards-actions/配下は参照側リポジトリでも常にチェックアウトされるが、
       # そのdocs/consumer-repositories.mdはdev-standards自身のものであり、参照側
       # リポジトリ自身の依存更新とは無関係なため誤って表示しないようにする）
-      - name: Generate fan-out note
+      - name: ファンアウト注記を生成する
         id: fanout
         if: steps.dependency-info.outcome == 'success' && github.repository == 'bamiyanapp/dev-standards'
         continue-on-error: true
@@ -2950,7 +2950,7 @@ jobs:
       # このリポジトリに前例が無く実機未検証のため避けた（continue-on-error: trueの
       # 後続ステップ内でrequireが失敗すると、Task A/B時点で既に動いているupdate type部分の
       # コメント投稿まで巻き込んで失敗しかねないため）
-      - name: Generate CI results section
+      - name: CI結果セクションを生成する
         id: ci-results
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2969,7 +2969,7 @@ jobs:
       # はdependency-risk-classifier.js自身が「セキュリティ情報不明」としてMedium以上へ
       # 格上げするため、このステップではファイルの有無を気にせずそのまま渡す。
       # 出力されるrisk_levelはjob outputとしてmerge job（Task 3で接続）へ渡す
-      - name: Classify risk
+      - name: リスクを分類する
         id: classify
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
@@ -2984,7 +2984,7 @@ jobs:
 
       # issue #666: package-lock.jsonの変更・GitHub Actions参照の変更のいずれか一方
       # だけが存在するPRでもコメントを投稿できるよう、gate自体（should_run）で判定する
-      - name: Build and post Risk Summary
+      - name: Risk Summaryを作成して投稿する
         if: steps.gate.outputs.should_run == 'true'
         continue-on-error: true
         uses: actions/github-script@v9
@@ -3211,7 +3211,7 @@ jobs:
       # /tmp配下のJSONファイルを直接読み直す（同一job内なので永続している）。
       # 誤って人間作成のPRを自動クローズしてしまう事故を避けるため、PR作成者がbot
       # アカウント（Renovate等）の場合のみ対象とする
-      - name: Close PRs with high apply risk and low stale risk (bot-authored only)
+      - name: 適用リスクHigh・維持リスクLowのPRをクローズする（bot作成のみ対象）
         if: inputs.enable_dependency_risk_auto_close && steps.gate.outputs.should_run == 'true'
         continue-on-error: true
         uses: actions/github-script@v9
