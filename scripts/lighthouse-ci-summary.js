@@ -27,18 +27,36 @@ function parseHealthcheck(log) {
   return { total: lines.length, failed: failed.length, warned: warned.length };
 }
 
-// サーバー起動を検知する。タイムアウト警告が出ていても、その後に実際の
-// `Local:`行（vite preview等のURL表示）が見つかれば起動成功とみなす。
-// Viteのカラー出力では「Local」と「:」の間にANSIエスケープシーケンスが
+// サーバー起動を検知する。`lhci autorun`は、起動待機がタイムアウトせず
+// 成功した場合、診断用の「Server Output:」ブロック自体を標準出力へ
+// ダンプしない（タイムアウト発生時のみ出力される仕様）。そのため
+// タイムアウトしなかった正常系では`Local`という文字列自体がログに
+// 一切現れず、`Local`の有無だけでは判定できない（dev-standards#1022）。
+// タイムアウト警告が無く`Running Lighthouse`まで到達していれば、
+// その事実自体が起動成功の証拠である
+//
+// タイムアウト警告が出た場合でも、その後に実際の`Local:`行
+// （vite preview等のURL表示）が見つかれば起動成功とみなす。Viteの
+// カラー出力では「Local」と「:」の間にANSIエスケープシーケンスが
 // 挟まり、"Local:"が連続した文字列として出力中に一度も現れないため、
 // `:`を挟まず行内で後続のhttpへ到達するかどうかで判定する（karuta#1723/#1724で
 // 実際に踏んだ落とし穴。dev-standards#1017参照）
 function detectServerStarted(log) {
   const timedOut = /Timed out waiting for the server to start listening/.test(log);
+
+  if (!timedOut) {
+    // タイムアウトしていなければ、Running Lighthouseへ到達していること自体が
+    // 起動成功の証拠になる（Server Outputブロックがダンプされないため、
+    // Local文字列はそもそも出力に現れない）
+    if (/Running Lighthouse \d+ time\(s\)/.test(log)) {
+      return { started: true, timedOutWarningOnly: false };
+    }
+    return { started: null, timedOutWarningOnly: false };
+  }
+
   const started = /Local[^\n]*?http/.test(log);
-  if (started) return { started: true, timedOutWarningOnly: timedOut };
-  if (timedOut) return { started: false, timedOutWarningOnly: false };
-  return { started: null, timedOutWarningOnly: false };
+  if (started) return { started: true, timedOutWarningOnly: true };
+  return { started: false, timedOutWarningOnly: false };
 }
 
 // `Running Lighthouse N time(s) on <URL>`を抽出する
