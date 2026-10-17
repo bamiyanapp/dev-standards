@@ -1,3 +1,10 @@
+# [2.97.0](https://github.com/bamiyanapp/dev-standards/compare/v2.96.0...v2.97.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** reusable-ci.ymlのステップ名を日本語化する（5/5: dependency-risk-summary） ([#1008](https://github.com/bamiyanapp/dev-standards/issues/1008)) ([6b97dfc](https://github.com/bamiyanapp/dev-standards/commit/6b97dfc5fb965d3ce8beea6dedd797b372f1debb))
+
 # [2.96.0](https://github.com/bamiyanapp/dev-standards/compare/v2.95.0...v2.96.0) (2026-10-17)
 
 
