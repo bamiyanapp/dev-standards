@@ -1,3 +1,10 @@
+# [2.83.0](https://github.com/bamiyanapp/dev-standards/compare/v2.82.4...v2.83.0) (2026-10-17)
+
+
+### Features
+
+* **risk:** Risk Summaryにnpm registryのdeprecatedフラグ検知を追加する ([#967](https://github.com/bamiyanapp/dev-standards/issues/967)) ([33bef67](https://github.com/bamiyanapp/dev-standards/commit/33bef6728401a82aa378b3caa3a9baf9aa5933f1))
+
 ## [2.82.4](https://github.com/bamiyanapp/dev-standards/compare/v2.82.3...v2.82.4) (2026-10-16)
 
 
