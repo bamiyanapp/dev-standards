@@ -1,3 +1,10 @@
+## [2.97.5](https://github.com/bamiyanapp/dev-standards/compare/v2.97.4...v2.97.5) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** Lighthouseサマリー用dev-standards自己チェックアウトのGITHUB_WORKFLOW_REF方式を元に戻す ([#1034](https://github.com/bamiyanapp/dev-standards/issues/1034)) ([ea0997e](https://github.com/bamiyanapp/dev-standards/commit/ea0997e1a1d9290d30177b9efe9b4acc5082cc27)), closes [#1033](https://github.com/bamiyanapp/dev-standards/issues/1033)
+
 ## [2.97.4](https://github.com/bamiyanapp/dev-standards/compare/v2.97.3...v2.97.4) (2026-10-17)
 
 
