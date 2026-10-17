@@ -110,6 +110,8 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 - 旧バージョン（更新前、現行バージョン）がdeprecatedの場合: 維持リスク（`classifyStaleRisk()`）をKEVと同様にhighへ昇格する。サポート終了したバージョンに留まり続けること自体が危険であるため
 - 新バージョン（更新後）がdeprecatedの場合: 適用リスク（`classifyRisk()`）はエスカレーションしない。deprecatedはパッケージの運用状態を示すのみで、PRの内容自体が危険であることを意味しないため。Risk Summary上のreasonにのみ表示し、自動マージはブロックしない
 
+**既知の限界（[#969](https://github.com/bamiyanapp/dev-standards/issues/969)で対応）**: 上記はいずれも更新PR（`package-lock.json`の変更）が存在する場合にのみ動作する。aws-sdk（v2系）のように後継バージョン自体が存在しないまま非推奨化されたパッケージは、Renovateが更新PRを作らないため一度も評価されない。この限界は`reusable-dependency-deprecation-scan.yml`（定期スキャン、詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)参照）で別途補う。
+
 ## 適用リスク
 
 このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。新バージョンのdeprecated検知（上記）はreasonにのみ反映され、Highへの昇格には使わない。

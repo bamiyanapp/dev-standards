@@ -1,0 +1,149 @@
+name: Reusable Dependency Deprecation Scan
+
+# issue #969（#945で追加したdeprecated検知の限界への対応）。
+# dependency-risk-summary job（reusable-ci.yml）のdeprecated検知（dependency-
+# deprecation-info.js、issue #945）は、更新PR（package-lock.jsonの変更）が
+# 存在する場合にのみ動作する。しかし、aws-sdk（v2系）のように後継バージョン自体が
+# 存在しないまま非推奨化されたパッケージは、Renovateが更新PRを作らないため
+# 一度も評価されない（karuta#1656・#1658）。
+#
+# 本ワークフローは更新PRの有無に関わらず、呼び出し元リポジトリで現時点で
+# ロックされている依存パッケージ全体をスケジュール実行等で定期的にスキャンし、
+# 検知結果をトラッキング用issueへ反映する（新規作成、または既存issueの本文更新）。
+#
+# karuta/promote-canary.yml等と同様、scheduleトリガー自体は呼び出し元リポジトリの
+# workflowが持つ（reusable workflow自身はworkflow_callのみ）。
+
+on:
+  workflow_call:
+    inputs:
+      lockfile_path:
+        description: "スキャン対象のpackage-lock.jsonのパス（リポジトリルート相対）。"
+        type: string
+        default: "package-lock.json"
+      direct_only:
+        description: "trueの場合、直接依存のみを対象とする（既定）。transitive依存まで含めると、呼び出し元が自力でアップグレードできないパッケージまで通知してしまうため"
+        type: boolean
+        default: true
+      tracking_issue_title:
+        description: "検知結果を反映するissueのタイトル。同名のopen issueが既にあれば本文を更新し、無ければ新規作成する。"
+        type: string
+        default: "[自動] 依存パッケージのdeprecated（サポート終了）検知"
+      tracking_issue_labels:
+        description: "トラッキングissue作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
+        type: string
+        default: '["bug", "priority: medium"]'
+    outputs:
+      has_deprecated:
+        description: "deprecatedなパッケージが1件以上検知されたか。"
+        value: ${{ jobs.scan.outputs.has_deprecated }}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    outputs:
+      has_deprecated: ${{ steps.scan.outputs.has_deprecated }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # scripts/dependency-deprecation-scan.jsはdev-standards自身のスクリプトのため、
+      # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
+      # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
+      # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと
+      - name: Checkout dev-standards (for the local script)
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: v2.83.0
+          path: .dev-standards-actions
+
+      - name: Scan for deprecated dependencies
+        id: scan
+        run: node .dev-standards-actions/scripts/dependency-deprecation-scan.js "${{ inputs.lockfile_path }}" "${{ inputs.direct_only }}" > /tmp/deprecation-scan.json
+
+      - name: Find existing tracking issue
+        id: find
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const results = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+            const existing = results.find((i) => !i.pull_request && i.title === ${{ toJSON(inputs.tracking_issue_title) }});
+            core.setOutput("issue_number", existing ? String(existing.number) : "");
+
+      - name: Create or update tracking issue
+        if: steps.scan.outputs.has_deprecated == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const deprecated = JSON.parse(fs.readFileSync("/tmp/deprecation-scan.json", "utf-8"));
+            const rows = deprecated.map((d) => `| ${d.name} | ${d.version} | ${d.deprecated} |`).join("\n");
+            const body = [
+              "npm registry上でdeprecated（非推奨）と判定されている依存パッケージが見つかりました。",
+              "後継バージョンが存在しない（Renovate等が更新PRを作らない）ため、通常のRisk Summaryでは検知できません。",
+              "",
+              "| パッケージ | バージョン | deprecatedメッセージ |",
+              "|---|---|---|",
+              rows,
+              "",
+              "対応候補: 後継パッケージへの移行、または許容できるリスクとして明示的にクローズする。",
+              "",
+              `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
+            ].join("\n");
+
+            const issueNumber = "${{ steps.find.outputs.issue_number }}";
+            if (issueNumber) {
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(issueNumber), body });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: ${{ toJSON(inputs.tracking_issue_title) }},
+                body,
+                labels: JSON.parse(${{ toJSON(inputs.tracking_issue_labels) }}),
+              });
+            }
+
+      - name: Close tracking issue if no longer detected
+        if: steps.scan.outputs.has_deprecated == 'false' && steps.find.outputs.issue_number != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
+              state: "closed",
+              state_reason: "completed",
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
+              body: "再スキャンの結果、deprecatedな依存パッケージが検知されなくなったため自動クローズします。",
+            });
+
+      - name: Write summary
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 依存パッケージdeprecatedスキャン 実行結果"
+            echo ""
+            echo "検知件数: $([ "${{ steps.scan.outputs.has_deprecated }}" = "true" ] && echo "1件以上" || echo "0件")"
+          } >> "$GITHUB_STEP_SUMMARY"
