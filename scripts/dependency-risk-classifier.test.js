@@ -300,9 +300,10 @@ test("classifyRisk: blastRadiusImpactがtrueの場合、lowをmediumへ1段階�
   assert.ok(result.reasons.some((r) => r.includes("重要パス")));
 });
 
-test("classifyRisk: blastRadiusImpactがtrueの場合、mediumをhighへ1段階昇格する", () => {
+test("classifyRisk: blastRadiusImpactがtrueでもmediumからhighへは昇格しない（issue #1040、ブラスト半径単独ではhighに到達しない）", () => {
   const result = classifyRisk(baseInput({ blastRadiusImpact: true, fanOutCount: 3 }));
-  assert.equal(result.level, "high");
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("既にMedium以上")));
 });
 
 test("classifyRisk: blastRadiusImpactがtrueでも既にhighならhighのまま（追加昇格なし）", () => {
@@ -313,7 +314,7 @@ test("classifyRisk: blastRadiusImpactがtrueでも既にhighならhighのまま�
     }),
   );
   assert.equal(result.level, "high");
-  assert.ok(result.reasons.some((r) => r.includes("既にHigh")));
+  assert.ok(result.reasons.some((r) => r.includes("既にHigh以上")));
 });
 
 test("classifyRisk: blastRadiusImpactを省略（既定false）した場合は昇格しない（重要パス未宣言リポジトリへの後方互換）", () => {
@@ -377,9 +378,9 @@ test("classifyRisk: vulnerabilityOnlyHigh: メンテナ変化が理由のhighは
   assert.equal(result.vulnerabilityOnlyHigh, false);
 });
 
-test("classifyRisk: vulnerabilityOnlyHigh: ブラスト半径でmedium→highへ昇格した場合はfalse（CVE/KEV以外が理由でhighに達したため）", () => {
+test("classifyRisk: vulnerabilityOnlyHigh: ブラスト半径はmedium止まりのためhighに到達せずfalse（issue #1040）", () => {
   const result = classifyRisk(baseInput({ blastRadiusImpact: true, fanOutCount: 3 }));
-  assert.equal(result.level, "high");
+  assert.equal(result.level, "medium");
   assert.equal(result.vulnerabilityOnlyHigh, false);
 });
 

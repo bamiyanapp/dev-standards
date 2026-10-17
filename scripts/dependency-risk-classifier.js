@@ -130,18 +130,18 @@ function classifyRisk({
 
   // issue #689（業務影響度・ブラスト半径）。変更された直接依存が、参照側リポジトリが
   // 宣言した「重要パス」（dependency-blast-radius.js）からimportされている場合、
-  // Risk判定を1段階昇格する（low→medium、medium→high、既にhighなら変化無し）。
-  // 重要パスの宣言が無いリポジトリではblastRadiusImpactが常にfalseになり、
-  // 既存の判定（昇格なし）のままフォールバックする
+  // Risk判定をmediumへ昇格する（lowの場合のみ変化し、medium/highは変化無し）。
+  // ブラスト半径単独ではhighまで昇格しない（issue #1040。CVE/KEV・Supply Chain異常等、
+  // 他の確実な根拠がある場合のみhighへ到達する設計を維持する）。重要パスの宣言が無い
+  // リポジトリではblastRadiusImpactが常にfalseになり、既存の判定（昇格なし）のまま
+  // フォールバックする
   if (blastRadiusImpact) {
-    const escalatedLevel = level === "low" ? "medium" : "high";
-    if (escalatedLevel !== level) {
-      reasons.push(
-        `変更された直接依存が重要パス（宣言済み）からimportされているため、Risk判定を${level}から${escalatedLevel}へ1段階昇格しました`,
-      );
-      level = escalatedLevel;
+    const before = level;
+    level = escalate(level, "medium");
+    if (level !== before) {
+      reasons.push(`変更された直接依存が重要パス（宣言済み）からimportされているため、Risk判定を${before}から${level}へ昇格しました`);
     } else {
-      reasons.push("変更された直接依存が重要パス（宣言済み）からimportされていますが、既にHighのため追加の昇格はありません");
+      reasons.push(`変更された直接依存が重要パス（宣言済み）からimportされていますが、既に${level === "high" ? "High" : "Medium"}以上のため追加の昇格はありません`);
     }
   }
 

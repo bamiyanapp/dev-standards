@@ -60,9 +60,10 @@ function classifyStaleRisk({
   }
 
   if (blastRadiusImpact) {
-    if (level === "low") {
-      level = "medium";
-      reasons.push("変更された直接依存が重要パス（宣言済み）からimportされているため、維持リスクをlowからmediumへ1段階昇格しました");
+    const before = level;
+    level = escalate(level, "medium");
+    if (level !== before) {
+      reasons.push(`変更された直接依存が重要パス（宣言済み）からimportされているため、維持リスクを${before}から${level}へ昇格しました`);
     } else {
       reasons.push(
         "変更された直接依存が重要パス（宣言済み）からimportされていますが、維持リスクのhighへの昇格は既知のCVE/KEVのみを根拠とするため追加の昇格はありません",

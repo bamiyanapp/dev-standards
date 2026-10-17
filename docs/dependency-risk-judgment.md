@@ -33,7 +33,7 @@ flowchart TD
 
 </details>
 
-![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment.png?320dd146fda1a9894977387689c88da2c02b6367)
+![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-1.png)
 
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
@@ -87,9 +87,19 @@ SBOMはRisk判定そのものには使わない。**「何が入っているか�
 
 依存関係を記録しておくことで、将来新たなCVEが公表された際に影響範囲を逆引きできる。
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart LR
+    App[Application] --> A[library A] --> B[library B] --> C[library C]
 ```
-Application → library A → library B → library C
-```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+
+</details>
+
+![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-2.png)
 
 上記の依存関係が分かっていれば、`library C`に新規CVEが公表された場合、`library B`・`library A`経由で`Application`まで影響が及ぶことを即座に追跡できる。
 
@@ -97,11 +107,22 @@ Application → library A → library B → library C
 
 install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力され、検知された場合は無条件でHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart LR
+    I1["install script検知: NEW"] --> R["classifyRisk()"]
+    I2["メンテナ変更検知: CHANGED"] --> R
+    R --> O["適用リスク（Low/Medium/High）"]
+    I3["SBOM生成: 実施済み"] -.->|Risk判定へは渡らない、証跡として別表示のみ| S[証跡表示のみ]
 ```
-install script検知: NEW      ─┐
-メンテナ変更検知:   CHANGED  ─┼─→ classifyRisk() → 適用リスク（Low/Medium/High）
-SBOM生成:           実施済み ─┘   （SBOMはRisk判定へは渡らない。証跡として別表示のみ）
-```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+
+</details>
+
+![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-3.png)
 
 ## deprecated（サポート終了）検知（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）
 
@@ -132,10 +153,10 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 | dev-standards自体の更新で、既知の参照側リポジトリ（ファンアウト）が1件以上ある | 🟡 Medium | |
 | 既知flakyパターンに該当するCI失敗がある（説明可能な失敗のみ） | 🟡 Medium | |
 | 直接依存の更新件数が`directDependencyThreshold`（既定2）以上 | 🟡 Medium | 変更の複雑さを理由に昇格 |
-| 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 現在の判定を1段階昇格（low→medium、medium→high） | 既にHighなら変化なし。重要パス未宣言時は常にfalseで影響なし（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)） |
+| 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化、medium/highは変化なし） | ブラスト半径単独ではHighまで昇格しない。重要パス未宣言時は常にfalseで影響なし（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)、[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)） |
 | 上記いずれにも該当しない | 🔵 Low | |
 
-`vulnerability_only_high`は、最終判定がHighかつ、major update・説明不能なCI失敗・Supply Chain異常・ブラスト半径由来のHighのいずれにも該当せず、CVE/KEVの残存のみが理由の場合にのみ`true`になる。
+`vulnerability_only_high`は、最終判定がHighかつ、major update・説明不能なCI失敗・Supply Chain異常のいずれにも該当せず、CVE/KEVの残存のみが理由の場合にのみ`true`になる（ブラスト半径はMedium止まりのためHigh到達の理由にはならない）。
 
 ## 維持リスク
 
@@ -151,7 +172,7 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 | 現行バージョンにKEVに該当する脆弱性がある | 🔴 High | |
 | 現行バージョンにCritical/High severityのCVEが残っている（KEVに該当しない場合のみ） | 🟡 Medium | KEVがある場合はHigh判定が優先され、この行は評価されない |
 | 現行バージョン（更新前）がnpm registry上でdeprecatedである | 🔴 High | サポート終了により今後の脆弱性修正が期待できないため（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)） |
-| 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | low→mediumのみ昇格 | medium→highへの昇格は行わない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。既にHighならreasonのみ追記 |
+| 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化） | medium→highへの昇格は行わない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。既にMedium/Highならreasonのみ追記 |
 | 上記いずれにも該当しない | 🔵 Low | |
 
 ## 判定結果マトリクス（適用リスク×維持リスク）
@@ -165,7 +186,7 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 | **🔴 High** | スキップ\*1 | 人が判定\*2 | 自動適用\*3 または 人が判定\*2 |
 
 \*1 自動クローズ。bot作成PRのみ対象（「適用リスクHigh・維持リスクLowのPRの自動クローズ」参照）。人間作成PRは対象外で、通常のCI判定に委ねる。
-\*2 自動マージ停止。「新旧どちらも選べない」ケース（major update・CI失敗・supply chain異常・ブラスト半径由来のHigh）で、人間の判断を待つ。
+\*2 自動マージ停止。「新旧どちらも選べない」ケース（major update・CI失敗・supply chain異常が理由のHigh）で、人間の判断を待つ。
 \*3 `vulnerability_only_high`（Highの理由がCVE/KEV残存のみであること）の場合のみ。放置の方が危険なため自動マージを止めない（「merge gateとの連携」参照）。
 
 適用リスクLow/Medium行が常に「自動適用」なのは、本仕組みが適用リスクHighの場合のみ介入する設計のため。
@@ -175,7 +196,7 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 適用リスク（risk_level、Low/Medium/High）がhighのPRでは`merge` jobによる自動マージを行わない（[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「Phase 2」Task 3）。対象をHighのみへ縮小した経緯は[#685](https://github.com/bamiyanapp/dev-standards/issues/685)を参照。
 
 - ただし`vulnerability_only_high`（適用リスクがhighに達した理由がCVE/KEV残存のみであること）かつ維持リスクがhighの場合は、放置の方が危険なため適用リスクがhighでも自動マージを止めない（[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）
-- major update・CI失敗・supply chain異常（install script異常・メンテナ変化）・ブラスト半径由来のHigh（`vulnerability_only_high`がfalse）は、この救済の対象外であり維持リスクに関わらず自動マージを止める。新旧どちらを選ぶかという比較が成り立たず、PR自体の危険性・複雑さが理由のため（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）
+- major update・CI失敗・supply chain異常（install script異常・メンテナ変化）が理由のHigh（`vulnerability_only_high`がfalse）は、この救済の対象外であり維持リスクに関わらず自動マージを止める。新旧どちらを選ぶかという比較が成り立たず、PR自体の危険性・複雑さが理由のため（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。ブラスト半径はMedium止まりのためHighの理由にはならない（[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)）
 - 適用リスクがLow/Medium判定、またはrisk_levelが無い（`package-lock.json`を変更していないPR等で`dependency-risk-summary` job自体が実行されなかった場合）は、他のCI条件のみで自動マージの可否を判定する従来どおりの動作になる。`enable_dependency_risk_summary`が`false`の場合はrisk_level・stale_risk_level自体が生成されないため、本入力の値に関わらず常に従来どおりの動作になる
 
 ## 適用リスクHigh・維持リスクLowのPRの自動クローズ（`enable_dependency_risk_auto_close`）
