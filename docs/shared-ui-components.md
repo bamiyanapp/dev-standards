@@ -297,6 +297,10 @@ useValueChange(connectionStatus, (current, previous) => {
 useWakeLock(isPlayingQuiz);
 ```
 
+<!-- jscpd:ignore-start -->
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 flowchart TD
     A[activeがtrueに変化] --> B{Wake Lock API対応?}
@@ -309,6 +313,11 @@ flowchart TD
     H --> I[visibilitychangeでタブが可視状態に戻る]
     I --> D
 ```
+
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
+
+</details>
+<!-- jscpd:ignore-end -->
 
 ![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 

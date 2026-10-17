@@ -6,6 +6,7 @@ frontend/backend のビルド・デプロイ手順（デプロイ先、固有の
 
 ## Architecture
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>ソースを表示（mermaid記法）</summary>
 
@@ -21,9 +22,10 @@ graph TD
     H -.-> I[analyze job: SARIFをSecurityタブへアップロード];
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification.png)
 
@@ -76,6 +78,7 @@ graph TD
     7. 公開したPNGを`raw.githubusercontent.com`のURLとして埋め込んだMarkdownを組み立て、Job Summaryへ出力する。見出しには、同名の`<name>.caption.txt`（呼び出し側が任意で書き出すUTF-8プレーンテキスト）があればその内容を、無ければファイル名（`<name>`）をそのまま使う。手順6の`screenshot-diff.json`が存在する場合、`"unchanged"`と判定されたスクリーンショットは添付自体を省略する（[bamiyanapp/karuta#750](https://github.com/bamiyanapp/karuta/issues/750)）。末尾に省略件数を1行で示す。さらに、同名の`<name>.spec.txt`（撮影したスペックファイル名）・`<name>.title.txt`（撮影したテストケース名）がある。これと`<frontend_dir>/e2e/spec-source-map.json`（検証対象ソースパスの宣言）の両方が用意されている場合を考える。かつ手順2で変更ファイル一覧が取得できている場合は、その宣言パスと変更ファイル一覧を突き合わせる。重なりが無ければ`<details><summary>`で折りたたむ（[bamiyanapp/karuta#628](https://github.com/bamiyanapp/karuta/issues/628)、案A）。グルーピング・宣言の単位をテストケース単位まで細かくした経緯は[bamiyanapp/karuta#651](https://github.com/bamiyanapp/karuta/issues/651)を参照。判定材料のいずれかが欠けている場合は、無関係と誤判定して見落とすことを避けるため常に展開表示にフォールバックする
     8. `pull_request`イベントの場合、上記MarkdownをPRコメントとして投稿する
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>E2Eスクリーンショット報告フロー（mermaid図）</summary>
 
@@ -100,6 +103,7 @@ flowchart TD
 ```
 
 </details>
+<!-- jscpd:ignore-end -->
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認できる。スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
 
@@ -243,6 +247,7 @@ semantic-release本体および一部プラグイン（`@semantic-release/npm`�
   4. `base_branch` が「変更は必ずPR経由」のリポジトリルールで保護されている場合、上記コミットの `base_branch` への直接pushは拒否される（想定内の失敗として扱う）。この場合 `git push` 失敗によって `semantic-release` プロセス自体が異常終了するため、タグは一度も作成されない。そのためタグ名はコミット済みの `package.json` に書き込まれたバージョンから導出する（`v<package.jsonのversion>`）。`release` job はローカルに作成済みのコミットを新しいブランチへpushする。`base_branch` へのPRを作成してAPI経由でsquash mergeする。これにより「PR経由の変更」としてリポジトリルールを満たしたうえで反映する。タグはこの方法で導出した名前でsquash後のコミットへ新規に打つ。GitHub Releaseは`CHANGELOG.md`の該当バージョン節から作成する。`@semantic-release/github`のpublishステップは`semantic-release`プロセスの異常終了により実行されないためである。
   5. リリースPRの作成は参照側リポジトリの通常のCIワークフローも起動する（`pull_request`イベントであるため）。`release` jobはCIの完了を待たずに即座にマージを試みる。そのため、リリースPR自体に対する`merge` jobの自動マージ処理と競合しうる。後勝ち（`release` job側が先にマージすることが多い）で無害に失敗するのみで実害はない。
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>リリース手順のフロー（mermaid図）</summary>
 
@@ -264,6 +269,7 @@ flowchart TD
 ```
 
 </details>
+<!-- jscpd:ignore-end -->
 - **なぜ `base_branch` へのpush後に実行するのか（旧方式からの変更点）**: 以前は PR の作業ブランチ上でマージ前に `semantic-release` を実行する方式だった。しかし、`pull_request` イベントで GitHub Actions が自動設定する `GITHUB_REF`/`GITHUB_REF_NAME` は `refs/pull/<PR番号>/merge` に固定されている。ワークフローYAMLの `env:` では上書きできない（GitHub Actionsの予約変数のため）。そのため semantic-release のブランチ判定が常に `refs/pull/<PR番号>/merge` を見てしまい、「対象ブランチと一致しないため公開しない」と判定されて新バージョンが一切発行されない状態になっていた（各ジョブ自体は成功扱いになるため発覚しにくい）。`base_branch` への実際のpushイベント、または`base_branch`を対象とした`schedule`イベント上で実行すれば `GITHUB_REF` は素直に `refs/heads/<base_branch>` になる。この場合、この問題は起きない（`schedule`イベントもpushと同様にデフォルトブランチのrefで実行されるため）。ただし `base_branch` がPR必須のリポジトリルールで保護されている場合は上記4のフォールバックが必要になる。
 
 ## 5. ビルド時バージョン情報のアプリ内表示（任意）

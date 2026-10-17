@@ -16,6 +16,10 @@ Safariは`HTMLAudioElement`ごとに「ユーザー操作（クリック/タッ�
 
 ユーザー操作の発生箇所（例: トップページのボタンクリック）と、実際に音声を再生する箇所（例: 別画面の非同期処理）が別のコンポーネントのライフサイクルにまたがることが多い。そのため、コンポーネントの`ref`ではなく**モジュールスコープのシングルトン**として保持する。
 
+<!-- jscpd:ignore-start -->
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 sequenceDiagram
     participant User as ユーザー操作（クリック等）
@@ -28,6 +32,11 @@ sequenceDiagram
     Async->>Audio: playSharedAudio(src)<br/>（srcを差し替えてplay()）
     Note over Audio: 解錠済みのため非同期文脈でも再生が許可される
 ```
+
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
+
+</details>
+<!-- jscpd:ignore-end -->
 
 ![解錠〜再生フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ios-safari-audio-unlock-pattern.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 

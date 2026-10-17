@@ -8,6 +8,10 @@ Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークン�
 
 1つのAWS SAMテンプレート（`infra/template.yaml`）で、API・データストア・フロントエンド配信をまとめて管理する。
 
+<!-- jscpd:ignore-start -->
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 flowchart TD
     Browser[Browser<br/>React/Vite SPA]
@@ -19,6 +23,11 @@ flowchart TD
     Browser --> CloudFront[CloudFront]
     CloudFront --> S3[S3<br/>フロントエンドビルド成果物]
 ```
+
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
+
+</details>
+<!-- jscpd:ignore-end -->
 
 ![アーキテクチャ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-1.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 
@@ -61,6 +70,7 @@ CORSはAPI Gateway（HTTP API）の`CorsConfiguration`側で処理し、Lambda�
 - バックエンド（初回ログイン、`POST /auth/session`のみ）: `google-auth-library`を使う。`OAuth2Client.verifyIdToken({ idToken, audience: clientId })`でこれを行う。これでGoogle IDトークンを検証する。この検証には`backend/src/lib/googleAuth.js`の`verifyGoogleIdToken`を使う。`audience`にGoogle Cloud ConsoleのクライアントIDを指定することで、他のGoogleサービス向けに発行されたIDトークンを弾く。検証後、`backend/src/services/authService.js`がセッショントークン（HS256 JWT、`sub`にGoogleアカウントのユーザーIDを設定）を発行する。有効期限は`AuthContext.jsx`のCookie保持期間と一致させて返す
 - バックエンド（それ以外の全リクエスト）: `backend/src/lib/sessionToken.js`の`createSessionAuthenticator({ secret })`を使う。これがセッショントークンを検証する。署名鍵`SESSION_SECRET`が一致しない・期限切れの場合は401を返す。Google APIへの通信は発生しない
 
+<!-- jscpd:ignore-start -->
 <details>
 <summary>トークン交換フロー（mermaid図）</summary>
 
@@ -85,6 +95,7 @@ sequenceDiagram
 ```
 
 </details>
+<!-- jscpd:ignore-end -->
 
 ![トークン交換フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-2.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 

@@ -47,6 +47,10 @@
 
 ## 状態遷移
 
+<!-- jscpd:ignore-start -->
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 stateDiagram-v2
     [*] --> idle
@@ -60,6 +64,11 @@ stateDiagram-v2
     error --> connecting: visibilitychange/online（即時・カウンタリセット）
     connected --> connecting: visibilitychange/online かつ readyState !== OPEN（即時・カウンタリセット）
 ```
+
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
+
+</details>
+<!-- jscpd:ignore-end -->
 
 ![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 

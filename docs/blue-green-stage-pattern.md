@@ -69,6 +69,10 @@ DynamoDBテーブル等のステートフルリソースを専用スタックへ
 
 mainへのマージから昇格・詰まりの自動解消までの一連の流れを示す。状態の組み合わせ一覧（判定マトリクス、後述）とは別の視点として、どの順で何が起きるかを示す。
 
+<!-- jscpd:ignore-start -->
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 flowchart TD
     A["mainへマージ"] --> C["canary_queue_pendingをtrueにする<br/>（デプロイ自体は行わない）"]
@@ -84,7 +88,10 @@ flowchart TD
     H --> D
 ```
 
-上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（issue #824参照）。ソースはこのまま維持しつつ、下記は`enable_mermaid_render` jobが`main`へのマージのたびに再レンダリングし、`docs-diagrams`ブランチの`latest/`へ上書き公開している画像（常に最新版）。
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
+
+</details>
+<!-- jscpd:ignore-end -->
 
 ![自動昇格ワークフローの処理フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/blue-green-stage-pattern.png?ea8f1880cdb0a441ad792e1bd312be3b285e4837)
 
