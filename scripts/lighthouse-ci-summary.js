@@ -140,16 +140,70 @@ function summarizeLighthouseCiLog(log) {
   return { overallSuccess, markdown: lines.join("\n") };
 }
 
+// カテゴリ名（manifest.jsonの`summary`キー）の日本語表示名。
+// `pwa`はLighthouseのバージョン・設定によって計測されないことがあるため、
+// `summary`に存在する場合のみ表の対象にする（存在しないカテゴリの行は作らない）
+const CATEGORY_LABELS = {
+  performance: "Performance",
+  accessibility: "Accessibility",
+  "best-practices": "Best Practices",
+  seo: "SEO",
+  pwa: "PWA",
+};
+
+// `lhci autorun`が`upload.target: "filesystem"`設定時に出力するmanifest.json
+// （`[{ url, isRepresentativeRun, summary: { performance, accessibility, ... } }]`
+// 形式、0〜1のスコア）から、カテゴリ別スコアのMarkdown表を組み立てる（issue #1047）。
+// `upload.target`が未設定・`filesystem`以外の参照側リポジトリではmanifest.json
+// 自体が生成されないため、その場合はnullを返し呼び出し側で「不明」表示に倒す
+function summarizeLighthouseScores(manifestEntries) {
+  if (!Array.isArray(manifestEntries) || manifestEntries.length === 0) return null;
+
+  const lines = [];
+  lines.push("| URL | " + Object.values(CATEGORY_LABELS).join(" | ") + " |");
+  lines.push("|---|" + Object.values(CATEGORY_LABELS).map(() => "---").join("|") + "|");
+
+  for (const entry of manifestEntries) {
+    const summary = entry?.summary ?? {};
+    const cells = Object.keys(CATEGORY_LABELS).map((key) => {
+      const score = summary[key];
+      if (typeof score !== "number") return "―";
+      const percent = Math.round(score * 100);
+      const mark = percent >= 90 ? "🟢" : percent >= 50 ? "🟡" : "🔴";
+      return `${mark} ${percent}`;
+    });
+    lines.push(`| ${entry.url ?? "不明"} | ${cells.join(" | ")} |`);
+  }
+
+  return lines.join("\n");
+}
+
 function main() {
-  const [, , logPath] = process.argv;
+  const [, , logPath, manifestPath] = process.argv;
   if (!logPath) {
-    console.error("Usage: node lighthouse-ci-summary.js <lhci-stdout.log>");
+    console.error("Usage: node lighthouse-ci-summary.js <lhci-stdout.log> [manifest.json]");
     process.exitCode = 1;
     return;
   }
   const log = fs.readFileSync(logPath, "utf-8");
   const { markdown } = summarizeLighthouseCiLog(log);
   console.log(markdown);
+
+  if (manifestPath && fs.existsSync(manifestPath)) {
+    const manifestEntries = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const scoresMarkdown = summarizeLighthouseScores(manifestEntries);
+    if (scoresMarkdown) {
+      console.log("");
+      console.log("### カテゴリ別スコア");
+      console.log("");
+      console.log(scoresMarkdown);
+    }
+  } else {
+    console.log("");
+    console.log(
+      "### カテゴリ別スコア\n\n不明（`lighthouserc.json`の`upload.target`が`filesystem`に設定されていないため、スコアレポートが生成されませんでした）",
+    );
+  }
 }
 
 if (require.main === module) {
@@ -163,4 +217,5 @@ module.exports = {
   detectServerStarted,
   parseRunCount,
   parseAssertionFailures,
+  summarizeLighthouseScores,
 };

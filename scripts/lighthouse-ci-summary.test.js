@@ -9,6 +9,7 @@ const {
   detectServerStarted,
   parseRunCount,
   parseAssertionFailures,
+  summarizeLighthouseScores,
 } = require("./lighthouse-ci-summary.js");
 
 // karuta#1698のPRコメントで実際に観測されたログをそのまま使う（issue #982）
@@ -214,4 +215,34 @@ test("summarizeLighthouseCiLog: 想定外の形式では不明として安全側
   const { overallSuccess, markdown } = summarizeLighthouseCiLog(UNEXPECTED_LOG);
   assert.equal(overallSuccess, null);
   assert.ok(markdown.includes("判定できませんでした"));
+});
+
+// karuta PR#1753で実際に観測された`manifest.json`形式（issue #1047）
+const MANIFEST_ENTRIES = [
+  {
+    url: "http://localhost:4173/",
+    isRepresentativeRun: true,
+    summary: { performance: 0.49, accessibility: 0.84, "best-practices": 0.93, seo: 0.9 },
+  },
+];
+
+test("summarizeLighthouseScores: manifest.jsonのsummaryからカテゴリ別スコア表を組み立てる", () => {
+  const markdown = summarizeLighthouseScores(MANIFEST_ENTRIES);
+  assert.ok(markdown.includes("http://localhost:4173/"));
+  assert.ok(markdown.includes("🔴 49"));
+  assert.ok(markdown.includes("🟡 84"));
+  assert.ok(markdown.includes("🟢 93"));
+  assert.ok(markdown.includes("🟢 90"));
+});
+
+test("summarizeLighthouseScores: pwa等summaryに無いカテゴリは「―」にする", () => {
+  const markdown = summarizeLighthouseScores(MANIFEST_ENTRIES);
+  const dataRow = markdown.split("\n").find((l) => l.includes("http://localhost:4173/"));
+  assert.ok(dataRow.includes("―"));
+});
+
+test("summarizeLighthouseScores: 空配列・非配列ではnullを返す", () => {
+  assert.equal(summarizeLighthouseScores([]), null);
+  assert.equal(summarizeLighthouseScores(undefined), null);
+  assert.equal(summarizeLighthouseScores(null), null);
 });

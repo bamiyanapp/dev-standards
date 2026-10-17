@@ -2559,8 +2559,16 @@ jobs:
         continue-on-error: true
         run: |
           set -eu
-          npx lhci autorun --output-path=/tmp/lhci-result.json > /tmp/lhci-stdout.log 2>&1 || echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          npx lhci autorun > /tmp/lhci-stdout.log 2>&1 || echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           cat /tmp/lhci-stdout.log
+          # issue #1047。カテゴリ別スコア（Performance/Accessibility/Best Practices/SEO）を
+          # サマリーへ含めるため、lhciが書き出すmanifest.jsonを探す。これは参照側リポジトリの
+          # lighthouserc.jsonで`upload.target: "filesystem"`を設定した場合のみ生成される
+          # （デフォルトのtemporary-public-storage等では生成されず、以降は「不明」表示に倒す）
+          manifest_path="$(find . -not -path '*/node_modules/*' -name manifest.json -print -quit 2>/dev/null || true)"
+          if [ -n "$manifest_path" ]; then
+            cp "$manifest_path" /tmp/lhci-manifest.json
+          fi
 
       # scripts/lighthouse-ci-summary.jsはdev-standards自身のスクリプトのため、
       # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
@@ -2608,7 +2616,7 @@ jobs:
             } >> /tmp/lighthouse-summary.md
           else
             {
-              node .dev-standards-actions/scripts/lighthouse-ci-summary.js /tmp/lhci-stdout.log
+              node .dev-standards-actions/scripts/lighthouse-ci-summary.js /tmp/lhci-stdout.log /tmp/lhci-manifest.json
               echo ""
               echo "<details>"
               echo "<summary>生ログを表示</summary>"
