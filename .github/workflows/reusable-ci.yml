@@ -2224,6 +2224,29 @@ jobs:
 
       # 補助的な機能であり、このステップの失敗（ブランチ保護やトークン権限の問題等）が
       # このジョブ自体の成否判定を上書きしてはならないためcontinue-on-error: trueにする
+      # issue #1012: キャッシュバスティング（後述）は、実際には画像内容が
+      # 変わっていないpushでも無条件に発生し、無関係な変更のたびに
+      # 追従コミット（新ブランチ→PR→squash merge）を発生させていた。
+      # 直後の「公開する」ステップがlatest/<file>.pngを上書きしてしまう前に、
+      # 上書き前（＝前回公開時点）の画像のチェックサムを記録しておき、
+      # 後続のキャッシュバスティングステップで新しいレンダリング結果と
+      # 比較することで、画像内容が実際に変わった場合にのみバスティングする
+      - name: 最新版公開前の画像チェックサムを記録する
+        id: prev-checksums
+        if: steps.diagrams.outputs.found == 'true' && github.event_name == 'push'
+        continue-on-error: true
+        run: |
+          set -eu
+          echo '{}' > /tmp/prev-checksums.json
+          for fileName in $(jq -r '.[].fileName' mermaid-diagrams/manifest.json); do
+            URL="https://raw.githubusercontent.com/${{ github.repository }}/docs-diagrams/latest/${fileName}"
+            HASH=$(curl -sS -f "$URL" 2>/dev/null | sha256sum | cut -d' ' -f1 || true)
+            if [ -n "$HASH" ]; then
+              jq --arg k "$fileName" --arg v "$HASH" '.[$k] = $v' /tmp/prev-checksums.json > /tmp/prev-checksums.json.tmp
+              mv /tmp/prev-checksums.json.tmp /tmp/prev-checksums.json
+            fi
+          done
+
       - name: レンダリング結果を専用ブランチへ公開する
         id: publish-diagrams
         if: steps.diagrams.outputs.found == 'true'
@@ -2269,12 +2292,31 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const crypto = require('crypto');
             const sha = context.sha;
             const repo = '${{ github.repository }}';
             const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const manifest = JSON.parse(fs.readFileSync('mermaid-diagrams/manifest.json', 'utf-8'));
+            // issue #1012: 前回公開時点の画像チェックサム（前段ステップで取得済み）が
+            // 存在し、かつ今回レンダリングした画像のチェックサムと一致する場合は、
+            // 画像内容に変化が無いためバスティング対象から除外する。前段ステップ自体が
+            // 失敗・スキップされた場合（初回実行等）はprevChecksumsが空になり、
+            // 従来どおり全件をバスティング対象とする安全側の動作になる
+            let prevChecksums = {};
+            try {
+              prevChecksums = JSON.parse(fs.readFileSync('/tmp/prev-checksums.json', 'utf-8'));
+            } catch (err) {
+              // 前段ステップが失敗・スキップされた場合は空のままにする
+            }
             const changedFiles = [];
             for (const { sourceFile, fileName } of manifest) {
+              const imagePath = `mermaid-diagrams/${fileName}`;
+              if (prevChecksums[fileName] && fs.existsSync(imagePath)) {
+                const newHash = crypto.createHash('sha256').update(fs.readFileSync(imagePath)).digest('hex');
+                if (newHash === prevChecksums[fileName]) {
+                  continue;
+                }
+              }
               const content = fs.readFileSync(sourceFile, 'utf-8');
               const pattern = new RegExp(`(https://raw\\.githubusercontent\\.com/${escape(repo)}/docs-diagrams/latest/${escape(fileName)})(\\?[^)\\s]*)?`, 'g');
               const updated = content.replace(pattern, `$1?${sha}`);
