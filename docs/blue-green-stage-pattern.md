@@ -85,7 +85,7 @@ flowchart TD
 
 上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（issue #824参照）。ソースはこのまま維持しつつ、下記は`enable_mermaid_render` jobが`main`へのマージのたびに再レンダリングし、`docs-diagrams`ブランチの`latest/`へ上書き公開している画像（常に最新版）。
 
-![自動昇格ワークフローの処理フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/blue-green-stage-pattern.png)
+![自動昇格ワークフローの処理フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/blue-green-stage-pattern.png?8578747177e30502407de0df2068dc52ae6887b1)
 
 ### 自動昇格ワークフローの判定マトリクス
 
