@@ -39,7 +39,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
     steps:
-      - name: Create on-demand backups
+      - name: オンデマンドバックアップを作成する
         env:
           TABLE_NAMES_JSON: ${{ inputs.table_names }}
         run: |
