@@ -103,13 +103,20 @@ install script検知: NEW      ─┐
 SBOM生成:           実施済み ─┘   （SBOMはRisk判定へは渡らない。証跡として別表示のみ）
 ```
 
+## deprecated（サポート終了）検知（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）
+
+CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る指標である。aws-sdk（v2系）のようにメンテナンスモード・サポート終了（EOL）となり、今後の脆弱性の修正が出なくなったパッケージは、CVEが公表されない限り検知できない（karuta#1656・#1658の調査で判明）。npm registryの各バージョンレスポンス（`GET /{name}`）が持つ`deprecated`フィールドを見ることで、この状態を機械的に検知する（`scripts/dependency-deprecation-info.js`）。
+
+- 旧バージョン（更新前、現行バージョン）がdeprecatedの場合: 維持リスク（`classifyStaleRisk()`）をKEVと同様にhighへ昇格する。サポート終了したバージョンに留まり続けること自体が危険であるため
+- 新バージョン（更新後）がdeprecatedの場合: 適用リスク（`classifyRisk()`）はエスカレーションしない。deprecatedはパッケージの運用状態を示すのみで、PRの内容自体が危険であることを意味しないため。Risk Summary上のreasonにのみ表示し、自動マージはブロックしない
+
 ## 適用リスク
 
-このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。
+このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。新バージョンのdeprecated検知（上記）はreasonにのみ反映され、Highへの昇格には使わない。
 
 ## 維持リスク
 
-このPRを適用せず現行バージョンに留まる場合のLow/Medium/High判定（更新前バージョンのCVE/KEVを見る、[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。業務影響度に該当する場合はlowからmediumへ1段階昇格する。維持リスクのhighへの昇格は既知のCVE/KEVのみを根拠とする設計のため、ブラスト半径単独ではhighへ昇格しない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。
+このPRを適用せず現行バージョンに留まる場合のLow/Medium/High判定（更新前バージョンのCVE/KEVを見る、[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。業務影響度に該当する場合はlowからmediumへ1段階昇格する。維持リスクのhighへの昇格は既知のCVE/KEV、または旧バージョンのdeprecated検知（上記、[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）のみを根拠とする設計のため、ブラスト半径単独ではhighへ昇格しない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。
 
 ## 判定結果マトリクス（適用リスク×維持リスク）
 

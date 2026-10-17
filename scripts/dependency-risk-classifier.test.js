@@ -119,6 +119,19 @@ test("classifyRisk: メンテナ（公開者）が変化したパッケージが
   assert.ok(result.reasons.some((r) => r.includes("メンテナ") && r.includes("foo")));
 });
 
+test("classifyRisk: 新バージョンがdeprecatedでもエスカレーションせずreasonのみ追加する（issue #945、自動マージをブロックしない）", () => {
+  const result = classifyRisk(
+    baseInput({ deprecationInfo: [{ name: "aws-sdk", oldVersion: "2.1691.0", newVersion: "2.1692.0", newDeprecated: "maintenance mode" }] }),
+  );
+  assert.equal(result.level, "low");
+  assert.ok(result.reasons.some((r) => r.includes("deprecated") && r.includes("aws-sdk")));
+});
+
+test("classifyRisk: deprecationInfoを省略（既定[]）した場合は追加reasonが無い（後方互換）", () => {
+  const result = classifyRisk(baseInput());
+  assert.ok(!result.reasons.some((r) => r.includes("deprecated")));
+});
+
 test("classifyRisk: セキュリティ情報取得失敗（securityDataAvailable=false）はmedium", () => {
   const result = classifyRisk(baseInput({ securityDataAvailable: false }));
   assert.equal(result.level, "medium");
@@ -232,6 +245,51 @@ test("CLI: vulnerability-info.json・exploit-info.jsonが無い場合はセキ�
   });
   const parsed = JSON.parse(output);
   assert.equal(parsed.level, "medium");
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("CLI: deprecation-info.json（newDeprecatedあり）を渡してもhighへは昇格しない", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "risk-classifier-test-"));
+  const updateInfoPath = path.join(tmpDir, "dependency-update-info.json");
+  const vulnerabilityInfoPath = path.join(tmpDir, "vulnerability-info.json");
+  const exploitInfoPath = path.join(tmpDir, "exploit-info.json");
+  const installScriptAnomaliesPath = path.join(tmpDir, "install-script-anomalies.json");
+  const maintainerAnomaliesPath = path.join(tmpDir, "maintainer-anomalies.json");
+  const blastRadiusInfoPath = path.join(tmpDir, "blast-radius-info.json");
+  const deprecationInfoPath = path.join(tmpDir, "deprecation-info.json");
+  fs.writeFileSync(
+    updateInfoPath,
+    JSON.stringify({ summary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 0, minor: 1, patch: 0, other: 0 } }, changes: [] }),
+  );
+  fs.writeFileSync(vulnerabilityInfoPath, "[]");
+  fs.writeFileSync(exploitInfoPath, "[]");
+  fs.writeFileSync(installScriptAnomaliesPath, "[]");
+  fs.writeFileSync(maintainerAnomaliesPath, "[]");
+  fs.writeFileSync(blastRadiusInfoPath, JSON.stringify({ hasCriticalPathImpact: false, hits: [] }));
+  fs.writeFileSync(
+    deprecationInfoPath,
+    JSON.stringify([{ name: "aws-sdk", oldVersion: "2.1691.0", newVersion: "2.1692.0", newDeprecated: "maintenance mode" }]),
+  );
+
+  const output = execFileSync(
+    process.execPath,
+    [
+      path.join(__dirname, "dependency-risk-classifier.js"),
+      updateInfoPath,
+      vulnerabilityInfoPath,
+      exploitInfoPath,
+      "",
+      installScriptAnomaliesPath,
+      maintainerAnomaliesPath,
+      blastRadiusInfoPath,
+      deprecationInfoPath,
+    ],
+    { encoding: "utf-8" },
+  );
+  const parsed = JSON.parse(output);
+  assert.equal(parsed.level, "low");
+  assert.ok(parsed.reasons.some((r) => r.includes("deprecated")));
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

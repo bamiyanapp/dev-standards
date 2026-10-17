@@ -22,7 +22,13 @@ const { buildSecurityRows } = require("./dependency-risk-security-summary.js");
 // highになると「適用リスクHighの理由がCVE/KEV残存のみの場合、自動マージの上書きを許す」
 // （issue #700）ため、ブラスト半径単独でhighへ昇格できると、実際の脆弱性の深刻度が不明・
 // 低いままでも業務影響度だけを理由に上書きが発動してしまうことを防ぐため
-function classifyStaleRisk({ oldVulnerabilityInfo = [], oldExploitInfo = [], securityDataAvailable, blastRadiusImpact = false }) {
+function classifyStaleRisk({
+  oldVulnerabilityInfo = [],
+  oldExploitInfo = [],
+  securityDataAvailable,
+  blastRadiusImpact = false,
+  deprecationInfo = [],
+}) {
   let level = "low";
   const reasons = [];
 
@@ -39,6 +45,17 @@ function classifyStaleRisk({ oldVulnerabilityInfo = [], oldExploitInfo = [], sec
     if (hasCriticalOrHighCve && !hasKev) {
       level = escalate(level, "medium");
       reasons.push("現行バージョンにCritical/High severityのCVEが残っています");
+    }
+  }
+
+  // issue #945。現行バージョンがnpm registry上でdeprecated（サポート終了・
+  // メンテナンスモード）の場合、CVEの有無に関わらず今後の脆弱性修正自体が
+  // 期待できなくなるため、KEVと同様に維持リスクをhighへ昇格する
+  const deprecatedOld = deprecationInfo.filter((d) => d.oldDeprecated);
+  if (deprecatedOld.length > 0) {
+    level = escalate(level, "high");
+    for (const d of deprecatedOld) {
+      reasons.push(`現行バージョンの${d.name}はnpm registry上でdeprecated（非推奨）のため、放置のリスクが高いです: ${d.oldDeprecated}`);
     }
   }
 
@@ -66,10 +83,10 @@ function readJsonFileIfExists(path) {
 }
 
 function main() {
-  const [, , oldVulnerabilityInfoPath, oldExploitInfoPath, blastRadiusInfoPath] = process.argv;
+  const [, , oldVulnerabilityInfoPath, oldExploitInfoPath, blastRadiusInfoPath, deprecationInfoPath] = process.argv;
   if (!oldVulnerabilityInfoPath) {
     console.error(
-      "Usage: node dependency-stale-risk-classifier.js <old-vulnerability-info.json> [old-exploit-info.json] [blast-radius-info.json]",
+      "Usage: node dependency-stale-risk-classifier.js <old-vulnerability-info.json> [old-exploit-info.json] [blast-radius-info.json] [deprecation-info.json]",
     );
     process.exitCode = 1;
     return;
@@ -79,12 +96,14 @@ function main() {
   const oldExploitInfo = readJsonFileIfExists(oldExploitInfoPath);
   const securityDataAvailable = oldVulnerabilityInfo != null && oldExploitInfo != null;
   const blastRadiusInfo = readJsonFileIfExists(blastRadiusInfoPath);
+  const deprecationInfo = readJsonFileIfExists(deprecationInfoPath);
 
   const result = classifyStaleRisk({
     oldVulnerabilityInfo: oldVulnerabilityInfo ?? [],
     oldExploitInfo: oldExploitInfo ?? [],
     securityDataAvailable,
     blastRadiusImpact: blastRadiusInfo?.hasCriticalPathImpact ?? false,
+    deprecationInfo: deprecationInfo ?? [],
   });
 
   console.log(JSON.stringify(result, null, 2));
