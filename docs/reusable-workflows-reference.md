@@ -260,6 +260,19 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 `canary_exists_kvs_key`を指定した場合、昇格・canaryスタック削除後はこのキーをfalseへ、キュー待ち更新をcanaryへ反映した後はtrueへ更新する。`/canary/`への明示アクセス時、CloudFront Functions側でcanaryスタックが存在しない状態への誤ルーティングを避けstableへフォールバックさせる用途を想定する（karuta issue #1489）。
 
+## `reusable-dependency-deprecation-scan.yml`
+
+更新PRの有無に関わらず、現時点でロックされている依存パッケージ全体を対象に、npm registryの`deprecated`フラグを定期スキャンする（issue #969）。`dependency-risk-summary` job（`reusable-ci.yml`）のdeprecated検知は更新PR起点のため、後継バージョンが存在しないまま非推奨化されたパッケージ（Renovateが更新PRを作らないケース）を検知できない限界を補う。定期実行（`schedule`トリガー）を想定する。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `lockfile_path` | スキャン対象の`package-lock.json`のパス | `package-lock.json` |
+| `direct_only` | 直接依存のみを対象とするか（falseでtransitive依存まで含める） | `true` |
+| `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] 依存パッケージのdeprecated（サポート終了）検知` |
+| `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: medium"]` |
+
+検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。
+
 ## `.github/actions/github-pages-migration-page`（複合action）
 
 ブルーグリーン（stable/canary）デプロイパターンで旧URL（GitHub Pages等）から新URLへ移行する際の、ビルドレスのkill switchページ（`index.html` + Service Worker）を生成する。既存のPWA用Service Workerがページをprecache済みでも、生成したkill switch用SWへの差し替えでキャッシュを確実に破棄し新URLへ誘導する。
