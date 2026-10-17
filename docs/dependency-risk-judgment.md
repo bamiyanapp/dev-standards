@@ -8,24 +8,28 @@
 <summary>ソースを表示（mermaid記法）</summary>
 
 ```mermaid
-flowchart TD
+flowchart LR
     A[依存更新PR] --> B{package-lock.jsonまたは<br/>GitHub Actions参照が変更された?}
     B -->|いいえ| C[risk_level/stale_risk_levelは生成されない]
-    B -->|package-lock.json変更あり| D[update type・直接/間接判定]
-    D --> E[新バージョンのCVE/CVSS/KEV/EPSS取得]
-    D --> F[旧バージョンのCVE/CVSS/KEV/EPSS取得]
-    D --> G[Supply Chainチェック]
-    D --> H[dependency-cruiser + 重要パス宣言で<br/>業務影響度（ブラスト半径）判定]
-    E --> I[適用リスク分類: classifyRisk]
-    G --> I
-    H --> I
-    F --> J[維持リスク分類: classifyStaleRisk<br/>ブラスト半径はlow→mediumのみ昇格]
-    H --> J
-    I --> K{適用リスク Low/Medium/High<br/>+ vulnerability_only_high}
-    J --> L{維持リスク Low/Medium/High}
+    B -->|変更あり| D[update type・直接/間接判定]
+    subgraph 情報収集
+        D --> E[新バージョンの<br/>CVE/CVSS/KEV/EPSS取得]
+        D --> F[旧バージョンの<br/>CVE/CVSS/KEV/EPSS取得]
+        D --> G[Supply Chain<br/>チェック]
+        D --> H[業務影響度<br/>（ブラスト半径）判定]
+    end
+    subgraph 分類
+        E --> I[適用リスク分類<br/>classifyRisk]
+        G --> I
+        H --> I
+        F --> J[維持リスク分類<br/>classifyStaleRisk]
+        H --> J
+    end
+    I --> K{適用リスク<br/>+ vulnerability_only_high}
+    J --> L{維持リスク}
     K --> M{merge gateの判定}
     L --> M
-    M -->|適用High かつ<br/>vulnerability_only_high・維持Highが同時に成立しない| N[自動マージ停止・人間レビュー待ち]
+    M -->|適用High かつ<br/>救済条件不成立| N[自動マージ停止]
     M -->|それ以外| O[自動マージ継続]
 ```
 
@@ -65,21 +69,11 @@ CVE/CVSS/KEVチェック（上記）は「既知の脆弱性があるかどう�
 
 ### 新規install scriptの検知（例）
 
-```
-更新前: @scope/pkg@1.0.0 → hasInstallScript: false
-更新後: @scope/pkg@1.1.0 → hasInstallScript: true
-```
-
-`package-lock.json`（lockfileVersion 3）は、実際のscript本文ではなく`hasInstallScript`という真偽値フラグのみを記録する（本文自体はpackage.json側にあり、lockfileには含まれない）。このフラグが新規に`true`へ変化したパッケージを検知する（`scripts/dependency-package-anomaly-info.js`）。既存パッケージがinstall scriptを失う（`true`→`false`）変化は、より安全な状態への変化のため検知対象としない。
+`@scope/pkg`が`1.0.0`（`hasInstallScript: false`）から`1.1.0`（`hasInstallScript: true`）へ更新された場合を検知する。`package-lock.json`（lockfileVersion 3）は実際のscript本文ではなく`hasInstallScript`という真偽値フラグのみを記録する（本文自体はpackage.json側にあり、lockfileには含まれない）。このフラグが新規に`true`へ変化したパッケージを検知する（`scripts/dependency-package-anomaly-info.js`）。既存パッケージがinstall scriptを失う（`true`→`false`）変化は、より安全な状態への変化のため検知対象としない。
 
 ### メンテナ（公開者）変更の検知（例）
 
-```
-更新前: publisher = alice
-更新後: publisher = mallory
-```
-
-旧バージョンと新バージョンでnpm registry上の公開者（npmアカウント名）が異なる場合に検知する（`scripts/dependency-maintainer-info.js`）。暗号学的な署名検証（provenance attestation等）は対象外である（詳細は同ファイルのコードコメント参照）。
+旧バージョンの公開者が`alice`、新バージョンが`mallory`のように、npm registry上の公開者（npmアカウント名）が異なる場合に検知する（`scripts/dependency-maintainer-info.js`）。暗号学的な署名検証（provenance attestation等）は対象外である（詳細は同ファイルのコードコメント参照）。
 
 ### SBOM（Software Bill of Materials）
 
@@ -195,9 +189,25 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 
 適用リスク（risk_level、Low/Medium/High）がhighのPRでは`merge` jobによる自動マージを行わない（[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「Phase 2」Task 3）。対象をHighのみへ縮小した経緯は[#685](https://github.com/bamiyanapp/dev-standards/issues/685)を参照。
 
-- ただし`vulnerability_only_high`（適用リスクがhighに達した理由がCVE/KEV残存のみであること）かつ維持リスクがhighの場合は、放置の方が危険なため適用リスクがhighでも自動マージを止めない（[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）
-- major update・CI失敗・supply chain異常（install script異常・メンテナ変化）が理由のHigh（`vulnerability_only_high`がfalse）は、この救済の対象外であり維持リスクに関わらず自動マージを止める。新旧どちらを選ぶかという比較が成り立たず、PR自体の危険性・複雑さが理由のため（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。ブラスト半径はMedium止まりのためHighの理由にはならない（[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)）
-- 適用リスクがLow/Medium判定、またはrisk_levelが無い（`package-lock.json`を変更していないPR等で`dependency-risk-summary` job自体が実行されなかった場合）は、他のCI条件のみで自動マージの可否を判定する従来どおりの動作になる。`enable_dependency_risk_summary`が`false`の場合はrisk_level・stale_risk_level自体が生成されないため、本入力の値に関わらず常に従来どおりの動作になる
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart TD
+    A{適用リスク} -->|Low/Medium、または未生成| Z[従来どおりのCI条件のみで判定]
+    A -->|High| B{vulnerability_only_high<br/>かつ維持リスクHigh?}
+    B -->|Yes: CVE/KEV残存のみが理由で<br/>放置の方が危険| C[自動マージを止めない]
+    B -->|No: major update・CI失敗・<br/>supply chain異常が理由| D[自動マージを止める]
+```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示される。図としては確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。ソース（mermaid記法）はこのまま維持する。下記は`enable_mermaid_render`（`render-mermaid-diagrams` job）が再レンダリングした画像である（常に最新版）。`base_branch`へのマージのたびに、`docs-diagrams`ブランチの`latest/`へ上書き公開する。
+
+</details>
+
+![merge gate判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-4.png)
+
+- `vulnerability_only_high`による救済は、放置（維持リスクHigh）の方が危険な場合に限る（[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。新旧どちらを選ぶかという比較が成り立たないmajor update・CI失敗・supply chain異常が理由のHighは対象外（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。ブラスト半径はMedium止まりのためHighの理由にはならない（[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)）
+- `enable_dependency_risk_summary`が`false`の場合はrisk_level・stale_risk_level自体が生成されないため、常に従来どおりの動作になる
 
 ## 適用リスクHigh・維持リスクLowのPRの自動クローズ（`enable_dependency_risk_auto_close`）
 
