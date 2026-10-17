@@ -634,5 +634,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.97.1",
+    "date": "2026-10-17T08:49:38.496Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]

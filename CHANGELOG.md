@@ -1,3 +1,10 @@
+## [2.97.1](https://github.com/bamiyanapp/dev-standards/compare/v2.97.0...v2.97.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** mermaid図のキャッシュバスティングを実際に画像が変わった場合のみ行う ([#1013](https://github.com/bamiyanapp/dev-standards/issues/1013)) ([8812c97](https://github.com/bamiyanapp/dev-standards/commit/8812c978259aba19ca7b21bf14677c2eae0f2e68)), closes [#1012](https://github.com/bamiyanapp/dev-standards/issues/1012)
+
 # [2.97.0](https://github.com/bamiyanapp/dev-standards/compare/v2.96.0...v2.97.0) (2026-10-17)
 
 
