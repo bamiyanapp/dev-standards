@@ -1,3 +1,10 @@
+# [2.89.0](https://github.com/bamiyanapp/dev-standards/compare/v2.88.0...v2.89.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** dev-standards自身のci.yml・cd.ymlの残りジョブへ日本語表示名を追加する ([#992](https://github.com/bamiyanapp/dev-standards/issues/992)) ([e28963d](https://github.com/bamiyanapp/dev-standards/commit/e28963dab89c41d8edb43db472918bb61b8133e8))
+
 # [2.88.0](https://github.com/bamiyanapp/dev-standards/compare/v2.87.0...v2.88.0) (2026-10-17)
 
 
