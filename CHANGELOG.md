@@ -1,3 +1,10 @@
+## [2.97.3](https://github.com/bamiyanapp/dev-standards/compare/v2.97.2...v2.97.3) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** detectServerStartedがタイムアウトせず速く起動した正常系を検知できない問題を修正する ([#1023](https://github.com/bamiyanapp/dev-standards/issues/1023)) ([a9275e5](https://github.com/bamiyanapp/dev-standards/commit/a9275e5d76e46f78853471ba563d931895f1bda3)), closes [#1022](https://github.com/bamiyanapp/dev-standards/issues/1022)
+
 ## [2.97.2](https://github.com/bamiyanapp/dev-standards/compare/v2.97.1...v2.97.2) (2026-10-17)
 
 
