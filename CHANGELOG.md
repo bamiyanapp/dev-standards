@@ -1,3 +1,10 @@
+## [2.97.2](https://github.com/bamiyanapp/dev-standards/compare/v2.97.1...v2.97.2) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** detectServerStartedがANSIエスケープで分断されたLocal:を検知できない問題を修正する ([#1018](https://github.com/bamiyanapp/dev-standards/issues/1018)) ([8d2c5c3](https://github.com/bamiyanapp/dev-standards/commit/8d2c5c3d955d0e6742d0bbeff221fb5b8b39af13)), closes [#1017](https://github.com/bamiyanapp/dev-standards/issues/1017)
+
 ## [2.97.1](https://github.com/bamiyanapp/dev-standards/compare/v2.97.0...v2.97.1) (2026-10-17)
 
 
