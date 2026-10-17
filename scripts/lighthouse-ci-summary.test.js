@@ -71,6 +71,33 @@ Assertion failed. Exiting with status code 1.`;
 
 const UNEXPECTED_LOG = "something completely different that lhci never actually produces";
 
+// karuta#1723/#1724のPRコメントで実際に観測されたログをそのまま使う（dev-standards#1017）。
+// Viteのカラー出力で「Local」と「:」の間にANSIエスケープシーケンス（\u001b[22m）が
+// 挟まり、"Local:"という連続した文字列が一度も現れないケース
+const ANSI_SUCCESS_LOG = `✅  .lighthouseci/ directory writable
+✅  Configuration file found
+✅  Chrome installation found
+⚠️   GitHub token not set
+Healthcheck passed!
+
+Started a web server with "npm run build && npm run preview"...
+Running Lighthouse 1 time(s) on http://localhost:4173/
+Run #1...done.
+Done running Lighthouse!
+
+Checking assertions against 1 URL(s), 1 total run(s)
+
+All results processed!
+Done running autorun.
+
+Server Output:
+
+> frontend@0.0.0 preview
+> vite preview
+
+  \u001b[32m➜\u001b[39m  \u001b[1mLocal\u001b[22m:   \u001b[36mhttp://localhost:\u001b[1m4173\u001b[22m/\u001b[39m
+\u001b[2m  \u001b[32m➜\u001b[39m  \u001b[1mNetwork\u001b[22m\u001b[2m: use \u001b[22m\u001b[1m--host\u001b[22m\u001b[2m to expose\u001b[22m`;
+
 test("detectOverallSuccess: Assertion failedがあればfalse", () => {
   assert.equal(detectOverallSuccess(FAILURE_LOG), false);
 });
@@ -104,6 +131,10 @@ test("detectServerStarted: Local:もタイムアウト警告も無ければ不�
   assert.deepEqual(detectServerStarted(UNEXPECTED_LOG), { started: null, timedOutWarningOnly: false });
 });
 
+test("detectServerStarted: ANSIエスケープで「Local」と「:」が分断されていても起動成功と判定する", () => {
+  assert.deepEqual(detectServerStarted(ANSI_SUCCESS_LOG), { started: true, timedOutWarningOnly: false });
+});
+
 test("parseRunCount: 実行回数と対象URLを抽出する", () => {
   assert.deepEqual(parseRunCount(SUCCESS_LOG), { count: 1, url: "http://localhost:4173/" });
 });
@@ -135,6 +166,12 @@ test("summarizeLighthouseCiLog: 失敗ログはassertion失敗マークダウン
   assert.equal(overallSuccess, false);
   assert.ok(markdown.includes("assertion"));
   assert.ok(markdown.includes("categories:performance"));
+});
+
+test("summarizeLighthouseCiLog: ANSIエスケープで分断されたLocal:でも起動成功と要約する", () => {
+  const { markdown } = summarizeLighthouseCiLog(ANSI_SUCCESS_LOG);
+  assert.ok(markdown.includes("計測対象サーバー: 起動成功"));
+  assert.ok(!markdown.includes("不明（起動ログを読み取れませんでした）"));
 });
 
 test("summarizeLighthouseCiLog: 想定外の形式では不明として安全側に倒す", () => {

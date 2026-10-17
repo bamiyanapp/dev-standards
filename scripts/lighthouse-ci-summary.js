@@ -28,10 +28,14 @@ function parseHealthcheck(log) {
 }
 
 // サーバー起動を検知する。タイムアウト警告が出ていても、その後に実際の
-// `Local:`行（vite preview等のURL表示）が見つかれば起動成功とみなす
+// `Local:`行（vite preview等のURL表示）が見つかれば起動成功とみなす。
+// Viteのカラー出力では「Local」と「:」の間にANSIエスケープシーケンスが
+// 挟まり、"Local:"が連続した文字列として出力中に一度も現れないため、
+// `:`を挟まず行内で後続のhttpへ到達するかどうかで判定する（karuta#1723/#1724で
+// 実際に踏んだ落とし穴。dev-standards#1017参照）
 function detectServerStarted(log) {
   const timedOut = /Timed out waiting for the server to start listening/.test(log);
-  const started = /Local:\s*http/.test(log);
+  const started = /Local[^\n]*?http/.test(log);
   if (started) return { started: true, timedOutWarningOnly: timedOut };
   if (timedOut) return { started: false, timedOutWarningOnly: false };
   return { started: null, timedOutWarningOnly: false };
