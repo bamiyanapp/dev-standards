@@ -1,3 +1,10 @@
+# [2.90.0](https://github.com/bamiyanapp/dev-standards/compare/v2.89.0...v2.90.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** 小規模ワークフローのステップ名を日本語化する ([#995](https://github.com/bamiyanapp/dev-standards/issues/995)) ([a4b9f15](https://github.com/bamiyanapp/dev-standards/commit/a4b9f150ed9ec8194a94659b7ff62fac1c3c00bb))
+
 # [2.89.0](https://github.com/bamiyanapp/dev-standards/compare/v2.88.0...v2.89.0) (2026-10-17)
 
 
