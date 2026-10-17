@@ -213,6 +213,14 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 </ErrorBoundary>
 ```
 
+`fallbackUrl`（任意）propを渡すと、例外検知時に`window.location.reload()`の代わりに自動的にそのURLへ遷移する（karuta issue #1328由来）。A/Bテスト等で複数バリアントを配信している環境で、現在表示中のバリアントに問題がある場合に別バリアントへ明示的に退避させたいケースを想定している。本コンポーネント自体はどのバリアント機構にも依存せず、遷移先URLの文字列を受け取るだけの汎用的なインターフェースである。ブルーグリーン/カナリアデプロイでの利用例は後述の「手動切り替えリンクパターン」を参照。
+
+```jsx
+<ErrorBoundary fallbackUrl={`/stable${window.location.search}`}>
+  <App />
+</ErrorBoundary>
+```
+
 ### 手動切り替えリンクパターン（ブルーグリーン/カナリアデプロイ）
 
 ErrorBoundaryが検知できない軽微な不具合（クラッシュに至らない表示崩れ等）向けに、ユーザー自身が安定版（stable）へ切り替えられる導線のパターンを考える。karuta（issue #1329）での実装を元にした。dev-standards#733（ブルーグリーンデプロイ方式の開発共通化）の検討対象の1つとして、独立した共有コンポーネントではなくパターンとして文書化する。CloudFront Functions側のCookie制御・stage別ビルド構成等、プロダクト固有のインフラ実装に依存する部分が大きいためである。
