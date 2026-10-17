@@ -2678,13 +2678,16 @@ jobs:
       # コンポーネントの一覧を直接列挙）を含むタグへ更新した。v2.59.2で、
       # issue #720（npm workspaces構成でextractDirectDependencyNames()が
       # 各ワークスペースメンバーの直接依存を見ておらず、常に「間接」と
-      # 誤分類していた問題の修正）を含むタグへ更新した
+      # 誤分類していた問題の修正）を含むタグへ更新した。v2.84.0で、issue #945
+      # （npm registryのdeprecatedフラグ検知、dependency-deprecation-info.js追加・
+      # dependency-risk-classifier.js・dependency-stale-risk-classifier.jsへの
+      # deprecationInfo引数追加）を含むタグへ更新した
       - name: Checkout dev-standards (for the local script)
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.59.2
+          ref: v2.84.0
           path: .dev-standards-actions
 
       - name: Generate dependency update info
@@ -2730,6 +2733,16 @@ jobs:
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-maintainer-info.js /tmp/dependency-update-info.json > /tmp/maintainer-anomaly-info.json
+
+      # issue #945。npm registryのdeprecatedフラグ検知。oldVersion/newVersion
+      # いずれもdependency-update-info.jsのchangesに含まれているため、1回の呼び出しで
+      # 両方を判定する（dependency-vulnerability-info.jsのようにversionFieldで
+      # 呼び分ける必要は無い）
+      - name: Generate deprecation info
+        id: deprecation-info
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-deprecation-info.js /tmp/dependency-update-info.json > /tmp/deprecation-info.json
 
       # issue #648（Phase 3）SBOM生成。--package-lock-onlyによりnode_modulesの実
       # インストール無しにpackage-lock.jsonのみから生成できる（実機確認済み）。
@@ -2879,7 +2892,7 @@ jobs:
         id: classify-stale
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json > /tmp/stale-risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json /tmp/deprecation-info.json > /tmp/stale-risk-classification.json
 
       # ファンアウト注記（issue #646 Task G前半）: dev-standardsは複数リポジトリから
       # 参照される共有基盤のため、dev-standards自身への依存更新は「影響リポジトリ数」
@@ -2930,7 +2943,7 @@ jobs:
           CI_RESULT_FRONTEND_E2E_TEST: ${{ needs.frontend-e2e-test.result }}
           CI_RESULT_ARCHITECTURE_CHECK: ${{ needs.architecture-check.result }}
           CI_RESULT_DUPLICATION_CHECK: ${{ needs.duplication-check.result }}
-        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" /tmp/package-anomaly-info.json /tmp/maintainer-anomaly-info.json /tmp/blast-radius-info.json > /tmp/risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-risk-classifier.js /tmp/dependency-update-info.json /tmp/vulnerability-info.json /tmp/exploit-info.json "${{ steps.fanout.outputs.count }}" /tmp/package-anomaly-info.json /tmp/maintainer-anomaly-info.json /tmp/blast-radius-info.json /tmp/deprecation-info.json > /tmp/risk-classification.json
 
       # issue #666: package-lock.jsonの変更・GitHub Actions参照の変更のいずれか一方
       # だけが存在するPRでもコメントを投稿できるよう、gate自体（should_run）で判定する
