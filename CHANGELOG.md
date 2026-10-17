@@ -1,3 +1,10 @@
+## [2.97.7](https://github.com/bamiyanapp/dev-standards/compare/v2.97.6...v2.97.7) (2026-10-17)
+
+
+### Bug Fixes
+
+* **risk:** ブラスト半径による昇格をmediumへのキャップ方式に変更する ([#1042](https://github.com/bamiyanapp/dev-standards/issues/1042)) ([ea8f188](https://github.com/bamiyanapp/dev-standards/commit/ea8f1880cdb0a441ad792e1bd312be3b285e4837)), closes [#1040](https://github.com/bamiyanapp/dev-standards/issues/1040) [#1041](https://github.com/bamiyanapp/dev-standards/issues/1041)
+
 ## [2.97.6](https://github.com/bamiyanapp/dev-standards/compare/v2.97.5...v2.97.6) (2026-10-17)
 
 
