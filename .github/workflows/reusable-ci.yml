@@ -616,13 +616,13 @@ jobs:
       # submoduleも取得する（package-testジョブと同じ理由。examination#169:
       # 未取得のまま`npm test`/buildするとsymlinkの参照先が存在せず"Failed to
       # resolve import"等で失敗する）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
@@ -630,21 +630,21 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.frontend_dir) }}
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || inputs.frontend_dir }}
         run: npm ci
-      - name: Lint
+      - name: Lintを実行する
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run lint
       # vitest自体もテスト単位の自動リトライ（呼び出し元のvitest.config等でretryを
@@ -662,16 +662,16 @@ jobs:
       # 将来生じた場合は、`--no-isolate`を安易に適用せず、モジュール側の状態リセットを
       # 見直す等の別の対応を検討すること（詳細はbackend-testジョブの同名ステップの
       # コメントを参照）
-      - name: Test (attempt 1/2)
+      - name: テストを実行する（1回目/2回）
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.frontend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
-      - name: Wait before retrying the test run
+      - name: テスト再試行前に待機する
         if: steps.test-1.outcome == 'failure'
         shell: bash
         run: sleep 5
-      - name: Test (attempt 2/2, retry after a possible flaky failure)
+      - name: テストを実行する（2回目/2回、flakyの可能性がある失敗後の再試行）
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.frontend_dir }}
         run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary
@@ -704,14 +704,14 @@ jobs:
       # action.ymlに入力を追加・変更した場合は、このrefの更新を絶対に忘れないこと。
       # v2.6.1で、check-coverage-thresholdにper-file-metrics入力を追加した
       # （issue #307）ため、その修正を含むタグへ更新した
-      - name: Checkout dev-standards (for the local composite action)
+      - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: v2.6.1
           path: .dev-standards-actions
-      - name: Check coverage threshold
+      - name: カバレッジ閾値を確認する
         if: inputs.coverage_threshold > 0
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
@@ -721,7 +721,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
-      - name: Build
+      - name: ビルドする
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run build
 
@@ -741,13 +741,13 @@ jobs:
       # submoduleも取得する（package-testジョブと同じ理由。examination#169:
       # 未取得のまま`npm test`/buildするとsymlinkの参照先が存在せず"Failed to
       # resolve import"等で失敗する）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
@@ -755,21 +755,21 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.backend_dir) }}
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', inputs.backend_dir) }}
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || inputs.backend_dir }}
         run: npm ci
-      - name: Lint
+      - name: Lintを実行する
         working-directory: ${{ inputs.backend_dir }}
         run: npm run lint
       # 自動リトライの理由自体はfrontend-testジョブの同名ステップのコメントを参照。
@@ -841,21 +841,21 @@ jobs:
       # ため、パスを直接組み立てず、`npx -c '...'`でnpxに`node_modules/.bin`を
       # 含むPATH解決をさせたうえで`command -v vitest`から実パスを取得し、
       # そのファイルへ直接`node --no-flush-bytecode`を適用する。
-      - name: Test (attempt 1/2)
+      - name: テストを実行する（1回目/2回）
         id: test-1
         continue-on-error: true
         working-directory: ${{ inputs.backend_dir }}
         run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
-      - name: Wait before retrying the test run
+      - name: テスト再試行前に待機する
         if: steps.test-1.outcome == 'failure'
         shell: bash
         run: sleep 5
-      - name: Test (attempt 2/2, retry after a possible flaky failure)
+      - name: テストを実行する（2回目/2回、flakyの可能性がある失敗後の再試行）
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
         run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
-      - name: Checkout dev-standards (for the local composite action)
+      - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
@@ -869,7 +869,7 @@ jobs:
       # 毎回全件成功しカバレッジ計測値だけが偶発的に振れる性質のため、
       # カバレッジ判定が閾値未達だった場合はテストを再実行して計測をやり直し、
       # 改めて判定する。
-      - name: Check coverage threshold (attempt 1/2)
+      - name: カバレッジ閾値を確認する（1回目/2回）
         id: coverage-check-1
         if: inputs.coverage_threshold > 0
         continue-on-error: true
@@ -881,11 +881,11 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
-      - name: Re-run backend tests before retrying the coverage threshold check
+      - name: カバレッジ閾値の再確認前にbackendテストを再実行する
         if: inputs.coverage_threshold > 0 && steps.coverage-check-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
         run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
-      - name: Check coverage threshold (attempt 2/2, retry after a possible flaky measurement)
+      - name: カバレッジ閾値を確認する（2回目/2回、flakyな可能性がある計測値の再試行）
         if: inputs.coverage_threshold > 0 && steps.coverage-check-1.outcome == 'failure'
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
@@ -920,13 +920,13 @@ jobs:
       # sync-manifest.local.json経由でsymlink共有しているパッケージがある前提とし、
       # submoduleも取得する（examination#169: 未取得のまま`npm test`/buildすると
       # symlinkの参照先が存在せず"Failed to resolve import"等で失敗する）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
@@ -934,46 +934,46 @@ jobs:
           node-version: ${{ matrix.package.node_version || inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', matrix.package.dir) }}
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.package.node_version || inputs.node_version }}
           cache: 'npm'
           cache-dependency-path: ${{ inputs.workspaces && 'package-lock.json' || format('{0}/package-lock.json', matrix.package.dir) }}
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         working-directory: ${{ inputs.workspaces && '.' || matrix.package.dir }}
         run: npm ci
-      - name: Lint
+      - name: Lintを実行する
         working-directory: ${{ matrix.package.dir }}
         run: npm run lint --if-present
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照
-      - name: Test (attempt 1/2)
+      - name: テストを実行する（1回目/2回）
         id: test-1
         continue-on-error: true
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
-      - name: Wait before retrying the test run
+      - name: テスト再試行前に待機する
         if: steps.test-1.outcome == 'failure'
         shell: bash
         run: sleep 5
-      - name: Test (attempt 2/2, retry after a possible flaky failure)
+      - name: テストを実行する（2回目/2回、flakyの可能性がある失敗後の再試行）
         if: steps.test-1.outcome == 'failure'
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
-      - name: Checkout dev-standards (for the local composite action)
+      - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: v2.6.1
           path: .dev-standards-actions
-      - name: Check coverage threshold
+      - name: カバレッジ閾値を確認する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
@@ -983,7 +983,7 @@ jobs:
           metrics: ${{ matrix.package.coverage_metrics || inputs.coverage_metrics }}
           per-file-metrics: ${{ matrix.package.coverage_per_file_metrics || inputs.coverage_per_file_metrics }}
           check-per-file: ${{ matrix.package.coverage_check_per_file || inputs.coverage_check_per_file }}
-      - name: Build
+      - name: ビルドする
         if: matrix.package.build == true
         working-directory: ${{ matrix.package.dir }}
         run: npm run build
