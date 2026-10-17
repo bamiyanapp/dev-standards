@@ -8,6 +8,9 @@ Cognitoを使わず、初回ログイン時のみGoogle OAuthのIDトークン�
 
 1つのAWS SAMテンプレート（`infra/template.yaml`）で、API・データストア・フロントエンド配信をまとめて管理する。
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 flowchart TD
     Browser[Browser<br/>React/Vite SPA]
@@ -19,6 +22,10 @@ flowchart TD
     Browser --> CloudFront[CloudFront]
     CloudFront --> S3[S3<br/>フロントエンドビルド成果物]
 ```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)参照）。ソースはこのまま維持しつつ、下記は`enable_mermaid_render` jobが`main`へのマージのたびに再レンダリングし、`docs-diagrams`ブランチの`latest/`へ上書き公開している画像（常に最新版）。
+
+</details>
 
 ![アーキテクチャ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-1.png?ed026bdd99314f665275971b63ecc26f0a9be669)
 

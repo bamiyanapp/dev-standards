@@ -16,6 +16,9 @@ Safariは`HTMLAudioElement`ごとに「ユーザー操作（クリック/タッ�
 
 ユーザー操作の発生箇所（例: トップページのボタンクリック）と、実際に音声を再生する箇所（例: 別画面の非同期処理）が別のコンポーネントのライフサイクルにまたがることが多い。そのため、コンポーネントの`ref`ではなく**モジュールスコープのシングルトン**として保持する。
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 sequenceDiagram
     participant User as ユーザー操作（クリック等）
@@ -28,6 +31,10 @@ sequenceDiagram
     Async->>Audio: playSharedAudio(src)<br/>（srcを差し替えてplay()）
     Note over Audio: 解錠済みのため非同期文脈でも再生が許可される
 ```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)参照）。ソースはこのまま維持しつつ、下記は`enable_mermaid_render` jobが`main`へのマージのたびに再レンダリングし、`docs-diagrams`ブランチの`latest/`へ上書き公開している画像（常に最新版）。
+
+</details>
 
 ![解錠〜再生フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ios-safari-audio-unlock-pattern.png?ed026bdd99314f665275971b63ecc26f0a9be669)
 

@@ -297,6 +297,9 @@ useValueChange(connectionStatus, (current, previous) => {
 useWakeLock(isPlayingQuiz);
 ```
 
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
 ```mermaid
 flowchart TD
     A[activeがtrueに変化] --> B{Wake Lock API対応?}
@@ -309,6 +312,10 @@ flowchart TD
     H --> I[visibilitychangeでタブが可視状態に戻る]
     I --> D
 ```
+
+上記の```mermaid```ブロックはPR差分ビュー・API経由でのファイル取得等ではテキストのまま表示され図として確認できない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)参照）。ソースはこのまま維持しつつ、下記は`enable_mermaid_render` jobが`main`へのマージのたびに再レンダリングし、`docs-diagrams`ブランチの`latest/`へ上書き公開している画像（常に最新版）。
+
+</details>
 
 ![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?ed026bdd99314f665275971b63ecc26f0a9be669)
 
