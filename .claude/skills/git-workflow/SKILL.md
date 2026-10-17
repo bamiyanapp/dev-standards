@@ -141,6 +141,29 @@ flowchart TD
 
 **PRがマージされた・CIが成功した、というだけでは「実際に修正が反映された」ことを意味しない**。このような複数段階のロールアウトが必要な変更では、Issueをクローズする前・完了報告をする前に、実際にmain上の挙動・生成物を再検証する。例えば、生成されたファイルの形式・内容を実際に確認する、参照側リポジトリの`ci.yml`で実際に使われているタグを確認する等である。CIが緑であることや「マージできた」という報告だけを根拠に完了と判断してはならない。
 
+## 新規reusable workflow・機能追加時の確認事項（再発防止チェックリスト）
+
+issue #945〜#977（deprecated検知機能の追加）の一連の作業で、2つの構造的な落とし穴に遭遇した（issue #980）。いずれも特定プロダクトに固有ではなく、dev-standardsのreusable workflowを使う全リポジトリに共通する再発性のパターンのため、着手前に以下を確認する。
+
+### 1. reusable workflowの自己参照pinned tagバグ
+
+新規スクリプトと、それを呼ぶreusable workflow自身の内部`actions/checkout`のref指定を**同じPRで追加してはならない**。そのPRのマージ・リリースによって初めて該当スクリプトを含むタグが発行されるため、同じPR内で指定できる値は常に「まだ存在しない」か「1つ前の、該当スクリプトを含まないバージョン」のいずれかになる。
+
+- 実例: PR #972で`reusable-dependency-deprecation-scan.yml`と`dependency-deprecation-scan.js`を同時に追加した。その際、ワークフロー内部の自己参照checkoutステップのrefを誤って1つ前のバージョン（該当スクリプトがまだ存在しないバージョン）としてしまい、issue #977としてバグ修正が必要になった
+- 類似の「pinned tagとsubmodule参照の更新漏れ」は、karuta側（`promote-canary.yml`）でも過去に複数回発生している（karuta#1684・#1690）
+- **対応**: 新規スクリプト・新規reusable workflowの追加と、それを呼ぶ側（reusable workflow自身の自己参照、または参照側リポジトリの`ci.yml`等）のref更新は分離する。新規追加のPRでは自己参照チェックアウト自体を無効化した状態でリリースし、タグ発行後のフォローアップPRで有効化・ref指定する（上記「複合action・pinned tagを伴う変更の展開確認」の「ブートストラップ」対応と同じ考え方）
+
+### 2. `permissions:`ブロックの暗黙的ゼロ化
+
+workflowに明示的な`permissions:`ブロックを書くと、デフォルト値ではなく**指定していないスコープは全て「none」**になる。reusable workflowの呼び出し元で必要な権限（例: 呼び出し先が内部で使う`actions/checkout`が必要とする`contents: read`）を見落として書き漏らすと、呼び出し先のjob自体が1つも作られない`startup_failure`（ログも残らない）で即座に失敗する。原因特定が難しい割に再発しやすい。
+
+- 実例: karuta#1696で`permissions: issues: write`のみを書き、`contents: read`を書き漏らした
+- **対応**: reusable workflow呼び出し元に`permissions:`を明示する場合、呼び出し先workflow・composite action内部が必要とする権限（`actions/checkout`の`contents: read`等）を含めて指定したかを確認する。呼び出し先の`jobs.<id>.permissions`・内部で使うactionの`action.yml`を実際に読んで洗い出す
+
+### 3. scheduled workflowの動作確認
+
+新規・変更したscheduled workflow（`on: schedule`を持つworkflow）は、次のscheduleまで待たずにマージ前に検証する。対象ブランチで`workflow_dispatch`を実際に実行し、動作確認してからマージする。
+
 ## `.github/workflows/*`変更時の自動マージ失敗（BOT_TOKENのworkflowスコープ不足、履歴）
 
 `.github/workflows/*.yml`（`ci.yml`・`cd.yml`等）を変更するPRで、ある事象が発生していた。CIの品質チェック（lint/test/e2e等）が全て成功していても`ci / merge`ジョブ自体が失敗する。その結果、自動マージされないという事象である（bamiyanapp/karuta#920で発生）。
