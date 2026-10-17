@@ -1,3 +1,10 @@
+# [2.93.0](https://github.com/bamiyanapp/dev-standards/compare/v2.92.0...v2.93.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** reusable-ci.ymlのステップ名を日本語化する（1/5: commitlint等） ([#1001](https://github.com/bamiyanapp/dev-standards/issues/1001)) ([c6abc1d](https://github.com/bamiyanapp/dev-standards/commit/c6abc1d34d8a70434c2d0c077bd6a4a6a383cd29))
+
 # [2.92.0](https://github.com/bamiyanapp/dev-standards/compare/v2.91.0...v2.92.0) (2026-10-17)
 
 
