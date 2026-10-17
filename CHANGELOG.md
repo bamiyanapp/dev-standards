@@ -1,3 +1,10 @@
+## [2.97.6](https://github.com/bamiyanapp/dev-standards/compare/v2.97.5...v2.97.6) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** 他のdev-standards自己参照チェックアウトを最新タグへ更新する ([#1036](https://github.com/bamiyanapp/dev-standards/issues/1036)) ([545d3dc](https://github.com/bamiyanapp/dev-standards/commit/545d3dc564603ba357028a53abe3a79224d66c28)), closes [#1030](https://github.com/bamiyanapp/dev-standards/issues/1030)
+
 ## [2.97.5](https://github.com/bamiyanapp/dev-standards/compare/v2.97.4...v2.97.5) (2026-10-17)
 
 
