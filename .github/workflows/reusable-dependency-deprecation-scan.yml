@@ -50,10 +50,10 @@ jobs:
     outputs:
       has_deprecated: ${{ steps.scan.outputs.has_deprecated }}
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
+      - name: Node.jsをセットアップする
         uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -66,18 +66,18 @@ jobs:
       # バージョンを誤って指定しており、参照側リポジトリでの実行時にMODULE_NOT_FOUNDで
       # 必ず失敗する不具合があった（karuta#1693での初回動作確認で発覚）。本ファイルが
       # 追加されたリリース（v2.84.0）以降を指すよう修正した
-      - name: Checkout dev-standards (for the local script)
+      - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: v2.85.0
           path: .dev-standards-actions
 
-      - name: Scan for deprecated dependencies
+      - name: deprecatedな依存パッケージをスキャンする
         id: scan
         run: node .dev-standards-actions/scripts/dependency-deprecation-scan.js "${{ inputs.lockfile_path }}" "${{ inputs.direct_only }}" > /tmp/deprecation-scan.json
 
-      - name: Find existing tracking issue
+      - name: 既存のトラッキングissueを検索する
         id: find
         uses: actions/github-script@v9
         with:
@@ -90,7 +90,7 @@ jobs:
             const existing = results.find((i) => !i.pull_request && i.title === ${{ toJSON(inputs.tracking_issue_title) }});
             core.setOutput("issue_number", existing ? String(existing.number) : "");
 
-      - name: Create or update tracking issue
+      - name: トラッキングissueを作成または更新する
         if: steps.scan.outputs.has_deprecated == 'true'
         uses: actions/github-script@v9
         with:
@@ -124,7 +124,7 @@ jobs:
               });
             }
 
-      - name: Close tracking issue if no longer detected
+      - name: 検知されなくなったトラッキングissueをクローズする
         if: steps.scan.outputs.has_deprecated == 'false' && steps.find.outputs.issue_number != ''
         uses: actions/github-script@v9
         with:
@@ -143,7 +143,7 @@ jobs:
               body: "再スキャンの結果、deprecatedな依存パッケージが検知されなくなったため自動クローズします。",
             });
 
-      - name: Write summary
+      - name: 概要を出力する
         if: always()
         run: |
           set -eu
