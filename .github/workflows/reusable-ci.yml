@@ -484,18 +484,18 @@ jobs:
       # （新しいアクション参照を追加すると、このリポジトリ自身が未タグ付けの状態で
       # それを参照することになり解決できないため、複合アクション化はせずジョブ内に
       # インラインで実装する）
-      - name: Setup Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Setup Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         id: setup-node-2
         if: steps.setup-node-1.outcome == 'failure'
         continue-on-error: true
@@ -503,17 +503,17 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-      - name: Install dependencies
+      - name: 依存パッケージをインストールする
         id: install
         if: steps.setup-node-1.outcome == 'success' || steps.setup-node-2.outcome == 'success'
         continue-on-error: true
         run: npm ci
-      - name: Validate current commit (last commit)
+      - name: 現在のコミット（直前のコミット）を検証する
         id: lint-push
         if: steps.install.outcome == 'success' && github.event_name == 'push'
         continue-on-error: true
         run: npx commitlint --from HEAD~1 --to HEAD --verbose
-      - name: Validate PR commits
+      - name: PRのコミットを検証する
         id: lint-pr
         if: steps.install.outcome == 'success' && github.event_name == 'pull_request'
         continue-on-error: true
@@ -534,14 +534,14 @@ jobs:
       # PRタイトルは第三者が自由に入力できる値のため、シェルへの直接展開（`${{ }}`を
       # runスクリプト内に埋め込む書き方）を避け、env経由で渡すことでコマンド
       # インジェクションを防ぐ
-      - name: Validate PR title (squash merge commit subject)
+      - name: PRタイトルを検証する（squash mergeコミットの件名）
         id: lint-pr-title
         if: steps.install.outcome == 'success' && github.event_name == 'pull_request'
         continue-on-error: true
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: echo "$PR_TITLE" | npx commitlint --verbose
-      - name: Determine result
+      - name: 結果を判定する
         id: result
         shell: bash
         run: |
@@ -583,7 +583,7 @@ jobs:
       frontend: ${{ steps.filter.outcome == 'success' && steps.filter.outputs.frontend || 'true' }}
       backend: ${{ steps.filter.outcome == 'success' && steps.filter.outputs.backend || 'true' }}
     steps:
-      - name: Detect changed paths
+      - name: 変更されたパスを検出する
         id: filter
         continue-on-error: true
         uses: dorny/paths-filter@v4
@@ -1635,11 +1635,11 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
-      - name: Run jscpd (workflow duplication check)
+      - name: jscpdを実行する（ワークフロー重複チェック）
         run: |
           set -eu
           TARGETS=()
@@ -1665,7 +1665,7 @@ jobs:
             -r markdown,console \
             -o ./jscpd-workflow-report \
             ${{ inputs.workflow_duplication_threshold > 0 && format('-t {0}', inputs.workflow_duplication_threshold) || '' }}
-      - name: Show workflow duplication report in Job Summary
+      - name: ワークフロー重複レポートをJob Summaryへ表示する
         if: always()
         run: |
           if [ -f ./jscpd-workflow-report/jscpd-report.md ]; then
@@ -1695,23 +1695,23 @@ jobs:
       # dependency-cruiser.config.cjsはdev-standards submodule配下からのsymlink
       # （sync-manifest.json）のため、参照側リポジトリではsubmoduleの取得が必須
       # （dev-standards自身のdogfoodingではsubmoduleが存在しないため無害）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
@@ -1719,7 +1719,7 @@ jobs:
       # 越境import・循環依存の検知対象はfrontend_dir・backend_dirのうち実在するものに
       # 限定する（単一パッケージ構成では一方のみ存在する。両方存在しない構成では
       # 何もスキャンせず成功扱いにする）
-      - name: Run dependency-cruiser (architecture check)
+      - name: dependency-cruiserを実行する（アーキテクチャチェック）
         run: |
           targets=()
           [ -d "${{ inputs.frontend_dir }}" ] && targets+=("${{ inputs.frontend_dir }}")
@@ -1750,28 +1750,28 @@ jobs:
       # textlint.config.cjs・textlint-rules/（独自ルール、issue #537）はdev-standards
       # submodule配下からのsymlink（sync-manifest.json）のため、参照側リポジトリでは
       # submoduleの取得が必須（dev-standards自身のdogfoodingではsubmoduleが存在しないため無害）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Run textlint
+      - name: textlintを実行する
         run: |
           mapfile -t targets < <(printf '%s' "${{ inputs.text_lint_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
           if [ ${#targets[@]} -eq 0 ]; then
@@ -1800,26 +1800,26 @@ jobs:
     steps:
       # submodules: trueが無いと、参照側リポジトリのdev-standards submodule配下への
       # 正当な相対リンクが常にファイル不在でリンク切れ判定されてしまう（issue #884）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           submodules: true
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Run markdown-link-check
+      - name: markdown-link-checkを実行する
         shell: bash
         run: |
           mapfile -t patterns < <(printf '%s' "${{ inputs.dead_link_check_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
@@ -1869,24 +1869,24 @@ jobs:
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
-      - name: Use Node.js (attempt 1/2)
+      - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Wait before retrying Node.js setup
+      - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
         run: sleep 10
-      - name: Use Node.js (attempt 2/2, retry after a transient failure)
+      - name: Node.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Run doc-reachability-check
+      - name: ドキュメント到達性チェックを実行する
         shell: bash
         env:
           DOC_REACHABILITY_ENTRY_POINTS: ${{ inputs.doc_reachability_entry_points }}
@@ -2112,11 +2112,11 @@ jobs:
       # PRのbase_branchとの差分のみを対象にスキャンする（GITLEAKS_CONFIGで
       # 全履歴スキャンに切り替えることも可能だが、既存履歴に残る過去の誤検知
       # で詰まるリスクを避けるため、既定では差分のみとする）
-      - name: Checkout
+      - name: チェックアウトする
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Run gitleaks
+      - name: gitleaksを実行する
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -3322,7 +3322,7 @@ jobs:
       # 存在しない）の問題を避けるため、あえてこの複合actionを経由せず
       # ロジックをインラインのまま保持している。ロジックを変更する場合は
       # 両方に同じ修正を反映すること
-      - name: Merge pull request
+      - name: プルリクエストをマージする
         id: merge-pr
         uses: actions/github-script@v9
         with:
