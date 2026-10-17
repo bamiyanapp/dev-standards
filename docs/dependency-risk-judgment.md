@@ -116,9 +116,43 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 
 このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。新バージョンのdeprecated検知（上記）はreasonにのみ反映され、Highへの昇格には使わない。
 
+### 適用リスク判定マトリクス（`classifyRisk()`）
+
+既定値は`low`。以下の条件に当てはまるたびに`escalate()`で段階的に昇格し（down-gradeしない）、最終的に最も高い段階が結果になる。`directDependencyThreshold`の既定値は2（`scripts/risk-policy.json`で変更可能）。
+
+| 条件 | 昇格先 | 補足 |
+|---|---|---|
+| major update、またはバージョン比較不能な更新（ダウングレード等）を含む | 🔴 High | `update type`が`other`の場合も含む |
+| Critical/High severityのCVEが残っている | 🔴 High | |
+| KEV（Known Exploited Vulnerability）に該当する | 🔴 High | |
+| 既知flakyパターンで説明できないCI失敗がある | 🔴 High | |
+| 新規install scriptを持つようになったパッケージがある | 🔴 High | Supply Chainチェック。異常検知は確実にHighへ（[#648](https://github.com/bamiyanapp/dev-standards/issues/648)） |
+| メンテナ（公開者）が変化したパッケージがある | 🔴 High | Supply Chainチェック |
+| CVE/CVSS/EPSS/KEV情報の取得に失敗した（不明） | 🟡 Medium | 「不明」を安全側＝Medium以上として扱う |
+| dev-standards自体の更新で、既知の参照側リポジトリ（ファンアウト）が1件以上ある | 🟡 Medium | |
+| 既知flakyパターンに該当するCI失敗がある（説明可能な失敗のみ） | 🟡 Medium | |
+| 直接依存の更新件数が`directDependencyThreshold`（既定2）以上 | 🟡 Medium | 変更の複雑さを理由に昇格 |
+| 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 現在の判定を1段階昇格（low→medium、medium→high） | 既にHighなら変化なし。重要パス未宣言時は常にfalseで影響なし（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)） |
+| 上記いずれにも該当しない | 🔵 Low | |
+
+`vulnerability_only_high`は、最終判定がHighかつ、major update・説明不能なCI失敗・Supply Chain異常・ブラスト半径由来のHighのいずれにも該当せず、CVE/KEVの残存のみが理由の場合にのみ`true`になる。
+
 ## 維持リスク
 
 このPRを適用せず現行バージョンに留まる場合のLow/Medium/High判定（更新前バージョンのCVE/KEVを見る、[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。業務影響度に該当する場合はlowからmediumへ1段階昇格する。維持リスクのhighへの昇格は既知のCVE/KEV、または旧バージョンのdeprecated検知（上記、[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）のみを根拠とする設計のため、ブラスト半径単独ではhighへ昇格しない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。
+
+### 維持リスク判定マトリクス（`classifyStaleRisk()`）
+
+既定値は`low`。`classifyRisk()`とは異なり、情報不明時は安全側（＝自動マージ対象を広げない方向）として`low`へフォールバックする点に注意する。
+
+| 条件 | 昇格先 | 補足 |
+|---|---|---|
+| 現行バージョンの脆弱性情報の取得に失敗した（不明） | 昇格なし（lowのまま） | `classifyRisk()`とは逆方向の安全側。「不明だから自動マージ対象を広げる」を避ける |
+| 現行バージョンにKEVに該当する脆弱性がある | 🔴 High | |
+| 現行バージョンにCritical/High severityのCVEが残っている（KEVに該当しない場合のみ） | 🟡 Medium | KEVがある場合はHigh判定が優先され、この行は評価されない |
+| 現行バージョン（更新前）がnpm registry上でdeprecatedである | 🔴 High | サポート終了により今後の脆弱性修正が期待できないため（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)） |
+| 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | low→mediumのみ昇格 | medium→highへの昇格は行わない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。既にHighならreasonのみ追記 |
+| 上記いずれにも該当しない | 🔵 Low | |
 
 ## 判定結果マトリクス（適用リスク×維持リスク）
 
