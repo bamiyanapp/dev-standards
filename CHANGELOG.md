@@ -1,3 +1,10 @@
+# [2.94.0](https://github.com/bamiyanapp/dev-standards/compare/v2.93.0...v2.94.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** reusable-ci.ymlのステップ名を日本語化する（2/5: frontend-test等） ([#1002](https://github.com/bamiyanapp/dev-standards/issues/1002)) ([81b1807](https://github.com/bamiyanapp/dev-standards/commit/81b1807ba074db01b5452188941352a3f2db6d7f))
+
 # [2.93.0](https://github.com/bamiyanapp/dev-standards/compare/v2.92.0...v2.93.0) (2026-10-17)
 
 
