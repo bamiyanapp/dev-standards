@@ -1,3 +1,10 @@
+# [2.87.0](https://github.com/bamiyanapp/dev-standards/compare/v2.86.0...v2.87.0) (2026-10-17)
+
+
+### Features
+
+* **ci:** reusable workflow群のジョブ表示名を日本語化する ([#985](https://github.com/bamiyanapp/dev-standards/issues/985)) ([03255f5](https://github.com/bamiyanapp/dev-standards/commit/03255f59c523067cdd903c419f28f3ca0d195f58))
+
 # [2.86.0](https://github.com/bamiyanapp/dev-standards/compare/v2.85.1...v2.86.0) (2026-10-17)
 
 
