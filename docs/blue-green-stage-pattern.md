@@ -24,12 +24,13 @@
 
 viewer-request/viewer-response関数と、ルーティング状態を保持するCloudFront KeyValueStore（KVS）を使う。
 
-- KVSに重み（既定キー`canary_weight`、未設定時は低い割合を既定にする）と強制切り替えフラグ（既定キー`force_stable`）を持たせる
+- KVSに重み（既定キー`canary_weight`、未設定時は低い割合を既定にする）、強制切り替えフラグ（既定キー`force_stable`）、canaryスタックの存在フラグ（既定キー`canary_exists`、後述）を持たせる
 - viewer-request関数: `canary` Cookieが無い場合、KVSの重みに従ってstable/canaryを抽選し、URIへプレフィックスを付与する。`force_stable`がtrueの場合はCookieに関わらず常にstableにする
 - viewer-response関数: 新規抽選が発生した場合のみ（`force_stable`による強制時は発生しない）canary Cookie（例: Max-Age=1週間）を付与する
 - 明示的に`/stable/`または`/canary/`で始まるリクエストは重み付け抽選を行わずそのまま通す（手動切り替えリンクパターン、[`shared-ui-components.md`](shared-ui-components.md)参照、との前方互換のため）
 - KVSの初期値は、CloudFormationの`AWS::CloudFront::KeyValueStore`では設定できない（`ImportSource`はS3からの一括インポートのみに対応し、個別キーの初期値指定はできない）。スタックデプロイ後に`aws cloudfront-keyvaluestore` CLIで未設定のキーのみ初期値を設定する（既存の値は上書きしない）
 - 関数コードはCloudFormationテンプレート内に直接インラインで記述する。Serverless Framework系ツールの`${file(...)}`変数は拡張子が`.js`/`.cjs`のファイルをNode.jsモジュールとして`require()`してしまう。`module.exports`を持たない素のCloudFront Functionsハンドラでは、この結果空オブジェクトが設定される不具合を引き起こすため
+- **canaryスタックが存在しない状態での`/canary/`明示アクセス対策**: 前述の「明示的に`/stable/`または`/canary/`で始まるリクエストはそのまま通す」仕組みは、canaryアプリ自体が起動した後にエラーが起きた場合（手動切り替えリンクパターン・ErrorBoundaryの`fallbackUrl`経由の遷移）にのみ機能する。canaryスタック自体が存在しない状態（昇格直後でまだ新規canaryが作られていない等）で`/canary/`へ明示アクセスすると、S3に対応するオブジェクトが無く`index.html`自体を取得できないため、アプリ側のフォールバック機構が発火する前に白画面になってしまう（karuta#1489）。対策として、KVSに`canary_exists`キーを新設し、canaryのデプロイ・削除に合わせて更新する（デプロイ成功時に`true`、削除時に`false`）。viewer-request関数は`/canary/`への明示アクセス時にこのキーを確認し、`true`でなければ`/stable/`への明示アクセスと同様に扱う（stableへ読み替え、以後の通常アクセスも`stable` Cookieで固定する）
 
 ### テンプレート（コピー＆調整用）
 
