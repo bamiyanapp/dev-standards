@@ -192,3 +192,54 @@ test("CLI: deprecation-info.json（oldDeprecatedあり）を渡すとhighへ昇�
   const result = JSON.parse(stdout);
   assert.equal(result.level, "high");
 });
+
+test("classifyStaleRisk: stalenessInfoがある場合はlowからmediumへ昇格する", () => {
+  const result = classifyStaleRisk({
+    securityDataAvailable: true,
+    stalenessInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000 }],
+  });
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("minor-pkg") && r.includes("1000日間")));
+});
+
+test("classifyStaleRisk: stalenessInfoはhighへは昇格しない（CVE/KEV・deprecatedのみが根拠）", () => {
+  const result = classifyStaleRisk({
+    securityDataAvailable: true,
+    stalenessInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000 }],
+    deprecationInfo: [],
+  });
+  assert.equal(result.level, "medium");
+});
+
+test("CLI: staleness-info.json（放置検知あり）を渡すとmediumへ昇格する", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "stale-risk-cli-test-"));
+  const oldVulnerabilityInfoPath = path.join(tmpDir, "old-vulnerability-info.json");
+  const oldExploitInfoPath = path.join(tmpDir, "old-exploit-info.json");
+  const blastRadiusInfoPath = path.join(tmpDir, "blast-radius-info.json");
+  const deprecationInfoPath = path.join(tmpDir, "deprecation-info.json");
+  const stalenessInfoPath = path.join(tmpDir, "staleness-info.json");
+  fs.writeFileSync(oldVulnerabilityInfoPath, "[]");
+  fs.writeFileSync(oldExploitInfoPath, "[]");
+  fs.writeFileSync(blastRadiusInfoPath, JSON.stringify({ hasCriticalPathImpact: false, hits: [] }));
+  fs.writeFileSync(deprecationInfoPath, "[]");
+  fs.writeFileSync(
+    stalenessInfoPath,
+    JSON.stringify([{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000 }]),
+  );
+
+  const stdout = execFileSync(
+    "node",
+    [
+      path.join(__dirname, "dependency-stale-risk-classifier.js"),
+      oldVulnerabilityInfoPath,
+      oldExploitInfoPath,
+      blastRadiusInfoPath,
+      deprecationInfoPath,
+      stalenessInfoPath,
+    ],
+    { encoding: "utf-8" },
+  );
+
+  const result = JSON.parse(stdout);
+  assert.equal(result.level, "medium");
+});

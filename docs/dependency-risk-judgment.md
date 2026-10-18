@@ -133,6 +133,14 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 
 **既知の限界（[#969](https://github.com/bamiyanapp/dev-standards/issues/969)で対応）**: 上記はいずれも更新PR（`package-lock.json`の変更）が存在する場合にのみ動作する。aws-sdk（v2系）のように後継バージョン自体が存在しないまま非推奨化されたパッケージは、Renovateが更新PRを作らないため一度も評価されない。この限界は`reusable-dependency-deprecation-scan.yml`（定期スキャン、詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)参照）で別途補う。
 
+## 放置検知（[#1076](https://github.com/bamiyanapp/dev-standards/issues/1076)）
+
+サポートが脆弱・利用者が少ないマイナーなパッケージの場合、メンテナが明示的にdeprecated化しないまま単に更新が止まっている状態がある。この場合、脆弱性が見つかってもCVEとして報告されず、修正版も出ないまま放置されるリスクがあるが、deprecated検知（上記）・CVE/KEV検知のいずれにも引っかからない。
+
+npm registryの各パッケージレスポンス（`GET /{name}`）は`time.modified`（そのパッケージの最新バージョンが公開された日時）を持つ。これを見て、直近2年間（既定値）新バージョンが一度も公開されていないパッケージを機械的に検知する（`scripts/dependency-staleness-info.js`）。現行バージョン（旧バージョン）のみを対象にする（維持リスクの判定に使うため）。
+
+deprecated検知より弱い信号（メンテナによる明示的な意思表示ではなく、単に更新が無いという事実のみ）として扱い、維持リスクへの昇格は**low→mediumのみ**に限定する（下記「維持リスク判定マトリクス」参照）。放置の事実はあっても脆弱性の深刻度自体は不明なため、highへの昇格はCVE/KEV・deprecated検知のみを根拠とする既存設計を維持する。
+
 ## 適用リスク
 
 このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。新バージョンのdeprecated検知（上記）はreasonにのみ反映され、Highへの昇格には使わない。
@@ -172,6 +180,7 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 | 現行バージョンにKEVに該当する脆弱性がある | 🔴 High | |
 | 現行バージョンにCritical/High severityのCVEが残っている（KEVに該当しない場合のみ） | 🟡 Medium | KEVがある場合はHigh判定が優先され、この行は評価されない |
 | 現行バージョン（更新前）がnpm registry上でdeprecatedである | 🔴 High | サポート終了により今後の脆弱性修正が期待できないため（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)） |
+| 現行バージョンが直近2年間（既定値）新バージョンを公開していない（放置検知） | 🟡 Mediumへキャップ（lowのみ変化） | deprecated検知より弱い信号のためhighへは昇格しない（[#1076](https://github.com/bamiyanapp/dev-standards/issues/1076)）。既にMedium/Highならreasonのみ追記 |
 | 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化） | medium→highへの昇格は行わない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。既にMedium/Highならreasonのみ追記 |
 | 上記いずれにも該当しない | 🔵 Low | |
 
