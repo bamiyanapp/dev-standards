@@ -1,3 +1,10 @@
+# [2.99.0](https://github.com/bamiyanapp/dev-standards/compare/v2.98.3...v2.99.0) (2026-10-18)
+
+
+### Features
+
+* **ci:** Lighthouse CIのスコアでmergeをブロックできるオプションを追加する ([#1064](https://github.com/bamiyanapp/dev-standards/issues/1064)) ([e90e3b4](https://github.com/bamiyanapp/dev-standards/commit/e90e3b41b4df24bb0b4eebb30d26cda33205e3e5))
+
 ## [2.98.3](https://github.com/bamiyanapp/dev-standards/compare/v2.98.2...v2.98.3) (2026-10-18)
 
 
