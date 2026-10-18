@@ -156,23 +156,28 @@ const CATEGORY_LABELS = {
 // 形式、0〜1のスコア）から、カテゴリ別スコアのMarkdown表を組み立てる（issue #1047）。
 // `upload.target`が未設定・`filesystem`以外の参照側リポジトリではmanifest.json
 // 自体が生成されないため、その場合はnullを返し呼び出し側で「不明」表示に倒す
+// カテゴリ数（最大5）に対してURLは通常1件のみのため、URL×カテゴリの横持ち
+// （列数がURL数+カテゴリ数になる）だとスマートフォンのPR画面で横スクロールが
+// 必要になり見づらい（issue #1053）。カテゴリを行、URLを列にした縦持ちにする
 function summarizeLighthouseScores(manifestEntries) {
   if (!Array.isArray(manifestEntries) || manifestEntries.length === 0) return null;
 
-  const lines = [];
-  lines.push("| URL | " + Object.values(CATEGORY_LABELS).join(" | ") + " |");
-  lines.push("|---|" + Object.values(CATEGORY_LABELS).map(() => "---").join("|") + "|");
+  const urls = manifestEntries.map((entry) => entry?.url ?? "不明");
+  const scoreCell = (summary, key) => {
+    const score = summary?.[key];
+    if (typeof score !== "number") return "―";
+    const percent = Math.round(score * 100);
+    const mark = percent >= 90 ? "🟢" : percent >= 50 ? "🟡" : "🔴";
+    return `${mark} ${percent}`;
+  };
 
-  for (const entry of manifestEntries) {
-    const summary = entry?.summary ?? {};
-    const cells = Object.keys(CATEGORY_LABELS).map((key) => {
-      const score = summary[key];
-      if (typeof score !== "number") return "―";
-      const percent = Math.round(score * 100);
-      const mark = percent >= 90 ? "🟢" : percent >= 50 ? "🟡" : "🔴";
-      return `${mark} ${percent}`;
-    });
-    lines.push(`| ${entry.url ?? "不明"} | ${cells.join(" | ")} |`);
+  const lines = [];
+  lines.push("| カテゴリ | " + urls.join(" | ") + " |");
+  lines.push("|---|" + urls.map(() => "---").join("|") + "|");
+
+  for (const [key, label] of Object.entries(CATEGORY_LABELS)) {
+    const cells = manifestEntries.map((entry) => scoreCell(entry?.summary, key));
+    lines.push(`| ${label} | ${cells.join(" | ")} |`);
   }
 
   return lines.join("\n");
