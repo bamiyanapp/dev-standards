@@ -1,3 +1,10 @@
+## [2.98.3](https://github.com/bamiyanapp/dev-standards/compare/v2.98.2...v2.98.3) (2026-10-18)
+
+
+### Bug Fixes
+
+* **ci:** Lighthouseスコア表からPWA列を削除する ([#1059](https://github.com/bamiyanapp/dev-standards/issues/1059)) ([7bf15f9](https://github.com/bamiyanapp/dev-standards/commit/7bf15f9b4ae7d0488917c89370b22bbb14305a1c))
+
 ## [2.98.2](https://github.com/bamiyanapp/dev-standards/compare/v2.98.1...v2.98.2) (2026-10-18)
 
 
