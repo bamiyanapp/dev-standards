@@ -40,6 +40,7 @@
 - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
 - [`service-worker-update-pattern.md`](docs/service-worker-update-pattern.md): Service Workerのキャッシュ更新・反映パターン
 - [`ios-safari-audio-unlock-pattern.md`](docs/ios-safari-audio-unlock-pattern.md): iOS Safari自動再生ポリシー対策（音声要素シングルトン解錠パターン）
+- [`render-blocking-resources-pattern.md`](docs/render-blocking-resources-pattern.md): 外部CDNの重要レンダリングパスCSS/フォントを避け、npmバンドル化でLighthouse Performanceスコアを改善するパターン
 
 ### インフラ・認証
 
