@@ -235,10 +235,17 @@ test("summarizeLighthouseScores: manifest.jsonのsummaryからカテゴリ別ス
   assert.ok(markdown.includes("🟢 90"));
 });
 
-test("summarizeLighthouseScores: pwa等summaryに無いカテゴリは「―」にする", () => {
+test("summarizeLighthouseScores: summaryに無いカテゴリは「―」にする", () => {
+  const markdown = summarizeLighthouseScores([
+    { url: "http://localhost:4173/", summary: { performance: 0.49, accessibility: 0.84, "best-practices": 0.93 } },
+  ]);
+  const seoRow = markdown.split("\n").find((l) => l.startsWith("| SEO"));
+  assert.ok(seoRow.includes("―"));
+});
+
+test("summarizeLighthouseScores: PWAカテゴリは撤廃済みのため対象に含まない", () => {
   const markdown = summarizeLighthouseScores(MANIFEST_ENTRIES);
-  const pwaRow = markdown.split("\n").find((l) => l.startsWith("| PWA"));
-  assert.ok(pwaRow.includes("―"));
+  assert.ok(!markdown.includes("PWA"));
 });
 
 test("summarizeLighthouseScores: カテゴリを行・URLを列にした縦持ちにする", () => {
