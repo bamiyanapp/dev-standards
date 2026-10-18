@@ -1,3 +1,10 @@
+## [2.99.1](https://github.com/bamiyanapp/dev-standards/compare/v2.99.0...v2.99.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **ci:** mergeジョブでPRが現在もopen状態かを確認してからマージする ([#1069](https://github.com/bamiyanapp/dev-standards/issues/1069)) ([0d25fe1](https://github.com/bamiyanapp/dev-standards/commit/0d25fe184e560015e4234c7e0978415bd159e501))
+
 # [2.99.0](https://github.com/bamiyanapp/dev-standards/compare/v2.98.3...v2.99.0) (2026-10-18)
 
 
