@@ -1,3 +1,10 @@
+# [2.100.0](https://github.com/bamiyanapp/dev-standards/compare/v2.99.1...v2.100.0) (2026-10-18)
+
+
+### Features
+
+* **dependency-risk:** 最終リリース日ベースの放置パッケージ検知を追加する ([#1078](https://github.com/bamiyanapp/dev-standards/issues/1078)) ([b2b16e4](https://github.com/bamiyanapp/dev-standards/commit/b2b16e49a219a321c9aef9efcab56fbc0ce6e33b))
+
 ## [2.99.1](https://github.com/bamiyanapp/dev-standards/compare/v2.99.0...v2.99.1) (2026-10-18)
 
 
