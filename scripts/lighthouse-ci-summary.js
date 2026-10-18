@@ -141,14 +141,13 @@ function summarizeLighthouseCiLog(log) {
 }
 
 // カテゴリ名（manifest.jsonの`summary`キー）の日本語表示名。
-// `pwa`はLighthouseのバージョン・設定によって計測されないことがあるため、
-// `summary`に存在する場合のみ表の対象にする（存在しないカテゴリの行は作らない）
+// `pwa`はLighthouse 10以降のdefault-config.jsから撤廃されており、現行の
+// `@lhci/cli`経由では計測自体ができないため対象に含めない（karuta#1758で確認）
 const CATEGORY_LABELS = {
   performance: "Performance",
   accessibility: "Accessibility",
   "best-practices": "Best Practices",
   seo: "SEO",
-  pwa: "PWA",
 };
 
 // `lhci autorun`が`upload.target: "filesystem"`設定時に出力するmanifest.json
