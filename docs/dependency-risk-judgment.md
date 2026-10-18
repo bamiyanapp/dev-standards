@@ -141,6 +141,14 @@ npm registryの各パッケージレスポンス（`GET /{name}`）は`time.modi
 
 deprecated検知より弱い信号（メンテナによる明示的な意思表示ではなく、単に更新が無いという事実のみ）として扱い、維持リスクへの昇格は**low→mediumのみ**に限定する（下記「維持リスク判定マトリクス」参照）。放置の事実はあっても脆弱性の深刻度自体は不明なため、highへの昇格はCVE/KEV・deprecated検知のみを根拠とする既存設計を維持する。
 
+## OpenSSF Scorecardによる質的評価（[#1077](https://github.com/bamiyanapp/dev-standards/issues/1077)）
+
+放置検知（上記）は「更新が止まっているか」という一次シグナルのみを見る。コントリビューター数・CI/テストの有無・ブランチ保護設定等、パッケージの質的なメンテナンス状態まで含めた評価には、[OpenSSF Scorecard](https://github.com/ossf/scorecard)のスコアを使う。
+
+scorecard CLIを自前で実行する方式ではなく、認証不要の公開データセットAPI（`https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}`）を使う。npm registryの`repository`フィールドからGitHubのowner/repoを特定し、Scorecardスコア（10点満点）を取得する（`scripts/dependency-scorecard-info.js`）。GitHub以外（GitLab等）のパッケージ、Scorecard未評価のプロジェクトは対象外（判定不能として「不明」扱いし、昇格の根拠にしない）。
+
+スコアが閾値未満（既定3点、OpenSSF Scorecardの一般的な「懸念あり」水準）の場合、放置検知と同様に維持リスクへの昇格は**low→mediumのみ**に限定する（質的評価は既知のCVE/KEV・deprecated検知と同じ確度を持たないため）。
+
 ## 適用リスク
 
 このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。新バージョンのdeprecated検知（上記）はreasonにのみ反映され、Highへの昇格には使わない。
@@ -181,6 +189,7 @@ deprecated検知より弱い信号（メンテナによる明示的な意思表�
 | 現行バージョンにCritical/High severityのCVEが残っている（KEVに該当しない場合のみ） | 🟡 Medium | KEVがある場合はHigh判定が優先され、この行は評価されない |
 | 現行バージョン（更新前）がnpm registry上でdeprecatedである | 🔴 High | サポート終了により今後の脆弱性修正が期待できないため（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)） |
 | 現行バージョンが直近2年間（既定値）新バージョンを公開していない（放置検知） | 🟡 Mediumへキャップ（lowのみ変化） | deprecated検知より弱い信号のためhighへは昇格しない（[#1076](https://github.com/bamiyanapp/dev-standards/issues/1076)）。既にMedium/Highならreasonのみ追記 |
+| 現行バージョンのOpenSSF Scorecardスコアが3点未満（既定値） | 🟡 Mediumへキャップ（lowのみ変化） | 質的評価のためhighへは昇格しない（[#1077](https://github.com/bamiyanapp/dev-standards/issues/1077)）。既にMedium/Highならreasonのみ追記 |
 | 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化） | medium→highへの昇格は行わない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。既にMedium/Highならreasonのみ追記 |
 | 上記いずれにも該当しない | 🔵 Low | |
 

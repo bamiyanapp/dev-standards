@@ -2885,6 +2885,16 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-staleness-info.js /tmp/dependency-update-info.json > /tmp/staleness-info.json
 
+      # issue #1077。OpenSSF Scorecardスコア（コントリビューター数・CI/テストの有無・
+      # ブランチ保護設定等の質的評価）が低いパッケージを検知する。認証不要の公開
+      # データセットAPI（api.securityscorecards.dev）を使うため、GitHub Token等の
+      # 追加設定は不要
+      - name: Scorecard情報を生成する
+        id: scorecard-info
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-scorecard-info.js /tmp/dependency-update-info.json > /tmp/scorecard-info.json
+
       # issue #648（Phase 3）SBOM生成。--package-lock-onlyによりnode_modulesの実
       # インストール無しにpackage-lock.jsonのみから生成できる（実機確認済み）。
       # このステップ自体はnpm installを必要としない（issue #813でこのjobの後続に
@@ -3033,7 +3043,7 @@ jobs:
         id: classify-stale
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json /tmp/deprecation-info.json /tmp/staleness-info.json > /tmp/stale-risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json /tmp/deprecation-info.json /tmp/staleness-info.json /tmp/scorecard-info.json > /tmp/stale-risk-classification.json
 
       # ファンアウト注記（issue #646 Task G前半）: dev-standardsは複数リポジトリから
       # 参照される共有基盤のため、dev-standards自身への依存更新は「影響リポジトリ数」
