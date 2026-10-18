@@ -318,8 +318,22 @@ on:
           有効化する参照側リポジトリは`frontend_dir`配下に`@lhci/cli`
           （devDependency）と、計測対象URL・起動コマンドを宣言する
           `lighthouserc.json`（https://github.com/GoogleChrome/lighthouse-ci 参照）を
-          用意しておく必要がある。本jobは`continue-on-error: true`のため、
-          このjobの失敗が`merge` jobをブロックすることはない。
+          用意しておく必要がある。既定（`enable_lighthouse_ci_gating: false`）では
+          本jobは`continue-on-error: true`のため、このjobの失敗が`merge` jobを
+          ブロックすることはない。
+        type: boolean
+        default: false
+      enable_lighthouse_ci_gating:
+        description: >-
+          trueの場合、`lighthouse-ci` jobの`continue-on-error`を外し、
+          `lighthouserc.json`の`assert.assertions`で`"error"`レベルに
+          設定したスコア閾値を下回った場合に`merge` jobをブロックする
+          （karuta#1762の実機指摘を受けて追加）。`enable_lighthouse_ci`が
+          `false`の場合は本入力に関わらず何も起きない。有効化する参照側
+          リポジトリは、閾値を下回ったPRが自動マージされなくなることを
+          理解した上で`lighthouserc.json`の各assertionsを`"warn"`から
+          `"error"`へ変更しておくこと（`"warn"`のままではassertion自体が
+          失敗しないため、本入力を有効にしても何もブロックされない）。
         type: boolean
         default: false
       skip_verification_on_push:
@@ -2556,11 +2570,15 @@ jobs:
       - name: Lighthouse CIを実行する
         id: lhci
         working-directory: ${{ inputs.frontend_dir }}
-        continue-on-error: true
+        continue-on-error: ${{ !inputs.enable_lighthouse_ci_gating }}
         run: |
-          set -eu
-          npx lhci autorun > /tmp/lhci-stdout.log 2>&1 || echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -u
+          npx lhci autorun > /tmp/lhci-stdout.log 2>&1
+          lhci_exit=$?
           cat /tmp/lhci-stdout.log
+          if [ "$lhci_exit" -ne 0 ]; then
+            echo "exit_code=$lhci_exit" >> "$GITHUB_OUTPUT"
+          fi
           # issue #1047。カテゴリ別スコア（Performance/Accessibility/Best Practices/SEO）を
           # サマリーへ含めるため、lhciが書き出すmanifest.jsonを探す。これは参照側リポジトリの
           # lighthouserc.jsonで`upload.target: "filesystem"`を設定した場合のみ生成される
@@ -2568,6 +2586,15 @@ jobs:
           manifest_path="$(find . -not -path '*/node_modules/*' -name manifest.json -print -quit 2>/dev/null || true)"
           if [ -n "$manifest_path" ]; then
             cp "$manifest_path" /tmp/lhci-manifest.json
+          fi
+          # issue #1762。enable_lighthouse_ci_gatingが有効な場合のみ、assertion失敗
+          # （lhciの非ゼロ終了）をこのstep自体の失敗として伝播させる。これによりjob全体が
+          # 失敗し、merge jobの`needs.lighthouse-ci.result`チェック（既存のロジック、
+          # enable_lighthouse_ci_gatingの有無に関わらず元から存在する）でマージがブロック
+          # される。gatingが無効な場合は`continue-on-error: true`により、この終了コードが
+          # step自体を失敗させてもjob・merge judgeには伝播しない（従来どおり情報提供のみ）
+          if [ "${{ inputs.enable_lighthouse_ci_gating }}" = "true" ] && [ "$lhci_exit" -ne 0 ]; then
+            exit "$lhci_exit"
           fi
 
       # scripts/lighthouse-ci-summary.jsはdev-standards自身のスクリプトのため、
