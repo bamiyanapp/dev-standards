@@ -237,8 +237,15 @@ test("summarizeLighthouseScores: manifest.jsonのsummaryからカテゴリ別ス
 
 test("summarizeLighthouseScores: pwa等summaryに無いカテゴリは「―」にする", () => {
   const markdown = summarizeLighthouseScores(MANIFEST_ENTRIES);
-  const dataRow = markdown.split("\n").find((l) => l.includes("http://localhost:4173/"));
-  assert.ok(dataRow.includes("―"));
+  const pwaRow = markdown.split("\n").find((l) => l.startsWith("| PWA"));
+  assert.ok(pwaRow.includes("―"));
+});
+
+test("summarizeLighthouseScores: カテゴリを行・URLを列にした縦持ちにする", () => {
+  const markdown = summarizeLighthouseScores(MANIFEST_ENTRIES);
+  const lines = markdown.split("\n");
+  assert.ok(lines[0].startsWith("| カテゴリ | http://localhost:4173/ |"));
+  assert.ok(lines.some((l) => l.startsWith("| Performance | 🔴 49 |")));
 });
 
 test("summarizeLighthouseScores: 空配列・非配列ではnullを返す", () => {
