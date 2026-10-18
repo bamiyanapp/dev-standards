@@ -19,16 +19,17 @@ const fs = require("node:fs");
 const NPM_REGISTRY_BASE = "https://registry.npmjs.org";
 const STALE_THRESHOLD_DAYS_DEFAULT = 730; // 2年
 
-// registryの"GET /{name}"レスポンスから、最終公開日時が閾値より古いかどうかを判定する。
-// `time.modified`自体が取得できない場合（registry側の仕様変化等）は判定不能としてnullを返す
+// registryの"GET /{name}"レスポンスから、最終公開日時・経過日数・閾値判定結果を算出する。
+// `time.modified`自体が取得できない場合（registry側の仕様変化等）は判定不能としてnullを返す。
+// issue #1086: 閾値に該当しなかった場合もRisk Summaryへ実測値を表示できるよう、
+// 該当の有無に関わらず常に結果を返す（`flagged`で判定結果を示す）
 function detectStaleness(packageJson, thresholdDays = STALE_THRESHOLD_DAYS_DEFAULT, now = new Date()) {
   const modified = packageJson?.time?.modified;
   if (!modified) return null;
   const lastPublishedAt = new Date(modified);
   if (Number.isNaN(lastPublishedAt.getTime())) return null;
   const ageDays = Math.floor((now.getTime() - lastPublishedAt.getTime()) / (24 * 60 * 60 * 1000));
-  if (ageDays < thresholdDays) return null;
-  return { lastPublishedAt: modified, ageDays };
+  return { lastPublishedAt: modified, ageDays, flagged: ageDays >= thresholdDays };
 }
 
 async function defaultFetchJson(url) {
@@ -42,8 +43,10 @@ async function defaultFetchJson(url) {
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）。
 // 「このPRを適用せず現行バージョンに留まる場合の危険度」（維持リスク）の判定に使うため、
 // oldVersionが存在する変更のみを対象にする（新規追加のみの変更は対象外）
-// 戻り値: [{ name, oldVersion, newVersion, lastPublishedAt, ageDays }]
-// 閾値未満で放置と判定されなかったパッケージは戻り値の配列に含めない
+// 戻り値: [{ name, oldVersion, newVersion, lastPublishedAt, ageDays, flagged }]
+// issue #1086: 判定不能（time.modifiedが取得できない）パッケージのみ対象外とし、
+// 閾値未満（flagged: false）のパッケージも含めて全件返す（Risk Summaryでの
+// 実測値表示に使うため）。閾値への該当判定自体はflaggedで示す
 async function fetchStalenessInfo(changes, { fetchJsonImpl = defaultFetchJson, thresholdDays = STALE_THRESHOLD_DAYS_DEFAULT, now } = {}) {
   const targets = changes.filter((c) => c.oldVersion != null);
   const results = [];

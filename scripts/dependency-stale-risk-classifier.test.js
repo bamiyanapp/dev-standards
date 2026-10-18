@@ -196,7 +196,7 @@ test("CLI: deprecation-info.json（oldDeprecatedあり）を渡すとhighへ昇�
 test("classifyStaleRisk: stalenessInfoがある場合はlowからmediumへ昇格する", () => {
   const result = classifyStaleRisk({
     securityDataAvailable: true,
-    stalenessInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000 }],
+    stalenessInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000, flagged: true }],
   });
   assert.equal(result.level, "medium");
   assert.ok(result.reasons.some((r) => r.includes("minor-pkg") && r.includes("1000日間")));
@@ -205,7 +205,7 @@ test("classifyStaleRisk: stalenessInfoがある場合はlowからmediumへ昇格
 test("classifyStaleRisk: stalenessInfoはhighへは昇格しない（CVE/KEV・deprecatedのみが根拠）", () => {
   const result = classifyStaleRisk({
     securityDataAvailable: true,
-    stalenessInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000 }],
+    stalenessInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000, flagged: true }],
     deprecationInfo: [],
   });
   assert.equal(result.level, "medium");
@@ -224,7 +224,7 @@ test("CLI: staleness-info.json（放置検知あり）を渡すとmediumへ昇�
   fs.writeFileSync(deprecationInfoPath, "[]");
   fs.writeFileSync(
     stalenessInfoPath,
-    JSON.stringify([{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000 }]),
+    JSON.stringify([{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2019-01-01T00:00:00Z", ageDays: 1000, flagged: true }]),
   );
 
   const stdout = execFileSync(
@@ -247,7 +247,7 @@ test("CLI: staleness-info.json（放置検知あり）を渡すとmediumへ昇�
 test("classifyStaleRisk: scorecardInfoがある場合はlowからmediumへ昇格する", () => {
   const result = classifyStaleRisk({
     securityDataAvailable: true,
-    scorecardInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5 }],
+    scorecardInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5, flagged: true }],
   });
   assert.equal(result.level, "medium");
   assert.ok(result.reasons.some((r) => r.includes("minor-pkg") && r.includes("1.5点")));
@@ -256,7 +256,7 @@ test("classifyStaleRisk: scorecardInfoがある場合はlowからmediumへ昇格
 test("classifyStaleRisk: scorecardInfoはhighへは昇格しない（CVE/KEV・deprecatedのみが根拠）", () => {
   const result = classifyStaleRisk({
     securityDataAvailable: true,
-    scorecardInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5 }],
+    scorecardInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5, flagged: true }],
   });
   assert.equal(result.level, "medium");
 });
@@ -276,7 +276,7 @@ test("CLI: scorecard-info.json（低スコアあり）を渡すとmediumへ昇�
   fs.writeFileSync(stalenessInfoPath, "[]");
   fs.writeFileSync(
     scorecardInfoPath,
-    JSON.stringify([{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5 }]),
+    JSON.stringify([{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5, flagged: true }]),
   );
 
   const stdout = execFileSync(
@@ -295,4 +295,20 @@ test("CLI: scorecard-info.json（低スコアあり）を渡すとmediumへ昇�
 
   const result = JSON.parse(stdout);
   assert.equal(result.level, "medium");
+});
+
+test("classifyStaleRisk: stalenessInfoがflagged: falseのみの場合は昇格しない", () => {
+  const result = classifyStaleRisk({
+    securityDataAvailable: true,
+    stalenessInfo: [{ name: "fresh-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", lastPublishedAt: "2025-12-01T00:00:00Z", ageDays: 10, flagged: false }],
+  });
+  assert.equal(result.level, "low");
+});
+
+test("classifyStaleRisk: scorecardInfoがflagged: falseのみの場合は昇格しない", () => {
+  const result = classifyStaleRisk({
+    securityDataAvailable: true,
+    scorecardInfo: [{ name: "healthy-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "healthy-pkg", score: 9.1, flagged: false }],
+  });
+  assert.equal(result.level, "low");
 });

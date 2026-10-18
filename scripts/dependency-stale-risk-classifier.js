@@ -67,10 +67,13 @@ function classifyStaleRisk({
   // blastRadiusImpactと同様にlow→mediumのみに限定する（放置の事実はあっても脆弱性の
   // 深刻度自体は不明なため、high昇格はCVE/KEV・deprecated検知のみを根拠とする既存設計を
   // 維持する）
-  if (stalenessInfo.length > 0) {
+  // issue #1086: 全件返すようになったfetchStalenessInfoの結果から、flagged（閾値該当）
+  // のみを昇格の根拠にする。非該当分はRisk Summaryの一覧表示にのみ使う
+  const flaggedStaleness = stalenessInfo.filter((s) => s.flagged);
+  if (flaggedStaleness.length > 0) {
     const before = level;
     level = escalate(level, "medium");
-    for (const s of stalenessInfo) {
+    for (const s of flaggedStaleness) {
       reasons.push(
         `現行バージョンの${s.name}は${s.ageDays}日間（${s.lastPublishedAt}以降）新バージョンが公開されていません。サポートが脆弱な可能性があります${level !== before ? "" : "（維持リスクのhighへの昇格は既知のCVE/KEV・deprecated検知のみを根拠とするため追加の昇格はありません）"}`,
       );
@@ -81,10 +84,13 @@ function classifyStaleRisk({
   // ブランチ保護設定等を総合した質的指標）が閾値未満のパッケージを検知する。
   // stalenessInfoと同様、既存のCVE/KEV・deprecated検知より確度の低い信号のため、
   // low→mediumのみに限定する
-  if (scorecardInfo.length > 0) {
+  // issue #1086: 全件返すようになったfetchScorecardInfoの結果から、flagged（閾値未満）
+  // のみを昇格の根拠にする。非該当分はRisk Summaryの一覧表示にのみ使う
+  const flaggedScorecard = scorecardInfo.filter((s) => s.flagged);
+  if (flaggedScorecard.length > 0) {
     const before = level;
     level = escalate(level, "medium");
-    for (const s of scorecardInfo) {
+    for (const s of flaggedScorecard) {
       reasons.push(
         `現行バージョンの${s.name}はOpenSSF Scorecardスコアが${s.score}点（10点満点）と低く、メンテナンス状態に懸念があります${level !== before ? "" : "（維持リスクのhighへの昇格は既知のCVE/KEV・deprecated検知のみを根拠とするため追加の昇格はありません）"}`,
       );

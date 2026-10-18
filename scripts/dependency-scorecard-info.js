@@ -34,14 +34,14 @@ function extractGitHubRepo(repository) {
   return null;
 }
 
-// Scorecard APIのレスポンス（{score, ...}）からscoreThreshold未満の場合のみ結果を返す。
+// Scorecard APIのレスポンス（{score, ...}）からscoreThreshold判定結果を算出する。
 // score自体が無い（プロジェクト未評価）場合は判定不能としてnullを返す（安全側、
-// 「不明」を昇格の根拠にしない）
+// 「不明」を昇格の根拠にしない）。issue #1086: 閾値以上の場合もRisk Summaryへ
+// 実測値を表示できるよう、該当の有無に関わらず常に結果を返す（`flagged`で判定結果を示す）
 function detectLowScorecard(scorecardResponse, scoreThreshold = SCORE_THRESHOLD_DEFAULT) {
   const score = scorecardResponse?.score;
   if (typeof score !== "number") return null;
-  if (score >= scoreThreshold) return null;
-  return { score };
+  return { score, flagged: score < scoreThreshold };
 }
 
 async function defaultFetchJson(url) {
@@ -55,9 +55,10 @@ async function defaultFetchJson(url) {
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）。
 // 維持リスクの判定に使うため、oldVersionが存在する変更のみを対象にする
-// 戻り値: [{ name, oldVersion, newVersion, owner, repo, score }]
-// GitHubリポジトリが特定できない・Scorecard未評価・閾値以上のパッケージは
-// 戻り値の配列に含めない
+// 戻り値: [{ name, oldVersion, newVersion, owner, repo, score, flagged }]
+// issue #1086: GitHubリポジトリが特定できない・Scorecard未評価（判定不能）の
+// パッケージのみ対象外とし、閾値以上（flagged: false）のパッケージも含めて
+// 全件返す（Risk Summaryでの実測値表示に使うため）
 async function fetchScorecardInfo(changes, { fetchJsonImpl = defaultFetchJson, scoreThreshold = SCORE_THRESHOLD_DEFAULT } = {}) {
   const targets = changes.filter((c) => c.oldVersion != null);
   const results = [];

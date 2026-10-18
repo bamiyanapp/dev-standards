@@ -34,12 +34,12 @@ test("extractGitHubRepo: repositoryフィールドが無い場合はnullを返�
   assert.equal(extractGitHubRepo(null), null);
 });
 
-test("detectLowScorecard: scoreThreshold未満の場合は結果を返す", () => {
-  assert.deepEqual(detectLowScorecard({ score: 2.1 }, 3), { score: 2.1 });
+test("detectLowScorecard: scoreThreshold未満の場合はflagged: trueを返す", () => {
+  assert.deepEqual(detectLowScorecard({ score: 2.1 }, 3), { score: 2.1, flagged: true });
 });
 
-test("detectLowScorecard: scoreThreshold以上の場合はnullを返す", () => {
-  assert.equal(detectLowScorecard({ score: 7.5 }, 3), null);
+test("detectLowScorecard: scoreThreshold以上の場合はflagged: falseを返す（結果自体は返す）", () => {
+  assert.deepEqual(detectLowScorecard({ score: 7.5 }, 3), { score: 7.5, flagged: false });
 });
 
 test("detectLowScorecard: scoreが無い（未評価）場合はnullを返す（判定不能）", () => {
@@ -49,11 +49,11 @@ test("detectLowScorecard: scoreが無い（未評価）場合はnullを返す（
 
 test("detectLowScorecard: scoreThreshold省略時はデフォルト値（3）を使う", () => {
   assert.ok(SCORE_THRESHOLD_DEFAULT > 0);
-  assert.deepEqual(detectLowScorecard({ score: 1 }), { score: 1 });
-  assert.equal(detectLowScorecard({ score: 9 }), null);
+  assert.deepEqual(detectLowScorecard({ score: 1 }), { score: 1, flagged: true });
+  assert.deepEqual(detectLowScorecard({ score: 9 }), { score: 9, flagged: false });
 });
 
-test("fetchScorecardInfo: スコアが閾値未満のパッケージのみを返す", async () => {
+test("fetchScorecardInfo: GitHubリポジトリが特定できチェックできたパッケージを全件返す", async () => {
   const changes = [
     { name: "low-score-pkg", oldVersion: "1.0.0", newVersion: "1.0.1" },
     { name: "high-score-pkg", oldVersion: "2.0.0", newVersion: "2.1.0" },
@@ -74,7 +74,16 @@ test("fetchScorecardInfo: スコアが閾値未満のパッケージのみを返
   };
   const result = await fetchScorecardInfo(changes, { fetchJsonImpl });
   assert.deepEqual(result, [
-    { name: "low-score-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "low-score-pkg", score: 1.8 },
+    { name: "low-score-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "low-score-pkg", score: 1.8, flagged: true },
+    {
+      name: "high-score-pkg",
+      oldVersion: "2.0.0",
+      newVersion: "2.1.0",
+      owner: "owner",
+      repo: "high-score-pkg",
+      score: 8.2,
+      flagged: false,
+    },
   ]);
 });
 
