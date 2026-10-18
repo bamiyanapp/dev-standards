@@ -6,7 +6,7 @@
 <summary>CloudWatch→LINE通知フロー（mermaid図）</summary>
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph 検知
         Target[Raspberry Pi等の<br/>実行環境] -->|定期的に呼び出し| Metric[CloudWatch<br/>メトリクス]
         Metric --> Alarm{CloudWatch Alarm<br/>想定間隔以上<br/>呼び出しが無い}
