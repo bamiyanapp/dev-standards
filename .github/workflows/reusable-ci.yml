@@ -3426,6 +3426,23 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const branchName = context.payload.pull_request.head.ref;
+
+            // issue #1068。このjob（merge）はワークフロー実行全体の末尾（他の全jobの
+            // 完了）を待つため、実行開始からここに至るまで数分かかることがある。
+            // その間にPRが人間またはAPI操作でcloseされていても、ワークフロー実行
+            // 自体は自動キャンセルされないため、closeに気づかずマージしてしまう
+            // 実害が確認された（karuta#1759）。マージ直前にPRの現在状態を取得し、
+            // openでなければスキップする
+            const { data: currentPr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            if (currentPr.state !== "open") {
+              console.log(`PR #${prNumber} is no longer open (state: ${currentPr.state}). Skipping merge.`);
+              return;
+            }
+
             console.log(`Attempting to merge PR #${prNumber}`);
             let mergeSha = "";
             // pushで作成したコミット直後はGitHub側のmergeable判定が
