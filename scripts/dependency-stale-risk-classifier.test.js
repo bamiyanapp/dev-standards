@@ -243,3 +243,56 @@ test("CLI: staleness-info.json（放置検知あり）を渡すとmediumへ昇�
   const result = JSON.parse(stdout);
   assert.equal(result.level, "medium");
 });
+
+test("classifyStaleRisk: scorecardInfoがある場合はlowからmediumへ昇格する", () => {
+  const result = classifyStaleRisk({
+    securityDataAvailable: true,
+    scorecardInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5 }],
+  });
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("minor-pkg") && r.includes("1.5点")));
+});
+
+test("classifyStaleRisk: scorecardInfoはhighへは昇格しない（CVE/KEV・deprecatedのみが根拠）", () => {
+  const result = classifyStaleRisk({
+    securityDataAvailable: true,
+    scorecardInfo: [{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5 }],
+  });
+  assert.equal(result.level, "medium");
+});
+
+test("CLI: scorecard-info.json（低スコアあり）を渡すとmediumへ昇格する", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "stale-risk-cli-test-"));
+  const oldVulnerabilityInfoPath = path.join(tmpDir, "old-vulnerability-info.json");
+  const oldExploitInfoPath = path.join(tmpDir, "old-exploit-info.json");
+  const blastRadiusInfoPath = path.join(tmpDir, "blast-radius-info.json");
+  const deprecationInfoPath = path.join(tmpDir, "deprecation-info.json");
+  const stalenessInfoPath = path.join(tmpDir, "staleness-info.json");
+  const scorecardInfoPath = path.join(tmpDir, "scorecard-info.json");
+  fs.writeFileSync(oldVulnerabilityInfoPath, "[]");
+  fs.writeFileSync(oldExploitInfoPath, "[]");
+  fs.writeFileSync(blastRadiusInfoPath, JSON.stringify({ hasCriticalPathImpact: false, hits: [] }));
+  fs.writeFileSync(deprecationInfoPath, "[]");
+  fs.writeFileSync(stalenessInfoPath, "[]");
+  fs.writeFileSync(
+    scorecardInfoPath,
+    JSON.stringify([{ name: "minor-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", owner: "owner", repo: "minor-pkg", score: 1.5 }]),
+  );
+
+  const stdout = execFileSync(
+    "node",
+    [
+      path.join(__dirname, "dependency-stale-risk-classifier.js"),
+      oldVulnerabilityInfoPath,
+      oldExploitInfoPath,
+      blastRadiusInfoPath,
+      deprecationInfoPath,
+      stalenessInfoPath,
+      scorecardInfoPath,
+    ],
+    { encoding: "utf-8" },
+  );
+
+  const result = JSON.parse(stdout);
+  assert.equal(result.level, "medium");
+});

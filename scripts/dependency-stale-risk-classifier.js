@@ -29,6 +29,7 @@ function classifyStaleRisk({
   blastRadiusImpact = false,
   deprecationInfo = [],
   stalenessInfo = [],
+  scorecardInfo = [],
 }) {
   let level = "low";
   const reasons = [];
@@ -76,6 +77,20 @@ function classifyStaleRisk({
     }
   }
 
+  // issue #1077。OpenSSF Scorecardスコア（コントリビューター数・CI/テストの有無・
+  // ブランチ保護設定等を総合した質的指標）が閾値未満のパッケージを検知する。
+  // stalenessInfoと同様、既存のCVE/KEV・deprecated検知より確度の低い信号のため、
+  // low→mediumのみに限定する
+  if (scorecardInfo.length > 0) {
+    const before = level;
+    level = escalate(level, "medium");
+    for (const s of scorecardInfo) {
+      reasons.push(
+        `現行バージョンの${s.name}はOpenSSF Scorecardスコアが${s.score}点（10点満点）と低く、メンテナンス状態に懸念があります${level !== before ? "" : "（維持リスクのhighへの昇格は既知のCVE/KEV・deprecated検知のみを根拠とするため追加の昇格はありません）"}`,
+      );
+    }
+  }
+
   if (blastRadiusImpact) {
     const before = level;
     level = escalate(level, "medium");
@@ -101,10 +116,11 @@ function readJsonFileIfExists(path) {
 }
 
 function main() {
-  const [, , oldVulnerabilityInfoPath, oldExploitInfoPath, blastRadiusInfoPath, deprecationInfoPath, stalenessInfoPath] = process.argv;
+  const [, , oldVulnerabilityInfoPath, oldExploitInfoPath, blastRadiusInfoPath, deprecationInfoPath, stalenessInfoPath, scorecardInfoPath] =
+    process.argv;
   if (!oldVulnerabilityInfoPath) {
     console.error(
-      "Usage: node dependency-stale-risk-classifier.js <old-vulnerability-info.json> [old-exploit-info.json] [blast-radius-info.json] [deprecation-info.json] [staleness-info.json]",
+      "Usage: node dependency-stale-risk-classifier.js <old-vulnerability-info.json> [old-exploit-info.json] [blast-radius-info.json] [deprecation-info.json] [staleness-info.json] [scorecard-info.json]",
     );
     process.exitCode = 1;
     return;
@@ -116,6 +132,7 @@ function main() {
   const blastRadiusInfo = readJsonFileIfExists(blastRadiusInfoPath);
   const deprecationInfo = readJsonFileIfExists(deprecationInfoPath);
   const stalenessInfo = readJsonFileIfExists(stalenessInfoPath);
+  const scorecardInfo = readJsonFileIfExists(scorecardInfoPath);
 
   const result = classifyStaleRisk({
     oldVulnerabilityInfo: oldVulnerabilityInfo ?? [],
@@ -124,6 +141,7 @@ function main() {
     blastRadiusImpact: blastRadiusInfo?.hasCriticalPathImpact ?? false,
     deprecationInfo: deprecationInfo ?? [],
     stalenessInfo: stalenessInfo ?? [],
+    scorecardInfo: scorecardInfo ?? [],
   });
 
   console.log(JSON.stringify(result, null, 2));
