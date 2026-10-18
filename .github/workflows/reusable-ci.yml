@@ -709,7 +709,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
         if: inputs.coverage_threshold > 0
@@ -860,7 +860,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
       # 上記の各種対策（--no-isolate・--no-file-parallelism・
       # --no-flush-bytecode）を講じてもなお、V8のカバレッジ計測が実行のたびに
@@ -971,7 +971,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -1081,7 +1081,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
       - name: E2Eカバレッジを表示する
         if: always()
@@ -2202,7 +2202,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
 
       - name: mermaid図をレンダリングする
@@ -2358,7 +2358,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions-commit-via-pr
 
       - name: キャッシュバスティング済みリンクをcommit-via-pr経由でコミットする
@@ -2596,7 +2596,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
 
       - name: Lighthouse CIの結果から概要を組み立てる
@@ -2791,7 +2791,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.97.5
+          ref: v2.98.0
           path: .dev-standards-actions
 
       - name: 依存パッケージ更新情報を生成する
