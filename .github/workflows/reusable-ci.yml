@@ -2895,6 +2895,16 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-scorecard-info.js /tmp/dependency-update-info.json > /tmp/scorecard-info.json
 
+      # issue #1086。放置検知・Scorecard確認は、閾値に該当しなかった場合は
+      # Risk Summaryに何も表示されず、実際にチェックが動作したかどうかが
+      # 分からない問題があった。閾値該当・非該当に関わらず、チェック対象の
+      # 全パッケージの実測値を常に表示するセクションを生成する
+      - name: メンテナンス状態セクションを生成する
+        id: maintenance-summary
+        if: steps.staleness-info.outcome == 'success' && steps.scorecard-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-maintenance-summary.js /tmp/staleness-info.json /tmp/scorecard-info.json > /tmp/maintenance-section.md
+
       # issue #648（Phase 3）SBOM生成。--package-lock-onlyによりnode_modulesの実
       # インストール無しにpackage-lock.jsonのみから生成できる（実機確認済み）。
       # このステップ自体はnpm installを必要としない（issue #813でこのjobの後続に
@@ -3249,6 +3259,10 @@ jobs:
 
             if (fs.existsSync('/tmp/sbom-section.md')) {
               body += fs.readFileSync('/tmp/sbom-section.md', 'utf-8') + '\n';
+            }
+
+            if (fs.existsSync('/tmp/maintenance-section.md')) {
+              body += fs.readFileSync('/tmp/maintenance-section.md', 'utf-8') + '\n';
             }
 
             await github.rest.issues.createComment({

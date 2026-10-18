@@ -151,6 +151,12 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 
 スコアが閾値未満（既定3点、OpenSSF Scorecardの一般的な「懸念あり」水準）の場合、放置検知と同様に維持リスクへの昇格は**low→mediumのみ**に限定する（質的評価は既知のCVE/KEV・deprecated検知と同じ確度を持たないため）。
 
+## Risk Summaryコメントでの常時表示（[#1086](https://github.com/bamiyanapp/dev-standards/issues/1086)）
+
+放置検知・Scorecard確認は、閾値に該当した場合のみ`classifyStaleRisk()`の`reasons`（維持リスクの理由欄）に出力される。該当が無い場合は何も表示されず、実際の依存更新PRでこれらのチェックが動作したかどうかが、コメントを見ても分からない。
+
+このため、`dependency-staleness-info.js`・`dependency-scorecard-info.js`は、閾値に該当したパッケージのみでなく、チェック対象になった全パッケージの実測値（`ageDays`・`score`）と判定結果（`flagged`）を返す。`dependency-stale-risk-classifier.js`は`flagged`なエントリのみを維持リスク昇格の根拠にする。一方、`dependency-maintenance-summary.js`が全件を「### メンテナンス状態（放置検知・Scorecard確認）」セクションとしてRisk Summaryコメントへ常に追記する（Security・SBOMセクションと同じ設計）。
+
 ## 適用リスク
 
 このPRを適用する場合のLow/Medium/High判定。Highへ到達した理由がCVE/KEV残存のみかどうかを示す`vulnerability_only_high`も合わせて出力する（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。新バージョンのdeprecated検知（上記）はreasonにのみ反映され、Highへの昇格には使わない。
