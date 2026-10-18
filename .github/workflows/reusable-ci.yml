@@ -2875,6 +2875,16 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-deprecation-info.js /tmp/dependency-update-info.json > /tmp/deprecation-info.json
 
+      # issue #1076。deprecated化されないまま単に更新が止まっているだけの放置パッケージ
+      # （サポートが脆弱・利用者が少なく、脆弱性が見つかってもCVEとして報告されない
+      # リスクがある）を検知する。oldVersionの情報のみを使う（維持リスク＝現行
+      # バージョンに留まる場合の危険度の判定に使うため）
+      - name: パッケージの放置検知情報を生成する
+        id: staleness-info
+        if: steps.dependency-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-staleness-info.js /tmp/dependency-update-info.json > /tmp/staleness-info.json
+
       # issue #648（Phase 3）SBOM生成。--package-lock-onlyによりnode_modulesの実
       # インストール無しにpackage-lock.jsonのみから生成できる（実機確認済み）。
       # このステップ自体はnpm installを必要としない（issue #813でこのjobの後続に
@@ -3023,7 +3033,7 @@ jobs:
         id: classify-stale
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json /tmp/deprecation-info.json > /tmp/stale-risk-classification.json
+        run: node .dev-standards-actions/scripts/dependency-stale-risk-classifier.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json /tmp/blast-radius-info.json /tmp/deprecation-info.json /tmp/staleness-info.json > /tmp/stale-risk-classification.json
 
       # ファンアウト注記（issue #646 Task G前半）: dev-standardsは複数リポジトリから
       # 参照される共有基盤のため、dev-standards自身への依存更新は「影響リポジトリ数」
