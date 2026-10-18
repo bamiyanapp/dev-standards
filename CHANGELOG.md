@@ -1,3 +1,10 @@
+## [2.98.2](https://github.com/bamiyanapp/dev-standards/compare/v2.98.1...v2.98.2) (2026-10-18)
+
+
+### Bug Fixes
+
+* **ci:** Lighthouseスコア表を縦横転換する ([#1054](https://github.com/bamiyanapp/dev-standards/issues/1054)) ([5a6a2e0](https://github.com/bamiyanapp/dev-standards/commit/5a6a2e0957a20c4799472243863663f2f20236b0))
+
 ## [2.98.1](https://github.com/bamiyanapp/dev-standards/compare/v2.98.0...v2.98.1) (2026-10-18)
 
 
