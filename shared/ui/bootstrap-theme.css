@@ -11,9 +11,16 @@
 
    前提:
    - 利用側でBootstrap 5.3を読み込んでいること（bg-light/bg-white/text-dark等の
-     カラーユーティリティ、data-bs-theme属性によるカラーモード切り替えを使う）
-   - 「M PLUS Rounded 1c」フォント（docs/frontend-ui-conventions.md）をGoogle Fonts等
-     経由で利用側が読み込んでいること。common-theme.css側でfont-familyの指定のみ行う
+     カラーユーティリティ、data-bs-theme属性によるカラーモード切り替えを使う）。
+     `bootstrap`パッケージをnpm依存として追加し、ビルド成果物へバンドルする
+     （`import 'bootstrap/dist/css/bootstrap.min.css'`）ことを推奨する。外部CDN
+     （cdn.jsdelivr.net等）からの読み込みは、追加のDNS解決・TLSハンドシェイクが
+     レンダリングをブロックし、Lighthouse Performanceスコアを悪化させるため避ける
+     （karuta#1761で実機確認。render-blocking-resourcesが1,880ms→1,050msへ改善）
+   - 「M PLUS Rounded 1c」フォント（docs/frontend-ui-conventions.md）を利用側が
+     読み込んでいること。common-theme.css側でfont-familyの指定のみ行う。
+     Bootstrapと同様の理由で、Google Fonts CDNではなく`@fontsource/m-plus-rounded-1c`
+     パッケージ（400・700ウェイト）によるnpmバンドルを推奨する
    - ダークモードの切り替え自体（data-bs-theme属性の付与・トグルUI）は利用側アプリの
      責務であり、本ファイルはCSS側の追従のみを担う
 
