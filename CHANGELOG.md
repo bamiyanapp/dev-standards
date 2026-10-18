@@ -1,3 +1,10 @@
+## [2.98.1](https://github.com/bamiyanapp/dev-standards/compare/v2.98.0...v2.98.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **ci:** 他のdev-standards自己参照チェックアウトをv2.98.0へ更新する ([#1051](https://github.com/bamiyanapp/dev-standards/issues/1051)) ([dea3701](https://github.com/bamiyanapp/dev-standards/commit/dea3701ad5346075b1852af7c8153ed15e980e06))
+
 # [2.98.0](https://github.com/bamiyanapp/dev-standards/compare/v2.97.7...v2.98.0) (2026-10-17)
 
 
