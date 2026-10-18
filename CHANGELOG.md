@@ -1,3 +1,10 @@
+# [2.101.0](https://github.com/bamiyanapp/dev-standards/compare/v2.100.0...v2.101.0) (2026-10-18)
+
+
+### Features
+
+* **dependency-risk:** OpenSSF Scorecardによる依存パッケージの質的評価を追加する ([#1080](https://github.com/bamiyanapp/dev-standards/issues/1080)) ([0c89063](https://github.com/bamiyanapp/dev-standards/commit/0c89063219389758ba722b5a5962f12b38c41744))
+
 # [2.100.0](https://github.com/bamiyanapp/dev-standards/compare/v2.99.1...v2.100.0) (2026-10-18)
 
 
