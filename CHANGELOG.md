@@ -1,3 +1,10 @@
+# [2.102.0](https://github.com/bamiyanapp/dev-standards/compare/v2.101.0...v2.102.0) (2026-10-18)
+
+
+### Features
+
+* **dependency-risk:** 放置検知・Scorecard確認の実行結果を常にRisk Summaryへ表示する ([#1087](https://github.com/bamiyanapp/dev-standards/issues/1087)) ([afef4f5](https://github.com/bamiyanapp/dev-standards/commit/afef4f57a4aa8d4d4e55f7228e95b374d5deed35))
+
 # [2.101.0](https://github.com/bamiyanapp/dev-standards/compare/v2.100.0...v2.101.0) (2026-10-18)
 
 
