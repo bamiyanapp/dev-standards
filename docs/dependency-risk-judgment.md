@@ -9,7 +9,7 @@
 <summary>ソースを表示（mermaid記法）</summary>
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[依存更新PR] --> B{package-lock.jsonまたは<br/>GitHub Actions参照が変更された?}
     B -->|いいえ| C[risk_level/stale_risk_levelは生成されない]
     B -->|変更あり| D[update type・直接/間接判定]
@@ -110,7 +110,7 @@ install script・メンテナ変更の検知結果は、適用リスク分類（
 <summary>ソースを表示（mermaid記法）</summary>
 
 ```mermaid
-flowchart LR
+flowchart TD
     I1["install script検知: NEW"] --> R["classifyRisk()"]
     I2["メンテナ変更検知: CHANGED"] --> R
     R --> O["適用リスク（Low/Medium/High）"]
