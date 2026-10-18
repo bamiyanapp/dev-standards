@@ -7,16 +7,17 @@
 
 ```mermaid
 flowchart LR
-    subgraph 監視対象
-        Target[Raspberry Pi等の<br/>実行環境]
+    subgraph 検知
+        Target[Raspberry Pi等の<br/>実行環境] -->|定期的に呼び出し| Metric[CloudWatch<br/>メトリクス]
+        Metric --> Alarm{CloudWatch Alarm<br/>想定間隔以上<br/>呼び出しが無い}
     end
-    Target -->|定期的に呼び出し| Metric[CloudWatch<br/>メトリクス]
-    Metric --> Alarm{CloudWatch Alarm<br/>想定間隔以上<br/>呼び出しが無い}
-    Alarm -->|TreatMissingData:<br/>breaching| SNS[SNS Topic]
-    SNS --> Lambda[opsAlertLambda]
-    Lambda --> Build[buildOpsAlertMessage]
-    Build --> Send[sendOpsAlert]
-    Send --> LINE[運用監視専用<br/>LINE Bot]
+    subgraph 通知
+        SNS[SNS Topic] --> Lambda[opsAlertLambda]
+        Lambda --> Build[buildOpsAlertMessage]
+        Build --> Send[sendOpsAlert]
+        Send --> LINE[運用監視専用<br/>LINE Bot]
+    end
+    Alarm -->|TreatMissingData:<br/>breaching| SNS
 ```
 
 </details>

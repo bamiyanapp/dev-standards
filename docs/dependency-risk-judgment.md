@@ -88,7 +88,7 @@ SBOMはRisk判定そのものには使わない。**「何が入っているか�
 <summary>ソースを表示（mermaid記法）</summary>
 
 ```mermaid
-flowchart LR
+flowchart TD
     App[Application] --> A[library A] --> B[library B] --> C[library C]
 ```
 
