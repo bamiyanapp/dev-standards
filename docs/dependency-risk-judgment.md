@@ -18,6 +18,7 @@ flowchart TD
         D --> F[旧バージョンの<br/>CVE/CVSS/KEV/EPSS取得]
         D --> G[Supply Chain<br/>チェック]
         D --> H[業務影響度<br/>（ブラスト半径）判定]
+        D --> P[deprecated検知・<br/>放置検知・Scorecard取得]
     end
     subgraph 分類
         E --> I[適用リスク分類<br/>classifyRisk]
@@ -25,6 +26,7 @@ flowchart TD
         H --> I
         F --> J[維持リスク分類<br/>classifyStaleRisk]
         H --> J
+        P --> J
     end
     I --> K{適用リスク<br/>+ vulnerability_only_high}
     J --> L{維持リスク}
