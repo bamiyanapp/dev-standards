@@ -39,7 +39,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-1.png?b2b16e49a219a321c9aef9efcab56fbc0ce6e33b)
+![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-1.png?0c89063219389758ba722b5a5962f12b38c41744)
 
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
@@ -97,7 +97,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-2.png?b2b16e49a219a321c9aef9efcab56fbc0ce6e33b)
+![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-2.png?0c89063219389758ba722b5a5962f12b38c41744)
 
 上記の依存関係が分かっていれば、`library C`に新規CVEが公表された場合、`library B`・`library A`経由で`Application`まで影響が及ぶことを即座に追跡できる。
 
@@ -122,7 +122,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-3.png?b2b16e49a219a321c9aef9efcab56fbc0ce6e33b)
+![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-3.png?0c89063219389758ba722b5a5962f12b38c41744)
 
 ## deprecated（サポート終了）検知（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）
 
@@ -230,7 +230,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![merge gate判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-4.png?b2b16e49a219a321c9aef9efcab56fbc0ce6e33b)
+![merge gate判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-4.png?0c89063219389758ba722b5a5962f12b38c41744)
 
 - `vulnerability_only_high`による救済は、放置（維持リスクHigh）の方が危険な場合に限る（[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。新旧どちらを選ぶかという比較が成り立たないmajor update・CI失敗・supply chain異常が理由のHighは対象外（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。ブラスト半径はMedium止まりのためHighの理由にはならない（[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)）
 - `enable_dependency_risk_summary`が`false`の場合はrisk_level・stale_risk_level自体が生成されないため、常に従来どおりの動作になる
