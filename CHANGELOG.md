@@ -1,3 +1,10 @@
+## [2.102.1](https://github.com/bamiyanapp/dev-standards/compare/v2.102.0...v2.102.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **ci:** 適用リスクHigh・維持リスクLowの自動クローズを有効化し、Low表記を実装と揃える ([#1092](https://github.com/bamiyanapp/dev-standards/issues/1092)) ([b20b0af](https://github.com/bamiyanapp/dev-standards/commit/b20b0aff81daaa0b39deee509f5bcbfc99b2fb23))
+
 # [2.102.0](https://github.com/bamiyanapp/dev-standards/compare/v2.101.0...v2.102.0) (2026-10-18)
 
 
