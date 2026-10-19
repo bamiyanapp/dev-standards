@@ -1,3 +1,10 @@
+# [2.105.0](https://github.com/bamiyanapp/dev-standards/compare/v2.104.1...v2.105.0) (2026-10-19)
+
+
+### Features
+
+* **ci:** mermaid画像リンクの整合性確認をrender-mermaid-diagrams jobへ組み込む ([#1105](https://github.com/bamiyanapp/dev-standards/issues/1105)) ([df50604](https://github.com/bamiyanapp/dev-standards/commit/df50604a8eb6158b8f77aed3ec0c430d91c90739))
+
 ## [2.104.1](https://github.com/bamiyanapp/dev-standards/compare/v2.104.0...v2.104.1) (2026-10-19)
 
 
