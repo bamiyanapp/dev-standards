@@ -1,3 +1,10 @@
+## [2.104.1](https://github.com/bamiyanapp/dev-standards/compare/v2.104.0...v2.104.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **docs:** cicd-pipeline-specification.mdの画像埋め込みリンク不足を解消する ([#1103](https://github.com/bamiyanapp/dev-standards/issues/1103)) ([424b9f5](https://github.com/bamiyanapp/dev-standards/commit/424b9f56dc5eac6dca1c955198d1ca7f5b66d5e3))
+
 # [2.104.0](https://github.com/bamiyanapp/dev-standards/compare/v2.103.0...v2.104.0) (2026-10-19)
 
 
