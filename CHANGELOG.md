@@ -1,3 +1,10 @@
+# [2.103.0](https://github.com/bamiyanapp/dev-standards/compare/v2.102.1...v2.103.0) (2026-10-19)
+
+
+### Features
+
+* **renovate:** lockfile全体の定期メンテナンスを有効化する ([#1096](https://github.com/bamiyanapp/dev-standards/issues/1096)) ([9a24865](https://github.com/bamiyanapp/dev-standards/commit/9a24865cc92a8ffe9cef859af8c5514906cdbb02))
+
 ## [2.102.1](https://github.com/bamiyanapp/dev-standards/compare/v2.102.0...v2.102.1) (2026-10-19)
 
 
