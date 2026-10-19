@@ -75,4 +75,4 @@ CLAUDE.md「開発環境の制約（スマホオンリー）」により、PRレ
 
 マージ後の初回レンダリングが完了するまで画像は表示されない（`docs-diagrams`ブランチの`latest/`は`push`イベントのたびに上書き公開されるため、埋め込み自体は最初の1回のみでよい）。
 
-既存ファイルへ図を追加・削除する場合、連番（`-1`・`-2`等）への切り替え・振り直しが必要になる。実際に[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)で、後から図を追加した際にこの追従を忘れ、既存の画像リンクが古いファイル名を指したまま（stale）残る・新規図のリンクが欠落する問題が発生した（[bamiyanapp/dev-standards#1101](https://github.com/bamiyanapp/dev-standards/issues/1101)）。この種の見落としを検知するため、mermaidブロック数と本文中の画像埋め込みリンク数の一致を検証する`scripts/check-mermaid-image-links.js`を用意した。CIの`render-mermaid-diagrams` job（`reusable-ci.yml`）への組み込みは後続のPRで行う（dev-standards自身の新規スクリプトをリリース前のタグから参照できない制約のため、2段階で導入する）。
+既存ファイルへ図を追加・削除する場合、連番（`-1`・`-2`等）への切り替え・振り直しが必要になる。実際に[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)で、後から図を追加した際にこの追従を忘れ、既存の画像リンクが古いファイル名を指したまま（stale）残る・新規図のリンクが欠落する問題が発生した（[bamiyanapp/dev-standards#1101](https://github.com/bamiyanapp/dev-standards/issues/1101)）。この種の見落としは`render-mermaid-diagrams` job（`reusable-ci.yml`）内の「mermaid画像リンクの整合性を確認する」ステップ（`scripts/check-mermaid-image-links.js`）がCIで検知する。mermaidブロック数と本文中の画像埋め込みリンク数が一致しない場合、CIが失敗する。
