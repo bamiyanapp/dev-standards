@@ -2208,15 +2208,15 @@ jobs:
           node-version: "24"
 
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）。
-      # v2.11.2で、render-mermaid-diagramsに解像度向上・余白追加（文字の潰れ・
-      # GitHubモバイルアプリでの見切れ対策）を追加した（dev-standards#388）ため、
-      # その修正を含むタグへ更新した
+      # v2.104.1で、mermaidブロック数と画像埋め込みリンク数の整合性を確認する
+      # scripts/check-mermaid-image-links.js（issue #1101）を追加したため、
+      # そのスクリプトを含むタグへ更新した
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: v2.104.1
           path: .dev-standards-actions
 
       - name: mermaid図をレンダリングする
@@ -2235,6 +2235,14 @@ jobs:
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # issue #1101: 複数mermaid図を持つドキュメントで、図を追加・削除した際に本文側の
+      # 画像埋め込みリンクの更新を手動で行う運用は、見落としを構造的に生みやすい
+      # （docs/cicd-pipeline-specification.mdで実際に発生した）。mermaidブロック数と
+      # 画像埋め込みリンク数の不一致をここで検知し、見落としをマージ前に検出する
+      - name: mermaid画像リンクの整合性を確認する
+        if: steps.diagrams.outputs.found == 'true'
+        run: node .dev-standards-actions/scripts/check-mermaid-image-links.js mermaid-diagrams/manifest.json
 
       # 補助的な機能であり、このステップの失敗（ブランチ保護やトークン権限の問題等）が
       # このジョブ自体の成否判定を上書きしてはならないためcontinue-on-error: trueにする
