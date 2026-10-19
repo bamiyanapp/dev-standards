@@ -57,6 +57,11 @@ jobs:
       # dogfoodingする。package-lock.jsonを変更しないPR（このPhase 2自体の実装PR群を含む）
       # ではrisk_level自体が生成されないため、他のPRの自動マージへの影響は無い
       enable_dependency_risk_gating: true
+      # issue #746/#1090: 適用リスクHigh・維持リスクLow（適用するのは危険だが、適用せず
+      # 現行バージョンに留まるのは安全）のbot作成PRの自動クローズもdogfoodingする。
+      # 設定漏れにより、dev-standards自身ではドキュメント記載どおりの自動クローズが
+      # 一度も実行されず、該当PRがHuman Review待ちのまま放置され続けていた
+      enable_dependency_risk_auto_close: true
     secrets:
       # mergeジョブのスカッシュマージをBOT_TOKENで行わないと、GITHUB_TOKENによる
       # pushはGitHub Actions上で新たなワークフロー実行のトリガーにならず、
