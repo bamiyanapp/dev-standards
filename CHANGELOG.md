@@ -1,3 +1,10 @@
+## [2.105.1](https://github.com/bamiyanapp/dev-standards/compare/v2.105.0...v2.105.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **scripts:** dependency-full-scan.jsがOSV API 400 Bad Requestで失敗する問題を修正する ([#1112](https://github.com/bamiyanapp/dev-standards/issues/1112)) ([92cf9ac](https://github.com/bamiyanapp/dev-standards/commit/92cf9ace081e5e6d3426a6f711fe6f040baa7e3c))
+
 # [2.105.0](https://github.com/bamiyanapp/dev-standards/compare/v2.104.1...v2.105.0) (2026-10-19)
 
 
