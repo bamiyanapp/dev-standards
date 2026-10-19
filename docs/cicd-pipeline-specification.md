@@ -27,7 +27,7 @@ graph TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification.png)
+![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-1.png)
 
 ## 1. CI ワークフロー (`reusable-ci.yml`)
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
@@ -104,6 +104,8 @@ flowchart TD
 
 </details>
 <!-- jscpd:ignore-end -->
+
+![E2Eスクリーンショット報告フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-2.png)
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認できる。スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
 
@@ -272,6 +274,9 @@ flowchart TD
 
 </details>
 <!-- jscpd:ignore-end -->
+
+![リリース手順のフロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-3.png)
+
 - **なぜ `base_branch` へのpush後に実行するのか（旧方式からの変更点）**: 以前は PR の作業ブランチ上でマージ前に `semantic-release` を実行する方式だった。しかし、`pull_request` イベントで GitHub Actions が自動設定する `GITHUB_REF`/`GITHUB_REF_NAME` は `refs/pull/<PR番号>/merge` に固定されている。ワークフローYAMLの `env:` では上書きできない（GitHub Actionsの予約変数のため）。そのため semantic-release のブランチ判定が常に `refs/pull/<PR番号>/merge` を見てしまい、「対象ブランチと一致しないため公開しない」と判定されて新バージョンが一切発行されない状態になっていた（各ジョブ自体は成功扱いになるため発覚しにくい）。`base_branch` への実際のpushイベント、または`base_branch`を対象とした`schedule`イベント上で実行すれば `GITHUB_REF` は素直に `refs/heads/<base_branch>` になる。この場合、この問題は起きない（`schedule`イベントもpushと同様にデフォルトブランチのrefで実行されるため）。ただし `base_branch` がPR必須のリポジトリルールで保護されている場合は上記4のフォールバックが必要になる。
 
 ## 5. ビルド時バージョン情報のアプリ内表示（任意）
