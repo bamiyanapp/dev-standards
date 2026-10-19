@@ -1,0 +1,156 @@
+name: Reusable Dependency Full Vulnerability Scan
+
+# issue #1095。既存のdependency-risk-summary job（reusable-ci.yml）は、PRの
+# package-lock.json差分に対してのみ動作するため、Renovateが更新PRを出さない限り
+# 一度も実行されない。間接依存は親パッケージのバージョン範囲内で解決されるため、
+# 親パッケージ自体がrange外の新しいバージョンを必要とする脆弱性修正を取り込めない
+# 場合、Renovateは通常検知できない（lockFileMaintenance有効化後も残るギャップ、
+# issue #1094参照）。
+#
+# 本ワークフローは更新PRの有無に関わらず、呼び出し元リポジトリで現時点で
+# ロックされている依存パッケージ全体（直接・間接問わず）をスケジュール実行等で
+# 定期的にスキャンし、検知結果をトラッキング用issueへ反映する（新規作成、
+# または既存issueの本文更新）。dependency-deprecation-scan（issue #969）と
+# 同じ設計に揃える。
+#
+# karuta/promote-canary.yml等と同様、scheduleトリガー自体は呼び出し元リポジトリの
+# workflowが持つ（reusable workflow自身はworkflow_callのみ）。
+
+on:
+  workflow_call:
+    inputs:
+      lockfile_path:
+        description: "スキャン対象のpackage-lock.jsonのパス（リポジトリルート相対）。"
+        type: string
+        default: "package-lock.json"
+      tracking_issue_title:
+        description: "検知結果を反映するissueのタイトル。同名のopen issueが既にあれば本文を更新し、無ければ新規作成する。"
+        type: string
+        default: "[自動] 依存パッケージの既知脆弱性検知（定期スキャン）"
+      tracking_issue_labels:
+        description: "トラッキングissue作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
+        type: string
+        default: '["bug", "priority: medium"]'
+    outputs:
+      has_vulnerabilities:
+        description: "既知の脆弱性が1件以上検知されたか。"
+        value: ${{ jobs.scan.outputs.has_vulnerabilities }}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: "依存パッケージの既知脆弱性スキャン"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    outputs:
+      has_vulnerabilities: ${{ steps.scan.outputs.has_vulnerabilities }}
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+
+      - name: Node.jsをセットアップする
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # scripts/dependency-full-scan.jsはdev-standards自身のスクリプトのため、
+      # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
+      # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
+      # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと
+      - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: v2.104.0
+          path: .dev-standards-actions
+
+      - name: 既知の脆弱性をスキャンする
+        id: scan
+        run: node .dev-standards-actions/scripts/dependency-full-scan.js "${{ inputs.lockfile_path }}" > /tmp/full-scan-result.json
+
+      - name: 既存のトラッキングissueを検索する
+        id: find
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const results = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+            const existing = results.find((i) => !i.pull_request && i.title === ${{ toJSON(inputs.tracking_issue_title) }});
+            core.setOutput("issue_number", existing ? String(existing.number) : "");
+
+      - name: トラッキングissueを作成または更新する
+        if: steps.scan.outputs.has_vulnerabilities == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result.json", "utf-8"));
+            const rows = findings.map((f) => {
+              const ids = f.vulnerabilities.map((v) => v.id).join(", ");
+              const severity = f.vulnerabilities.map((v) => v.severityRating).filter(Boolean).join(", ") || "不明";
+              return `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} |`;
+            }).join("\n");
+            const body = [
+              "対象リポジトリの`package-lock.json`を対象にした定期スキャンで、既知の脆弱性が見つかりました。",
+              "",
+              "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity |",
+              "|---|---|---|---|---|",
+              rows,
+              "",
+              "### 対応候補",
+              "",
+              "- 親パッケージ（間接依存の場合）に、該当パッケージを取り込んだ新バージョンが出ていればそちらへ更新する",
+              "- 親パッケージ側が未対応の場合、`package.json`の`overrides`で該当パッケージのバージョンを強制固定する（互換性リスクがあるため、固定後は該当機能の動作確認が必要）",
+              "- 影響が深刻かつ代替手段が無い場合、該当パッケージの採用自体を見直す",
+              "",
+              `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
+            ].join("\n");
+
+            const issueNumber = "${{ steps.find.outputs.issue_number }}";
+            if (issueNumber) {
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(issueNumber), body });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: ${{ toJSON(inputs.tracking_issue_title) }},
+                body,
+                labels: JSON.parse(${{ toJSON(inputs.tracking_issue_labels) }}),
+              });
+            }
+
+      - name: 検知されなくなったトラッキングissueをクローズする
+        if: steps.scan.outputs.has_vulnerabilities == 'false' && steps.find.outputs.issue_number != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
+              state: "closed",
+              state_reason: "completed",
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
+              body: "再スキャンの結果、既知の脆弱性が検知されなくなったため自動クローズします。",
+            });
+
+      - name: 概要を出力する
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## 依存パッケージ既知脆弱性スキャン 実行結果"
+            echo ""
+            echo "検知件数: $([ "${{ steps.scan.outputs.has_vulnerabilities }}" = "true" ] && echo "1件以上" || echo "0件")"
+          } >> "$GITHUB_STEP_SUMMARY"
