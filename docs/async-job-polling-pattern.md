@@ -39,7 +39,7 @@ sequenceDiagram
 </details>
 <!-- jscpd:ignore-end -->
 
-![開始→ポーリングの一連の流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/async-job-polling-pattern.png?9a24865cc92a8ffe9cef859af8c5514906cdbb02)
+![開始→ポーリングの一連の流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/async-job-polling-pattern.png?a76ebc48ffde6a43a3c98c64f9bce7ad93ece1ee)
 
 ## 開始用ハンドラ
 
