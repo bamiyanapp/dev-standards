@@ -65,7 +65,12 @@ function main() {
 
   const lockJson = JSON.parse(fs.readFileSync(lockPath, "utf-8"));
   scanLockFileForVulnerabilities(lockJson)
-    .then((result) => console.log(JSON.stringify(result, null, 2)))
+    .then((result) => {
+      console.log(JSON.stringify(result, null, 2));
+      if (process.env.GITHUB_OUTPUT) {
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_vulnerabilities=${result.length > 0}\n`);
+      }
+    })
     .catch((error) => {
       console.error(error.message);
       process.exitCode = 1;

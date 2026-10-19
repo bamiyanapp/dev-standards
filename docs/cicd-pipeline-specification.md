@@ -344,7 +344,7 @@ flowchart TD
 
 `rebaseWhen: "behind-base-branch"` は、複数の Renovate PR が同一の `package-lock.json` 等へ並行して変更をかけることがある。その場合のコンフリクトを予防するための設定である。デフォルトの `rebaseWhen: "auto"` はコンフリクト検知後の受動的リベースのみである。npm workspaces構成等でロックファイルを複数パッケージ間で共有しているリポジトリでは、先にマージされた別PRの影響を受けることがある。その結果、後発PRのロックファイル差分が当たらなくなる場合がある（hanko-master-kentei#330）。mainの更新のたびに未マージPRを継続的にリベースさせることで、この種のコンフリクトの発生頻度を下げる。
 
-`lockFileMaintenance`（[bamiyanapp/dev-standards#1094](https://github.com/bamiyanapp/dev-standards/issues/1094)）は、間接依存（推移的依存）の放置を防ぐための設定である。Renovateは基本的に直接依存の`package.json`に明記されたバージョン制約のみを更新対象とするため、間接依存は親パッケージのバージョン範囲内で解決される。親パッケージ自体の更新PRが来ない限り、間接依存側で新しいバージョンが出ていてもRenovateは通常関知しない。週次でlockfile全体を再生成するPRを作成させることで、親のバージョン範囲内で解決可能な更新を定期的に取り込む。詳細・残存する制約（親パッケージ自体がバージョン範囲外の更新を必要とするケースは検知できない点と、それを補う`scheduled-dependency-scan.yml`の仕組み）は[`dependency-risk-judgment.md`](dependency-risk-judgment.md)「Renovateの提案に依存しない推移的依存のセーフティネット」を参照する。
+`lockFileMaintenance`（[bamiyanapp/dev-standards#1094](https://github.com/bamiyanapp/dev-standards/issues/1094)）は、間接依存（推移的依存）の放置を防ぐための設定である。Renovateは基本的に直接依存の`package.json`に明記されたバージョン制約のみを更新対象とするため、間接依存は親パッケージのバージョン範囲内で解決される。親パッケージ自体の更新PRが来ない限り、間接依存側で新しいバージョンが出ていてもRenovateは通常関知しない。週次でlockfile全体を再生成するPRを作成させることで、親のバージョン範囲内で解決可能な更新を定期的に取り込む。詳細・残存する制約（親パッケージ自体がバージョン範囲外の更新を必要とするケースは検知できない点と、それを補う`reusable-dependency-full-scan.yml`の仕組み）は[`dependency-risk-judgment.md`](dependency-risk-judgment.md)「Renovateの提案に依存しない推移的依存のセーフティネット」を参照する。
 
 ## 2. Mend Renovate GitHub App のインストール
 
