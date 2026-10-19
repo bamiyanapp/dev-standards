@@ -129,3 +129,50 @@ test("scanLockFileForVulnerabilities: パッケージが1件も無い場合は�
   assert.deepEqual(result, []);
   assert.equal(called, false);
 });
+
+test("scanLockFileForVulnerabilities: issue #1111。パッケージ数がchunkSizeを超える場合、querybatchを複数回に分けて呼ぶ", async () => {
+  const packages = { "": { dependencies: {} } };
+  for (let i = 0; i < 5; i++) {
+    packages[`node_modules/pkg${i}`] = { version: "1.0.0" };
+  }
+  const lockJson = { packages };
+
+  const querybatchCalls = [];
+  const fetchJsonImpl = async (url, options) => {
+    if (url.endsWith("/querybatch")) {
+      const body = JSON.parse(options.body);
+      querybatchCalls.push(body.queries.length);
+      return { results: body.queries.map(() => ({ vulns: [] })) };
+    }
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const result = await scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl, chunkSize: 2 });
+  assert.deepEqual(result, []);
+  // 5件を chunkSize=2 で分割すると 2, 2, 1 の3回に分かれる
+  assert.deepEqual(querybatchCalls, [2, 2, 1]);
+});
+
+test("scanLockFileForVulnerabilities: チャンク分割後も脆弱性検知結果を正しくマージする", async () => {
+  const packages = { "": { dependencies: {} } };
+  for (let i = 0; i < 3; i++) {
+    packages[`node_modules/pkg${i}`] = { version: "1.0.0" };
+  }
+  const lockJson = { packages };
+
+  const fetchJsonImpl = async (url, options) => {
+    if (url.endsWith("/querybatch")) {
+      const body = JSON.parse(options.body);
+      // pkg1（2回目のチャンク）にのみ脆弱性があるものとする
+      return { results: body.queries.map((q) => (q.package.name === "pkg1" ? { vulns: [{ id: "GHSA-bbbb" }] } : { vulns: [] })) };
+    }
+    if (url.endsWith("/vulns/GHSA-bbbb")) {
+      return { id: "GHSA-bbbb", summary: "example", aliases: [], database_specific: {}, severity: [] };
+    }
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  const result = await scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl, chunkSize: 2 });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].name, "pkg1");
+});

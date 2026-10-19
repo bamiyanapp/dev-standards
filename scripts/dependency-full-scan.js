@@ -36,15 +36,39 @@ function extractAllPackages(lockJson) {
   return result.sort((a, b) => (a.name === b.name ? a.version.localeCompare(b.version) : a.name.localeCompare(b.name)));
 }
 
+// issue #1111。OSV.devのquerybatch APIには1リクエストあたりのクエリ件数上限が
+// あり、karuta等の実運用規模のpackage-lock.json（5000件超のエントリ）を一度に
+// 渡すと400 Bad Requestで失敗する。既存のdependency-vulnerability-info.jsは
+// PRのpackage-lock.json差分（通常は数件）のみを対象としてきたため、この規模の
+// バッチサイズで実行されたことが無く、上限を考慮していなかった。上限の正確な
+// 値はAPIドキュメント・エラーレスポンス本文から確認できなかった（開発時の
+// サンドボックス環境のエグレスプロキシがosv.devをブロックするため、実機でも
+// レスポンス本文を直接確認できていない）。十分な安全マージンを取った値に
+// チャンク分割して複数回に分けて照会する
+const OSV_QUERYBATCH_CHUNK_SIZE = 500;
+
+function chunk(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 // lockJson全体を対象にOSV.devへ脆弱性照会し、1件以上の脆弱性が見つかったパッケージ
 // のみを返す（対象外のパッケージまで毎回列挙すると、Issue本文が肥大化し
 // textlintのmax-linesにも抵触しやすいため、Risk SummaryのSecurity節とは異なり
 // 「見つかった場合のみ」の設計にする。スキャン自体が実行されたかどうかは、
 // ワークフロー側のJob Summary・Issueの有無で確認できる）
 // fetchJsonImpl: テスト用に差し替え可能なHTTP呼び出し実装（既定はグローバルfetch）
-async function scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl } = {}) {
+async function scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl, chunkSize = OSV_QUERYBATCH_CHUNK_SIZE } = {}) {
   const packages = extractAllPackages(lockJson);
-  const results = await fetchVulnerabilityInfo(packages, fetchJsonImpl ? { fetchJsonImpl } : {});
+  const options = fetchJsonImpl ? { fetchJsonImpl } : {};
+
+  const results = [];
+  for (const batch of chunk(packages, chunkSize)) {
+    results.push(...(await fetchVulnerabilityInfo(batch, options)));
+  }
 
   const byNameVersion = new Map(packages.map((p) => [`${p.name}@${p.version}`, p]));
   return results
