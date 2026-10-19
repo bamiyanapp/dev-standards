@@ -1,3 +1,10 @@
+# [2.104.0](https://github.com/bamiyanapp/dev-standards/compare/v2.103.0...v2.104.0) (2026-10-19)
+
+
+### Features
+
+* **ci:** mainブランチのpackage-lock.jsonを対象にした定期脆弱性スキャンを追加する ([#1098](https://github.com/bamiyanapp/dev-standards/issues/1098)) ([a76ebc4](https://github.com/bamiyanapp/dev-standards/commit/a76ebc48ffde6a43a3c98c64f9bce7ad93ece1ee))
+
 # [2.103.0](https://github.com/bamiyanapp/dev-standards/compare/v2.102.1...v2.103.0) (2026-10-19)
 
 
