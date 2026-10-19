@@ -251,6 +251,17 @@ flowchart TD
 - 判定が誤っていると思われる場合は、クローズされたPRを再オープンすれば従来どおり扱われる（再クローズする仕組みは無い）
 - 本機能は`enable_dependency_risk_gating`（merge gateとの連携）とは独立している。gatingを無効化していても、auto_closeが有効であればこの組み合わせのPRはクローズされる
 
+## Renovateの提案に依存しない推移的依存のセーフティネット（[#1094](https://github.com/bamiyanapp/dev-standards/issues/1094)・[#1095](https://github.com/bamiyanapp/dev-standards/issues/1095)）
+
+ここまでの仕組みは、いずれもRenovateが更新PRを作成した時点で初めて動作する。Renovateは基本的に直接依存の`package.json`に明記されたバージョン制約のみを更新対象とするため、間接依存（推移的依存）は親パッケージのsemver range内で解決される。親パッケージ自体の更新PRが来ない限り、間接依存側の脆弱性修正・放置はRenovate経由では検知されない。この片側だけのチェック体制を補うため、以下の2つを独立に用意している。
+
+- **`renovate.json`の`lockFileMaintenance`**（issue #1094）: 週次でlockfile全体を再生成するPRを作成する。親パッケージのバージョン範囲内で解決可能な新しいバージョンへ、Renovateが提案を出さなくても定期的に取り込まれるようになる
+- **`scheduled-dependency-scan.yml`**（issue #1095）: `dependency-risk-summary` job（PRの`package-lock.json`差分に対してのみ動作）とは独立に、mainブランチの`package-lock.json`全体を毎日スキャンする。`scripts/dependency-full-scan.js`が全パッケージ（直接・間接問わず）を抽出し、既存の`dependency-vulnerability-info.js`（OSV.dev照会）を再利用して脆弱性を検知する。検知した場合、固定タイトルの単一Issueへ結果を反映する（実行毎に新規Issueを積み重ねない。Renovateの「Dependency Dashboard」と同じ考え方）
+
+`lockFileMaintenance`は、あくまで親パッケージのバージョン範囲内で解決可能な更新のみをカバーする。親パッケージ自体が古すぎて、より新しい間接依存を許容しない（range外にある）ケースは`lockFileMaintenance`だけでは検知できない。この残存ギャップを`scheduled-dependency-scan.yml`が補う。
+
+本機能は「検知して起票/更新する」までを担い、修正PRの自動作成は対象外とする。推移的依存は親パッケージの期待するバージョン範囲内にあるため、機械的に1パッケージだけ安全に更新する手段が無く、不適切な自動変更で動作を崩すリスクがあるためである。起票するIssue本文には、親パッケージの更新待ち・`package.json`の`overrides`での強制固定・採用自体の見直しを対応候補として記載し、人間の判断に委ねる。
+
 ## dev-standards自身のリリースにおけるRisk判定履歴（issue #746 Phase 2）
 
 dev-standards自体の依存更新を考える。Renovate等によるPRがmainへマージされ、semantic-releaseが新バージョンをリリースする際のRisk判定結果を記録したい。各プロダクトリポジトリ（karuta等）が参照できるよう`docs/generated/dependency-risk-history.json`へ機械可読な形で残す。
