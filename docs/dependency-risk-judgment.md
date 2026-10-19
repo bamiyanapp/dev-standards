@@ -178,7 +178,7 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 | 既知flakyパターンに該当するCI失敗がある（説明可能な失敗のみ） | 🟡 Medium | |
 | 直接依存の更新件数が`directDependencyThreshold`（既定2）以上 | 🟡 Medium | 変更の複雑さを理由に昇格 |
 | 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化、medium/highは変化なし） | ブラスト半径単独ではHighまで昇格しない。重要パス未宣言時は常にfalseで影響なし（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)、[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)） |
-| 上記いずれにも該当しない | 🔵 Low | |
+| 上記いずれにも該当しない | 🟢 Low | |
 
 `vulnerability_only_high`は、最終判定がHighかつ、major update・説明不能なCI失敗・Supply Chain異常のいずれにも該当せず、CVE/KEVの残存のみが理由の場合にのみ`true`になる（ブラスト半径はMedium止まりのためHigh到達の理由にはならない）。
 
@@ -199,15 +199,15 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 | 現行バージョンが直近2年間（既定値）新バージョンを公開していない（放置検知） | 🟡 Mediumへキャップ（lowのみ変化） | deprecated検知より弱い信号のためhighへは昇格しない（[#1076](https://github.com/bamiyanapp/dev-standards/issues/1076)）。既にMedium/Highならreasonのみ追記 |
 | 現行バージョンのOpenSSF Scorecardスコアが3点未満（既定値） | 🟡 Mediumへキャップ（lowのみ変化） | 質的評価のためhighへは昇格しない（[#1077](https://github.com/bamiyanapp/dev-standards/issues/1077)）。既にMedium/Highならreasonのみ追記 |
 | 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化） | medium→highへの昇格は行わない（[#701](https://github.com/bamiyanapp/dev-standards/issues/701)）。既にMedium/Highならreasonのみ追記 |
-| 上記いずれにも該当しない | 🔵 Low | |
+| 上記いずれにも該当しない | 🟢 Low | |
 
 ## 判定結果マトリクス（適用リスク×維持リスク）
 
 以下の節で説明する個別のロジックを、最終結果の一覧として整理したもの。
 
-| 適用リスク（行）↓ ／ 維持リスク（列）→ | 🔵 Low | 🟡 Medium | 🔴 High |
+| 適用リスク（行）↓ ／ 維持リスク（列）→ | 🟢 Low | 🟡 Medium | 🔴 High |
 |---|---|---|---|
-| **🔵 Low** | 自動適用 | 自動適用 | 自動適用 |
+| **🟢 Low** | 自動適用 | 自動適用 | 自動適用 |
 | **🟡 Medium** | 自動適用 | 自動適用 | 自動適用 |
 | **🔴 High** | スキップ\*1 | 人が判定\*2 | 自動適用\*3 または 人が判定\*2 |
 
