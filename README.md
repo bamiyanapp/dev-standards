@@ -75,6 +75,7 @@
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
 - [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
 - [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
+- [`renovate-adoption-lessons.md`](docs/renovate-adoption-lessons.md): Renovate導入初期に集中して発生する依存更新PRのCI失敗事例と`renovate.json`側の対処パターン
 
 ### 個人情報・リポジトリ運用
 
