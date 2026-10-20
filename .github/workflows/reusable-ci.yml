@@ -718,12 +718,28 @@ jobs:
       # action.ymlに入力を追加・変更した場合は、このrefの更新を絶対に忘れないこと。
       # v2.6.1で、check-coverage-thresholdにper-file-metrics入力を追加した
       # （issue #307）ため、その修正を含むタグへ更新した
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
         if: inputs.coverage_threshold > 0
@@ -869,12 +885,28 @@ jobs:
         working-directory: ${{ inputs.backend_dir }}
         run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
       # 上記の各種対策（--no-isolate・--no-file-parallelism・
       # --no-flush-bytecode）を講じてもなお、V8のカバレッジ計測が実行のたびに
@@ -980,12 +1012,28 @@ jobs:
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -1090,12 +1138,28 @@ jobs:
       # 顕在化した不具合の発生源そのもの（if: always()で必ず実行されるため、
       # coverage_thresholdが0のfrontend-test/backend-testでは潜在化していた同じ
       # 不具合が最初に表面化した）
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
       - name: E2Eカバレッジを表示する
         if: always()
@@ -2211,12 +2275,28 @@ jobs:
       # v2.104.1で、mermaidブロック数と画像埋め込みリンク数の整合性を確認する
       # scripts/check-mermaid-image-links.js（issue #1101）を追加したため、
       # そのスクリプトを含むタグへ更新した
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.104.1
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
 
       - name: mermaid図をレンダリングする
@@ -2380,7 +2460,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions-commit-via-pr
 
       - name: キャッシュバスティング済みリンクをcommit-via-pr経由でコミットする
@@ -2626,12 +2706,28 @@ jobs:
       # lighthouse-ci-summary.jsを変更した同じPRで必ず更新すること。
       # スクリプトの入出力仕様を変更していなくても、定期的に最新タグへ追従させる
       # ことが望ましい（dev-standards#1030で横展開・改善案を検討中）
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
 
       - name: Lighthouse CIの結果から概要を組み立てる
@@ -2821,12 +2917,28 @@ jobs:
       # （npm registryのdeprecatedフラグ検知、dependency-deprecation-info.js追加・
       # dependency-risk-classifier.js・dependency-stale-risk-classifier.jsへの
       # deprecationInfo引数追加）を含むタグへ更新した
+      - name: dev-standards自身の参照を解決する
+        # issue #1071。以下でdev-standards自身をチェックアウトする際のrefを
+        # hardcodeしていたが、このファイル（reusable-ci.yml）自体を変更した際に
+        # 更新を繰り返し忘れ、呼び出し元が新しいタグを参照してもこのローカル
+        # スクリプト・composite actionだけ古いコードのまま固定される事故が
+        # 複数回発生した（#1022・#1023・#1030・#1050）。手動更新に依存する運用
+        # 自体を廃止し、呼び出し元が実際に参照したタグ・ブランチ
+        # （github.workflow_ref）から動的に解決する
+        id: resolve-self-ref
+        # actionlintの既知の制約: github.workflow_refへの直接のプロパティアクセスは、
+        # actionlint側のgithubコンテキスト型定義にworkflow_refがまだ含まれておらず、
+        # 型検査エラーになる。toJson(github)で全体をシリアライズしてから
+        # 実行時にjqで取り出すことで、この型検査を回避する
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "ref=$(echo "$GITHUB_CONTEXT" | jq -r '.workflow_ref | split("@")[1]')" >> "$GITHUB_OUTPUT"
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.98.0
+          ref: ${{ steps.resolve-self-ref.outputs.ref }}
           path: .dev-standards-actions
 
       - name: 依存パッケージ更新情報を生成する
