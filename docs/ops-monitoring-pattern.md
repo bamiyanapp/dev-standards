@@ -22,7 +22,7 @@ flowchart TD
 
 </details>
 
-![CloudWatch→LINE通知フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ops-monitoring-pattern.png?34df51793efd77819e105ee04737a55667fafdbe)
+![CloudWatch→LINE通知フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ops-monitoring-pattern.png?8fec4e473381c08069244547d8ded1f30cdb1307)
 
 **このファイル自体はnpmパッケージを`require`しない**（symlink経由で共有する場合の制約は[`daily-rate-limit-pattern.md`](daily-rate-limit-pattern.md)参照）。SNSイベントのパース等、実際のLambdaハンドラの実装は呼び出し側に委ねる。
 

@@ -93,7 +93,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![自動昇格ワークフローの処理フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/blue-green-stage-pattern.png?34df51793efd77819e105ee04737a55667fafdbe)
+![自動昇格ワークフローの処理フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/blue-green-stage-pattern.png?8fec4e473381c08069244547d8ded1f30cdb1307)
 
 ### 自動昇格ワークフローの判定マトリクス
 
