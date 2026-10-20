@@ -1,3 +1,10 @@
+## [2.105.2](https://github.com/bamiyanapp/dev-standards/compare/v2.105.1...v2.105.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ci:** merge-pr composite actionにもPRのopen状態確認を反映する ([#1118](https://github.com/bamiyanapp/dev-standards/issues/1118)) ([83af3c4](https://github.com/bamiyanapp/dev-standards/commit/83af3c4f5910fb9d6dd4ecc900b17a092628a017)), closes [#1068](https://github.com/bamiyanapp/dev-standards/issues/1068)
+
 ## [2.105.1](https://github.com/bamiyanapp/dev-standards/compare/v2.105.0...v2.105.1) (2026-10-19)
 
 
