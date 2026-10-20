@@ -28,6 +28,23 @@ runs:
         script: |
           const prNumber = context.payload.pull_request.number;
           const branchName = context.payload.pull_request.head.ref;
+
+          // issue #1068。reusable-ci.ymlのmergeジョブ（PR #1069）と同じ理由。
+          // このactionを呼び出す側のgate jobも他jobの完了を待つため、実行開始
+          // からここに至るまで数分かかることがある。その間にPRが人間または
+          // API操作でcloseされていても、ワークフロー実行自体は自動キャンセル
+          // されないため、closeに気づかずマージしてしまう。マージ直前にPRの
+          // 現在状態を取得し、openでなければスキップする
+          const { data: currentPr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: prNumber
+          });
+          if (currentPr.state !== "open") {
+            console.log(`PR #${prNumber} is no longer open (state: ${currentPr.state}). Skipping merge.`);
+            return;
+          }
+
           console.log(`Attempting to merge PR #${prNumber}`);
           let mergeSha = "";
           // pushで作成したコミット直後はGitHub側のmergeable判定が
