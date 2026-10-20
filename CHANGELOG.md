@@ -1,3 +1,10 @@
+## [2.105.4](https://github.com/bamiyanapp/dev-standards/compare/v2.105.3...v2.105.4) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ci:** duplication-checkのスキャン対象をdev-standards submoduleのshared/のみに限定する ([#1121](https://github.com/bamiyanapp/dev-standards/issues/1121)) ([5a65daf](https://github.com/bamiyanapp/dev-standards/commit/5a65dafb851a2053fc38bf4294d5d0678b7aa433)), closes [#621](https://github.com/bamiyanapp/dev-standards/issues/621) [#981](https://github.com/bamiyanapp/dev-standards/issues/981)
+
 ## [2.105.3](https://github.com/bamiyanapp/dev-standards/compare/v2.105.2...v2.105.3) (2026-10-20)
 
 
