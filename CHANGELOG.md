@@ -1,3 +1,10 @@
+## [2.105.3](https://github.com/bamiyanapp/dev-standards/compare/v2.105.2...v2.105.3) (2026-10-20)
+
+
+### Bug Fixes
+
+* **ci:** reusable-ci.ymlの自己参照チェックアウトをgithub.workflow_refで動的解決する ([#1119](https://github.com/bamiyanapp/dev-standards/issues/1119)) ([496f076](https://github.com/bamiyanapp/dev-standards/commit/496f076cff274ca6a6b83af3762a9c481ec3e2f3)), closes [#1071](https://github.com/bamiyanapp/dev-standards/issues/1071)
+
 ## [2.105.2](https://github.com/bamiyanapp/dev-standards/compare/v2.105.1...v2.105.2) (2026-10-20)
 
 
