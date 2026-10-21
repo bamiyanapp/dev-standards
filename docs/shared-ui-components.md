@@ -319,7 +319,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?83e0a3f52095643cf81bfdfa60bd042ec6e1ebd7)
+![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?30f1d2dfb5e7144c823937021c16462d8a55b1a1)
 
 ### `sync-manifest.local.json`への追加例
 
