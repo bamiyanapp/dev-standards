@@ -27,7 +27,7 @@ graph TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-1.png?6863f3f3467a4a9cd869c26b15720172ffe64d0a)
+![Architecture (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-1.png?a077ddcde1c8aa84064f68923b99db7ff1580c07)
 
 ## 1. CI ワークフロー (`reusable-ci.yml`)
 - **トリガー**: 参照側 `ci.yml` の `on` 設定に従う（通常 `base_branch` へのプッシュ、全プルリクエスト）
@@ -83,7 +83,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![E2Eスクリーンショット報告フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-2.png?6863f3f3467a4a9cd869c26b15720172ffe64d0a)
+![E2Eスクリーンショット報告フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-2.png?a077ddcde1c8aa84064f68923b99db7ff1580c07)
 
     Playwright HTMLレポート（アーティファクトzip）だけでは、特にスマートフォン版GitHubアプリからのダウンロード・展開が事実上できず閲覧しづらい。この仕組みにより、E2Eテストの視覚的な結果をJob Summary・PRコメント上で画像として直接確認できる。スマートフォンのブラウザ操作だけで完結する（CLAUDE.md「開発環境の制約（スマホオンリー）」参照）。
 
@@ -253,7 +253,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![リリース手順のフロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-3.png?6863f3f3467a4a9cd869c26b15720172ffe64d0a)
+![リリース手順のフロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/cicd-pipeline-specification-3.png?a077ddcde1c8aa84064f68923b99db7ff1580c07)
 
 - **なぜ `base_branch` へのpush後に実行するのか**: `pull_request` イベントで GitHub Actions が自動設定する `GITHUB_REF`/`GITHUB_REF_NAME` は `refs/pull/<PR番号>/merge` に固定される。ワークフローYAMLの `env:` では上書きできない（GitHub Actionsの予約変数のため）。`base_branch` への実際のpushイベント、または`base_branch`を対象とした`schedule`イベント上で実行すれば `GITHUB_REF` は素直に `refs/heads/<base_branch>` になる。`schedule`イベントもpushと同様にデフォルトブランチのrefで実行されるため、同じ解決になる。この方式に変更した経緯は[過去経緯](history/cicd-pipeline-specification-history.md#semantic-releaseをbase_branchへのpush後に実行する方式への変更経緯)を参照する。ただし `base_branch` がPR必須のリポジトリルールで保護されている場合は上記4のフォールバックが必要になる。
 
