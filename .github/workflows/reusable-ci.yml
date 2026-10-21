@@ -418,6 +418,21 @@ on:
           生成されないため、本入力の値に関わらずクローズは行われない。
         type: boolean
         default: false
+      self_ref:
+        description: >-
+          呼び出し元が本workflowを`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@<ref>`
+          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する必須入力。
+          本workflow内でdev-standards自身をローカルcomposite action・スクリプト用に
+          再チェックアウトする8箇所で使う（issue #1071）。
+          `github.workflow_ref`は呼び出し元トップレベルワークフロー自身の参照しか返さず、
+          reusable workflowが実際に呼び出された際の参照を実行時に取得する標準的な手段が
+          GitHub Actionsには存在しないため（一度`github.workflow_ref`で動的解決を試みたが、
+          実機で誤動作し revert した。PR #1119/#1123参照）、呼び出し元に明示的な入力として
+          渡してもらう方式にした。呼び出し元の`uses:`行のrefとこの入力の値が一致している
+          ことの検証は呼び出し元リポジトリ側の責務とする（例: dev-standards自身の
+          `node scripts/check-workflows.js`に相当するチェックを参照側に追加する等）。
+        type: string
+        required: true
     secrets:
       BOT_TOKEN:
         required: false
@@ -715,15 +730,16 @@ jobs:
       # coverage_metrics/coverage_check_per_fileによる絞り込みが一切効かないまま
       # 全指標・total平均のみでの判定にフォールバックしてしまう不具合が発生した
       # （bamiyanapp/karuta#459でcoverage_threshold: 80を有効化した際に発覚）。
-      # action.ymlに入力を追加・変更した場合は、このrefの更新を絶対に忘れないこと。
-      # v2.6.1で、check-coverage-thresholdにper-file-metrics入力を追加した
-      # （issue #307）ため、その修正を含むタグへ更新した
+      # issue #1071: 以前はこのrefをハードコードし、action.ymlへ入力を追加・変更する
+      # たびに手動更新する運用だったが、更新漏れが繰り返し発生した。呼び出し元が
+      # 渡すinputs.self_ref（uses:で指定したrefと同じ値）を使う方式へ変更し、
+      # 手動更新そのものを不要にした
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
         if: inputs.coverage_threshold > 0
@@ -874,7 +890,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       # 上記の各種対策（--no-isolate・--no-file-parallelism・
       # --no-flush-bytecode）を講じてもなお、V8のカバレッジ計測が実行のたびに
@@ -985,7 +1001,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
@@ -1095,7 +1111,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       - name: E2Eカバレッジを表示する
         if: always()
@@ -2247,7 +2263,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
       - name: mermaid図をレンダリングする
@@ -2399,19 +2415,16 @@ jobs:
       # のルール自体を満たすため、bypass設定に依存しない
       # issue #830: 「直接push→（拒否時）新ブランチ→PR→API経由squash merge」の
       # パターンを共通composite actionへ切り出した。ブランチを切る前の
-      # 最新base_branchへのrebase（issue #821）も内蔵している。v2.73.0で
-      # リリース済みとなったため、issue #888のフォローアップでそのタグへ
-      # 固定した（以降、このactionに変更を加えた場合は新リリース後に
-      # 本ステップの参照タグも更新すること）。issue #905: #903
-      # （description内githubコンテキスト参照バグ修正、v2.77.1でリリース）の
-      # 際にこの更新を一度見落とし、dev-standards自身のrender-mermaid-diagrams
-      # ジョブが連続して失敗する事態になった
+      # 最新base_branchへのrebase（issue #821）も内蔵している。以前はこのrefを
+      # ハードコードし、リリースのたびに手動更新する運用だったため、更新忘れで
+      # 連続失敗する事故（issue #905）も発生した。issue #1071で、呼び出し元が
+      # 渡すinputs.self_refを使う方式へ変更し、手動更新を不要にした
       - name: dev-standardsをチェックアウトする（commit-via-pr用）
         if: steps.cache-bust.outputs.changed == 'true'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions-commit-via-pr
 
       - name: キャッシュバスティング済みリンクをcommit-via-pr経由でコミットする
@@ -2649,20 +2662,19 @@ jobs:
       # pull_requestイベントでは`refs/pull/<PR番号>/merge`になる。ネストされた
       # reusable workflow自体が呼び出し側からどのタグで参照されたかを示す値では
       # ないため、karuta側のPRマージrefをdev-standardsリポジトリに対して
-      # チェックアウトしようとして失敗した（dev-standards#1033）。GitHub Actionsには
-      # reusable workflowが自分自身の呼び出しrefを取得する標準的な組み込み
-      # コンテキスト変数が存在しないため、この方式は採用できない。
+      # チェックアウトしようとして失敗した（dev-standards#1033、PR #1119/#1123で
+      # revert済み）。GitHub Actionsにはreusable workflowが自分自身の呼び出しrefを
+      # 取得する標準的な組み込みコンテキスト変数が存在しないため、この方式は
+      # 採用できない。
       #
-      # そのため、hardcode方式へ戻す。このrefを更新する際は、scripts/
-      # lighthouse-ci-summary.jsを変更した同じPRで必ず更新すること。
-      # スクリプトの入出力仕様を変更していなくても、定期的に最新タグへ追従させる
-      # ことが望ましい（dev-standards#1030で横展開・改善案を検討中）
+      # そのため、issue #1071で呼び出し元が渡すinputs.self_ref（uses:で指定した
+      # refと同じ値）を使う方式へ変更した。これにより手動更新運用自体を廃止した
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always()
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
       - name: Lighthouse CIの結果から概要を組み立てる
@@ -2857,7 +2869,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.105.4
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
       - name: 依存パッケージ更新情報を生成する
