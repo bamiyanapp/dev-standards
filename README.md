@@ -24,7 +24,7 @@
 
 ### 索引・導入
 
-- [`claude-workflow-philosophy.md`](docs/claude-workflow-philosophy.md): Claudeがこのリポジトリ群でなぜ「残したいものは全てIssue化し、変更は必ずPRとして出す」という方針で動くのかを初学者向けに俯瞰する入口
+- [`claude-workflow-philosophy.md`](docs/claude-workflow-philosophy.md): Claudeはこのリポジトリ群で「残したいものは全てIssue化し、変更は必ずPRとして出す」という方針で動く。本書はその理由を初学者向けに俯瞰する入口である
 - [`ai-driven-app-curriculum.md`](docs/ai-driven-app-curriculum.md): アイデア→アプリ化→dev-standards準拠のモダナイズというAI駆動開発の進め方（カリキュラム）
 - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス
@@ -40,7 +40,7 @@
 - [`pwa-icon-generation-pattern.md`](docs/pwa-icon-generation-pattern.md): PWAホーム画面アイコンの生成手順・manifest.json構成
 - [`service-worker-update-pattern.md`](docs/service-worker-update-pattern.md): Service Workerのキャッシュ更新・反映パターン
 - [`ios-safari-audio-unlock-pattern.md`](docs/ios-safari-audio-unlock-pattern.md): iOS Safari自動再生ポリシー対策（音声要素シングルトン解錠パターン）
-- [`render-blocking-resources-pattern.md`](docs/render-blocking-resources-pattern.md): 外部CDNの重要レンダリングパスCSS/フォントを避け、npmバンドル化でLighthouse Performanceスコアを改善するパターン
+- [`render-blocking-resources-pattern.md`](docs/render-blocking-resources-pattern.md): 外部CDNの重要レンダリングパスCSS/フォントを避けるパターンである。npmバンドル化でLighthouse Performanceスコアを改善する
 
 ### インフラ・認証
 
@@ -49,7 +49,7 @@
 - [`serverless-api-dynamodb-pattern.md`](docs/serverless-api-dynamodb-pattern.md): Google IDトークン直接検証の認証ロジック（デプロイツール自体はAWS SAMの実装例、標準はOSLS）
 - [`nextjs-static-lambda-pattern.md`](docs/nextjs-static-lambda-pattern.md): ログイン不要のバックエンドAPI（Lambda + API Gateway + DynamoDB、OSLS）構成
 - [`serverless-spa-pattern.md`](docs/serverless-spa-pattern.md): 独自バックエンドAPI（WebSocketによるリアルタイム双方向通信を含む）構成
-- [`async-job-polling-pattern.md`](docs/async-job-polling-pattern.md): API Gatewayタイムアウトを超える重い処理をLambda非同期Invoke＋S3ステートレス状態管理で実現する「開始→ポーリング」パターン
+- [`async-job-polling-pattern.md`](docs/async-job-polling-pattern.md): API Gatewayタイムアウトを超える重い処理を扱う「開始→ポーリング」パターンである。Lambda非同期Invoke＋S3ステートレス状態管理で実現する
 - [`websocket-client-reconnect-pattern.md`](docs/websocket-client-reconnect-pattern.md): WebSocketクライアントの再接続エンジン設計パターン
 - [`serverless-static-site-pattern.md`](docs/serverless-static-site-pattern.md)がある。S3 + CloudFront + Cognito(Google) + Lambda@Edgeの認証付き静的サイト配信構成である。標準索引からは除外している。サイト全体ログイン保護が必要な場合の追加パターンである
 - [`oauth-csrf-nonce-pattern.md`](docs/oauth-csrf-nonce-pattern.md): OAuthログインのCSRF対策（サーバー側nonce管理。`serverless-static-site-pattern.md`向け）
@@ -64,8 +64,8 @@
 - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
 - [`ops-monitoring-pattern.md`](docs/ops-monitoring-pattern.md): 運用監視（サイレント障害検知）パターン。CloudWatch Alarm→SNS→運用監視専用LINE Bot（`shared/lambda/opsAlertNotifier.js`）
 - [`client-error-reporting-pattern.md`](docs/client-error-reporting-pattern.md)がある。フロントエンドError Boundary＋サーバーサイドロギング構成である。`shared/ui/ErrorBoundary.jsx`・`shared/lambda/clientErrorReporting.js`を使う
-- [`blue-green-stage-pattern.md`](docs/blue-green-stage-pattern.md): S3+CloudFront・CloudFront Functions重み付けルーティング・カナリア直列化・自動昇格・DynamoDBスキーマ互換性を組み合わせたブルーグリーン（stable/canary）デプロイパターン
-- [`blue-green-workflow-templates.md`](docs/blue-green-workflow-templates.md): `blue-green-stage-pattern.md`の運用workflow（自動昇格・状態可視化・ロールバック・実機検証・手動per-stageデプロイ）のコピー＆調整用テンプレート集
+- [`blue-green-stage-pattern.md`](docs/blue-green-stage-pattern.md): S3+CloudFrontによるブルーグリーン（stable/canary）デプロイパターンである。CloudFront Functions重み付けルーティング・カナリア直列化・自動昇格を使う。DynamoDBスキーマ互換性も組み合わせる
+- [`blue-green-workflow-templates.md`](docs/blue-green-workflow-templates.md): `blue-green-stage-pattern.md`の運用workflow用テンプレート集である。自動昇格・状態可視化・ロールバック・実機検証・手動per-stageデプロイのコピー＆調整に使う
 
 ### CI/CD・運用
 
@@ -100,7 +100,7 @@
 | hanko-master-kentei（ハンコ捺印の作法をテーマにした風刺Webアプリ） | [bamiyanapp.github.io/hanko-master-kentei/](https://bamiyanapp.github.io/hanko-master-kentei/) | [bamiyanapp/hanko-master-kentei](https://github.com/bamiyanapp/hanko-master-kentei) |
 | shock-lab（車両サスペンション物理シミュレータ） | [bamiyanapp.github.io/shock-lab/](https://bamiyanapp.github.io/shock-lab/) | [bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab) |
 
-- **Camp-Stock**: cd.yml実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的確認だけでは固定URLを特定できない。Google OAuthログインで保護されている（許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。
+- **Camp-Stock**: cd.yml実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成である。そのため、コードの静的確認だけでは固定URLを特定できない。Google OAuthログインで保護されている（許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。
 - **examination**: CloudFront配信で、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、Google OAuthログインで保護された家族限定利用。
 - **kingyo**: CloudFormationのスタック出力から動的に取得したドメイン。ログイン機構は無く全員共通ランキングを扱う仕様のため、一般公開の入り口として案内して問題ない。
 

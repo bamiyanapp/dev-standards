@@ -1,10 +1,10 @@
 # AI駆動アプリ開発カリキュラム（アイデア→アプリ化→構成リファクタリング→モダナイズ）
 
-何を作るか決まっていないアイデアを固め、Claude Codeとの対話でアプリとして動かし、ある程度形になった段階で構成を見直し、その後CI/CD・テスト・lint等の技術的な品質基準を適用して育てていく、4段階の進め方をまとめる。karuta等の実プロダクトが実際にこの順番で育った。構成の見直し（設計判断）とモダナイズ（品質基準の適用）は性質が異なるため、別フェーズとして扱う。
+何を作るか決まっていないアイデアを固め、Claude Codeとの対話でアプリとして動かし、ある程度形になった段階で構成を見直す。その後、CI/CD・テスト・lint等の技術的な品質基準を適用して育てていく、4段階の進め方をまとめる。karuta等の実プロダクトが実際にこの順番で育った。構成の見直し（設計判断）とモダナイズ（品質基準の適用）は性質が異なるため、別フェーズとして扱う。
 
 dev-standardsには2種類の内容が含まれており、本カリキュラムではこれらを区別する。
 
-- **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**: [`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)・[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらず**フェーズ2から常に頼る**
+- **開発プロセス自体の手順（`.claude/skills/`配下のSkill）**がある。具体的には[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)・[`git-conventions`](../.claude/skills/git-conventions/SKILL.md)がある。また、[`code-review`](../.claude/skills/code-review/SKILL.md)・[`safe-bash-commands`](../.claude/skills/safe-bash-commands/SKILL.md)等もある。それぞれブランチ運用・コミット前提条件・コミットメッセージ規約・自己レビュー観点・安全なコマンド実行を扱う。プロダクトの成熟度に関わらずフェーズ2から常に頼る。
 - **最小限のCI・自動マージ基盤**: 本カリキュラムの想定ユーザーはコードを読まずに進めるため、人間によるPRレビューの余地が無い。CI通過が実質的な唯一のレビュー機構であるため、**フェーズ2から自動マージ（`enable_auto_merge`）を有効化する**。lint厳格化・カバレッジ閾値等の品質基準そのものの厳格化は含まない
 - **技術的なモダナイズ観点**: テストカバレッジ閾値・lint厳格化・依存リスク判定等。アプリの完成度に応じて段階的に適用するため、**フェーズ4まで後回しにしてよい**
 
@@ -27,7 +27,7 @@ dev-standards全体が提供する内容の一覧は[`README.md`](../README.md)�
 | AWSアカウント・認証情報 | フェーズ2は最も簡単な配信先（GitHub Pages等）で足りるため、この段階では不要。バックエンドAPIが最初から必要と分かっている場合、またはフェーズ3で技術選定を見直した場合に、AWSアカウントとGitHub Secrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`）を準備する。アクセスキーの作成方法は[AWS公式のIAMアクセスキー管理ガイド](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)を参照 |
 | 費用の目安 | Claude Codeは最初はProプランで十分である。月次払いは$20/月、年次払いは$200/年（月あたり約$17相当）が目安（2026年時点、変動するため[claude.com/pricing](https://claude.com/pricing)で最新を確認する）。AWS側は、個人の試作程度のアクセス量であればS3 + CloudFront・Lambda等は無料利用枠内、または月あたり数百円程度に収まることが多い。アクセスが増えた場合やPollyの音声合成等、課金が大きくなりうる機能を使う場合は、AWSの料金ページで事前に確認する |
 
-dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）はユーザーが準備する項目ではなく、**Claudeへ最初のプロンプトで依頼する作業**である。詳細は後述の「最初のプロンプトの例」を参照。この作業はClaude Code on the webのセッション（Claudeの仮想環境）内で完結し、スマートフォン側で何かを操作する必要は無い。また、dev-standardsは公開リポジトリであり`git submodule add`は読み取り専用のcloneにすぎないため、dev-standards自体への書き込み権限・フォークは一切不要である（書き込み権限が必要なのは、ユーザー自身が新規に作成したリポジトリ側のみ）。
+dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）はユーザーが準備する項目ではない。**Claudeへ最初のプロンプトで依頼する作業**である。詳細は後述の「最初のプロンプトの例」を参照。この作業はClaude Code on the webのセッション（Claudeの仮想環境）内で完結し、スマートフォン側で何かを操作する必要は無い。また、dev-standardsは公開リポジトリであり`git submodule add`は読み取り専用のcloneにすぎない。そのため、dev-standards自体への書き込み権限・フォークは一切不要である。書き込み権限が必要なのは、ユーザー自身が新規に作成したリポジトリ側のみである。
 
 ## フェーズ1: アイデアを決める
 
@@ -56,7 +56,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 ### 進め方
 
 1. リポジトリを作り、Claude Code on the webのセッションを開始する。最初のプロンプト（後述の例を参照）で、dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLAUDE.md`作成）をClaudeへ依頼する。これにより[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)・[`commit`](../.claude/skills/commit/SKILL.md)等のSkillがフェーズ2から使える状態になる
-2. **最小限のCIと自動マージを導入する**。`.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出すだけでよく、lint厳格化・カバレッジ閾値等の品質基準そのものの厳格化はまだ行わない。`enable_auto_merge`（既定で有効）によりPRはCI通過後に自動マージされる。加えて、GitHub Settingsのブランチ保護ルールで必須ジョブ（`commitlint`等）をRequired status checksとして指定する（これを設定しないと、CI完了を待たずにマージされてしまうケースを防げない）。コードを人間が読まずに進める運用のため、CI通過がPRに対する実質的な唯一のレビューになる。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照
+2. **最小限のCIと自動マージを導入する**。`.github/workflows/ci.yml`が`reusable-ci.yml`を呼び出すだけでよく、lint厳格化・カバレッジ閾値等の品質基準そのものの厳格化はまだ行わない。`enable_auto_merge`（既定で有効）によりPRはCI通過後に自動マージされる。加えて、GitHub Settingsのブランチ保護ルールで必須ジョブ（`commitlint`等）をRequired status checksとして指定する。これを設定しないと、CI完了を待たずにマージされてしまうケースを防げない。コードを人間が読まずに進める運用のため、CI通過がPRに対する実質的な唯一のレビューになる。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照
 3. **最小限の内容（画面が1枚表示されるだけでよい）を、先にリモート環境へデプロイする**。この時点ではAWSアカウント等を用意せず、GitHub Pages等、最も簡単に用意できる配信先を選ぶ。具体的な設定手順は汎用的なGitHub操作のため、このドキュメントには書かず、Claude Codeとのセッション内で「どう進めればよいか」を相談しながら対話的に進めてもらう。目的は「実際のURLがスマートフォンのブラウザで開ける」状態を作ることであり、配信先自体の良し悪しは問わない。S3 + CloudFront（[`static-hosting-pattern.md`](static-hosting-pattern.md)）等への移行は、フェーズ3の技術選定見直しで必要に応じて検討する。以降のステップは、ローカルではなくこのURLへの反映を都度確認しながら進める
 4. アイデアをそのままClaude Codeへ伝え、最小限の画面・機能を一気に作ってもらう（後述のプロンプト例を参照）。ブランチ運用・コミットは[`git-workflow`](../.claude/skills/git-workflow/SKILL.md)/[`commit`](../.claude/skills/commit/SKILL.md)/[`git-conventions`](../.claude/skills/git-conventions/SKILL.md) Skillに従って進む
 5. 実装してもらったら、手順3のURLへ反映した上で実際にスマートフォンのブラウザで開いて触り、違和感のある部分を言葉で伝えて直してもらう。デプロイ前の実装内容を確認したい場合は、スクリーンショットで提示してもらう（スマートフォンの画面からはローカルで動かしたものが見えないため）。カバレッジ閾値・lint厳格化等の技術的なモダナイズ観点はこの段階では要求しない
@@ -95,7 +95,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 まず簡単な実装方針を示してから、実装してほしい。
 ```
 
-このプロンプトの要点は5つある。dev-standardsの取り込み（Claude側の作業）と開発プロセス自体（ブランチ運用・コミット規約・issue起票）は最初から外さないこと。コードを読まずに進める運用のため、最小限のCI・自動マージ・ブランチ保護設定だけはフェーズ2から導入すること。確認手段をスマートフォンで実際に使える形（実機のURL・スクリーンショット）に限定すること。「最速で動くもの」を優先させること。そして技術選定自体もミニマムにとどめ、最終形が決まった段階（フェーズ3）で見直す前提にすることである。後回しにしてよいのは、カバレッジ閾値・lint厳格化等の品質基準そのものの厳格化のみであり、dev-standardsの取り込み・開発プロセス自体（CI・自動マージ基盤を含む）・確認手段は例外扱いにはしない。
+このプロンプトの要点は5つある。dev-standardsの取り込み（Claude側の作業）と開発プロセス自体（ブランチ運用・コミット規約・issue起票）は最初から外さないこと。コードを読まずに進める運用のため、最小限のCI・自動マージ・ブランチ保護設定だけはフェーズ2から導入すること。確認手段をスマートフォンで実際に使える形（実機のURL・スクリーンショット）に限定すること。「最速で動くもの」を優先させること。そして技術選定自体もミニマムにとどめ、最終形が決まった段階（フェーズ3）で見直す前提にすることである。後回しにしてよいのは、カバレッジ閾値・lint厳格化等の品質基準そのものの厳格化のみである。dev-standardsの取り込み・開発プロセス自体（CI・自動マージ基盤を含む）・確認手段は例外扱いにはしない。
 
 ## フェーズ3: 構成のリファクタリング
 

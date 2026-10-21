@@ -16,25 +16,27 @@
 
 ## 共有インフラ初期デプロイワークフロー（deploy-infra.yml）
 
-導入時に最初に1回だけ実行する、S3+CloudFront共有スタック（固定の1つのスタックとして常時存在するもの、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「S3 + CloudFrontの最小インフラ」参照）の手動デプロイworkflow。CloudFrontディストリビューションの作成・更新は伝播に15〜20分程度かかるため、頻繁に走る通常のCDとは別の、専用の手動ワークフローとする。
+S3+CloudFront共有スタック（固定の1つのスタックとして常時存在するもの、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「S3 + CloudFrontの最小インフラ」参照）の手動デプロイworkflowである。導入時に最初に1回だけ実行する。CloudFrontディストリビューションの作成・更新は伝播に15〜20分程度かかる。そのため、頻繁に走る通常のCDとは別の、専用の手動ワークフローとする。
 
-KVSの初期値（`canary_weight`・`force_stable`等）は「未設定のキーのみ」seedする。既存の値は上書きしない。これにより、運用中（例えば管理者ロールバックで`force_stable`をtrueにしている状態）に本ワークフローを再実行（CloudFrontディストリビューション設定の変更等）しても、その値を誤って既定値へ戻してしまうことを防ぐ。
+KVSの初期値（`canary_weight`・`force_stable`等）は「未設定のキーのみ」seedする。既存の値は上書きしない。運用中（例えば管理者ロールバックで`force_stable`をtrueにしている状態）に本ワークフローを再実行（CloudFrontディストリビューション設定の変更等）することがある。これにより、その値を誤って既定値へ戻してしまうことを防ぐ。
 
 コピー＆調整用テンプレート: [`examples/blue-green-deploy-infra.yml`](examples/blue-green-deploy-infra.yml)
 
 ## 自動昇格ワークフロー（promote-canary.yml）
 
-canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過し、`force_stable`によるロールバックが行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。同時に、canaryへの日次バッチ反映（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「canaryデプロイの日次バッチ化」参照）・緊急デプロイ後の自動最新化（「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、同じ定期実行の中で判定する。
+canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過したとする。この時点で`force_stable`によるロールバックが行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。同時に、canaryへの日次バッチ反映（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「canaryデプロイの日次バッチ化」参照）も判定する。緊急デプロイ後の自動最新化（「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も、同じ定期実行の中で判定する。
 
-**推奨: 以下のスタンドアロン版テンプレートより、`bamiyanapp/dev-standards/.github/workflows/reusable-promote-canary.yml`（`workflow_call`で呼び出すreusable workflow）を優先する。**
+**推奨: 以下のスタンドアロン版テンプレートより、`bamiyanapp/dev-standards/.github/workflows/reusable-promote-canary.yml`を優先する。**
 
-判定・昇格・キュー処理ロジックは後からこのreusable workflowへ一般化された（dev-standards#757）。「canaryが実際に検証したコミットのみを昇格する」仕組み（git worktree + `canary_tag_name`、dev-standards#919）は、このreusable workflow側にのみ存在する。そのworktree使用に伴うサブモジュール初期化・`timeout-minutes`設定（dev-standards#927、「自動昇格・管理者ロールバック・詰まりの自動解消」参照）も同様である。以下のスタンドアロン版はこれらの修正を含まない古いテンプレートであり、新規導入では使わないこと。
+これは`workflow_call`で呼び出すreusable workflowである。
+
+判定・昇格・キュー処理ロジックは後からこのreusable workflowへ一般化された（dev-standards#757）。「canaryが実際に検証したコミットのみを昇格する」仕組みは、このreusable workflow側にのみ存在する。これはgit worktree + `canary_tag_name`（dev-standards#919）で実現している。そのworktree使用に伴うサブモジュール初期化・`timeout-minutes`設定（dev-standards#927）も同様である。詳細は「自動昇格・管理者ロールバック・詰まりの自動解消」を参照する。以下のスタンドアロン版はこれらの修正を含まない古いテンプレートである。新規導入では使わないこと。
 
 コピー＆調整用テンプレート: [`examples/blue-green-promote-canary-standalone.yml`](examples/blue-green-promote-canary-standalone.yml)
 
 ## 運用状態の可視化ワークフロー（canary-status.yml）
 
-KVS・CloudFormationスタックの状態（重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時・各stageの配信中バージョン）は、AWS CLIで見るしかなくPR・CIのログからは掴めない。スマートフォンのGitHub Actions画面から手動実行するだけで現在の状態をJob Summaryへ出力し、1時間おきの定期実行で`docs/generated/canary-status.md`へコミットすることで、GitHubのファイルビュー・コミット履歴だけで最新状態を確認できるようにする。デプロイは一切行わない状態確認専用のworkflow。
+KVS・CloudFormationスタックの状態（重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時・各stageの配信中バージョン）は、AWS CLIで見るしかない。PR・CIのログからは掴めない。スマートフォンのGitHub Actions画面から手動実行するだけで現在の状態をJob Summaryへ出力する。さらに、1時間おきの定期実行で`docs/generated/canary-status.md`へコミットすることで、GitHubのファイルビュー・コミット履歴だけで最新状態を確認できるようにする。デプロイは一切行わない状態確認専用のworkflow。
 
 mainブランチがリポジトリルール（Rulesets）で「変更は必ずPR経由」になっている場合、直接push（`git push origin HEAD:main`）は拒否される。[`reusable-ci.yml`](reusable-workflows-reference.md)の`render-mermaid-diagrams`ジョブと同じ「新ブランチへpush→PR作成→API経由でsquash merge」方式を使う。この自動コミット部分は、本来は共通のcomposite actionへ切り出すべき重複（issue #830で検討中）である。#830が利用可能になったら、以下のテンプレートの該当ステップをcomposite action呼び出しへ置き換える。
 
@@ -63,9 +65,9 @@ CloudFront Functionsの重み付けルーティング・sticky Cookie挙動を�
 1. Cookie無しでアクセスした場合、設定した重みのおおよその割合でcanaryが選ばれる
 2. 一度付与されたCookieの値通りに2回目以降のアクセスが固定される
 3. KVSの`force_stable`をtrueにすると、Cookieに関わらず常にstableになる
-4. `/stable/`への明示アクセスは常にstableの内容を返し、かつ以後のCookie無しアクセスもstableへ一時固定される（手動切り替えリンクパターンとの前方互換、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「CloudFront Functionsによる重み付けルーティング」のviewer-request関数仕様に対応）
+4. `/stable/`への明示アクセスは常にstableの内容を返す。また、以後のCookie無しアクセスもstableへ一時固定される。これは手動切り替えリンクパターンとの前方互換であり、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「CloudFront Functionsによる重み付けルーティング」のviewer-request関数仕様に対応する
 
-このworkflowは検証専用で、デプロイやKVSの既定値を変更する副作用を残さない（`force_stable`検証後は必ずfalseへ戻す）。レスポンス本文から変種を判別する`CANARY`・`STABLE`の文字列は、frontendのビルド時にモードに応じて埋め込むマーカー文字列に置き換える（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「主要画面へのバージョン表示」等、既存のモード判定の仕組みと合わせる）。
+このworkflowは検証専用で、デプロイやKVSの既定値を変更する副作用を残さない（`force_stable`検証後は必ずfalseへ戻す）。レスポンス本文から変種を判別する`CANARY`・`STABLE`の文字列は、frontendのビルド時にモードに応じて埋め込むマーカー文字列に置き換える。既存のモード判定の仕組み（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「主要画面へのバージョン表示」等）と合わせる。
 
 コピー＆調整用テンプレート: [`examples/blue-green-verify-bg-routing.yml`](examples/blue-green-verify-bg-routing.yml)
 
@@ -73,7 +75,7 @@ CloudFront Functionsの重み付けルーティング・sticky Cookie挙動を�
 
 stable/canaryが同一のデータストアを共有していることは、[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)「DynamoDBスキーマ互換性ガイドライン（expand/contract方式）」の前提となる中核要件である。本workflowは、一方のステージへ書き込んだデータが、もう一方のステージから読み取れることを実際のAPI呼び出しで検証する。
 
-前提として、`deploy-backend-stage.yml`でstable・canary両方を先にデプロイしておくこと。検証対象が実際の本番データストアのため、検証用レコードには分かりやすいマーカーを付け、確認後に対象ストアから直接削除する（通常のAPIにはdelete相当のエンドポイントが無いことが多いため、AWS CLI/SDKで直接削除する）。
+前提として、`deploy-backend-stage.yml`でstable・canary両方を先にデプロイしておくこと。検証対象が実際の本番データストアのため、検証用レコードには分かりやすいマーカーを付ける。確認後は対象ストアから直接削除する（通常のAPIにはdelete相当のエンドポイントが無いことが多いため、AWS CLI/SDKで直接削除する）。
 
 コピー＆調整用テンプレート: [`examples/blue-green-verify-stage-data-sharing.yml`](examples/blue-green-verify-stage-data-sharing.yml)
 

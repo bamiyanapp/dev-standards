@@ -16,7 +16,7 @@
       "url": "https://d2mfi7ve53o8zl.cloudfront.net/",
       "repoUrl": "https://github.com/bamiyanapp/Camp-Stock",
       "loginRequired": true,
-      "note": "cd.yml実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成のため、コードの静的確認だけでは固定URLを特定できない。Google OAuthログインで保護されている（許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。"
+      "note": "cd.yml実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成である。そのため、コードの静的確認だけでは固定URLを特定できない。Google OAuthログインで保護されている（許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。"
     },
     {
       "id": "examination",
