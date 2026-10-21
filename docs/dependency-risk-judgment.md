@@ -262,6 +262,8 @@ flowchart TD
 
 本機能は「検知して起票/更新する」までを担い、修正PRの自動作成は対象外とする。推移的依存は親パッケージの期待するバージョン範囲内にあるため、機械的に1パッケージだけ安全に更新する手段が無く、不適切な自動変更で動作を崩すリスクがあるためである。起票するIssue本文には、親パッケージの更新待ち・`package.json`の`overrides`での強制固定・採用自体の見直しを対応候補として記載し、人間の判断に委ねる。
 
+**既知の限界（残存する検知ラグ・情報源の範囲）**。`reusable-dependency-full-scan.yml`自体は`workflow_call`のみでscheduleトリガーを持たない。実行頻度は呼び出し元リポジトリ（karuta等）が用意するcron設定に依存する。新しいCVEが公開されてから次回スキャンまでのラグは、呼び出し元の設定次第で生じる（例: 週1回呼び出す場合、最大1週間弱のラグが生じ得る）。また、本機能の脆弱性照会は`dependency-vulnerability-info.js`経由のOSV.devのみに依拠する。適用リスク側（`classifyRisk()`）が別途使うCISA KEVは、本フルスキャン側では使っていない。いずれも「検知するが直さない」という上記の設計上の割り切りと同種の、受容された既知の限界である。
+
 ## dev-standards自身のリリースにおけるRisk判定履歴（issue #746 Phase 2）
 
 dev-standards自体の依存更新を考える。Renovate等によるPRがmainへマージされ、semantic-releaseが新バージョンをリリースする際のRisk判定結果を記録したい。各プロダクトリポジトリ（karuta等）が参照できるよう`docs/generated/dependency-risk-history.json`へ機械可読な形で残す。
