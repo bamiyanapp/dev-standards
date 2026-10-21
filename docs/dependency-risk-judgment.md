@@ -54,7 +54,7 @@ flowchart TD
 
 ## update type・直接/間接判定（`dependency-update-info.js`）
 
-更新前後2つの`package-lock.json`を比較し、変更されたパッケージごとに以下を判定する。後続の適用リスク分類（`classifyRisk()`）・維持リスク分類（`classifyStaleRisk()`）・業務影響度（ブラスト半径）判定は、いずれもこの判定結果を入力として使う。
+更新前後2つの`package-lock.json`を比較し、変更されたパッケージごとに以下を判定する。この比較は`packages`セクション全体の新旧diffである。Renovateが直接依存を更新した結果npmが連動して解決し直す従属（transitive）依存のバージョン変化も、直接依存と同様に対象へ含む。後続の適用リスク分類（`classifyRisk()`）・維持リスク分類（`classifyStaleRisk()`）のCVE/CVSS取得は、いずれもこの全件（直接・間接問わず）を入力として使う。そのため、直接依存の更新に連動した従属依存側の脆弱性変化（新規混入・既存脆弱性の偶発的解消のいずれも）も、適用リスク・維持リスクの両方で捕捉される。業務影響度（ブラスト半径）判定のみ、次項の通り直接依存に限定する。
 
 - **update type**: 新旧バージョンのsemver（major.minor.patch）を比較し、`major`/`minor`/`patch`のいずれかに分類する。プレリリース等でバージョン比較ができない場合・バージョンが不変の場合・ダウングレードの場合は`other`として扱う。`other`はRisk判定側で保守的にHigh相当として扱う
 - **直接/間接判定**: `package-lock.json`のルートエントリ（`packages[""]`）が宣言する依存であれば直接依存とする。npm workspaces構成（`packages[""].workspaces`）の場合は、各ワークスペースメンバー自身の`package.json`が宣言する依存も合算する。karutaの実環境では、この合算が漏れており全依存が常に「間接」と誤分類されていたことが発覚し修正した（[#720](https://github.com/bamiyanapp/dev-standards/issues/720)参照）。業務影響度（ブラスト半径）判定は、直接依存のみを対象にする
