@@ -1,6 +1,6 @@
 # 非同期ジョブ「開始→ポーリング」パターン
 
-API Gatewayの統合タイムアウト（29秒固定、変更不可）を超える重い処理（ヘッドレスChromiumでのPDFレンダリング、音声認識等）を、APIリクエストとは別の実行単位へ委譲するためのパターンをまとめる。karuta（`bamiyanapp/karuta`）での実装（PDF生成・音声認識の2箇所で独立に出現）を一般化したものである。
+API Gatewayの統合タイムアウト（29秒固定、変更不可）を超える重い処理（ヘッドレスChromiumでのPDFレンダリング、音声認識等）がある。本ドキュメントは、そうした処理をAPIリクエストとは別の実行単位へ委譲するためのパターンをまとめる。karuta（`bamiyanapp/karuta`）での実装（PDF生成・音声認識の2箇所で独立に出現）を一般化したものである。
 
 ## 全体構成
 
@@ -159,4 +159,4 @@ exports.getJobStatus = async (event) => {
 
 ## 参考実装
 
-karuta（`bamiyanapp/karuta`）の`backend/efudaPdfHandler.js`（`generateEfudaPdf`・`renderEfudaPdfWorker`・`getEfudaPdfStatus`）が本パターンの実装例である。音声認識機能（`startSpeechRecognition`・`getSpeechRecognitionResult`）も同じ構成で独立に実装されている。
+karuta（`bamiyanapp/karuta`）の`backend/efudaPdfHandler.js`が本パターンの実装例である。具体的には`generateEfudaPdf`・`renderEfudaPdfWorker`・`getEfudaPdfStatus`の3関数である。音声認識機能（`startSpeechRecognition`・`getSpeechRecognitionResult`）も同じ構成で独立に実装されている。

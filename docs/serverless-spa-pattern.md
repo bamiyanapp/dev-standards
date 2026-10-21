@@ -144,7 +144,7 @@ functions:
 
 ## 運用: オンデマンドバックアップワークフロー
 
-PITR（Point-in-Time Recovery、過去35日間の任意の時点への復旧用、常時有効）とは別に、スキーマ移行・リソースインポート等の破壊的な作業の直前に「このタイミングの状態を明示的に残す」ための追加の保険として、手動実行できるオンデマンドバックアップworkflowを用意する。`workflow_dispatch`のみのため、スマートフォンのGitHub Web/モバイルアプリのActionsタブから実行できる。
+PITR（Point-in-Time Recovery、過去35日間の任意の時点への復旧用、常時有効）とは別に、追加の保険として手動実行できるオンデマンドバックアップworkflowを用意する。これはスキーマ移行・リソースインポート等の破壊的な作業の直前に「このタイミングの状態を明示的に残す」ためのものである。`workflow_dispatch`のみのため、スマートフォンのGitHub Web/モバイルアプリのActionsタブから実行できる。
 
 ```yaml
 name: Backup DynamoDB Tables

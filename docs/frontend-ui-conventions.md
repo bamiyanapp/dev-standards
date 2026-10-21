@@ -22,7 +22,7 @@
 
 `getAppVersionDefine.js`が埋め込む`__APP_VERSION__`はViteの`define`でJSバンドルへ直接埋め込まれる値であり、`index.html`自体には一切現れない。そのため`curl`等JSを実行しない方法では外部から取得できない。
 
-[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)のようにstable/canary等、複数stageを並行デプロイする構成では、各stageで実際にデプロイされているフロントエンドのバージョンを外部から検証したい場合がある（運用状態の可視化ワークフロー等）。この場合、`shared/ui/createVersionJsonPlugin.js`を利用し、ビルド時に`dist`直下へ`version.json`（`{version, buildTime}`）を書き出す。
+[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)のようにstable/canary等、複数stageを並行デプロイする構成を考える。各stageで実際にデプロイされているフロントエンドのバージョンを外部から検証したい場合がある（運用状態の可視化ワークフロー等）。この場合、`shared/ui/createVersionJsonPlugin.js`を利用し、ビルド時に`dist`直下へ`version.json`（`{version, buildTime}`）を書き出す。
 
 ```js
 // vite.config.js
