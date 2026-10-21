@@ -70,7 +70,7 @@ stateDiagram-v2
 </details>
 <!-- jscpd:ignore-end -->
 
-![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?177771a0f21596a16cb606470ded98ea807c1c4f)
+![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?e3dc22ea8acd4ef57848d9316b6634d82cc3fc6b)
 
 ## 実例
 
