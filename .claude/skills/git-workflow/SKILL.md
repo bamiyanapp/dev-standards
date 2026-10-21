@@ -65,9 +65,9 @@ git-conventions Skillを使用する。
 
 ## PR本文での「直接の目的」と「副作用」の明記（重要）
 
-`npm install`等で新規の依存パッケージを追加すると、依存解決（npm dedup）の副作用として、対象外の既存パッケージまで`package-lock.json`上で間接的にバージョンが変動することがある。例えば、新規devDependencyの依存先が既存の間接依存より新しいsemver範囲を要求し、1つに重複排除される共有コピーが引き上げられるケースである。これはソースコードの変更を伴わない`package-lock.json`限りの副作用である。PR差分を見ても対応する「コードの変更」が見つからず、読み手を混乱させる（実際にこの混乱が発生した事例: bamiyanapp/dev-standards#687）。
+`npm install`等で新規の依存パッケージを追加すると、依存解決（npm dedup）の副作用が生じることがある。この副作用により、対象外の既存パッケージまで`package-lock.json`上で間接的にバージョンが変動する場合がある。例えば、新規devDependencyの依存先が既存の間接依存より新しいsemver範囲を要求し、1つに重複排除される共有コピーが引き上げられるケースである。これはソースコードの変更を伴わない`package-lock.json`限りの副作用である。PR差分を見ても対応する「コードの変更」が見つからず、読み手を混乱させる（実際にこの混乱が発生した事例: bamiyanapp/dev-standards#687）。
 
-`dependency-risk-summary` job（`enable_dependency_risk_summary`）が投稿するRisk Summaryコメントは、`package-lock.json`の差分を機械的に列挙するだけである。「Issueが要求する直接の変更」か「依存解決の副作用」かを区別しないため、この区別はPR本文側で人間が明記する必要がある。
+`dependency-risk-summary` job（`enable_dependency_risk_summary`）が投稿するRisk Summaryコメントがある。このコメントは`package-lock.json`の差分を機械的に列挙するだけである。「Issueが要求する直接の変更」か「依存解決の副作用」かを区別しない。そのため、この区別はPR本文側で人間が明記する必要がある。
 
 新規依存パッケージの追加等に伴い、このような副作用が同じPR内に含まれる場合、PR本文に以下を明記する。
 
@@ -151,14 +151,14 @@ issue #945〜#977（deprecated検知機能の追加）の一連の作業で、2�
 
 - 実例: PR #972で`reusable-dependency-deprecation-scan.yml`と`dependency-deprecation-scan.js`を同時に追加した。その際、ワークフロー内部の自己参照checkoutステップのrefを誤って1つ前のバージョン（該当スクリプトがまだ存在しないバージョン）としてしまい、issue #977としてバグ修正が必要になった
 - 類似の「pinned tagとsubmodule参照の更新漏れ」は、karuta側（`promote-canary.yml`）でも過去に複数回発生している（karuta#1684・#1690）
-- **対応**: 新規スクリプト・新規reusable workflowの追加と、それを呼ぶ側（reusable workflow自身の自己参照、または参照側リポジトリの`ci.yml`等）のref更新は分離する。新規追加のPRでは自己参照チェックアウト自体を無効化した状態でリリースし、タグ発行後のフォローアップPRで有効化・ref指定する（上記「複合action・pinned tagを伴う変更の展開確認」の「ブートストラップ」対応と同じ考え方）
+- **対応**: 新規スクリプト・新規reusable workflowの追加と、それを呼ぶ側（reusable workflow自身の自己参照、または参照側リポジトリの`ci.yml`等）のref更新は分離する。新規追加のPRでは自己参照チェックアウト自体を無効化した状態でリリースする。タグ発行後のフォローアップPRで有効化・ref指定する（上記「複合action・pinned tagを伴う変更の展開確認」の「ブートストラップ」対応と同じ考え方）
 
 ### 2. `permissions:`ブロックの暗黙的ゼロ化
 
-workflowに明示的な`permissions:`ブロックを書くと、デフォルト値ではなく**指定していないスコープは全て「none」**になる。reusable workflowの呼び出し元で必要な権限（例: 呼び出し先が内部で使う`actions/checkout`が必要とする`contents: read`）を見落として書き漏らすと、呼び出し先のjob自体が1つも作られない`startup_failure`（ログも残らない）で即座に失敗する。原因特定が難しい割に再発しやすい。
+workflowに明示的な`permissions:`ブロックを書くと、デフォルト値ではなく**指定していないスコープは全て「none」**になる。reusable workflowの呼び出し元で必要な権限（例: 呼び出し先が内部で使う`actions/checkout`が必要とする`contents: read`）を見落として書き漏らすことがある。その場合、呼び出し先のjob自体が1つも作られない`startup_failure`（ログも残らない）で即座に失敗する。原因特定が難しい割に再発しやすい。
 
 - 実例: karuta#1696で`permissions: issues: write`のみを書き、`contents: read`を書き漏らした
-- **対応**: reusable workflow呼び出し元に`permissions:`を明示する場合、呼び出し先workflow・composite action内部が必要とする権限（`actions/checkout`の`contents: read`等）を含めて指定したかを確認する。呼び出し先の`jobs.<id>.permissions`・内部で使うactionの`action.yml`を実際に読んで洗い出す
+- **対応**: reusable workflow呼び出し元に`permissions:`を明示する場合を考える。その場合、呼び出し先workflow・composite action内部が必要とする権限（`actions/checkout`の`contents: read`等）を含めて指定したかを確認する。呼び出し先の`jobs.<id>.permissions`・内部で使うactionの`action.yml`を実際に読んで洗い出す
 
 ### 3. scheduled workflowの動作確認
 
