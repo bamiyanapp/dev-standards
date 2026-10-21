@@ -22,7 +22,7 @@
 
 Bootstrap 5.3ベースのアプリ向け共通テーマ（issue #232）。ダークモード（`data-bs-theme="dark"`）対応・Bootstrapボタンコンポーネントのダークモード配色等、Bootstrap固有の部分を提供する。フレームワーク非依存の部分（共通フォント・フェードイン/アウト・ボタン押下時の触覚的フィードバック）は上記`common-theme.css`を`@import`している。このため**本ファイルを利用する場合は`common-theme.css`も同じディレクトリへ併せてsymlinkすること**（`@import`の相対パス解決に必要）。かるた札の意匠等プロダクト固有のスタイルは含まない。
 
-利用側でBootstrap 5.3本体を読み込み、以下のようにグローバルCSSへ`@import`する。読み込み元は`bootstrap`パッケージによるnpmバンドルを推奨する（外部CDNは追加のDNS解決・TLSハンドシェイクがレンダリングをブロックし、Lighthouse Performanceスコアを悪化させるため避ける。karuta#1761で実機確認）。
+利用側でBootstrap 5.3本体を読み込み、以下のようにグローバルCSSへ`@import`する。読み込み元は`bootstrap`パッケージによるnpmバンドルを推奨する。外部CDNは追加のDNS解決・TLSハンドシェイクがレンダリングをブロックし、Lighthouse Performanceスコアを悪化させるため避ける（karuta#1761で実機確認）。
 
 ```css
 @import "./bootstrap-theme.css";
@@ -155,7 +155,7 @@ function AppHeader() {
 
 ### `shared/ui/createVersionJsonPlugin.js`
 
-[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「バージョン情報の外部公開（任意、ブルーグリーン運用等向け）」を実装するためのVite複合プラグイン。`getAppVersionDefine.js`と同様、Node.js側（`vite.config.js`）で動く。`__APP_VERSION__`はJSバンドルへ直接埋め込まれるだけで`index.html`には現れないため、`curl`のみで外部から取得できる専用の静的ファイル（`dist/version.json`）をビルド後に書き出す。
+[`frontend-ui-conventions.md`](frontend-ui-conventions.md)「バージョン情報の外部公開（任意、ブルーグリーン運用等向け）」を実装するためのVite複合プラグイン。`getAppVersionDefine.js`と同様、Node.js側（`vite.config.js`）で動く。`__APP_VERSION__`はJSバンドルへ直接埋め込まれるだけで`index.html`には現れない。このため、`curl`のみで外部から取得できる専用の静的ファイル（`dist/version.json`）をビルド後に書き出す。
 
 `vite.config.js`:
 
@@ -226,7 +226,7 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 ErrorBoundaryが検知できない軽微な不具合（クラッシュに至らない表示崩れ等）向けに、ユーザー自身が安定版（stable）へ切り替えられる導線のパターンを考える。karuta（issue #1329）での実装を元にした。dev-standards#733（ブルーグリーンデプロイ方式の開発共通化）の検討対象の1つとして、独立した共有コンポーネントではなくパターンとして文書化する。CloudFront Functions側のCookie制御・stage別ビルド構成等、プロダクト固有のインフラ実装に依存する部分が大きいためである。
 
 - ビルド時のmode判定（例: Viteの`import.meta.env.MODE`）でcanaryビルドの場合のみ表示する
-- クリック時は単純に`/stable${検索クエリ}`等の固定パスへ遷移するだけでよい。CloudFront Functions（viewer-request）側が「`/stable/`への明示アクセス」をきっかけに、以後の通常アクセスも含めてstableへ固定するよう設計しておけば（sticky Cookie発行等）、リンク自体に複雑なロジックは不要になる
+- クリック時は単純に`/stable${検索クエリ}`等の固定パスへ遷移するだけでよい。CloudFront Functions（viewer-request）側は「`/stable/`への明示アクセス」をきっかけに、stableへ固定する（sticky Cookie発行等）。以後の通常アクセスもstableへ固定される。こうしておけばリンク自体に複雑なロジックは不要になる
 
 ```jsx
 export default function StableSwitchLink() {
@@ -244,7 +244,7 @@ export default function StableSwitchLink() {
 }
 ```
 
-`shared/ui/`配下の共有コンポーネントとしては提供しない。CloudFront Functions側の対応するロジック（stage固定ヘッダーの設定等）が無いと単に404になるだけで機能しないため、ブルーグリーンデプロイ基盤全体（dev-standards#733の他のサブissue）を導入したプロダクトでのみ意味を持つ。
+`shared/ui/`配下の共有コンポーネントとしては提供しない。CloudFront Functions側の対応するロジック（stage固定ヘッダーの設定等）が無いと単に404になるだけで機能しない。このため、ブルーグリーンデプロイ基盤全体（dev-standards#733の他のサブissue）を導入したプロダクトでのみ意味を持つ。
 
 ### `shared/hooks/useLocalStorageState.js`
 

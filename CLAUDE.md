@@ -98,7 +98,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - 更新したドキュメントが肥大化していないか確認する。`textlint`の`max-lines`ルール（実効行数、既定200行）が通っていても、巨大な表セルへ詰め込んだ場合は検知をすり抜ける既知の限界がある（[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「ドキュメント1本のボリューム上限」参照）。独立した話題として切り出せる内容があれば分割する
 - 新規にmermaid図を追加した場合、`mermaid_doc_paths`（`.github/workflows/ci.yml`）への登録・画像埋め込みリンクの追加をしたか確認する。詳細は[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照する。開発環境がスマホオンリーのためPRレビューは差分ビュー経由になり、未登録のままだと図として確認できない
 - 対応するissueの本文にTODO・検討事項・懸念点の列挙がある場合、今回の対応でそれぞれ解消したかを1つずつ確認する。解消していない項目があれば、フォローアップissueとして切り出す。または対応不要と判断した理由をissueに明記する。このいずれかを行ってからでなければ、元issueをクローズしない（一部だけ実装してTODOごとクローズしない）
-- 本リポジトリがdev-standardsを参照している場合（`@dev-standards/CLAUDE.md`等）、今回の作業で気づいたdev-standards共通のSkill・ドキュメント・ルールの不備や考慮漏れはないか考える。本プロダクト固有ではなく他の参照側リポジトリにも共通して当てはまりうる問題であれば、本リポジトリ内で個別対応するだけで終わらせず、[bamiyanapp/dev-standards](https://github.com/bamiyanapp/dev-standards)へissueとして起票する。起票時は、気づいた経緯（どの参照側リポジトリでの作業中に気づいたか）を本文に明記する
+- 本リポジトリがdev-standardsを参照している場合（`@dev-standards/CLAUDE.md`等）がある。その場合、今回の作業で気づいたdev-standards共通のSkill・ドキュメント・ルールの不備や考慮漏れはないか考える。本プロダクト固有ではなく他の参照側リポジトリにも共通して当てはまりうる問題であるかを考える。当てはまる場合は、本リポジトリ内で個別対応するだけで終わらせない。[bamiyanapp/dev-standards](https://github.com/bamiyanapp/dev-standards)へissueとして起票する。起票時は、気づいた経緯（どの参照側リポジトリでの作業中に気づいたか）を本文に明記する
 
 # Skills (専門手順)
 
@@ -113,7 +113,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - **code-review**: 差分の自己レビュー（品質、バグ、テスト網羅等の確認）
 - **git-conventions**: ブランチ命名規則およびコミットメッセージ（subject/body）フォーマットの詳細
 - **safe-bash-commands**: ハングや対話プロンプトを回避する安全なコマンド実行方法
-- **sandbox-unreachable-investigation**: サンドボックス・スマホオンリー環境の両方から対象へ到達できない場合に、GitHub Actionsの一時workflowで情報を取得する手順
+- **sandbox-unreachable-investigation**: サンドボックス・スマホオンリー環境の両方から対象へ到達できない場合がある。その場合、GitHub Actionsの一時workflowで情報を取得する手順
 - **loop-budget**: ループ実行の前後でトークン予算・実行ログの消費状況を確認し、予算超過時や実行可能なタスクがない場合に早期終了させる
 - **loop-triage**: 直近の変更・CIの失敗・Issue・会話内容をトリアージし、ループで処理可能な結果レポートを生成する
 - **loop-verifier**: ループが生成した変更を却下する前提で検証する独立エージェント（実装者と同じ役割では使用しない）

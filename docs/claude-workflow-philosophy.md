@@ -19,13 +19,13 @@ Claudeは会話の外に状態を持たない。1つの作業セッションが�
 Claudeがベースブランチへ直接コミットを反映することはない。変更は常にPull Requestというかたちでアウトプットする。これには2つの意味がある。
 
 1. **差分としてレビュー可能な単位にする**: PRはコミットの集合に対して、変更理由・影響範囲をまとめて提示する単位である。Issueが「何をなぜやるか」を記録するのに対し、PRは「実際に何を変えたか」を記録する
-2. **承認・マージの最終判断を人間に委ねる**: Claudeは`gh pr review --approve`等によるPRの承認、`gh pr merge`等によるマージを一切行わない（[`CLAUDE.md`](../CLAUDE.md)「PR（MR）承認・マージ禁止」）。CIが全て成功することを確認したうえでPRを作成・更新するところまでがClaudeの役割であり、その先の最終判断（または自動マージの仕組みに委ねる判断）は人間が持つ
+2. **承認・マージの最終判断を人間に委ねる**: Claudeは`gh pr review --approve`等によるPRの承認を一切行わない。`gh pr merge`等によるマージも一切行わない（[`CLAUDE.md`](../CLAUDE.md)「PR（MR）承認・マージ禁止」）。CIが全て成功することを確認したうえでPRを作成・更新するところまでがClaudeの役割である。その先の最終判断（または自動マージの仕組みに委ねる判断）は人間が持つ
 
-具体的なブランチ作成・コミット・PR作成の手順は[git-workflow Skill](../.claude/skills/git-workflow/SKILL.md)、コミットメッセージ・ブランチ命名のフォーマットは[git-conventions Skill](../.claude/skills/git-conventions/SKILL.md)、コミット前の確認事項は[commit Skill](../.claude/skills/commit/SKILL.md)を参照する。
+具体的なブランチ作成・コミット・PR作成の手順は[git-workflow Skill](../.claude/skills/git-workflow/SKILL.md)を参照する。コミットメッセージ・ブランチ命名のフォーマットは[git-conventions Skill](../.claude/skills/git-conventions/SKILL.md)を参照する。コミット前の確認事項は[commit Skill](../.claude/skills/commit/SKILL.md)を参照する。
 
 ## なぜIssueにラベルを付けるのか
 
-Issueには種別ラベル（`bug`/`enhancement`/`documentation`等）と重要度ラベル（`priority: high`/`priority: medium`/`priority: low`）を必ず付与する（[`CLAUDE.md`](../CLAUDE.md)「Issue駆動の原則」）。
+Issueには種別ラベル（`bug`/`enhancement`/`documentation`等）を必ず付与する。重要度ラベル（`priority: high`/`priority: medium`/`priority: low`）も必ず付与する（[`CLAUDE.md`](../CLAUDE.md)「Issue駆動の原則」）。
 
 Issueは起票するだけでは「積まれているだけの箱」になりやすい。ラベルは、後から見返したときに「これは何の作業か」「どれくらい急ぐべきか」を構造化し、トリアージ（優先順位付け）を可能にするための最小限の情報である。ラベルが欠けたIssueに基づいて作業を開始してはならないというルールは、着手前にこの構造化を必ず済ませることを強制するためのものである。
 
