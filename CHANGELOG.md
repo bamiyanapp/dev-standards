@@ -1,3 +1,10 @@
+## [2.105.6](https://github.com/bamiyanapp/dev-standards/compare/v2.105.5...v2.105.6) (2026-10-21)
+
+
+### Bug Fixes
+
+* **docs:** 共有設定ファイルの振る舞い変更にdocs:を使わないようgit-conventionsへ明記する ([#1134](https://github.com/bamiyanapp/dev-standards/issues/1134)) ([2879dd0](https://github.com/bamiyanapp/dev-standards/commit/2879dd0310231f63288b9f545ae1dc4d29a31e17))
+
 ## [2.105.5](https://github.com/bamiyanapp/dev-standards/compare/v2.105.4...v2.105.5) (2026-10-21)
 
 
