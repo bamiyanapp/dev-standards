@@ -56,3 +56,7 @@ description: 新しい作業ブランチを作成する時、またはコミッ�
 - `テスト:`
 
 1つでも欠けている場合は、そのまま `git commit` を実行してはならない。本文を補ってから再度確認すること。「軽微な変更だから」「設定ファイルのみの変更だから」等を理由にbody自体を省略してはならない。該当項目が無い場合は本文中で `N/A` と書くことで対応する。bodyそのものを書かないことの言い訳にはならない。
+
+## subjectのtype選定（dev-standards固有）
+
+`release-config.cjs`の`BASE_RELEASE_RULES`は`docs`・`Docs`を`release: false`（新タグを切らない）としている。`textlint.config.cjs`・`eslint.config.js`等、参照側リポジトリへsymlinkで配布する共有設定ファイルの変更は見た目には設定ファイルの編集である。しかし実際には、参照側リポジトリのCIで強制される判定基準を変える**振る舞いの変更**である。このため`docs:`ではなく`fix:`（破壊的変更を伴う場合は`fix!:`/`feat!:`）を使い、新タグを確実に切ること。`docs:`を使うと新タグが切られない。その結果、参照側リポジトリが`uses: ...@vX.Y.Z`で新しい挙動を取り込めない事故につながる。実際にbamiyanapp/dev-standards#1133で発生し、bamiyanapp/karuta#1189のクローズが一時ブロックされた。
