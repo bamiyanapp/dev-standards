@@ -1,3 +1,10 @@
+## [2.105.5](https://github.com/bamiyanapp/dev-standards/compare/v2.105.4...v2.105.5) (2026-10-21)
+
+
+### Reverts
+
+* **ci:** 自己参照チェックアウトの動的解決を取り消し、hardcode refをv2.105.4へ統一する ([#1123](https://github.com/bamiyanapp/dev-standards/issues/1123)) ([6863f3f](https://github.com/bamiyanapp/dev-standards/commit/6863f3f3467a4a9cd869c26b15720172ffe64d0a)), closes [#1119](https://github.com/bamiyanapp/dev-standards/issues/1119) [#1071](https://github.com/bamiyanapp/dev-standards/issues/1071)
+
 ## [2.105.4](https://github.com/bamiyanapp/dev-standards/compare/v2.105.3...v2.105.4) (2026-10-20)
 
 
