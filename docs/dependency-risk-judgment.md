@@ -1,6 +1,6 @@
 # 依存更新Risk判定
 
-`reusable-ci.yml`の`dependency-risk-summary` job（`enable_dependency_risk_summary`・`enable_dependency_risk_gating`入力）が、依存更新PRに対して行うリスク判定の詳細を扱う。背景はissue #645「OSS依存更新の自動安全判定・エスカレーション基盤」（[bamiyanapp/dev-standards#645](https://github.com/bamiyanapp/dev-standards/issues/645)）を参照。両入力自体の一覧（デフォルト値等）は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。
+`reusable-ci.yml`は`dependency-risk-summary` jobを持つ。このjobは`enable_dependency_risk_summary`・`enable_dependency_risk_gating`の2入力を持つ。本ドキュメントは、このjobが依存更新PRに対して行うリスク判定の詳細を扱う。背景はissue #645「OSS依存更新の自動安全判定・エスカレーション基盤」（[bamiyanapp/dev-standards#645](https://github.com/bamiyanapp/dev-standards/issues/645)）を参照。両入力自体の一覧（デフォルト値等）は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。
 
 以下は、判定フロー全体を分岐を含む処理フローとして可視化したもの（[bamiyanapp/dev-standards#695](https://github.com/bamiyanapp/dev-standards/issues/695)）。本ドキュメントの各節がどこに対応するかの目次としても使える。個別の昇格ルールの詳細は本ドキュメントの各節、および`scripts/dependency-risk-classifier.js`のコードコメントを正本とし、ここでは全体構造のみを示す。
 
@@ -45,19 +45,19 @@ flowchart TD
 
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
-`package-lock.json`・`.github/workflows/*.yml`・`.github/actions/*/action.yml`のいずれかが変更されたPRで、以下をまとめたRisk Summaryを投稿する。Phase 1は[#646](https://github.com/bamiyanapp/dev-standards/issues/646)、Phase 3は[#648](https://github.com/bamiyanapp/dev-standards/issues/648)を参照。Renovate等が作成した依存更新PRのリスク判断を、人間が調査を始める前に補助する情報を用意するのが目的。各ステップは`continue-on-error: true`のため、このjobの失敗が`merge` jobをブロックすることはない。
+対象は`package-lock.json`・`.github/workflows/*.yml`・`.github/actions/*/action.yml`のいずれかが変更されたPRである。このPRに対し、以下をまとめたRisk Summaryを投稿する。Phase 1は[#646](https://github.com/bamiyanapp/dev-standards/issues/646)、Phase 3は[#648](https://github.com/bamiyanapp/dev-standards/issues/648)を参照。目的は、Renovate等が作成した依存更新PRのリスク判断を補助する情報を用意することである。人間が調査を始める前にこの情報を提示する。各ステップは`continue-on-error: true`のため、このjobの失敗が`merge` jobをブロックすることはない。
 
 - **update type・直接/間接判定**（CVE/CVSS/EPSS/KEV・CI結果・ファンアウト（dev-standards自体の更新の場合）の算出元にもなる、詳細は次節）
 - GitHub Actions/reusable workflow参照の更新（dev-standards自体を含むworkflow参照のバージョン更新）
 - **Supply Chainチェック**（新規install script・メンテナ変更・SBOM、詳細は次々節）
-- **業務影響度（ブラスト半径）**: 変更された直接依存のimport元が、重要パスに該当する場合を考える。重要パスはリポジトリルートの`dependency-risk-critical-paths.json`（`{"criticalPaths": ["frontend/src/payment/"]}`形式、パスのprefix文字列でglobは使わない）で宣言する。該当する場合、適用リスクを1段階昇格する。宣言が無い場合は昇格しない（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)）
+- **業務影響度（ブラスト半径）**: 変更された直接依存のimport元が、重要パスに該当する場合を考える。重要パスはリポジトリルートの`dependency-risk-critical-paths.json`で宣言する。形式は`{"criticalPaths": ["frontend/src/payment/"]}`で、パスのprefix文字列を指定する（globは使わない）。該当する場合、適用リスクを1段階昇格する。宣言が無い場合は昇格しない（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)）
 
 ## update type・直接/間接判定（`dependency-update-info.js`）
 
 更新前後2つの`package-lock.json`を比較し、変更されたパッケージごとに以下を判定する。後続の適用リスク分類（`classifyRisk()`）・維持リスク分類（`classifyStaleRisk()`）・業務影響度（ブラスト半径）判定は、いずれもこの判定結果を入力として使う。
 
 - **update type**: 新旧バージョンのsemver（major.minor.patch）を比較し、`major`/`minor`/`patch`のいずれかに分類する。プレリリース等でバージョン比較ができない場合・バージョンが不変の場合・ダウングレードの場合は`other`として扱う。`other`はRisk判定側で保守的にHigh相当として扱う
-- **直接/間接判定**: `package-lock.json`のルートエントリ（`packages[""]`）が宣言する依存であれば直接依存とする。npm workspaces構成（`packages[""].workspaces`）の場合は、各ワークスペースメンバー自身の`package.json`が宣言する依存も合算する（karutaの実環境で、この合算が漏れており全依存が常に「間接」と誤分類されていたことが発覚し修正した。[#720](https://github.com/bamiyanapp/dev-standards/issues/720)参照）。業務影響度（ブラスト半径）判定は、直接依存のみを対象にする
+- **直接/間接判定**: `package-lock.json`のルートエントリ（`packages[""]`）が宣言する依存であれば直接依存とする。npm workspaces構成（`packages[""].workspaces`）の場合は、各ワークスペースメンバー自身の`package.json`が宣言する依存も合算する。karutaの実環境では、この合算が漏れており全依存が常に「間接」と誤分類されていたことが発覚し修正した（[#720](https://github.com/bamiyanapp/dev-standards/issues/720)参照）。業務影響度（ブラスト半径）判定は、直接依存のみを対象にする
 
 ## Supply Chainチェック（[#648](https://github.com/bamiyanapp/dev-standards/issues/648) Phase 3）
 
@@ -73,11 +73,11 @@ CVE/CVSS/KEVチェック（上記）は「既知の脆弱性があるかどう�
 
 ### 新規install scriptの検知（例）
 
-`@scope/pkg`が`1.0.0`（`hasInstallScript: false`）から`1.1.0`（`hasInstallScript: true`）へ更新された場合を検知する。`package-lock.json`（lockfileVersion 3）は実際のscript本文ではなく`hasInstallScript`という真偽値フラグのみを記録する（本文自体はpackage.json側にあり、lockfileには含まれない）。このフラグが新規に`true`へ変化したパッケージを検知する（`scripts/dependency-package-anomaly-info.js`）。既存パッケージがinstall scriptを失う（`true`→`false`）変化は、より安全な状態への変化のため検知対象としない。
+`@scope/pkg`が`1.0.0`（`hasInstallScript: false`）から`1.1.0`（`hasInstallScript: true`）へ更新された場合を検知する。`package-lock.json`（lockfileVersion 3）は実際のscript本文ではなく`hasInstallScript`という真偽値フラグのみを記録する。本文自体はpackage.json側にあり、lockfileには含まれない。このフラグが新規に`true`へ変化したパッケージを検知する（`scripts/dependency-package-anomaly-info.js`）。既存パッケージがinstall scriptを失う（`true`→`false`）変化は、より安全な状態への変化のため検知対象としない。
 
 ### メンテナ（公開者）変更の検知（例）
 
-旧バージョンの公開者が`alice`、新バージョンが`mallory`のように、npm registry上の公開者（npmアカウント名）が異なる場合に検知する（`scripts/dependency-maintainer-info.js`）。暗号学的な署名検証（provenance attestation等）は対象外である（詳細は同ファイルのコードコメント参照）。
+npm registry上の公開者（npmアカウント名）が異なる場合に検知する（`scripts/dependency-maintainer-info.js`）。例えば旧バージョンの公開者が`alice`、新バージョンが`mallory`のような変化である。暗号学的な署名検証（provenance attestation等）は対象外である（詳細は同ファイルのコードコメント参照）。
 
 ### SBOM（Software Bill of Materials）
 
@@ -105,7 +105,7 @@ flowchart TD
 
 ### Risk Engineとの接続
 
-install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力され、検知された場合は無条件でHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
+install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力される。検知された場合は無条件でHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
 
 <!-- jscpd:ignore-start -->
 <details>
@@ -128,7 +128,7 @@ flowchart TD
 
 ## deprecated（サポート終了）検知（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）
 
-CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る指標である。aws-sdk（v2系）のようにメンテナンスモード・サポート終了（EOL）となり、今後の脆弱性の修正が出なくなったパッケージは、CVEが公表されない限り検知できない（karuta#1656・#1658の調査で判明）。npm registryの各バージョンレスポンス（`GET /{name}`）が持つ`deprecated`フィールドを見ることで、この状態を機械的に検知する（`scripts/dependency-deprecation-info.js`）。
+CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る指標である。aws-sdk（v2系）のようにメンテナンスモード・サポート終了（EOL）となり、今後の脆弱性の修正が出なくなったパッケージがある。このようなパッケージは、CVEが公表されない限り検知できない（karuta#1656・#1658の調査で判明）。npm registryの各バージョンレスポンス（`GET /{name}`）が持つ`deprecated`フィールドを見ることで、この状態を機械的に検知する。この検知は`scripts/dependency-deprecation-info.js`が担う。
 
 - 旧バージョン（更新前、現行バージョン）がdeprecatedの場合: 維持リスク（`classifyStaleRisk()`）をKEVと同様にhighへ昇格する。サポート終了したバージョンに留まり続けること自体が危険であるため
 - 新バージョン（更新後）がdeprecatedの場合: 適用リスク（`classifyRisk()`）はエスカレーションしない。deprecatedはパッケージの運用状態を示すのみで、PRの内容自体が危険であることを意味しないため。Risk Summary上のreasonにのみ表示し、自動マージはブロックしない
@@ -141,21 +141,21 @@ CVE/CVSS/KEV/EPSSは「既知の脆弱性が公表されているか」を見る
 
 npm registryの各パッケージレスポンス（`GET /{name}`）は`time.modified`（そのパッケージの最新バージョンが公開された日時）を持つ。これを見て、直近2年間（既定値）新バージョンが一度も公開されていないパッケージを機械的に検知する（`scripts/dependency-staleness-info.js`）。現行バージョン（旧バージョン）のみを対象にする（維持リスクの判定に使うため）。
 
-deprecated検知より弱い信号（メンテナによる明示的な意思表示ではなく、単に更新が無いという事実のみ）として扱い、維持リスクへの昇格は**low→mediumのみ**に限定する（下記「維持リスク判定マトリクス」参照）。放置の事実はあっても脆弱性の深刻度自体は不明なため、highへの昇格はCVE/KEV・deprecated検知のみを根拠とする既存設計を維持する。
+これは、メンテナによる明示的な意思表示ではなく単に更新が無いという事実のみであり、deprecated検知より弱い信号として扱う。このため、維持リスクへの昇格は**low→mediumのみ**に限定する（下記「維持リスク判定マトリクス」参照）。放置の事実はあっても脆弱性の深刻度自体は不明なため、highへの昇格はCVE/KEV・deprecated検知のみを根拠とする既存設計を維持する。
 
 ## OpenSSF Scorecardによる質的評価（[#1077](https://github.com/bamiyanapp/dev-standards/issues/1077)）
 
 放置検知（上記）は「更新が止まっているか」という一次シグナルのみを見る。コントリビューター数・CI/テストの有無・ブランチ保護設定等、パッケージの質的なメンテナンス状態まで含めた評価には、[OpenSSF Scorecard](https://github.com/ossf/scorecard)のスコアを使う。
 
-scorecard CLIを自前で実行する方式ではなく、認証不要の公開データセットAPI（`https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}`）を使う。npm registryの`repository`フィールドからGitHubのowner/repoを特定し、Scorecardスコア（10点満点）を取得する（`scripts/dependency-scorecard-info.js`）。GitHub以外（GitLab等）のパッケージ、Scorecard未評価のプロジェクトは対象外（判定不能として「不明」扱いし、昇格の根拠にしない）。
+scorecard CLIを自前で実行する方式ではなく、認証不要の公開データセットAPIを使う。APIのURLは`https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}`である。npm registryの`repository`フィールドからGitHubのowner/repoを特定する。これにより、Scorecardスコア（10点満点）を取得する（`scripts/dependency-scorecard-info.js`）。GitHub以外（GitLab等）のパッケージ、Scorecard未評価のプロジェクトは対象外とする。これらは判定不能として「不明」扱いし、昇格の根拠にしない。
 
-スコアが閾値未満（既定3点、OpenSSF Scorecardの一般的な「懸念あり」水準）の場合、放置検知と同様に維持リスクへの昇格は**low→mediumのみ**に限定する（質的評価は既知のCVE/KEV・deprecated検知と同じ確度を持たないため）。
+スコアが閾値未満（既定3点、OpenSSF Scorecardの一般的な「懸念あり」水準）の場合は、放置検知と同様に扱う。すなわち、維持リスクへの昇格は**low→mediumのみ**に限定する。これは、質的評価が既知のCVE/KEV・deprecated検知と同じ確度を持たないためである。
 
 ## Risk Summaryコメントでの常時表示（[#1086](https://github.com/bamiyanapp/dev-standards/issues/1086)）
 
 放置検知・Scorecard確認は、閾値に該当した場合のみ`classifyStaleRisk()`の`reasons`（維持リスクの理由欄）に出力される。該当が無い場合は何も表示されず、実際の依存更新PRでこれらのチェックが動作したかどうかが、コメントを見ても分からない。
 
-このため、`dependency-staleness-info.js`・`dependency-scorecard-info.js`は、閾値に該当したパッケージのみでなく、チェック対象になった全パッケージの実測値（`ageDays`・`score`）と判定結果（`flagged`）を返す。`dependency-stale-risk-classifier.js`は`flagged`なエントリのみを維持リスク昇格の根拠にする。一方、`dependency-maintenance-summary.js`が全件を「### メンテナンス状態（放置検知・Scorecard確認）」セクションとしてRisk Summaryコメントへ常に追記する（Security・SBOMセクションと同じ設計）。
+このため、`dependency-staleness-info.js`・`dependency-scorecard-info.js`は、閾値に該当したパッケージのみでなく全パッケージを対象にする。チェック対象になった全パッケージの実測値（`ageDays`・`score`）と判定結果（`flagged`）を返す。`dependency-stale-risk-classifier.js`は`flagged`なエントリのみを維持リスク昇格の根拠にする。一方、`dependency-maintenance-summary.js`は全件を扱う。全件を「### メンテナンス状態（放置検知・Scorecard確認）」セクションとしてRisk Summaryコメントへ常に追記する（Security・SBOMセクションと同じ設計）。
 
 ## 適用リスク
 
@@ -180,7 +180,7 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 | 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化、medium/highは変化なし） | ブラスト半径単独ではHighまで昇格しない。重要パス未宣言時は常にfalseで影響なし（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)、[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)） |
 | 上記いずれにも該当しない | 🟢 Low | |
 
-`vulnerability_only_high`は、最終判定がHighかつ、major update・説明不能なCI失敗・Supply Chain異常のいずれにも該当せず、CVE/KEVの残存のみが理由の場合にのみ`true`になる（ブラスト半径はMedium止まりのためHigh到達の理由にはならない）。
+`vulnerability_only_high`は、最終判定がHighかつmajor update・説明不能なCI失敗・Supply Chain異常のいずれにも該当しない場合に限り`true`になる。すなわち、CVE/KEVの残存のみが理由の場合である（ブラスト半径はMedium止まりのためHigh到達の理由にはならない）。
 
 ## 維持リスク
 
@@ -219,7 +219,7 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 
 ## merge gateとの連携（`enable_dependency_risk_gating`）
 
-適用リスク（risk_level、Low/Medium/High）がhighのPRでは`merge` jobによる自動マージを行わない（[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「Phase 2」Task 3）。対象をHighのみへ縮小した経緯は[#685](https://github.com/bamiyanapp/dev-standards/issues/685)を参照。
+適用リスク（risk_level、Low/Medium/High）がhighのPRでは`merge` jobによる自動マージを行わない。この仕様は[bamiyanapp/dev-standards#647](https://github.com/bamiyanapp/dev-standards/issues/647)「Phase 2」Task 3による。対象をHighのみへ縮小した経緯は[#685](https://github.com/bamiyanapp/dev-standards/issues/685)を参照。
 
 <!-- jscpd:ignore-start -->
 <details>
@@ -256,7 +256,7 @@ flowchart TD
 ここまでの仕組みは、いずれもRenovateが更新PRを作成した時点で初めて動作する。Renovateは基本的に直接依存の`package.json`に明記されたバージョン制約のみを更新対象とするため、間接依存（推移的依存）は親パッケージのsemver range内で解決される。親パッケージ自体の更新PRが来ない限り、間接依存側の脆弱性修正・放置はRenovate経由では検知されない。この片側だけのチェック体制を補うため、以下の2つを独立に用意している。
 
 - **`renovate.json`の`lockFileMaintenance`**（issue #1094）: 週次でlockfile全体を再生成するPRを作成する。親パッケージのバージョン範囲内で解決可能な新しいバージョンへ、Renovateが提案を出さなくても定期的に取り込まれるようになる
-- **`reusable-dependency-full-scan.yml`**（issue #1095）: `dependency-risk-summary` job（PRの`package-lock.json`差分に対してのみ動作）とは独立に動作する。呼び出し元リポジトリの`package-lock.json`全体を定期スキャンする。`scripts/dependency-full-scan.js`が全パッケージ（直接・間接問わず）を抽出し、既存の`dependency-vulnerability-info.js`（OSV.dev照会）を再利用して脆弱性を検知する。検知した場合、固定タイトルの単一Issueへ結果を反映する（dependency-deprecation-scan、issue #969と同じ設計。実行毎に新規Issueを積み重ねない）。`reusable-ci.yml`同様のreusable workflowとして提供する。参照側リポジトリ（karuta等）が独自のscheduleトリガー付きworkflowから呼び出す構成とする
+- **`reusable-dependency-full-scan.yml`**（issue #1095）: `dependency-risk-summary` jobはPRに対して動作する。その対象は`package-lock.json`差分のみである。本機能はそれとは独立に動作する。呼び出し元リポジトリの`package-lock.json`全体を定期スキャンする。`scripts/dependency-full-scan.js`が全パッケージ（直接・間接問わず）を抽出する。既存の`dependency-vulnerability-info.js`（OSV.dev照会）を再利用して脆弱性を検知する。検知した場合、固定タイトルの単一Issueへ結果を反映する。これはdependency-deprecation-scan（issue #969）と同じ設計であり、実行毎に新規Issueを積み重ねない。`reusable-ci.yml`同様のreusable workflowとして提供する。参照側リポジトリ（karuta等）が独自のscheduleトリガー付きworkflowから呼び出す構成とする
 
 `lockFileMaintenance`は、あくまで親パッケージのバージョン範囲内で解決可能な更新のみをカバーする。親パッケージ自体が古すぎて、より新しい間接依存を許容しない（range外にある）ケースは`lockFileMaintenance`だけでは検知できない。この残存ギャップを`reusable-dependency-full-scan.yml`が補う。
 
@@ -266,10 +266,10 @@ flowchart TD
 
 dev-standards自体の依存更新を考える。Renovate等によるPRがmainへマージされ、semantic-releaseが新バージョンをリリースする際のRisk判定結果を記録したい。各プロダクトリポジトリ（karuta等）が参照できるよう`docs/generated/dependency-risk-history.json`へ機械可読な形で残す。
 
-- `reusable-cd.yml`の`release` jobへ、dev-standards自身（`github.repository == 'bamiyanapp/dev-standards'`）の場合のみ実行されるステップを追加した
-- このステップは前回リリースタグとの`package-lock.json`差分から、このPR作成時の`dependency-risk-summary` jobと同じ判定材料（update type・install script異常・メンテナ変化・CVE/CVSS/EPSS/KEV）を再計算する
+- `reusable-cd.yml`の`release` jobへステップを追加した。dev-standards自身（`github.repository == 'bamiyanapp/dev-standards'`）の場合のみ実行される
+- このステップは前回リリースタグとの`package-lock.json`差分から判定材料を再計算する。判定材料とはupdate type・install script異常・メンテナ変化・CVE/CVSS/EPSS/KEVである。これらはPR作成時の`dependency-risk-summary` jobと同じ材料である
 - 外部API呼び出し（OSV.dev・CISA KEV・npm registry）を含むため、一時的な障害でリリース自体を失敗させないようこのステップ全体を`continue-on-error`にする
-- 計算結果は`scripts/append-dependency-risk-history.js`が`docs/generated/dependency-risk-history.json`へ追記し、リリースコミットへ含める
+- 計算結果は`scripts/append-dependency-risk-history.js`が`docs/generated/dependency-risk-history.json`へ追記する。この追記はリリースコミットへ含める
 - このスクリプトはsemantic-releaseの`changelogPrepareCmd`から`${nextRelease.version}`付きで呼ばれる
 - このスクリプトはどのような内部エラーが起きても必ず正常終了する。`changelogPrepareCmd`の失敗は`@semantic-release/git`によるコミット自体を止めてしまうため、安全側に倒す
 - ファイルの形式: `{ version, date, riskLevel, riskReasons, staleRiskLevel, staleRiskReasons }`の配列。同一`version`への再追記は上書きする（リトライ時の重複防止）

@@ -22,7 +22,8 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   - 既存の実ファイル・ディレクトリ（シンボリックリンクではないもの）がリンク先に存在する場合は、誤って上書きしないよう検知のみ行い変更しない。
   - `.claude/settings.json` はプロジェクト固有の許可ルールを追加できない。そのようなルールは参照側リポジトリの `.claude/settings.local.json` に記載する。これはClaude Codeが `settings.json` と合わせてマージする、プロジェクト固有の追加設定ファイルである。
   - `.gitignore` はGitHub側の制約によりシンボリックリンクにできない。symlink化した `.gitignore`/`.gitattributes` はsubmodule経由の攻撃に使われた前例があり、pushしようとすると `gitignoreSymlink` 警告が出る。このため `bootstrap.js` は実体ファイルとしてコピーする。
-    - 本リポジトリ側の `.gitignore` は**管理区間**（`# --- dev-standards managed: start ---` 〜 `# --- dev-standards managed: end ---` のマーカーで囲まれた区間）を持つ。`--check`/コピー元との一致判定はこの区間内のみが対象（issue #138）。マーカーが無い場合はファイル全体の完全一致が要求される従来の挙動にフォールバックする
+    - 本リポジトリ側の `.gitignore` は**管理区間**を持つ。管理区間とは`# --- dev-standards managed: start ---` 〜 `# --- dev-standards managed: end ---` のマーカーで囲まれた区間を指す。`--check`/コピー元との一致判定はこの区間内のみが対象（issue #138）。
+    - マーカーが無い場合はファイル全体の完全一致が要求される従来の挙動にフォールバックする
     - 区間外（前後）にはプロジェクト固有のignoreエントリを自由に追記できる。乖離検知の対象外のため、ルート直下の `.gitignore` に直接追記してよい
     - 管理区間内の差分（本リポジトリ側の`.gitignore`更新への追従）は、`bootstrap.js`（`--check` 無し）を再実行すると区間外の追記を保持したまま自動的に再同期される
   - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある。例えば `shared/pwa/` 配下のPWAキャッシュ更新パターンである（詳細は [`service-worker-update-pattern.md`](service-worker-update-pattern.md) 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述する。すると`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
@@ -57,9 +58,9 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `e2e_coverage_threshold` | `frontend-e2e-test`のE2EテストJSカバレッジ閾値（%） | `0` |
 | `e2e_coverage_metrics` | `e2e_coverage_threshold`のゲート判定対象指標（カンマ区切り、例: `"statements,functions,lines"`） | `""`（lines/statements/functions/branchesの全4種） |
 
-- いずれも**開発共通標準の目標値は80%以上**。新規導入時は実測値が無いため0から開始してよいが、その値のまま据え置かずテストケースを追加して段階的に80%へ近づける（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)参照）
-- `coverage_threshold`: 0以下（既定）の場合、`vitest run --coverage`に`--coverage.reporter=json-summary`を追加して`coverage/coverage-summary.json`を生成する。ただし`.github/actions/check-coverage-threshold`による閾値判定・Job Summaryへの表示ステップ自体はスキップする。0より大きい値を指定するとこのステップが実行される。`packages`のmatrix構成では各要素の`coverage_threshold`で上書きできる
-- `e2e_coverage_threshold`: `coverage_threshold`と同じ`check-coverage-threshold`複合アクションを使う。対象はPlaywright（monocart-reporter）が出力するE2E実行時のカバレッジで、`coverage_threshold`（ユニットテストカバレッジ）とは独立している（[bamiyanapp/karuta#576](https://github.com/bamiyanapp/karuta/issues/576)、[bamiyanapp/dev-standards#422](https://github.com/bamiyanapp/dev-standards/issues/422)）
+- いずれも**開発共通標準の目標値は80%以上**。新規導入時は実測値が無いため0から開始してよい。ただし、その値のまま据え置かずテストケースを追加して段階的に80%へ近づける（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)参照）
+- `coverage_threshold`: 0以下（既定）の場合、`vitest run --coverage`に`--coverage.reporter=json-summary`を追加する。これにより`coverage/coverage-summary.json`を生成する。ただし`.github/actions/check-coverage-threshold`による閾値判定・Job Summaryへの表示ステップ自体はスキップする。0より大きい値を指定するとこのステップが実行される。`packages`のmatrix構成では各要素の`coverage_threshold`で上書きできる
+- `e2e_coverage_threshold`: `coverage_threshold`と同じ`check-coverage-threshold`複合アクションを使う。対象はPlaywright（monocart-reporter）が出力するE2E実行時のカバレッジである。これは`coverage_threshold`（ユニットテストカバレッジ）とは独立している（[bamiyanapp/karuta#576](https://github.com/bamiyanapp/karuta/issues/576)、[bamiyanapp/dev-standards#422](https://github.com/bamiyanapp/dev-standards/issues/422)）
 
 ### 自動マージ
 
@@ -83,13 +84,13 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `workflow_duplication_threshold` | workflow重複率のしきい値（%） | `0` |
 | `enable_architecture_check` | `dependency-cruiser`によるアーキテクチャ違反検知（`architecture-check` job） | `false` |
 
-- `enable_duplication_check`: SonarCloud相当の静的解析をCIネイティブなツールで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。ESLintの`complexity`ルール・`eslint-plugin-sonarjs`はこのワークフローでは扱わず、参照側リポジトリのESLint設定へ直接追加する（推奨ルールセットは[`code-quality-conventions.md`](code-quality-conventions.md)参照）。`submodules: true`でcheckoutするため、参照側リポジトリのproduct codeが`shared/`と重複（symlink化し忘れ）していないかも検知できる（[bamiyanapp/dev-standards#621](https://github.com/bamiyanapp/dev-standards/issues/621)）。`sync-manifest.json`等に列挙済みのsymlink/copyの組は自動生成される除外リストにより誤検知しない
+- `enable_duplication_check`: SonarCloud相当の静的解析をCIネイティブなツールで代替する取り組みの一部（[bamiyanapp/karuta#806](https://github.com/bamiyanapp/karuta/issues/806)）。ESLintの`complexity`ルール・`eslint-plugin-sonarjs`はこのワークフローでは扱わない。参照側リポジトリのESLint設定へ直接追加する（推奨ルールセットは[`code-quality-conventions.md`](code-quality-conventions.md)参照）。`submodules: true`でcheckoutする。そのため、参照側リポジトリのproduct codeが`shared/`と重複（symlink化し忘れ）していないかも検知できる（[bamiyanapp/dev-standards#621](https://github.com/bamiyanapp/dev-standards/issues/621)）。`sync-manifest.json`等に列挙済みのsymlink/copyの組は、自動生成される除外リストにより誤検知しない
 - `duplication_threshold`: 0以下（既定）の場合`jscpd`にゲート判定（`--threshold`）を渡さずJob Summaryへのレポート表示のみ行う。対象はリポジトリ全体のプロダクトコード（テストファイル・`e2e`ディレクトリ配下を除く）。**開発共通標準の目標値は5%以下**（[bamiyanapp/dev-standards#416](https://github.com/bamiyanapp/dev-standards/issues/416)）
-- `enable_doc_duplication_check`: `duplication-check`（コード向け）とは別ジョブで、CLAUDE.md・`SKILL.md`間の丸ごとコピペ重複（drift事故の原因）を検知する（[bamiyanapp/dev-standards#586](https://github.com/bamiyanapp/dev-standards/issues/586)）
-- `doc_duplication_threshold`: ドキュメント内の埋め込みコードサンプルも`jscpd`の自動判定により別フォーマットとして計上されうるため、意図的に複数の完全なコード例を並べているドキュメントがある場合はその分を許容できる値にすること
+- `enable_doc_duplication_check`: `duplication-check`（コード向け）とは別ジョブである。CLAUDE.md・`SKILL.md`間の丸ごとコピペ重複（drift事故の原因）を検知する（[bamiyanapp/dev-standards#586](https://github.com/bamiyanapp/dev-standards/issues/586)）
+- `doc_duplication_threshold`: ドキュメント内の埋め込みコードサンプルも`jscpd`の自動判定により別フォーマットとして計上されうる。そのため、意図的に複数の完全なコード例を並べているドキュメントがある場合は、その分を許容できる値にすること
 - `doc_duplication_paths`: `text_lint_paths`等と異なりglobパターンではなく`jscpd`へそのまま位置引数として渡す。カンマまたは改行区切りで複数指定できる（例: `"docs\nREADME.md\nCLAUDE.md\n.claude/skills"`）
-- `enable_workflow_duplication_check`: 参照側リポジトリ独自のworkflowが、後からdev-standards側でreusable workflow・composite actionへ一般化されることがある。追従されず同じロジックが両方に残ったまま放置される事故を検知する（[bamiyanapp/dev-standards#874](https://github.com/bamiyanapp/dev-standards/issues/874)、実例: [bamiyanapp/karuta#1548](https://github.com/bamiyanapp/karuta/issues/1548)）。`duplication-check`（JS/TS専用）ではYAMLを対象外にしているため拾えない。`reusable-ci.yml`・`reusable-cd.yml`・`reusable-codeql.yml`自身は比較対象から除く（内部job間の構造的な類似による自己重複がノイズになるだけのため）
-- `enable_architecture_check`: 循環依存と、npm workspacesモノレポでの`frontend_dir`/`backend_dir`間の越境importを検知する（[bamiyanapp/dev-standards#523](https://github.com/bamiyanapp/dev-standards/issues/523)）。共有ルール（`dependency-cruiser.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのジョブの有効化のみでよい（詳細は[`code-quality-conventions.md`](code-quality-conventions.md)参照）
+- `enable_workflow_duplication_check`: 参照側リポジトリ独自のworkflowは、後から一般化されることがある。具体的には、dev-standards側のreusable workflow・composite actionへ一般化される。その際に追従されず、同じロジックが両方に残ったまま放置される事故を検知する（[bamiyanapp/dev-standards#874](https://github.com/bamiyanapp/dev-standards/issues/874)、実例: [bamiyanapp/karuta#1548](https://github.com/bamiyanapp/karuta/issues/1548)）。`duplication-check`（JS/TS専用）ではYAMLを対象外にしているため拾えない。`reusable-ci.yml`・`reusable-cd.yml`・`reusable-codeql.yml`自身は比較対象から除く（内部job間の構造的な類似による自己重複がノイズになるだけのため）
+- `enable_architecture_check`: 検知対象は循環依存である。加えて、npm workspacesモノレポでの`frontend_dir`/`backend_dir`間の越境importも検知する（[bamiyanapp/dev-standards#523](https://github.com/bamiyanapp/dev-standards/issues/523)）。共有ルール（`dependency-cruiser.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのジョブの有効化のみでよい（詳細は[`code-quality-conventions.md`](code-quality-conventions.md)参照）
 
 ### ドキュメント品質
 
@@ -103,10 +104,10 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `dead_link_check_paths` | 検証対象Markdownのglobパターン | `""` |
 | `enable_secret_scan` | PR差分に誤ってコミットされた認証情報を検知する（`secret-scan` job） | `false` |
 
-- `enable_mermaid_render`: GitHubのPR差分ビュー・API経由でのファイル取得等、mermaidがネイティブレンダリングされない場面向け（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`を一度だけ手動で埋め込んでおく。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）
-- `enable_text_lint`: ESLint・stylelintがコード向け、CodeQLがセキュリティ向けの静的解析であるのに対し、こちらはMarkdownドキュメントの文章品質（文体の不統一・表記ゆれ等）を検知する（[bamiyanapp/dev-standards#436](https://github.com/bamiyanapp/dev-standards/issues/436)）。共有設定（`textlint.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのjobの有効化と`text_lint_paths`の指定のみでよい
-- `enable_dead_link_check`: ドキュメントのリファクタリング・ファイル移動・リネームでリンク切れが発生しても、`text-lint`・`doc-duplication-check`では検知できないため別ジョブとして提供する（[bamiyanapp/dev-standards#603](https://github.com/bamiyanapp/dev-standards/issues/603)）。外部URL（`http`/`https`）は一時的な障害でCIが不安定になることを避けるため検証対象から除外し、相対パスのリンクのみを検証する
-- `enable_secret_scan`: CodeQL（SAST）はコードの脆弱性パターンを検知するものであり、誤ってコミットされた具体的な秘密情報（APIキー・トークン等）の検出とは別物のため、別ジョブとして提供する（[bamiyanapp/dev-standards#892](https://github.com/bamiyanapp/dev-standards/issues/892)）。`gitleaks/gitleaks-action`を使い、PRのbase_branchとの差分のみを対象にスキャンする。誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`を置いてallowlistを設定する
+- `enable_mermaid_render`: 対象はGitHubのPR差分ビュー・API経由でのファイル取得等である。これらの場面ではmermaidがネイティブレンダリングされない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に画像リンクを一度だけ手動で埋め込んでおく。画像リンクの形式は`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`である。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）
+- `enable_text_lint`: ESLint・stylelintはコード向け、CodeQLはセキュリティ向けの静的解析である。これに対し、こちらはMarkdownドキュメントの文章品質（文体の不統一・表記ゆれ等）を検知する（[bamiyanapp/dev-standards#436](https://github.com/bamiyanapp/dev-standards/issues/436)）。共有設定（`textlint.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのjobの有効化と`text_lint_paths`の指定のみでよい
+- `enable_dead_link_check`: ドキュメントのリファクタリング・ファイル移動・リネームでリンク切れが発生することがある。この種のリンク切れは`text-lint`・`doc-duplication-check`では検知できないため、別ジョブとして提供する（[bamiyanapp/dev-standards#603](https://github.com/bamiyanapp/dev-standards/issues/603)）。外部URL（`http`/`https`）は一時的な障害でCIが不安定になることを避けるため検証対象から除外し、相対パスのリンクのみを検証する
+- `enable_secret_scan`: CodeQL（SAST）はコードの脆弱性パターンを検知するものである。これは誤ってコミットされた具体的な秘密情報（APIキー・トークン等）の検出とは別物のため、別ジョブとして提供する（[bamiyanapp/dev-standards#892](https://github.com/bamiyanapp/dev-standards/issues/892)）。`gitleaks/gitleaks-action`を使い、PRのbase_branchとの差分のみを対象にスキャンする。誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`を置いてallowlistを設定する
 
 ### CI実行回数削減
 
@@ -115,8 +116,14 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
 | `skip_verification_on_push` | `true`かつ`push`イベントの場合、主要な検証系jobをスキップする | `false` |
 | `enable_path_filtering` | `frontend_dir`/`backend_dir`配下の変更有無に応じて該当jobを選択的にスキップする | `false` |
 
-- `skip_verification_on_push`: 対象は`frontend-test`・`backend-test`・`package-test`・`standards-check`・`duplication-check`の5 jobである。加えて`doc-duplication-check`・`architecture-check`・`text-lint`・`dead-link-check`も対象（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)）。PRが`base_branch`と同期済みでなければマージ不可（up-to-date required）＋Squash merge運用（マージ後のmainのツリーがPR headと完全に一致する）を前提にした最適化である。`pull_request`イベントで既に検証済みの内容を`push`側で再検証しない仕組みのため、この前提が成り立たない運用では有効化しないこと。`frontend-e2e-test`・`render-mermaid-diagrams`は`push`イベントでのみ発生する副作用（`latest/`ベースラインの公開）を担う。そのためスキップ対象に含めない
-- `enable_path_filtering`: 対象は`frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`・`architecture-check`（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)）。ルート直下の`package.json`・`package-lock.json`・`.github/workflows/**`の変更は共通変更とみなしいずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）は対象外（常に全ジョブを実行する）。`standards-check`・`text-lint`・`doc-duplication-check`はいずれもリポジトリ全体のチェックのため対象外（常に実行する）。変更検出自体が失敗した場合は安全側に倒し全ジョブを実行する
+- `skip_verification_on_push`: 対象のjobは次の2グループ（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)）。
+  - `frontend-test`・`backend-test`・`package-test`・`standards-check`・`duplication-check`
+  - `doc-duplication-check`・`architecture-check`・`text-lint`・`dead-link-check`
+  - 前提の1つは、PRが`base_branch`と同期済みでなければマージ不可（up-to-date required）であることである。もう1つの前提は、Squash merge運用（マージ後のmainのツリーがPR headと完全に一致する）である。これら2つを前提にした最適化である。`pull_request`イベントで既に検証済みの内容を`push`側で再検証しない仕組みのため、この前提が成り立たない運用では有効化しないこと。
+  - `frontend-e2e-test`・`render-mermaid-diagrams`は`push`イベントでのみ発生する副作用（`latest/`ベースラインの公開）を担う。そのためスキップ対象に含めない
+- `enable_path_filtering`: 対象は次のjobである（[bamiyanapp/dev-standards#187](https://github.com/bamiyanapp/dev-standards/issues/187)）。
+  - `frontend-test`・`backend-test`・`frontend-e2e-test`・`duplication-check`・`architecture-check`
+  - ルート直下の`package.json`・`package-lock.json`・`.github/workflows/**`の変更は共通変更とみなす。いずれの判定でも「変更あり」を返す。`packages`入力使用時（package-testモード）は対象外（常に全ジョブを実行する）。`standards-check`・`text-lint`・`doc-duplication-check`はいずれもリポジトリ全体のチェックのため対象外（常に実行する）。変更検出自体が失敗した場合は安全側に倒し全ジョブを実行する
 
 ### 依存更新Risk判定
 
@@ -191,7 +198,7 @@ jobs:
 
 ## `reusable-rollback-to-stable.yml`
 
-ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）を`value`（既定`"true"`）へ設定する。`value: "false"`を指定すれば、通常運用（`canary_weight`による分散ルーティング）への復帰にも使える（karuta#1662）。呼び出し元は「ロールバック用」「復帰用」の2つの`workflow_dispatch`として、それぞれ固定の`value`を指定する別々のworkflowを用意するとよい（誤って逆の値を指定する事故を避けるため）。
+ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）を`value`（既定`"true"`）へ設定する。`value: "false"`を指定すれば、通常運用（`canary_weight`による分散ルーティング）への復帰にも使える（karuta#1662）。呼び出し元は「ロールバック用」「復帰用」の2つの`workflow_dispatch`を用意するとよい。それぞれ固定の`value`を指定する別々のworkflowにする（誤って逆の値を指定する事故を避けるため）。
 
 ```yaml
 on:
@@ -214,7 +221,7 @@ jobs:
 
 ### `.github/actions/check-rollback-staleness`（戻し忘れの検知）
 
-kill switch（`force_stable`相当のKVSフラグ）をtrueに設定したまま長時間放置される事故（karuta#1663）を防ぐための複合アクション。KVS自体には設定時刻が無いため、「trueを設定するworkflow」「falseへ戻すworkflow」それぞれの直近の成功実行履歴（GitHub Actions run history）を比較し、trueの実行の方が新しければ放置中と判定する（dev-standards#950）。kill switch自体は管理者が対処するまで持続させる設計のため、本アクションは検知のみを行い、自動でfalseへ戻す操作は行わない。1日1回のスケジュール実行（canary運用状態のドキュメント生成等）に組み込み、`stale`が`true`の場合はJob Summary・ドキュメントへ警告を表示する運用を想定する。
+kill switch（`force_stable`相当のKVSフラグ）をtrueに設定したまま長時間放置される事故（karuta#1663）を防ぐための複合アクション。KVS自体には設定時刻が無い。そのため、「trueを設定するworkflow」「falseへ戻すworkflow」それぞれの直近の成功実行履歴（GitHub Actions run history）を比較する。trueの実行の方が新しければ放置中と判定する（dev-standards#950）。kill switch自体は管理者が対処するまで持続させる設計のため、本アクションは検知のみを行い、自動でfalseへ戻す操作は行わない。1日1回のスケジュール実行（canary運用状態のドキュメント生成等）に組み込み、`stale`が`true`の場合はJob Summary・ドキュメントへ警告を表示する運用を想定する。
 
 ```yaml
 - name: Check rollback staleness
@@ -236,7 +243,7 @@ falseへ戻す操作（通常運用への復帰）は本ワークフローの対
 
 ## `reusable-promote-canary.yml`
 
-ブルーグリーン（stable/canary）デプロイパターンで、canaryデプロイから一定の猶予期間が経過し、管理者ロールバック（`force_stable`）が行われていなければcanaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。定期実行（`schedule`トリガー）を想定する。
+ブルーグリーン（stable/canary）デプロイパターンで、canaryデプロイから一定の猶予期間が経過した場合の処理を行う。管理者ロールバック（`force_stable`）が行われていなければ、canaryの内容をstableへ自動的に昇格し、canaryスタックを削除する。定期実行（`schedule`トリガー）を想定する。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|
@@ -256,13 +263,13 @@ falseへ戻す操作（通常運用への復帰）は本ワークフローの対
 
 stableが緊急手動デプロイ等でcanaryより新しい場合、昇格を安全側にスキップしJob Summaryへ警告を出す（karuta issue #1411）。カナリア直列化（同時1件制限）を使わない場合は`backend_deploy_command_canary`を省略すればキュー処理自体が無効化される。
 
-stableがcanaryより新しいと判定した場合（上記）、キュー待ちの有無に関わらずcanaryを強制的に最新化する（karuta issue #1448、[bamiyanapp/dev-standards#878](https://github.com/bamiyanapp/dev-standards/issues/878)）。これにより、緊急デプロイ後にcanaryが古い内容のまま詰まり続ける状態を自動的に解消する。
+stableがcanaryより新しいと判定した場合（上記）、キュー待ちの有無に関わらずcanaryを強制的に最新化する。これはkaruta issue #1448、[bamiyanapp/dev-standards#878](https://github.com/bamiyanapp/dev-standards/issues/878)で対応した動作である。これにより、緊急デプロイ後にcanaryが古い内容のまま詰まり続ける状態を自動的に解消する。
 
-`canary_exists_kvs_key`を指定した場合、昇格・canaryスタック削除後はこのキーをfalseへ、キュー待ち更新をcanaryへ反映した後はtrueへ更新する。`/canary/`への明示アクセス時、CloudFront Functions側でcanaryスタックが存在しない状態への誤ルーティングを避けstableへフォールバックさせる用途を想定する（karuta issue #1489）。
+`canary_exists_kvs_key`を指定した場合、昇格・canaryスタック削除後はこのキーをfalseへ更新する。キュー待ち更新をcanaryへ反映した後はtrueへ更新する。`/canary/`への明示アクセス時、CloudFront Functions側でcanaryスタックが存在しない状態への誤ルーティングを避けたい場合に使う。stableへフォールバックさせる用途を想定する（karuta issue #1489）。
 
 ## `reusable-dependency-deprecation-scan.yml`
 
-更新PRの有無に関わらず、現時点でロックされている依存パッケージ全体を対象に、npm registryの`deprecated`フラグを定期スキャンする（issue #969）。`dependency-risk-summary` job（`reusable-ci.yml`）のdeprecated検知は更新PR起点のため、後継バージョンが存在しないまま非推奨化されたパッケージ（Renovateが更新PRを作らないケース）を検知できない限界を補う。定期実行（`schedule`トリガー）を想定する。
+更新PRの有無に関わらず、現時点でロックされている依存パッケージ全体を対象とする。npm registryの`deprecated`フラグを定期スキャンする（issue #969）。`dependency-risk-summary` job（`reusable-ci.yml`）のdeprecated検知は更新PR起点である。そのため、後継バージョンが存在しないまま非推奨化されたパッケージ（Renovateが更新PRを作らないケース）を検知できない限界がある。本ワークフローはこの限界を補う。定期実行（`schedule`トリガー）を想定する。
 
 | 入力 | 説明 | デフォルト |
 |---|---|---|
@@ -275,7 +282,7 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 ## `.github/actions/github-pages-migration-page`（複合action）
 
-ブルーグリーン（stable/canary）デプロイパターンで旧URL（GitHub Pages等）から新URLへ移行する際の、ビルドレスのkill switchページ（`index.html` + Service Worker）を生成する。既存のPWA用Service Workerがページをprecache済みでも、生成したkill switch用SWへの差し替えでキャッシュを確実に破棄し新URLへ誘導する。
+ブルーグリーン（stable/canary）デプロイパターンで旧URL（GitHub Pages等）から新URLへ移行する際に使う。ビルドレスのkill switchページ（`index.html` + Service Worker）を生成する。既存のPWA用Service Workerがページをprecache済みの場合も考える。その場合も、生成したkill switch用SWへの差し替えでキャッシュを確実に破棄し新URLへ誘導する。
 
 ```yaml
 - name: Generate migration page
@@ -301,7 +308,7 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 ## `.github/actions/commit-via-pr`（複合action）
 
-作業ツリー上の変更を、可能なら対象ブランチへ直接pushし、Rulesets等で拒否された場合は「新ブランチへpush→PR作成→API経由でsquash merge」へ自動フォールバックしてコミットする（issue #830）。`reusable-ci.yml`の`render-mermaid-diagrams`ジョブ（自動生成ファイルのコミット）で使用している。ジョブ実行中に他のPRが対象ブランチへマージされていてもコンフリクトしたまま放置されないよう、ブランチを切る前に最新の対象ブランチへ`git rebase -X ours`する処理を内蔵している。
+作業ツリー上の変更は、可能なら対象ブランチへ直接pushしてコミットする。Rulesets等で拒否された場合は「新ブランチへpush→PR作成→API経由でsquash merge」へ自動フォールバックする（issue #830）。`reusable-ci.yml`の`render-mermaid-diagrams`ジョブ（自動生成ファイルのコミット）で使用している。ジョブ実行中に他のPRが対象ブランチへマージされていてもコンフリクトしたまま放置されないよう、ブランチを切る前に最新の対象ブランチへ`git rebase -X ours`する処理を内蔵している。
 
 ```yaml
 - name: Commit generated files via commit-via-pr
@@ -324,4 +331,4 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 | `push-token` | 直接pushに使うトークン。未指定の場合は直接pushを試みず常にPRフォールバックを使う | `""` |
 | `github-token` | PR作成・squash merge・ブランチ削除に使うトークン | （必須） |
 
-対象ブランチへのpushで後続workflowをトリガーする必要がある場合、`push-token`には`secrets.GITHUB_TOKEN`ではなく`secrets.BOT_TOKEN`等を渡す（`GITHUB_TOKEN`によるpushは新たなworkflow実行を作らないため）。
+対象ブランチへのpushで後続workflowをトリガーする必要がある場合、`push-token`には`secrets.GITHUB_TOKEN`ではなく`secrets.BOT_TOKEN`等を渡すこと。`GITHUB_TOKEN`によるpushは新たなworkflow実行を作らないためである。
