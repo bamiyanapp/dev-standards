@@ -1,3 +1,10 @@
+## [2.105.9](https://github.com/bamiyanapp/dev-standards/compare/v2.105.8...v2.105.9) (2026-10-22)
+
+
+### Bug Fixes
+
+* **workflows:** 依存フル脆弱性スキャンの検知結果をJob Summary・標準出力にも詳細表示する ([#1150](https://github.com/bamiyanapp/dev-standards/issues/1150)) ([5a71dda](https://github.com/bamiyanapp/dev-standards/commit/5a71dda70a0c16922c924bfd794b2d673f6db670)), closes [#1149](https://github.com/bamiyanapp/dev-standards/issues/1149)
+
 ## [2.105.8](https://github.com/bamiyanapp/dev-standards/compare/v2.105.7...v2.105.8) (2026-10-22)
 
 
