@@ -1,7 +1,6 @@
 "use strict";
 
 const fs = require("node:fs");
-const path = require("node:path");
 const { summarizeCiResults, analyzeCiFailures, readCiResultsFromEnv } = require("./dependency-risk-ci-results.js");
 const { buildSecurityRows } = require("./dependency-risk-security-summary.js");
 
@@ -20,23 +19,6 @@ const { buildSecurityRows } = require("./dependency-risk-security-summary.js");
 // 「危険な更新を誤って通す」方向のリスクは既存のCI gate自体の信頼性に依存する
 // （Risk Engineが新たにそのリスクを増やすことはない）
 
-const DIRECT_DEPENDENCY_THRESHOLD_DEFAULT = 2;
-
-// issue #649（OSS依存更新の自動安全判定基盤 Phase 4）8-6 policy-as-code化。
-// scripts/risk-policy.jsonが存在する場合、その値をclassifyRisk()呼び出し側
-// （main()）のデフォルト値として使う。これにより閾値のチューニングに
-// コード変更・レビューを必要としない（ファイルが無い・壊れている場合は
-// 既存のDIRECT_DEPENDENCY_THRESHOLD_DEFAULTへ安全側にフォールバックする）
-function loadRiskPolicy() {
-  try {
-    const policyPath = path.join(__dirname, "risk-policy.json");
-    const policy = JSON.parse(fs.readFileSync(policyPath, "utf-8"));
-    return { directDependencyThreshold: policy.directDependencyThreshold ?? DIRECT_DEPENDENCY_THRESHOLD_DEFAULT };
-  } catch {
-    return { directDependencyThreshold: DIRECT_DEPENDENCY_THRESHOLD_DEFAULT };
-  }
-}
-
 function escalate(current, next) {
   const order = { low: 0, medium: 1, high: 2 };
   return order[next] > order[current] ? next : current;
@@ -50,8 +32,6 @@ function escalate(current, next) {
 //     無いことを意味しない「不明」であり、安全側に倒してMedium以上へ格上げする）
 //   ciSummary: summarizeCiResults()の出力
 //   fanOutCount: consumer-repositories.jsの出力（dev-standards自体の更新でない場合はnull）
-//   directDependencyThreshold: 直接依存の更新件数がこの値以上の場合、変更の複雑さを理由に
-//     Medium以上へ格上げする（#645「2. Risk判定」のMedium Risk条件「依存変更が複数」に対応）
 function classifyRisk({
   updateSummary,
   vulnerabilityInfo = [],
@@ -59,7 +39,6 @@ function classifyRisk({
   securityDataAvailable,
   ciSummary,
   fanOutCount = null,
-  directDependencyThreshold = DIRECT_DEPENDENCY_THRESHOLD_DEFAULT,
   installScriptAnomalies = [],
   maintainerAnomalies = [],
   blastRadiusImpact = false,
@@ -118,10 +97,6 @@ function classifyRisk({
   if (ciFailures.hasExplainedFailure && !ciFailures.hasUnexplainedFailure) {
     level = escalate(level, "medium");
     reasons.push("既知flakyパターンに該当する失敗があります（再実行での解消を確認してください）");
-  }
-  if (updateSummary.direct >= directDependencyThreshold) {
-    level = escalate(level, "medium");
-    reasons.push(`直接依存の更新が${updateSummary.direct}件あり、影響範囲の特定が難しい可能性があります`);
   }
 
   // issue #700のvulnerabilityOnlyHigh判定用に、ブラスト半径エスカレーション直前の
@@ -206,7 +181,6 @@ function main() {
   const securityDataAvailable = vulnerabilityInfo != null && exploitInfo != null;
   const fanOutCount = fanOutCountArg ? Number(fanOutCountArg) : null;
   const ciSummary = summarizeCiResults(readCiResultsFromEnv());
-  const policy = loadRiskPolicy();
   const blastRadiusInfo = readJsonFileIfExists(blastRadiusInfoPath);
 
   const result = classifyRisk({
@@ -220,7 +194,6 @@ function main() {
     installScriptAnomalies: readJsonFileIfExists(installScriptAnomaliesPath) ?? [],
     maintainerAnomalies: readJsonFileIfExists(maintainerAnomaliesPath) ?? [],
     deprecationInfo: readJsonFileIfExists(deprecationInfoPath) ?? [],
-    directDependencyThreshold: policy.directDependencyThreshold,
   });
 
   console.log(JSON.stringify(result, null, 2));
@@ -237,6 +210,5 @@ if (require.main === module) {
 
 module.exports = {
   classifyRisk,
-  loadRiskPolicy,
   escalate,
 };

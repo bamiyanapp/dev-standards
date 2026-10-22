@@ -6,7 +6,7 @@ const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { classifyRisk, loadRiskPolicy } = require("./dependency-risk-classifier.js");
+const { classifyRisk } = require("./dependency-risk-classifier.js");
 const { summarizeCiResults } = require("./dependency-risk-ci-results.js");
 
 const PASSING_CI = summarizeCiResults({
@@ -29,10 +29,6 @@ function baseInput(overrides = {}) {
     ...overrides,
   };
 }
-
-test("loadRiskPolicy: scripts/risk-policy.jsonからdirectDependencyThresholdを読み取る（回帰確認）", () => {
-  assert.deepEqual(loadRiskPolicy(), { directDependencyThreshold: 2 });
-});
 
 test("classifyRisk: patch/minor・脆弱性なし・CI全PASS・ファンアウトなしはlow", () => {
   const result = classifyRisk(baseInput());
@@ -149,11 +145,11 @@ test("classifyRisk: ファンアウトが0件（対象外）はmediumへ格上�
   assert.equal(result.level, "low");
 });
 
-test("classifyRisk: 直接依存の更新が閾値以上ならmedium", () => {
+test("classifyRisk: 直接依存の更新件数が多くても、他に問題が無ければlow（issue #1159）", () => {
   const result = classifyRisk(
     baseInput({ updateSummary: { total: 3, direct: 3, transitive: 0, byUpdateType: { major: 0, minor: 3, patch: 0, other: 0 } } }),
   );
-  assert.equal(result.level, "medium");
+  assert.equal(result.level, "low");
 });
 
 test("classifyRisk: highとmedium両方の条件がある場合はhighが優先される", () => {
