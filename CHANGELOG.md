@@ -1,3 +1,10 @@
+## [2.105.11](https://github.com/bamiyanapp/dev-standards/compare/v2.105.10...v2.105.11) (2026-10-22)
+
+
+### Bug Fixes
+
+* **scripts:** 放置検知・Scorecard確認をdevDependency専用パッケージ対象外にする ([#1157](https://github.com/bamiyanapp/dev-standards/issues/1157)) ([eeecde8](https://github.com/bamiyanapp/dev-standards/commit/eeecde87ff872b1a6269522aea320f0d45f2009c)), closes [#1156](https://github.com/bamiyanapp/dev-standards/issues/1156)
+
 ## [2.105.10](https://github.com/bamiyanapp/dev-standards/compare/v2.105.9...v2.105.10) (2026-10-22)
 
 
