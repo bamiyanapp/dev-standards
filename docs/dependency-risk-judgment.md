@@ -155,7 +155,11 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 
 放置検知・Scorecard確認は、閾値に該当した場合のみ`classifyStaleRisk()`の`reasons`（維持リスクの理由欄）に出力される。該当が無い場合は何も表示されず、実際の依存更新PRでこれらのチェックが動作したかどうかが、コメントを見ても分からない。
 
-このため、`dependency-staleness-info.js`・`dependency-scorecard-info.js`は、閾値に該当したパッケージのみでなく全パッケージを対象にする。チェック対象になった全パッケージの実測値（`ageDays`・`score`）と判定結果（`flagged`）を返す。`dependency-stale-risk-classifier.js`は`flagged`なエントリのみを維持リスク昇格の根拠にする。一方、`dependency-maintenance-summary.js`は全件を扱う。全件を「### メンテナンス状態（放置検知・Scorecard確認）」セクションとしてRisk Summaryコメントへ常に追記する（Security・SBOMセクションと同じ設計）。
+このため、`dependency-staleness-info.js`・`dependency-scorecard-info.js`は、閾値に該当したパッケージのみでなく全パッケージを対象にする。チェック対象になった全パッケージの実測値（`ageDays`・`score`）と判定結果（`flagged`）を返す。`dependency-stale-risk-classifier.js`は`flagged`なエントリのみを維持リスク昇格の根拠にする。
+
+一方、`dependency-maintenance-summary.js`は全件をそのまま列挙しない（issue #1152）。これはRisk Summaryコメントへ「### メンテナンス状態（放置検知・Scorecard確認）」セクションを追記する関数である。対象パッケージ数が多い依存更新PR（実例: karuta#1860、273件）では、ほぼ全件が「問題なし」のまま延々と表示されてしまう。この結果、本来注目すべき該当行が埋もれる問題があった。
+
+このため`flagged: true`の該当行が1件も無い場合は、「N件を確認し、該当はありませんでした」という件数のみの要約1行に留める。該当がある場合は、該当行のみを問題が大きい順（放置検知は経過日数の降順、Scorecardはスコアの昇順）で列挙する。チェックが実際に動いたことを示す（issue #1086の目的）という点は、件数のみの要約でも引き続き満たされる。
 
 ## 適用リスク
 
