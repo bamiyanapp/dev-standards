@@ -1,0 +1,189 @@
+name: Reusable Runtime Version Scan
+
+# karuta#1880のフォローアップ。CVE-2026-111497（Node.js組み込みBrotliデコーダの
+# 範囲外書き込み）の調査で、AWS Lambda等のマネージドランタイムが実際にどの
+# Node.jsパッチバージョンで稼働しているかを確認する手段が参照側リポジトリに
+# 無いことが分かった。既存のdependency-risk-summary・dependency-full-scanは
+# いずれもnpmパッケージ（package-lock.json）専用で、Node.js本体・AWS管理の
+# ランタイム自体はスコープ外である。
+#
+# 本ワークフローは、呼び出し元が指定するエンドポイント群（稼働中プロセスの
+# process.versionを`{ "nodeVersion": "v22.23.4" }`形式で返すエンドポイント。
+# karutaのbackend/handler.js `/get-version`が実例）へ問い合わせ、Node.js公式の
+# リリース一覧（nodejs.org/dist/index.json）における同一メジャー系列の最新
+# バージョンと比較する。既知の限界（「最新パッチより古い」ことは脆弱性の存在を
+# 確実には意味しない）はscripts/runtime-version-scan.jsのコメントを参照。
+#
+# dependency-full-scan.yml・dependency-deprecation-scan.ymlと同じ設計
+# （検知結果を固定issueへ反映、修正PRの自動作成は対象外）に揃える。
+
+on:
+  workflow_call:
+    inputs:
+      endpoints:
+        description: >-
+          スキャン対象のエンドポイント一覧（JSON配列文字列）。
+          例: '[{"name":"canary","url":"https://.../get-version"},{"name":"stable","url":"https://.../get-version"}]'
+        type: string
+        required: true
+      tracking_issue_title:
+        description: "検知結果を反映するissueのタイトル。同名のopen issueが既にあれば本文を更新し、無ければ新規作成する。"
+        type: string
+        default: "[自動] ランタイムのNode.jsバージョン遅延検知（定期スキャン）"
+      tracking_issue_labels:
+        description: "トラッキングissue作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
+        type: string
+        default: '["bug", "priority: medium"]'
+      self_ref:
+        description: >-
+          呼び出し元が本workflowを`uses: bamiyanapp/dev-standards/.github/workflows/reusable-runtime-version-scan.yml@<ref>`
+          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する必須入力。
+          本workflow内でdev-standards自身のスクリプト（scripts/runtime-version-scan.js）を
+          ローカルチェックアウトする際に使う（dev-standards#1144、issue #1071と同種の問題）。
+          `github.workflow_ref`では動的解決できないため、reusable-ci.ymlと同じ方式で
+          呼び出し元に明示的な入力として渡してもらう
+        type: string
+        required: true
+    outputs:
+      has_outdated:
+        description: "最新パッチより古いランタイムが1件以上検知されたか。"
+        value: ${{ jobs.scan.outputs.has_outdated }}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: "ランタイムのNode.jsバージョン遅延スキャン"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    outputs:
+      has_outdated: ${{ steps.scan.outputs.has_outdated }}
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+
+      - name: Node.jsをセットアップする
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # scripts/runtime-version-scan.jsはdev-standards自身のスクリプトのため、
+      # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
+      - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+
+      - name: 対象エンドポイントをファイルへ書き出す
+        run: echo '${{ inputs.endpoints }}' > /tmp/runtime-version-scan-endpoints.json
+
+      - name: ランタイムのNode.jsバージョン遅延をスキャンする
+        id: scan
+        run: node .dev-standards-actions/scripts/runtime-version-scan.js /tmp/runtime-version-scan-endpoints.json > /tmp/runtime-version-scan-result.json
+
+      - name: 既存のトラッキングissueを検索する
+        id: find
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const results = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+            const existing = results.find((i) => !i.pull_request && i.title === ${{ toJSON(inputs.tracking_issue_title) }});
+            core.setOutput("issue_number", existing ? String(existing.number) : "");
+
+      - name: トラッキングissueを作成または更新する
+        if: steps.scan.outputs.has_outdated == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const findings = JSON.parse(fs.readFileSync("/tmp/runtime-version-scan-result.json", "utf-8"));
+            const rows = findings.map((f) => {
+              if (f.error) return `| ${f.name} | - | - | ${f.error} |`;
+              return `| ${f.name} | ${f.currentVersion} | ${f.latestVersion} | - |`;
+            }).join("\n");
+            const body = [
+              "対象エンドポイントのNode.jsランタイムバージョンを対象にした定期スキャンで、公式の最新パッチより古いものが見つかりました。",
+              "",
+              "| エンドポイント | 現在のバージョン | 最新バージョン | エラー |",
+              "|---|---|---|---|",
+              rows,
+              "",
+              "### 注意",
+              "",
+              "「最新パッチより古い」ことは、既知の脆弱性を持つことの確実な証明ではありません（最新パッチが脆弱性修正を含まないメンテナンスリリースの場合も検知します）。[Node.js公式のセキュリティリリースアナウンス](https://nodejs.org/en/blog/vulnerability/)を確認し、実際に対応が必要か判断してください。",
+              "",
+              "### 対応候補",
+              "",
+              "- マネージドランタイム（AWS Lambda等）の場合、関数の再デプロイでAWS側の最新ランタイムへ載せ替える",
+              "- 自己管理の環境の場合、Node.jsを最新パッチへ更新する",
+              "",
+              `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
+            ].join("\n");
+
+            const issueNumber = "${{ steps.find.outputs.issue_number }}";
+            if (issueNumber) {
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(issueNumber), body });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: ${{ toJSON(inputs.tracking_issue_title) }},
+                body,
+                labels: JSON.parse(${{ toJSON(inputs.tracking_issue_labels) }}),
+              });
+            }
+
+      - name: 検知されなくなったトラッキングissueをクローズする
+        if: steps.scan.outputs.has_outdated == 'false' && steps.find.outputs.issue_number != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
+              state: "closed",
+              state_reason: "completed",
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
+              body: "再スキャンの結果、最新パッチより古いランタイムが検知されなくなったため自動クローズします。",
+            });
+
+      - name: 概要を出力する
+        if: always()
+        run: |
+          set -eu
+          node -e '
+            const fs = require("fs");
+            let body = "## ランタイムNode.jsバージョン遅延スキャン 実行結果\n\n";
+            const hasOutdated = "${{ steps.scan.outputs.has_outdated }}" === "true";
+            if (!hasOutdated) {
+              body += "最新パッチより古いランタイムは検知されませんでした。\n";
+            } else {
+              const findings = JSON.parse(fs.readFileSync("/tmp/runtime-version-scan-result.json", "utf-8"));
+              body += `検知件数: ${findings.length}件\n\n`;
+              body += "| エンドポイント | 現在のバージョン | 最新バージョン | エラー |\n";
+              body += "|---|---|---|---|\n";
+              for (const f of findings) {
+                if (f.error) {
+                  body += `| ${f.name} | - | - | ${f.error} |\n`;
+                } else {
+                  body += `| ${f.name} | ${f.currentVersion} | ${f.latestVersion} | - |\n`;
+                }
+              }
+            }
+            fs.writeFileSync("/tmp/runtime-version-scan-summary.md", body);
+          '
+          tee -a "$GITHUB_STEP_SUMMARY" < /tmp/runtime-version-scan-summary.md
