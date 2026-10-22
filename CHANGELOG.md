@@ -1,3 +1,10 @@
+## [2.105.8](https://github.com/bamiyanapp/dev-standards/compare/v2.105.7...v2.105.8) (2026-10-22)
+
+
+### Bug Fixes
+
+* **scripts:** check-workflows.jsが参照側リポジトリ自身のワークフローを検証するよう修正する ([#1147](https://github.com/bamiyanapp/dev-standards/issues/1147)) ([715ce5d](https://github.com/bamiyanapp/dev-standards/commit/715ce5d1d53e091203b154338eebe5ab50ce5358)), closes [#1144](https://github.com/bamiyanapp/dev-standards/issues/1144)
+
 ## [2.105.7](https://github.com/bamiyanapp/dev-standards/compare/v2.105.6...v2.105.7) (2026-10-22)
 
 
