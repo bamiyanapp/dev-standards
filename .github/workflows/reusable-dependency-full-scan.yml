@@ -158,12 +158,34 @@ jobs:
               body: "再スキャンの結果、既知の脆弱性が検知されなくなったため自動クローズします。",
             });
 
+      # dev-standards#1149: 検知結果の詳細（パッケージ名・バージョン・直接/間接・
+      # 脆弱性ID・Severity）は従来トラッキングissueの本文にのみ書き込んでおり、
+      # Job Summary・ジョブログには件数のみしか出していなかった。issueタブへの
+      # 遷移無しでも確認できるよう、同じ詳細表をJob Summary・標準出力の両方へ出す。
+      # `tee`で両方に書くのは、sandbox-unreachable-investigation Skillの既知の知見
+      # （Job Summaryの内容はAPI経由で取得できないため、ジョブログにも同じ内容を
+      # 出しておく）と同じ理由
       - name: 概要を出力する
         if: always()
         run: |
           set -eu
-          {
-            echo "## 依存パッケージ既知脆弱性スキャン 実行結果"
-            echo ""
-            echo "検知件数: $([ "${{ steps.scan.outputs.has_vulnerabilities }}" = "true" ] && echo "1件以上" || echo "0件")"
-          } >> "$GITHUB_STEP_SUMMARY"
+          node -e '
+            const fs = require("fs");
+            let body = "## 依存パッケージ既知脆弱性スキャン 実行結果\n\n";
+            const hasVulnerabilities = "${{ steps.scan.outputs.has_vulnerabilities }}" === "true";
+            if (!hasVulnerabilities) {
+              body += "既知の脆弱性は検知されませんでした。\n";
+            } else {
+              const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result.json", "utf-8"));
+              body += `検知件数: ${findings.length}件\n\n`;
+              body += "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity |\n";
+              body += "|---|---|---|---|---|\n";
+              for (const f of findings) {
+                const ids = f.vulnerabilities.map((v) => v.id).join(", ");
+                const severity = f.vulnerabilities.map((v) => v.severityRating).filter(Boolean).join(", ") || "不明";
+                body += `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} |\n`;
+              }
+            }
+            fs.writeFileSync("/tmp/full-scan-summary.md", body);
+          '
+          tee -a "$GITHUB_STEP_SUMMARY" < /tmp/full-scan-summary.md
