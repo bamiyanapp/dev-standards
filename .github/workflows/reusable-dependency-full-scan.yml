@@ -31,6 +31,16 @@ on:
         description: "トラッキングissue作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
         type: string
         default: '["bug", "priority: medium"]'
+      self_ref:
+        description: >-
+          呼び出し元が本workflowを`uses: bamiyanapp/dev-standards/.github/workflows/reusable-dependency-full-scan.yml@<ref>`
+          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する必須入力。
+          本workflow内でdev-standards自身のスクリプト（scripts/dependency-full-scan.js）を
+          ローカルチェックアウトする際に使う（dev-standards#1144、issue #1071と同種の問題）。
+          `github.workflow_ref`では動的解決できないため、reusable-ci.ymlと同じ方式で
+          呼び出し元に明示的な入力として渡してもらう
+        type: string
+        required: true
     outputs:
       has_vulnerabilities:
         description: "既知の脆弱性が1件以上検知されたか。"
@@ -60,12 +70,15 @@ jobs:
       # scripts/dependency-full-scan.jsはdev-standards自身のスクリプトのため、
       # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
       # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
-      # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと
+      # refはハードコードせず、呼び出し元から渡されるself_ref（本workflow自身が
+      # 呼び出された際のref）を使う（dev-standards#1144）。ハードコードしていた
+      # 旧実装では、呼び出し元がバージョンを上げても本チェックアウトだけ古いまま
+      # 固定され、スクリプトの修正（issue #1111等）が反映されない事故が発生した
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.104.0
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
       - name: 既知の脆弱性をスキャンする

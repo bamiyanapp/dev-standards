@@ -33,6 +33,16 @@ on:
         description: "トラッキングissue作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
         type: string
         default: '["bug", "priority: medium"]'
+      self_ref:
+        description: >-
+          呼び出し元が本workflowを`uses: bamiyanapp/dev-standards/.github/workflows/reusable-dependency-deprecation-scan.yml@<ref>`
+          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する必須入力。
+          本workflow内でdev-standards自身のスクリプト（scripts/dependency-deprecation-scan.js）を
+          ローカルチェックアウトする際に使う（dev-standards#1144、issue #1071と同種の問題）。
+          `github.workflow_ref`では動的解決できないため、reusable-ci.ymlと同じ方式で
+          呼び出し元に明示的な入力として渡してもらう
+        type: string
+        required: true
     outputs:
       has_deprecated:
         description: "deprecatedなパッケージが1件以上検知されたか。"
@@ -61,16 +71,17 @@ jobs:
       # scripts/dependency-deprecation-scan.jsはdev-standards自身のスクリプトのため、
       # 参照側リポジトリ（karuta等）では別途チェックアウトする必要がある
       # （「reusable workflow参照のバージョン固定」docs/cicd-pipeline-specification.md参照）。
-      # スクリプトの入出力仕様を変更した場合は、このrefの更新を忘れないこと。
-      # 初版（v2.83.0固定）はdependency-deprecation-scan.js自体がまだ存在しない
-      # バージョンを誤って指定しており、参照側リポジトリでの実行時にMODULE_NOT_FOUNDで
-      # 必ず失敗する不具合があった（karuta#1693での初回動作確認で発覚）。本ファイルが
-      # 追加されたリリース（v2.84.0）以降を指すよう修正した
+      # refはハードコードせず、呼び出し元から渡されるself_ref（本workflow自身が
+      # 呼び出された際のref）を使う（dev-standards#1144）。ハードコードする方式は
+      # 過去に2度問題を起こしている（初版v2.83.0固定でのMODULE_NOT_FOUND、
+      # karuta#1693）・（v2.85.0固定のまま更新が追従せずOSV API不具合修正が
+      # 反映されなかった件、dev-standards#1144）ため、根本的にハードコード自体を
+      # やめる
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
-          ref: v2.85.0
+          ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
       - name: deprecatedな依存パッケージをスキャンする
