@@ -42,13 +42,16 @@ async function defaultFetchJson(url) {
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）。
 // 「このPRを適用せず現行バージョンに留まる場合の危険度」（維持リスク）の判定に使うため、
-// oldVersionが存在する変更のみを対象にする（新規追加のみの変更は対象外）
+// oldVersionが存在する変更のみを対象にする（新規追加のみの変更は対象外）。
+// issue #1156: production: falseのパッケージ（devDependency経由のみで到達し、本番コードに
+// 含まれない）も対象外にする。放置されていても実害が無いパッケージの表示で、本来注目すべき
+// 本番コードの依存が埋もれる問題への対応
 // 戻り値: [{ name, oldVersion, newVersion, lastPublishedAt, ageDays, flagged }]
 // issue #1086: 判定不能（time.modifiedが取得できない）パッケージのみ対象外とし、
 // 閾値未満（flagged: false）のパッケージも含めて全件返す（Risk Summaryでの
 // 実測値表示に使うため）。閾値への該当判定自体はflaggedで示す
 async function fetchStalenessInfo(changes, { fetchJsonImpl = defaultFetchJson, thresholdDays = STALE_THRESHOLD_DAYS_DEFAULT, now } = {}) {
-  const targets = changes.filter((c) => c.oldVersion != null);
+  const targets = changes.filter((c) => c.oldVersion != null && c.production !== false);
   const results = [];
   for (const change of targets) {
     const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);

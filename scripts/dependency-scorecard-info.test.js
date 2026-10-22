@@ -115,3 +115,12 @@ test("fetchScorecardInfo: oldVersionが無い変更（新規追加）は対象�
   const result = await fetchScorecardInfo(changes, { fetchJsonImpl });
   assert.deepEqual(result, []);
 });
+
+test("fetchScorecardInfo: production: falseのパッケージは対象外にする（issue #1156）", async () => {
+  const changes = [{ name: "dev-only-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", production: false }];
+  const fetchJsonImpl = async () => {
+    throw new Error("fetchJsonImplが呼ばれるべきではない");
+  };
+  const result = await fetchScorecardInfo(changes, { fetchJsonImpl });
+  assert.deepEqual(result, []);
+});

@@ -98,7 +98,7 @@ test("diffPackageLocks: 直接依存のpatch更新を検出する", () => {
   };
   const changes = diffPackageLocks(oldLock, newLock);
   assert.deepEqual(changes, [
-    { name: "foo", oldVersion: "1.0.0", newVersion: "1.0.1", updateType: "patch", direct: true },
+    { name: "foo", oldVersion: "1.0.0", newVersion: "1.0.1", updateType: "patch", direct: true, production: true },
   ]);
 });
 
@@ -119,7 +119,26 @@ test("diffPackageLocks: 間接依存（direct: false）・major更新も検出�
   };
   const changes = diffPackageLocks(oldLock, newLock);
   assert.deepEqual(changes, [
-    { name: "bar", oldVersion: "1.0.0", newVersion: "2.0.0", updateType: "major", direct: false },
+    { name: "bar", oldVersion: "1.0.0", newVersion: "2.0.0", updateType: "major", direct: false, production: true },
+  ]);
+});
+
+test("diffPackageLocks: package-lock.jsonのdevフラグをproduction: falseへ反転する（issue #1156）", () => {
+  const oldLock = {
+    packages: {
+      "": { devDependencies: { "dev-only-pkg": "^1.0.0" } },
+      "node_modules/dev-only-pkg": { version: "1.0.0", dev: true },
+    },
+  };
+  const newLock = {
+    packages: {
+      "": { devDependencies: { "dev-only-pkg": "^1.0.0" } },
+      "node_modules/dev-only-pkg": { version: "1.0.1", dev: true },
+    },
+  };
+  const changes = diffPackageLocks(oldLock, newLock);
+  assert.deepEqual(changes, [
+    { name: "dev-only-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", updateType: "patch", direct: true, production: false },
   ]);
 });
 

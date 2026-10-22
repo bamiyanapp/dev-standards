@@ -102,6 +102,13 @@ function diffPackageLocks(oldLockJson, newLockJson) {
       newVersion: newEntry.version ?? null,
       updateType: classifyUpdateType(oldEntry.version, newEntry.version),
       direct: directNames.has(name),
+      // issue #1156: package-lock.jsonの各エントリが持つdevフラグ（npm workspaces環境で
+      // devDependency経由でのみ到達するパッケージに付与される）を反転して保持する。
+      // 放置検知・Scorecard確認（dependency-staleness-info.js・dependency-scorecard-info.js）が
+      // 本番コードに含まれないパッケージをチェック対象から除外するために使う。
+      // CVE/KEV等の既存の脆弱性判定には影響させない（devDependency経由でも、ビルド・テスト
+      // 実行環境自体への攻撃経路はあり得るため、本フィールドは放置検知・Scorecard確認限定で使う）
+      production: !newEntry.dev,
     });
   }
   return changes.sort((a, b) => a.name.localeCompare(b.name));
