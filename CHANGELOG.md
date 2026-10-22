@@ -1,3 +1,10 @@
+## [2.105.7](https://github.com/bamiyanapp/dev-standards/compare/v2.105.6...v2.105.7) (2026-10-22)
+
+
+### Bug Fixes
+
+* **workflows:** dependency系reusable workflowのself-checkout refをハードコードから必須入力へ変更する ([#1145](https://github.com/bamiyanapp/dev-standards/issues/1145)) ([859b472](https://github.com/bamiyanapp/dev-standards/commit/859b4726b43b8c0dd12b2adfc14640b0de94342e)), closes [#1144](https://github.com/bamiyanapp/dev-standards/issues/1144)
+
 ## [2.105.6](https://github.com/bamiyanapp/dev-standards/compare/v2.105.5...v2.105.6) (2026-10-21)
 
 

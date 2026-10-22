@@ -958,5 +958,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.105.7",
+    "date": "2026-10-22T01:10:09.402Z",
+    "riskLevel": "medium",
+    "riskReasons": [
+      "直接依存の更新が2件あり、影響範囲の特定が難しい可能性があります"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]
