@@ -169,7 +169,7 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 
 ### 適用リスク判定マトリクス（`classifyRisk()`）
 
-既定値は`low`。以下の条件に当てはまるたびに`escalate()`で段階的に昇格し（down-gradeしない）、最終的に最も高い段階が結果になる。`directDependencyThreshold`の既定値は2（`scripts/risk-policy.json`で変更可能）。
+既定値は`low`。以下の条件に当てはまるたびに`escalate()`で段階的に昇格し（down-gradeしない）、最終的に最も高い段階が結果になる。
 
 | 条件 | 昇格先 | 補足 |
 |---|---|---|
@@ -182,11 +182,12 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 | CVE/CVSS/EPSS/KEV情報の取得に失敗した（不明） | 🟡 Medium | 「不明」を安全側＝Medium以上として扱う |
 | dev-standards自体の更新で、既知の参照側リポジトリ（ファンアウト）が1件以上ある | 🟡 Medium | |
 | 既知flakyパターンに該当するCI失敗がある（説明可能な失敗のみ） | 🟡 Medium | |
-| 直接依存の更新件数が`directDependencyThreshold`（既定2）以上 | 🟡 Medium | 変更の複雑さを理由に昇格 |
 | 変更された直接依存が重要パス（宣言済み）からimportされている（ブラスト半径） | 🟡 Mediumへキャップ（lowのみ変化、medium/highは変化なし） | ブラスト半径単独ではHighまで昇格しない。重要パス未宣言時は常にfalseで影響なし（[#689](https://github.com/bamiyanapp/dev-standards/issues/689)、[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)） |
 | 上記いずれにも該当しない | 🟢 Low | |
 
 `vulnerability_only_high`は、最終判定がHighかつmajor update・説明不能なCI失敗・Supply Chain異常のいずれにも該当しない場合に限り`true`になる。すなわち、CVE/KEVの残存のみが理由の場合である（ブラスト半径はMedium止まりのためHigh到達の理由にはならない）。
+
+以前は直接依存の更新件数が閾値（既定2件）以上の場合も「変更の複雑さ」を理由にMediumへ昇格させていたが、この条件は削除した（issue #1159）。判定結果マトリクス上、適用リスクLow/Medium行はいずれも維持リスクを問わず常に「自動適用」である。このため、この条件はマージを止める実効性を持たなかった。件数自体は破壊的変更・脆弱性・サプライチェーン異常のいずれとも相関しない。また`lockFileMaintenance`等の正常な運用でも頻繁に発生する。このため、本来注目すべき理由（major update・CVE/KEV等）をreason欄で埋もれさせるノイズになっていた。
 
 ## 維持リスク
 
