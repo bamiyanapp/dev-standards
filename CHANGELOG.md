@@ -1,3 +1,10 @@
+## [2.105.10](https://github.com/bamiyanapp/dev-standards/compare/v2.105.9...v2.105.10) (2026-10-22)
+
+
+### Bug Fixes
+
+* **scripts:** メンテナンス状態セクションを問題該当行のみ・問題が大きい順に絞り込む ([#1153](https://github.com/bamiyanapp/dev-standards/issues/1153)) ([9c4b763](https://github.com/bamiyanapp/dev-standards/commit/9c4b763a479ba326a9e196157ffa8474ca03c17f)), closes [#1152](https://github.com/bamiyanapp/dev-standards/issues/1152)
+
 ## [2.105.9](https://github.com/bamiyanapp/dev-standards/compare/v2.105.8...v2.105.9) (2026-10-22)
 
 
