@@ -1,3 +1,10 @@
+# [2.106.0](https://github.com/bamiyanapp/dev-standards/compare/v2.105.12...v2.106.0) (2026-10-22)
+
+
+### Features
+
+* AWS Lambda等のマネージドランタイムのNode.jsバージョン遅延を定期検知する ([#1166](https://github.com/bamiyanapp/dev-standards/issues/1166)) ([feb265a](https://github.com/bamiyanapp/dev-standards/commit/feb265a294ec64e553f15b50c17c7b751bb7fa65)), closes [#1165](https://github.com/bamiyanapp/dev-standards/issues/1165)
+
 ## [2.105.12](https://github.com/bamiyanapp/dev-standards/compare/v2.105.11...v2.105.12) (2026-10-22)
 
 
