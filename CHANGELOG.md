@@ -1,3 +1,10 @@
+## [2.105.12](https://github.com/bamiyanapp/dev-standards/compare/v2.105.11...v2.105.12) (2026-10-22)
+
+
+### Bug Fixes
+
+* **scripts:** 適用リスク判定から直接依存更新件数によるMedium昇格を削除する ([#1160](https://github.com/bamiyanapp/dev-standards/issues/1160)) ([ee493bc](https://github.com/bamiyanapp/dev-standards/commit/ee493bc22c133d3287c76cb92179e07ba4bb816a)), closes [#1159](https://github.com/bamiyanapp/dev-standards/issues/1159)
+
 ## [2.105.11](https://github.com/bamiyanapp/dev-standards/compare/v2.105.10...v2.105.11) (2026-10-22)
 
 
