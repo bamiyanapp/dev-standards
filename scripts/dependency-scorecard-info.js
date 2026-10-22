@@ -54,13 +54,16 @@ async function defaultFetchJson(url) {
 }
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）。
-// 維持リスクの判定に使うため、oldVersionが存在する変更のみを対象にする
+// 維持リスクの判定に使うため、oldVersionが存在する変更のみを対象にする。
+// issue #1156: production: falseのパッケージ（devDependency経由のみで到達し、本番コードに
+// 含まれない）も対象外にする。放置されていても実害が無いパッケージの表示で、本来注目すべき
+// 本番コードの依存が埋もれる問題への対応
 // 戻り値: [{ name, oldVersion, newVersion, owner, repo, score, flagged }]
 // issue #1086: GitHubリポジトリが特定できない・Scorecard未評価（判定不能）の
 // パッケージのみ対象外とし、閾値以上（flagged: false）のパッケージも含めて
 // 全件返す（Risk Summaryでの実測値表示に使うため）
 async function fetchScorecardInfo(changes, { fetchJsonImpl = defaultFetchJson, scoreThreshold = SCORE_THRESHOLD_DEFAULT } = {}) {
-  const targets = changes.filter((c) => c.oldVersion != null);
+  const targets = changes.filter((c) => c.oldVersion != null && c.production !== false);
   const results = [];
   for (const change of targets) {
     const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);

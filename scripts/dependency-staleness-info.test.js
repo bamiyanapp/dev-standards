@@ -86,3 +86,12 @@ test("fetchStalenessInfo: time.modifiedが取得できない（判定不能）�
   const result = await fetchStalenessInfo(changes, { fetchJsonImpl });
   assert.deepEqual(result, []);
 });
+
+test("fetchStalenessInfo: production: falseのパッケージは対象外にする（issue #1156）", async () => {
+  const changes = [{ name: "dev-only-pkg", oldVersion: "1.0.0", newVersion: "1.0.1", production: false }];
+  const fetchJsonImpl = async () => {
+    throw new Error("fetchJsonImpl should not be called");
+  };
+  const result = await fetchStalenessInfo(changes, { fetchJsonImpl });
+  assert.deepEqual(result, []);
+});

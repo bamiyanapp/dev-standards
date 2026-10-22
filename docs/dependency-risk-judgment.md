@@ -143,6 +143,8 @@ npm registryの各パッケージレスポンス（`GET /{name}`）は`time.modi
 
 これは、メンテナによる明示的な意思表示ではなく単に更新が無いという事実のみであり、deprecated検知より弱い信号として扱う。このため、維持リスクへの昇格は**low→mediumのみ**に限定する（下記「維持リスク判定マトリクス」参照）。放置の事実はあっても脆弱性の深刻度自体は不明なため、highへの昇格はCVE/KEV・deprecated検知のみを根拠とする既存設計を維持する。
 
+`dependency-update-info.js`の`diffPackageLocks()`は、各変更に`production`フィールド（`!lockEntry.dev`）を付与する。放置検知・Scorecard確認は`production: false`（devDependency経由のみで到達し、本番コードに含まれないパッケージ）を対象外にする（issue #1156）。ビルド・テスト・リリース作業にのみ使うパッケージが古くなっていても実害が無く、対象に含めると本番コードの依存（`dependencies`経由）が埋もれるためである。CVE/KEV検知（既知の脆弱性）は`production`フィールドの影響を受けず、direct/transitiveを問わず全件を対象とする従来の挙動を維持する。
+
 ## OpenSSF Scorecardによる質的評価（[#1077](https://github.com/bamiyanapp/dev-standards/issues/1077)）
 
 放置検知（上記）は「更新が止まっているか」という一次シグナルのみを見る。コントリビューター数・CI/テストの有無・ブランチ保護設定等、パッケージの質的なメンテナンス状態まで含めた評価には、[OpenSSF Scorecard](https://github.com/ossf/scorecard)のスコアを使う。
