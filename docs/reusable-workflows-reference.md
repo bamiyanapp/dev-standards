@@ -280,6 +280,22 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。
 
+## `reusable-runtime-version-scan.yml`
+
+既存のdependency-risk-summary・dependency-full-scanはいずれもnpmパッケージ（`package-lock.json`）専用である。AWS Lambda等のマネージドランタイムが実際にどのNode.jsパッチバージョンで稼働しているかはスコープ外だった（karuta#1880、CVE-2026-111497の調査で判明）。
+
+本ワークフローは、呼び出し元が指定するエンドポイント群へ問い合わせる。各エンドポイントは稼働中プロセスの`process.version`を`{ "nodeVersion": "v22.23.4" }`形式で返す必要がある。実例はkarutaの`backend/handler.js` `/get-version`である。問い合わせた結果を、Node.js公式のリリース一覧（`nodejs.org/dist/index.json`）における同一メジャー系列の最新バージョンと比較する。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `endpoints` | スキャン対象のエンドポイント一覧（JSON配列文字列、`[{"name":"...","url":"..."}]`形式） | （必須） |
+| `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] ランタイムのNode.jsバージョン遅延検知（定期スキャン）` |
+| `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: medium"]` |
+
+検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。
+
+既知の限界: 「最新パッチより古い」ことは、既知の脆弱性を持つことの確実な証明ではない（最新パッチが脆弱性修正を含まないメンテナンスリリースの場合も検知する、保守的な判定）。逆に最新パッチと一致していても、本スクリプト自体はCVE内容を照合しないため脆弱性が無いことの証明にはならない。実際に対応が必要かどうかは、[Node.js公式のセキュリティリリースアナウンス](https://nodejs.org/en/blog/vulnerability/)を人間が確認して判断する。
+
 ## `.github/actions/github-pages-migration-page`（複合action）
 
 ブルーグリーン（stable/canary）デプロイパターンで旧URL（GitHub Pages等）から新URLへ移行する際に使う。ビルドレスのkill switchページ（`index.html` + Service Worker）を生成する。既存のPWA用Service Workerがページをprecache済みの場合も考える。その場合も、生成したkill switch用SWへの差し替えでキャッシュを確実に破棄し新URLへ誘導する。
