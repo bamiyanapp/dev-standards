@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const semver = require("semver");
 
 // issue #1881のフォローアップ。CVE-2026-111497（Node.js組み込みBrotliデコーダの
 // 範囲外書き込み）の調査で、AWS Lambda等のマネージドランタイムが実際にどの
@@ -16,14 +17,38 @@ const fs = require("node:fs");
 // 比較する。エンドポイント側のレスポンス形式は`{ "nodeVersion": "v22.23.4" }`
 // （先頭の"v"有無はどちらでも許容）を期待する。
 //
-// 既知の限界: 「最新パッチより古い」ことは「既知の脆弱性を持つ」ことの確実な
+// issue #1188。「最新パッチより古い」ことは「既知の脆弱性を持つ」ことの確実な
 // 証明ではない（最新パッチが脆弱性修正を含まないメンテナンスリリースの場合も
-// 検知してしまう、いわば保守的な判定）。一方で「最新パッチと一致している」ことは
-// 「既知の脆弱性が無い」ことの証明にもならない（本スクリプト自体はCVE内容の
-// 照合を行わない）。既存のdependency-staleness-info.js（放置検知）と同種の、
-// 「古さ」という弱い信号のみを扱う設計である。正確な脆弱性有無の判定は、人間が
-// Node.js公式のセキュリティリリースアナウンス（nodejs.org/en/blog/vulnerability/）
-// を確認する必要がある。
+// 検知してしまう、いわば保守的な判定）。そこで、Node.js security working groupが
+// 公開する機械可読な脆弱性データベース（SECURITY_WG_VULN_DB_URL）を照会し、
+// 現在のバージョンが実際にどのCVEの影響を受けるか（vulnerable範囲に該当し、
+// かつpatched範囲には該当しない＝未パッチ）を判定結果に含める。vulnerable/patched
+// はいずれもnpm semver range記法のため、自前実装ではなくsemverパッケージ
+// （satisfies()）に委ねる
+//
+// 既知の限界: この判定はSECURITY_WG_VULN_DB_URL自体の更新ラグに依存する
+// （Node.js公式のセキュリティリリース発表直後は反映されていない可能性がある）。
+// 該当するCVEが0件という結果も「安全である」ことの証明ではなく「現時点で
+// security-wgのデータベースに未登録」という意味である
+const SECURITY_WG_VULN_DB_URL = "https://raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json";
+
+// vulnDatabase: SECURITY_WG_VULN_DB_URLのレスポンス（キーが連番文字列のオブジェクト）。
+// versionが対象（vulnerable範囲に該当）かつ未パッチ（patched範囲に該当しない）の
+// エントリのみを返す。vulnerable/patchedのいずれかがsemverとして解釈できない
+// エントリ（記法の揺れ等）は安全側に倒して対象外とする（誤って「脆弱」と
+// 誤検知しないことを優先する。見逃しよりも誤検知の方が人間の確認コストが高いため）
+function findUnpatchedVulnerabilities(version, vulnDatabase) {
+  const entries = Object.values(vulnDatabase ?? {});
+  return entries
+    .filter((entry) => {
+      if (!entry?.vulnerable) return false;
+      if (!semver.validRange(entry.vulnerable)) return false;
+      if (!semver.satisfies(version, entry.vulnerable)) return false;
+      if (entry.patched && semver.validRange(entry.patched) && semver.satisfies(version, entry.patched)) return false;
+      return true;
+    })
+    .map((entry) => ({ cve: entry.cve ?? [], severity: entry.severity ?? null, overview: entry.overview ?? null }));
+}
 
 function parseVersion(raw) {
   const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(raw ?? "").trim());
@@ -62,6 +87,7 @@ async function fetchJson(url, { fetchJsonImpl } = {}) {
 // { name, url, currentVersion, latestVersion, major }
 async function scanRuntimeVersions(endpoints, { fetchJsonImpl } = {}) {
   const releases = await fetchJson("https://nodejs.org/dist/index.json", { fetchJsonImpl });
+  const vulnDatabase = await fetchJson(SECURITY_WG_VULN_DB_URL, { fetchJsonImpl });
 
   const outdated = [];
   for (const endpoint of endpoints) {
@@ -90,6 +116,7 @@ async function scanRuntimeVersions(endpoints, { fetchJsonImpl } = {}) {
         currentVersion: current.raw,
         latestVersion: latest.raw,
         major: current.major,
+        vulnerabilities: findUnpatchedVulnerabilities(current.raw, vulnDatabase),
       });
     }
   }
@@ -126,5 +153,6 @@ module.exports = {
   parseVersion,
   compareVersions,
   latestVersionForMajor,
+  findUnpatchedVulnerabilities,
   scanRuntimeVersions,
 };

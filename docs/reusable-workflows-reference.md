@@ -286,6 +286,8 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 本ワークフローは、呼び出し元が指定するエンドポイント群へ問い合わせる。各エンドポイントは稼働中プロセスの`process.version`を`{ "nodeVersion": "v22.23.4" }`形式で返す必要がある。実例はkarutaの`backend/handler.js` `/get-version`である。問い合わせた結果を、Node.js公式のリリース一覧（`nodejs.org/dist/index.json`）における同一メジャー系列の最新バージョンと比較する。
 
+最新パッチより古いエンドポイントについては、Node.js security working groupが公開する脆弱性データベース（issue #1188）も照会する。参照先は`raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json`である。現在のバージョンが`vulnerable`範囲（npm semver range記法）に該当し、かつ`patched`範囲には該当しない（＝未パッチ）場合のみ対象とする。該当エントリのCVE ID・severityを、issue本文・Job Summaryの「既知の脆弱性（CVE）」列へ記載する。この照合には`semver`パッケージの`satisfies()`を使う。
+
 | 入力 | 説明 | デフォルト |
 |---|---|---|
 | `endpoints` | スキャン対象のエンドポイント一覧（JSON配列文字列、`[{"name":"...","url":"..."}]`形式） | （必須） |
@@ -294,7 +296,7 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。
 
-既知の限界: 「最新パッチより古い」ことは、既知の脆弱性を持つことの確実な証明ではない（最新パッチが脆弱性修正を含まないメンテナンスリリースの場合も検知する、保守的な判定）。逆に最新パッチと一致していても、本スクリプト自体はCVE内容を照合しないため脆弱性が無いことの証明にはならない。実際に対応が必要かどうかは、[Node.js公式のセキュリティリリースアナウンス](https://nodejs.org/en/blog/vulnerability/)を人間が確認して判断する。
+既知の限界: 「最新パッチより古い」ことは、既知の脆弱性を持つことの確実な証明ではない（最新パッチが脆弱性修正を含まないメンテナンスリリースの場合も検知する、保守的な判定）。CVE照合を追加した後も、「既知の脆弱性（無し）」という表示は、上記データベース自体の更新ラグにより「現時点で未登録」という意味に過ぎない。Node.jsセキュリティリリース直後は、実際に対応が必要かどうかを人間が確認する必要がある。マネージドランタイム（AWS Lambda等）の場合、実際のパッチ反映状況は[AWS Lambdaのランタイムサポート・非推奨スケジュール](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html)を参照する。
 
 ## `.github/actions/github-pages-migration-page`（複合action）
 
