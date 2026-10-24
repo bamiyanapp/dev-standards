@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { extractAllPackages, scanLockFileForVulnerabilities } = require("./dependency-full-scan.js");
+const { extractAllPackages, scanLockFileForVulnerabilities, findRelatedPullRequest } = require("./dependency-full-scan.js");
 
 test("extractAllPackages: 直接・間接の全パッケージをname/version付きで抽出する", () => {
   const lockJson = {
@@ -175,4 +175,32 @@ test("scanLockFileForVulnerabilities: チャンク分割後も脆弱性検知結
   const result = await scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl, chunkSize: 2 });
   assert.equal(result.length, 1);
   assert.equal(result[0].name, "pkg1");
+});
+
+test("findRelatedPullRequest: パッケージ名をタイトルに含むopen PRを見つける", () => {
+  const openPullRequests = [
+    { number: 100, title: "chore(deps): update dependency foo-bar to v2.0.0" },
+    { number: 101, title: "chore(deps): update dependency baz to v1.2.3" },
+  ];
+  assert.deepEqual(findRelatedPullRequest("foo-bar", openPullRequests), {
+    number: 100,
+    title: "chore(deps): update dependency foo-bar to v2.0.0",
+  });
+});
+
+test("findRelatedPullRequest: 大文字小文字を区別しない", () => {
+  const openPullRequests = [{ number: 200, title: "chore(deps): update dependency Foo-Bar to v2.0.0" }];
+  assert.deepEqual(findRelatedPullRequest("foo-bar", openPullRequests), {
+    number: 200,
+    title: "chore(deps): update dependency Foo-Bar to v2.0.0",
+  });
+});
+
+test("findRelatedPullRequest: 該当するPRが無い場合はnullを返す", () => {
+  const openPullRequests = [{ number: 300, title: "chore(deps): update dependency unrelated-pkg to v1.0.0" }];
+  assert.equal(findRelatedPullRequest("foo-bar", openPullRequests), null);
+});
+
+test("findRelatedPullRequest: openPullRequestsが空の場合はnullを返す", () => {
+  assert.equal(findRelatedPullRequest("foo-bar", []), null);
 });

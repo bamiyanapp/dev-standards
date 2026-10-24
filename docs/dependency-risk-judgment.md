@@ -303,6 +303,8 @@ flowchart TD
 
 **既知の限界（残存する検知ラグ・情報源の範囲）**。`reusable-dependency-full-scan.yml`自体は`workflow_call`のみでscheduleトリガーを持たない。実行頻度は呼び出し元リポジトリ（karuta等）が用意するcron設定に依存する。新しいCVEが公開されてから次回スキャンまでのラグは、呼び出し元の設定次第で生じる（例: 週1回呼び出す場合、最大1週間弱のラグが生じ得る）。また、本機能の脆弱性照会は`dependency-vulnerability-info.js`経由のOSV.devのみに依拠する。適用リスク側（`classifyRisk()`）が別途使うCISA KEVは、本フルスキャン側では使っていない。いずれも「検知するが直さない」という上記の設計上の割り切りと同種の、受容された既知の限界である。
 
+**Renovate対応中PRの重複検知対策（issue #1163）**。フルスキャンはRenovateが既に対応PRを作成済みかどうかを元々見ていなかった。`minimumReleaseAge`待機中・Human Review待ち等のPRが既に存在する脆弱性も「新規検知」として重複して固定issueへ反映してしまう問題があった。パッケージ名をタイトルに含むopenなPRが存在する場合、issue本文の「対応PR」列へその番号を記載するようにした（`findRelatedPullRequest()`）。タイトル文字列の部分一致による簡易な判定のため、誤検出（無関係なPRが偶然同じ文字列を含む等）の可能性は残る。あくまで人間の判断を補助する目安であり、修正PRの自動作成・自動クローズの判断には使わない。
+
 ## dev-standards自身のリリースにおけるRisk判定履歴（issue #746 Phase 2）
 
 dev-standards自体の依存更新を考える。Renovate等によるPRがmainへマージされ、semantic-releaseが新バージョンをリリースする際のRisk判定結果を記録したい。各プロダクトリポジトリ（karuta等）が参照できるよう`docs/generated/dependency-risk-history.json`へ機械可読な形で残す。
