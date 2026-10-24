@@ -1,3 +1,10 @@
+# [2.113.0](https://github.com/bamiyanapp/dev-standards/compare/v2.112.0...v2.113.0) (2026-10-24)
+
+
+### Features
+
+* reusable-canary-status.ymlにキューイング中・反映済みPR一覧を追加する ([#1207](https://github.com/bamiyanapp/dev-standards/issues/1207)) ([215fad6](https://github.com/bamiyanapp/dev-standards/commit/215fad65a95ece88baee30bbdc06a757e1b0e620)), closes [#1201](https://github.com/bamiyanapp/dev-standards/issues/1201)
+
 # [2.112.0](https://github.com/bamiyanapp/dev-standards/compare/v2.111.0...v2.112.0) (2026-10-24)
 
 
