@@ -65,7 +65,17 @@ async function scanRuntimeVersions(endpoints, { fetchJsonImpl } = {}) {
 
   const outdated = [];
   for (const endpoint of endpoints) {
-    const body = await fetchJson(endpoint.url, { fetchJsonImpl });
+    // issue #1170。HTTPエラー・ネットワーク到達不可等でfetchJson自体が例外を
+    // 投げるケースをcatchしていなかった。canary/stableの一方が起動直後・
+    // デプロイ中等で一時的に不安定な状況は普通に起こりうるため、1エンドポイントの
+    // 到達失敗が他の正常なエンドポイントの結果まで失わせてしまうことを防ぐ
+    let body;
+    try {
+      body = await fetchJson(endpoint.url, { fetchJsonImpl });
+    } catch (error) {
+      outdated.push({ name: endpoint.name, url: endpoint.url, error: `エンドポイントへの到達に失敗した: ${error.message}` });
+      continue;
+    }
     const current = parseVersion(body?.nodeVersion);
     if (!current) {
       outdated.push({ name: endpoint.name, url: endpoint.url, error: "nodeVersionを取得できなかった（レスポンス形式不正、または欠落）" });
