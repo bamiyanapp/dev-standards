@@ -1,3 +1,10 @@
+# [2.110.0](https://github.com/bamiyanapp/dev-standards/compare/v2.109.2...v2.110.0) (2026-10-24)
+
+
+### Features
+
+* 採用中のdev-standardsバージョンをREADMEへ表示する複合actionを追加する ([#1198](https://github.com/bamiyanapp/dev-standards/issues/1198)) ([e2dcd48](https://github.com/bamiyanapp/dev-standards/commit/e2dcd48df4e27eda94ce065631c5530a01b81e0b)), closes [#1197](https://github.com/bamiyanapp/dev-standards/issues/1197)
+
 ## [2.109.2](https://github.com/bamiyanapp/dev-standards/compare/v2.109.1...v2.109.2) (2026-10-24)
 
 
