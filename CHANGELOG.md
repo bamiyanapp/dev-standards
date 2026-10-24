@@ -1,3 +1,10 @@
+## [2.109.2](https://github.com/bamiyanapp/dev-standards/compare/v2.109.1...v2.109.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* **ci:** mermaid図キャッシュバスティングをPR自身への直接pushへ変更する ([#1195](https://github.com/bamiyanapp/dev-standards/issues/1195)) ([d2af1dd](https://github.com/bamiyanapp/dev-standards/commit/d2af1ddc53cb5c40df82a9488dde77a39ec92e70)), closes [#1194](https://github.com/bamiyanapp/dev-standards/issues/1194)
+
 ## [2.109.1](https://github.com/bamiyanapp/dev-standards/compare/v2.109.0...v2.109.1) (2026-10-24)
 
 
