@@ -265,6 +265,38 @@ flowchart TD
 - **`renovate.json`の`lockFileMaintenance`**（issue #1094）: 週次でlockfile全体を再生成するPRを作成する。親パッケージのバージョン範囲内で解決可能な新しいバージョンへ、Renovateが提案を出さなくても定期的に取り込まれるようになる
 - **`reusable-dependency-full-scan.yml`**（issue #1095）: `dependency-risk-summary` jobはPRに対して動作する。その対象は`package-lock.json`差分のみである。本機能はそれとは独立に動作する。呼び出し元リポジトリの`package-lock.json`全体を定期スキャンする。`scripts/dependency-full-scan.js`が全パッケージ（直接・間接問わず）を抽出する。既存の`dependency-vulnerability-info.js`（OSV.dev照会）を再利用して脆弱性を検知する。検知した場合、固定タイトルの単一Issueへ結果を反映する。これはdependency-deprecation-scan（issue #969）と同じ設計であり、実行毎に新規Issueを積み重ねない。`reusable-ci.yml`同様のreusable workflowとして提供する。参照側リポジトリ（karuta等）が独自のscheduleトリガー付きworkflowから呼び出す構成とする
 
+### 3つの定期スキャン系セーフティネットの関係（issue #1174）
+
+PRに依存しない定期スキャンは、上記の`reusable-dependency-full-scan.yml`以外にも2つある。`reusable-dependency-deprecation-scan.yml`は「deprecated（サポート終了）検知」節を参照する。`reusable-runtime-version-scan.yml`は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。3つはいずれも「Renovateの更新PRが来るまで何も検知しない」という同じ構造的な弱点を補う。対象・補うギャップはそれぞれ異なるため、一覧性を上げるためここで並べて示す。
+
+| スキャン | 対象 | 補うギャップ |
+|---|---|---|
+| `reusable-dependency-full-scan.yml` | `package-lock.json`全体（直接・間接問わず） | 間接依存が親パッケージのsemver range外の更新を必要とするケース |
+| `reusable-dependency-deprecation-scan.yml` | `package-lock.json`全体（既定で直接依存のみ） | 後継バージョンが存在せず、Renovateが更新PRを作れないケース |
+| `reusable-runtime-version-scan.yml` | 稼働中プロセスが報告するランタイム（Node.js等）のバージョン | マネージドランタイム自体（npmパッケージの管轄外、karuta#1880） |
+
+<!-- jscpd:ignore-start -->
+<details>
+<summary>ソースを表示（mermaid記法）</summary>
+
+```mermaid
+flowchart TD
+    A[Renovateの更新PR] -->|作成された場合のみ動作| B[dependency-risk-summary job]
+    C[package-lock.json全体] --> D[reusable-dependency-full-scan.yml]
+    C --> E[reusable-dependency-deprecation-scan.yml]
+    F[稼働中プロセスのランタイムバージョン] --> G[reusable-runtime-version-scan.yml]
+    D -->|semver range外の間接依存| H[固定issueへ反映]
+    E -->|後継バージョンが無いdeprecated| H
+    G -->|マネージドランタイムの遅延| H
+```
+
+（mermaid記法のソースは畳み込んで維持し、下に`enable_mermaid_render`の再レンダリング画像を貼る理由・運用は[`documentation-format-conventions.md`](documentation-format-conventions.md)「`enable_mermaid_render`との関係」を参照）
+
+</details>
+<!-- jscpd:ignore-end -->
+
+![3つの定期スキャン系セーフティネットの関係 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-5.png)
+
 `lockFileMaintenance`は、あくまで親パッケージのバージョン範囲内で解決可能な更新のみをカバーする。親パッケージ自体が古すぎて、より新しい間接依存を許容しない（range外にある）ケースは`lockFileMaintenance`だけでは検知できない。この残存ギャップを`reusable-dependency-full-scan.yml`が補う。
 
 本機能は「検知して起票/更新する」までを担い、修正PRの自動作成は対象外とする。推移的依存は親パッケージの期待するバージョン範囲内にあるため、機械的に1パッケージだけ安全に更新する手段が無く、不適切な自動変更で動作を崩すリスクがあるためである。起票するIssue本文には、親パッケージの更新待ち・`package.json`の`overrides`での強制固定・採用自体の見直しを対応候補として記載し、人間の判断に委ねる。
