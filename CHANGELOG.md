@@ -1,3 +1,10 @@
+## [2.106.1](https://github.com/bamiyanapp/dev-standards/compare/v2.106.0...v2.106.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* runtime-version-scanで1エンドポイントの到達失敗が全体を失敗させないようにする ([#1175](https://github.com/bamiyanapp/dev-standards/issues/1175)) ([994bc53](https://github.com/bamiyanapp/dev-standards/commit/994bc5398be06c4c5aa5027dad50b05e1a78d80b)), closes [#1170](https://github.com/bamiyanapp/dev-standards/issues/1170)
+
 # [2.106.0](https://github.com/bamiyanapp/dev-standards/compare/v2.105.12...v2.106.0) (2026-10-22)
 
 
