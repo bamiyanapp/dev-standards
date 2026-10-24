@@ -1,3 +1,10 @@
+# [2.109.0](https://github.com/bamiyanapp/dev-standards/compare/v2.108.0...v2.109.0) (2026-10-24)
+
+
+### Features
+
+* runtime-version-scanの検知結果にNode.jsの既知脆弱性(CVE)情報を付与する ([#1189](https://github.com/bamiyanapp/dev-standards/issues/1189)) ([54d8b60](https://github.com/bamiyanapp/dev-standards/commit/54d8b6093f6f095a7d10ed665e6a9e7a8de28919)), closes [#1188](https://github.com/bamiyanapp/dev-standards/issues/1188)
+
 # [2.108.0](https://github.com/bamiyanapp/dev-standards/compare/v2.107.0...v2.108.0) (2026-10-24)
 
 
