@@ -6,14 +6,21 @@ name: Reusable Canary Status
 # 見るしかなくPR・CIのログからは掴めない。デプロイは一切行わない状態確認
 # 専用のworkflow（workflow_call）である。
 #
-# 本Taskでは最小スライスとして、KVS読み取り・CloudFormationスタックの状態
-# 取得・Job Summary出力のみを実装する。backend/frontendの配信中バージョン
-# 取得（#1200）、PR一覧の算出（#1201）、docs/generated/への反映・force_stable
-# 放置検知・直近実行取得（#1202）は後続Taskで追加する。
+# Task 1（#1199）でKVS読み取り・CloudFormationスタックの状態取得・Job Summary
+# 出力を実装した。本Task（#1200）ではbackend/frontendの配信中バージョン表示を
+# 追加する。PR一覧の算出（#1201）、docs/generated/への反映・force_stable放置
+# 検知・直近実行取得（#1202）は後続Taskで追加する。
 #
 # 猶予期間の判定は、専用のタイムスタンプ管理を新設せず、backendのcanary
 # CloudFormationスタックのLastUpdatedTime（未更新の場合はCreationTime）を
 # そのまま使う（reusable-promote-canary.ymlと同じ方式）。
+#
+# backend URLの解決は、reusable-promote-canary.ymlと同じ分離方針を取る。
+# このworkflow自体はosls等のデプロイツールチェインに依存させず、呼び出し元が
+# resolve-serverless-backend-url複合action等であらかじめ解決した結果を
+# canary_backend_url/stable_backend_urlとして渡す。これにより、本workflowは
+# checkout・Node.jsセットアップ・npm ciが不要（curlとubuntu-latestランナー
+# 標準搭載のnodeのみで完結する）な軽量な構成を保てる
 
 on:
   workflow_call:
@@ -42,6 +49,26 @@ on:
         description: "KVS操作APIが存在するAWSリージョン。"
         type: string
         default: "us-east-1"
+      canary_backend_url:
+        description: "canary backendのベースURL（末尾スラッシュ無し）。`/get-version`エンドポイントを持つこと。呼び出し元があらかじめ解決する（例: resolve-serverless-backend-url複合action）。省略時（既定の空文字列）はbackendバージョンの表示を省略する。"
+        type: string
+        default: ""
+      stable_backend_url:
+        description: "stable backendの同上URL。"
+        type: string
+        default: ""
+      frontend_domain:
+        description: "frontendの`version.json`を配信するドメイン（例: example.cloudfront.net）。省略時（既定の空文字列）はfrontendバージョンの表示を省略する。"
+        type: string
+        default: ""
+      canary_frontend_version_path:
+        description: "frontend版canaryのversion.jsonパス（frontend_domainからの相対パス、先頭スラッシュ有り）。"
+        type: string
+        default: "/canary/version.json"
+      stable_frontend_version_path:
+        description: "frontend版stableのversion.jsonパス（frontend_domainからの相対パス、先頭スラッシュ有り）。"
+        type: string
+        default: "/stable/version.json"
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -101,6 +128,67 @@ jobs:
           ELIGIBLE_AT=$(TZ=Asia/Tokyo date -d "@${ELIGIBLE_EPOCH}" +"%Y-%m-%d %H:%M:%S JST")
           echo "promotion_eligible_at=${ELIGIBLE_AT}" >> "$GITHUB_OUTPUT"
 
+      # issue #1523・#1565相当。各stageのbackend/frontendが実際に配信している
+      # バージョンを取得する。canary_backend_url・frontend_domainのいずれも
+      # 省略された場合は何も取得しない（呼び出し元がbackend/frontendを持たない
+      # 構成の可能性があるため、必須にしない）。疎通不可の場合もエラーにせず
+      # 「取得できなかった」と表示する
+      - name: canary/stableの配信中バージョンを取得する
+        id: version
+        if: inputs.canary_backend_url != '' || inputs.frontend_domain != ''
+        run: |
+          set -eu
+          fetch_backend_version() {
+            local url="$1"
+            if [ -z "$url" ]; then
+              echo "（未設定）"
+              return
+            fi
+            local body
+            if ! body=$(curl -fsS --max-time 10 "${url}/get-version" 2>/dev/null); then
+              echo "（取得できなかった）"
+              return
+            fi
+            echo "$body" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).version||'（取得できなかった）')}catch{console.log('（取得できなかった）')}})"
+          }
+          fetch_frontend_version() {
+            local url="$1"
+            if [ -z "$url" ]; then
+              echo "（未設定）"
+              return
+            fi
+            local body
+            if ! body=$(curl -fsS --max-time 10 "$url" 2>/dev/null); then
+              echo "（取得できなかった）"
+              return
+            fi
+            echo "$body" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).version||'（取得できなかった）')}catch{console.log('（取得できなかった）')}})"
+          }
+          combine_version() {
+            local backend="$1"
+            local frontend="$2"
+            if [ "$backend" = "$frontend" ]; then
+              echo "$backend"
+            else
+              echo "⚠️ 不一致（backend: ${backend} / frontend: ${frontend}）"
+            fi
+          }
+
+          CANARY_BACKEND_VERSION=$(fetch_backend_version "${{ inputs.canary_backend_url }}")
+          STABLE_BACKEND_VERSION=$(fetch_backend_version "${{ inputs.stable_backend_url }}")
+
+          FRONTEND_DOMAIN="${{ inputs.frontend_domain }}"
+          if [ -n "$FRONTEND_DOMAIN" ]; then
+            CANARY_FRONTEND_VERSION=$(fetch_frontend_version "https://${FRONTEND_DOMAIN}${{ inputs.canary_frontend_version_path }}")
+            STABLE_FRONTEND_VERSION=$(fetch_frontend_version "https://${FRONTEND_DOMAIN}${{ inputs.stable_frontend_version_path }}")
+          else
+            CANARY_FRONTEND_VERSION="（未設定）"
+            STABLE_FRONTEND_VERSION="（未設定）"
+          fi
+
+          echo "canary_version=$(combine_version "$CANARY_BACKEND_VERSION" "$CANARY_FRONTEND_VERSION")" >> "$GITHUB_OUTPUT"
+          echo "stable_version=$(combine_version "$STABLE_BACKEND_VERSION" "$STABLE_FRONTEND_VERSION")" >> "$GITHUB_OUTPUT"
+
       - name: 概要を出力する
         if: always()
         run: |
@@ -120,5 +208,11 @@ jobs:
               echo "| stableの最終更新 | ${{ steps.status.outputs.stable_last_updated || '（stableスタックが存在しない）' }} |"
               echo "| canaryの最終更新 | ${{ steps.status.outputs.canary_last_updated }} |"
               echo "| 本番昇格の条件を満たす日時（この日時を過ぎたら昇格対象） | ${{ steps.status.outputs.promotion_eligible_at }}以降 |"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "${{ steps.version.outputs.stable_version }}" ]; then
+            {
+              echo "| stableの配信中バージョン | ${{ steps.version.outputs.stable_version }} |"
+              echo "| canaryの配信中バージョン | ${{ steps.version.outputs.canary_version }} |"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
