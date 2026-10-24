@@ -1,3 +1,10 @@
+# [2.108.0](https://github.com/bamiyanapp/dev-standards/compare/v2.107.0...v2.108.0) (2026-10-24)
+
+
+### Features
+
+* フルスキャンの検知結果にRenovate対応中PRの有無を注記する ([#1185](https://github.com/bamiyanapp/dev-standards/issues/1185)) ([090956b](https://github.com/bamiyanapp/dev-standards/commit/090956be20bbfb5cdbb78a2fb3d8df360e07f241)), closes [#1163](https://github.com/bamiyanapp/dev-standards/issues/1163)
+
 # [2.107.0](https://github.com/bamiyanapp/dev-standards/compare/v2.106.1...v2.107.0) (2026-10-24)
 
 
