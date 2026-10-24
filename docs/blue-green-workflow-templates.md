@@ -36,15 +36,21 @@ canaryデプロイから猶予期間（`GRACE_PERIOD_DAYS`）が経過したと�
 
 ## 運用状態の可視化ワークフロー（canary-status.yml）
 
-KVS・CloudFormationスタックの状態（重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時・各stageの配信中バージョン）は、AWS CLIで見るしかない。PR・CIのログからは掴めない。スマートフォンのGitHub Actions画面から手動実行するだけで現在の状態をJob Summaryへ出力する。さらに、1時間おきの定期実行で`docs/generated/canary-status.md`へコミットすることで、GitHubのファイルビュー・コミット履歴だけで最新状態を確認できるようにする。デプロイは一切行わない状態確認専用のworkflow。
+KVS・CloudFormationスタックの状態（重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時・各stageの配信中バージョン）は、AWS CLIで見るしかない。PR・CIのログからは掴めない。スマートフォンのGitHub Actions画面から手動実行するだけで現在の状態をJob Summaryへ出力する。デプロイは一切行わない状態確認専用のworkflow。
 
-mainブランチがリポジトリルール（Rulesets）で「変更は必ずPR経由」になっている場合、直接push（`git push origin HEAD:main`）は拒否される。[`reusable-ci.yml`](reusable-workflows-reference.md)の`render-mermaid-diagrams`ジョブと同じ「新ブランチへpush→PR作成→API経由でsquash merge」方式を使う。この自動コミット部分は、本来は共通のcomposite actionへ切り出すべき重複（issue #830で検討中）である。#830が利用可能になったら、以下のテンプレートの該当ステップをcomposite action呼び出しへ置き換える。
+**推奨: 以下のスタンドアロン版テンプレートより、`bamiyanapp/dev-standards/.github/workflows/reusable-canary-status.yml`を優先する。**
+
+これは`workflow_call`で呼び出すreusable workflowである（issue #1196、#1199〜#1202で一般化）。KVS読み取り・CloudFormationスタックの状態取得・backend/frontendの配信中バージョン表示を内包する。キューイング中・反映済みPR一覧の算出も内包する。`docs_output_path`指定時の`commit-via-pr`経由の自動コミット・`force_stable`放置検知・直近のpromote-canary実行取得も同様である。詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「`reusable-canary-status.yml`」を参照する。以下のスタンドアロン版はこれらの機能を含まない古いテンプレートである。新規導入では使わないこと。
+
+mainブランチがリポジトリルール（Rulesets）で「変更は必ずPR経由」になっている場合、直接push（`git push origin HEAD:main`）は拒否される。`reusable-canary-status.yml`は内部で`commit-via-pr`複合action（dev-standards#830）を使う。「新ブランチへpush→PR作成→API経由でsquash merge」方式へ自動フォールバックする。
 
 コピー＆調整用テンプレート: [`examples/blue-green-canary-status.yml`](examples/blue-green-canary-status.yml)
 
 ## 管理者ロールバックワークフロー（rollback-to-stable.yml）
 
-管理者が問題を検知した際、再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVS（`force_stable`）をtrueに設定するだけの軽量なworkflow。
+管理者が問題を検知した際、再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVS（`force_stable`）をtrueに設定する。
+
+KVS ARNの解決（`osls info`等、プロダクト固有のデプロイツールチェインに依存する）はプロダクト固有のため、呼び出し元workflowに残す。反映確認（canary Cookie付きでの実アクセス確認）も同様に呼び出し元workflowに残す。KVS更新処理自体は`reusable-rollback-to-stable.yml`（dev-standards#756）へ委譲する。
 
 誤って元に戻してしまう事故を避けるため、`force_stable`をfalse（通常運用）へ戻す機能は本workflowに持たせない。復帰は自動昇格ワークフロー経由、または必要に応じて別途手動でAWS CLIを実行する運用とする。
 
@@ -83,11 +89,11 @@ stable/canaryが同一のデータストアを共有していることは、[`bl
 
 通常の変更はCDパイプライン（mainマージ→`canary_queue_pending`キューイング→`promote-canary.yml`での定期反映）経由で届く。緊急修正やstable/canaryいずれかだけの単純な再デプロイが必要な場合向けに、手動実行できるper-stageデプロイworkflowを用意する。
 
-backend側はcanaryへの直接デプロイがキューイング設計を素通りしてしまう事故が実際に起きた。canaryの`LastUpdatedTime`が書き換わり、昇格猶予期間の起点が意図せず前進してしまう事故である。このため`stage=canary`への直接デプロイは既定で禁止し、占有中（スタックが存在し`force_stable`でない）であればデプロイを停止するガードを入れる。`force`入力をtrueにすれば緊急時のみ素通りできる。
+backend側はcanaryへの直接デプロイがキューイング設計を素通りしてしまう事故が実際に起きた。canaryの`LastUpdatedTime`が書き換わり、昇格猶予期間の起点が意図せず前進してしまう事故である。このため`stage=canary`への直接デプロイは既定で禁止する。占有中（スタックが存在し`force_stable`でない）であればデプロイを停止するガードも入れる。`force`入力をtrueにすれば緊急時のみ素通りできる。occupancyガード自体はpromote-canary.yml側の設計に強く結びついたプロダクト固有ロジックである。このためreusable workflow化はしない。デプロイ実行部分のみ`deploy-serverless`複合action（dev-standards#756系列）を呼び出す。
 
 コピー＆調整用テンプレート: [`examples/blue-green-deploy-backend-stage.yml`](examples/blue-green-deploy-backend-stage.yml)
 
-frontend側はS3プレフィックス同期のみの単純な操作で、canaryスタック自体を作成・削除しないためLastUpdatedTimeへの影響が無く、occupancyガードは不要。
+frontend側はS3プレフィックス同期のみの単純な操作である。canaryスタック自体を作成・削除しないためLastUpdatedTimeへの影響が無く、occupancyガードは不要。S3同期＋CloudFrontキャッシュ無効化は現時点では呼び出し元にインラインで書く。`reusable-promote-canary.yml`のfrontend昇格ステップと重複している可能性がある。共通化の価値はdev-standards#1203で検討済みだが、本ドキュメント初版では見送り、必要になった時点で別issueとして起票する。
 
 コピー＆調整用テンプレート: [`examples/blue-green-deploy-frontend-stage.yml`](examples/blue-green-deploy-frontend-stage.yml)
 
