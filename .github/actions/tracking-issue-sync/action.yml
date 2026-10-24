@@ -1,0 +1,79 @@
+name: "Tracking issue sync"
+description: >-
+  定期スキャン系reusable workflow（reusable-dependency-full-scan.yml・
+  reusable-dependency-deprecation-scan.yml・reusable-runtime-version-scan.yml、
+  issue #1172）が共通で使う「検知結果を固定タイトルの単一issueへ反映する」ロジック。
+  タイトルで既存のopen issueを検索し、検知有り（has-findings: "true"）なら作成/更新、
+  検知無し（"false"）ならopen issueがあればクローズする。実行毎に新規issueを
+  積み重ねない設計（issue #1095・#969・#1165と同じ）。issue本文・クローズ時コメントの
+  組み立て（表の列・文言等、各workflow固有の差分）は呼び出し元の責務とし、
+  本actionは検索・作成/更新/クローズの制御フローのみを担う
+
+inputs:
+  title:
+    description: "検知結果を反映するissueのタイトル。同名のopen issueが既にあれば本文を更新し、無ければ新規作成する。"
+    required: true
+  has-findings:
+    description: "検知結果が1件以上あったか（'true'/'false'の文字列）。"
+    required: true
+  body:
+    description: "has-findingsが'true'の場合に使うissue本文（Markdown）。呼び出し元で組み立て済みの文字列を渡す。"
+    required: false
+    default: ""
+  labels:
+    description: "issue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
+    required: false
+    default: "[]"
+  close-comment:
+    description: "has-findingsが'false'になった際、既存issueをクローズする直前に投稿するコメント本文。"
+    required: false
+    default: "再スキャンの結果、検知されなくなったため自動クローズします。"
+  github-token:
+    description: "issues: writeを持つGitHub token。"
+    required: true
+
+outputs:
+  issue-number:
+    description: "作成・更新・クローズしたissue番号（該当issueが無い場合は空文字列）。"
+    value: ${{ steps.sync.outputs.issue_number }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: トラッキングissueを同期する
+      id: sync
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const title = ${{ toJSON(inputs.title) }};
+          const hasFindings = ${{ toJSON(inputs.has-findings) }} === "true";
+          const body = ${{ toJSON(inputs.body) }};
+          const labels = JSON.parse(${{ toJSON(inputs.labels) }});
+          const closeComment = ${{ toJSON(inputs.close-comment) }};
+
+          const results = await github.paginate(github.rest.issues.listForRepo, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: "open",
+          });
+          const existing = results.find((i) => !i.pull_request && i.title === title);
+
+          if (hasFindings) {
+            if (existing) {
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
+              core.setOutput("issue_number", String(existing.number));
+            } else {
+              const created = await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels });
+              core.setOutput("issue_number", String(created.data.number));
+            }
+            return;
+          }
+
+          if (!existing) {
+            core.setOutput("issue_number", "");
+            return;
+          }
+          await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, state: "closed", state_reason: "completed" });
+          await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body: closeComment });
+          core.setOutput("issue_number", String(existing.number));

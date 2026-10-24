@@ -86,20 +86,12 @@ jobs:
         id: scan
         run: node .dev-standards-actions/scripts/runtime-version-scan.js /tmp/runtime-version-scan-endpoints.json > /tmp/runtime-version-scan-result.json
 
-      - name: 既存のトラッキングissueを検索する
-        id: find
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const results = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-            });
-            const existing = results.find((i) => !i.pull_request && i.title === ${{ toJSON(inputs.tracking_issue_title) }});
-            core.setOutput("issue_number", existing ? String(existing.number) : "");
-
-      - name: トラッキングissueを作成または更新する
+      # issue #1172。issue検索・作成/更新/クローズの制御フロー自体は
+      # reusable-dependency-full-scan.yml・reusable-dependency-deprecation-scan.yml
+      # と完全に同一のため、共通action（tracking-issue-sync）へ切り出した。
+      # 本文組み立て（表の列・文言）のみ、ここで呼び出し元として行う
+      - name: Issue本文を組み立てる
+        id: body
         if: steps.scan.outputs.has_outdated == 'true'
         uses: actions/github-script@v9
         with:
@@ -128,38 +120,17 @@ jobs:
               "",
               `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
             ].join("\n");
+            core.setOutput("body", body);
 
-            const issueNumber = "${{ steps.find.outputs.issue_number }}";
-            if (issueNumber) {
-              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: Number(issueNumber), body });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: ${{ toJSON(inputs.tracking_issue_title) }},
-                body,
-                labels: JSON.parse(${{ toJSON(inputs.tracking_issue_labels) }}),
-              });
-            }
-
-      - name: 検知されなくなったトラッキングissueをクローズする
-        if: steps.scan.outputs.has_outdated == 'false' && steps.find.outputs.issue_number != ''
-        uses: actions/github-script@v9
+      - name: トラッキングissueを同期する
+        uses: ./.dev-standards-actions/.github/actions/tracking-issue-sync
         with:
-          script: |
-            await github.rest.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
-              state: "closed",
-              state_reason: "completed",
-            });
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number("${{ steps.find.outputs.issue_number }}"),
-              body: "再スキャンの結果、最新パッチより古いランタイムが検知されなくなったため自動クローズします。",
-            });
+          title: ${{ inputs.tracking_issue_title }}
+          has-findings: ${{ steps.scan.outputs.has_outdated }}
+          body: ${{ steps.body.outputs.body }}
+          labels: ${{ inputs.tracking_issue_labels }}
+          close-comment: "再スキャンの結果、最新パッチより古いランタイムが検知されなくなったため自動クローズします。"
+          github-token: ${{ github.token }}
 
       - name: 概要を出力する
         if: always()
