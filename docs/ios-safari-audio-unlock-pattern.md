@@ -38,7 +38,7 @@ sequenceDiagram
 </details>
 <!-- jscpd:ignore-end -->
 
-![解錠〜再生フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ios-safari-audio-unlock-pattern.png?994bc5398be06c4c5aa5027dad50b05e1a78d80b)
+![解錠〜再生フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/ios-safari-audio-unlock-pattern.png?b9521d54a953529265fcb327d50e5e83ac05470c)
 
 ## 実装
 
