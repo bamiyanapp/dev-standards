@@ -1,0 +1,36 @@
+name: "Resolve Serverless Framework backend URL"
+description: >-
+  Serverless Framework（`osls`/`serverless`）でデプロイしたbackendの、指定stageにおける
+  API Gateway URLを`osls info`経由で解決する複合action（issue #1173）。ブルーグリーン
+  （stable/canary）パターンでは、stageごとのURLがスタックの削除・再作成のたびに変わる
+  ため、静的な環境変数ファイルではなく毎回`osls info`から都度解決する必要がある
+  （参照側: karutaの`canary-status.yml`・`promote-canary.yml`で同一ロジックが重複していた）。
+  依存パッケージのインストール（`npm ci`等）は呼び出し元の責務とし、本actionは
+  `osls info`の呼び出しとURL抽出のみを行う
+
+inputs:
+  stage:
+    description: "解決対象のstage名（例: canary、stable）。"
+    required: true
+  working-directory:
+    description: "`serverless.yml`があるディレクトリ（リポジトリルート相対）。"
+    required: false
+    default: "backend"
+
+outputs:
+  backend-url:
+    description: "解決したAPI Gateway URL（例: https://xxxx.execute-api.ap-northeast-1.amazonaws.com/<stage>）。解決できなかった場合は空文字列。"
+    value: ${{ steps.resolve.outputs.backend_url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: osls infoからbackend URLを解決する
+      id: resolve
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -eu
+        INFO=$(npx osls info --stage "${{ inputs.stage }}" --verbose 2>/dev/null || true)
+        BACKEND_URL=$(echo "$INFO" | grep -oE "https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/${{ inputs.stage }}" | head -1)
+        echo "backend_url=${BACKEND_URL}" >> "$GITHUB_OUTPUT"
