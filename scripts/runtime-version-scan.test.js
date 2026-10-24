@@ -65,6 +65,31 @@ test("scanRuntimeVersions: nodeVersionを取得できない場合はerrorとし�
   assert.ok(result[0].error);
 });
 
+test("scanRuntimeVersions: 1エンドポイントがHTTPエラー等で例外を投げても、他のエンドポイントの結果に影響しない", async () => {
+  const fetchJsonImpl = async (url) => {
+    if (url === "https://nodejs.org/dist/index.json") return [{ version: "v22.23.4" }];
+    if (url === "https://canary.example.com/get-version") throw new Error("HTTP 503 for https://canary.example.com/get-version");
+    if (url === "https://stable.example.com/get-version") return { nodeVersion: "v22.22.0" };
+    throw new Error(`unexpected url: ${url}`);
+  };
+
+  const endpoints = [
+    { name: "canary", url: "https://canary.example.com/get-version" },
+    { name: "stable", url: "https://stable.example.com/get-version" },
+  ];
+  const result = await scanRuntimeVersions(endpoints, { fetchJsonImpl });
+  assert.equal(result.length, 2);
+  assert.equal(result[0].name, "canary");
+  assert.ok(result[0].error.includes("HTTP 503"));
+  assert.deepEqual(result[1], {
+    name: "stable",
+    url: "https://stable.example.com/get-version",
+    currentVersion: "v22.22.0",
+    latestVersion: "v22.23.4",
+    major: 22,
+  });
+});
+
 test("scanRuntimeVersions: 同一メジャー系列が公式リリース一覧に無い場合（EOL等）はスキップする", async () => {
   const fetchJsonImpl = async (url) => {
     if (url === "https://nodejs.org/dist/index.json") return [{ version: "v22.23.4" }];
