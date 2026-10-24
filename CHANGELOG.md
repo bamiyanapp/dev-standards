@@ -1,3 +1,10 @@
+## [2.109.1](https://github.com/bamiyanapp/dev-standards/compare/v2.109.0...v2.109.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* **ci:** mermaid図キャッシュバスティングの判定をソーステキスト比較に変更する ([#1193](https://github.com/bamiyanapp/dev-standards/issues/1193)) ([39220fc](https://github.com/bamiyanapp/dev-standards/commit/39220fc109cf0848c0f1837eeb0b775a8bf785d9))
+
 # [2.109.0](https://github.com/bamiyanapp/dev-standards/compare/v2.108.0...v2.109.0) (2026-10-24)
 
 
