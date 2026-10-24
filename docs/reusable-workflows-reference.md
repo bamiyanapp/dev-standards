@@ -271,7 +271,7 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 ブルーグリーン（stable/canary）デプロイパターンの現在の運用状態をJob Summaryへ出力する（issue #1196、#1199）。重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時を表示する。デプロイは一切行わない状態確認専用のworkflowである。`workflow_dispatch`での手動実行を想定する。
 
-karutaの`canary-status.yml`を一般化したものである。ただしTask分割（#1199〜#1202）の途中までを実装済みである。PR一覧の算出（#1201）は今後追加予定である。`docs/generated/`への反映・force_stable放置検知・直近のpromote-canary実行取得（#1202）も同様に、現時点ではまだ含まれていない。
+karutaの`canary-status.yml`を一般化したものである。ただしTask分割（#1199〜#1202）の途中までを実装済みである。`docs/generated/`への反映・force_stable放置検知・直近のpromote-canary実行取得（#1202）は今後追加予定で、現時点ではまだ含まれていない。
 
 backend URLの解決は本ワークフロー自身では行わない。`resolve-serverless-backend-url`複合action等で呼び出し元があらかじめ解決する。解決結果は`canary_backend_url`・`stable_backend_url`として渡す（`reusable-promote-canary.yml`と同じ分離方針）。これにより本ワークフローはcheckout・Node.jsセットアップが不要な軽量な構成を保っている。
 
@@ -315,8 +315,11 @@ backend URLの解決は本ワークフロー自身では行わない。`resolve-
 | `canary_backend_url` / `stable_backend_url` | 各stageのbackendベースURL（`/get-version`エンドポイントを持つこと）。呼び出し元が解決して渡す | `""`（省略時はbackendバージョン表示を省略） |
 | `frontend_domain` | frontendの`version.json`を配信するドメイン | `""`（省略時はfrontendバージョン表示を省略） |
 | `canary_frontend_version_path` / `stable_frontend_version_path` | `frontend_domain`からの`version.json`の相対パス | `/canary/version.json` / `/stable/version.json` |
+| `release_type_regex` | PR一覧へ含めるconventional commits種別を判定する正規表現 | `^(feat\|fix\|refactor)(\(\|!\|:)` |
 
 backend/frontendのバージョンが不一致の場合（デプロイの部分失敗を示す異常値）は、Job Summaryへ両方を明示して警告表示する。
+
+2種のPR一覧もJob Summaryへ表示する（karuta issue #1475・#1478・#1622・#1791相当）。「キューイング中の変更」は、canary最終更新以降にmainへマージされたPRである。「canaryに反映済み・stable昇格待ちの変更」は、stable/canaryの配信中バージョンのgitタグ同士のrangeで算出する。タグが解決できない場合はタイムスタンプ区間へフォールバックする。`release_type_regex`に一致しないコミット種別（chore・docs等）は一覧から除外する。
 
 ## `reusable-dependency-deprecation-scan.yml`
 
