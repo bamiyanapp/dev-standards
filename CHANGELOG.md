@@ -1,3 +1,10 @@
+# [2.107.0](https://github.com/bamiyanapp/dev-standards/compare/v2.106.1...v2.107.0) (2026-10-24)
+
+
+### Features
+
+* Serverless FrameworkのbackendURL解決ロジックを共通actionへ切り出す ([#1180](https://github.com/bamiyanapp/dev-standards/issues/1180)) ([b9521d5](https://github.com/bamiyanapp/dev-standards/commit/b9521d54a953529265fcb327d50e5e83ac05470c)), closes [#1173](https://github.com/bamiyanapp/dev-standards/issues/1173)
+
 ## [2.106.1](https://github.com/bamiyanapp/dev-standards/compare/v2.106.0...v2.106.1) (2026-10-24)
 
 
