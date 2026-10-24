@@ -79,6 +79,19 @@ async function scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl, chunkSi
     }));
 }
 
+// issue #1163。フルスキャンはRenovateが既に対応PRを作成済みかどうかを一切見ず、
+// 同じ脆弱性を「新規検知」として重複して固定issueへ反映してしまう（Renovate対応中
+// にもかかわらず別のアラートが出る、二重管理感の原因）。packageNameをタイトルに
+// 含むopenなPRが既に存在する場合、そのPR番号を関連付ける。大文字小文字は区別しない
+// （npmパッケージ名は小文字が基本だが、PRタイトル側の表記ゆれを考慮する）。
+// openPullRequests: [{ number, title }]（呼び出し元がGitHub APIから取得済みの前提、
+// 本関数自体はネットワーク呼び出しを行わない）
+function findRelatedPullRequest(packageName, openPullRequests) {
+  const needle = packageName.toLowerCase();
+  const match = openPullRequests.find((pr) => pr.title.toLowerCase().includes(needle));
+  return match ? { number: match.number, title: match.title } : null;
+}
+
 function main() {
   const [, , lockPath] = process.argv;
   if (!lockPath) {
@@ -108,4 +121,5 @@ if (require.main === module) {
 module.exports = {
   extractAllPackages,
   scanLockFileForVulnerabilities,
+  findRelatedPullRequest,
 };

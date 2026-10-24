@@ -56,6 +56,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       issues: write
+      pull-requests: read
     outputs:
       has_vulnerabilities: ${{ steps.scan.outputs.has_vulnerabilities }}
     steps:
@@ -85,6 +86,30 @@ jobs:
         id: scan
         run: node .dev-standards-actions/scripts/dependency-full-scan.js "${{ inputs.lockfile_path }}" > /tmp/full-scan-result.json
 
+      # issue #1163。フルスキャンは「Renovateが既に対応PRを作成済みか」を見ずに
+      # 新規検知として起票・更新してしまい、Renovate対応中（minimumReleaseAge待機中・
+      # Human Review待ち等）の脆弱性と二重管理になる混乱を招いていた。各パッケージ名を
+      # タイトルに含むopenなPRが既に存在する場合、その番号をfindingへ付与する
+      - name: 対応中のPRを確認する
+        id: related-prs
+        if: steps.scan.outputs.has_vulnerabilities == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const { findRelatedPullRequest } = require("./.dev-standards-actions/scripts/dependency-full-scan.js");
+            const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result.json", "utf-8"));
+            const openPullRequests = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+            const withRelatedPr = findings.map((f) => ({
+              ...f,
+              relatedPr: findRelatedPullRequest(f.name, openPullRequests),
+            }));
+            fs.writeFileSync("/tmp/full-scan-result-with-pr.json", JSON.stringify(withRelatedPr));
+
       # issue #1172。issue検索・作成/更新/クローズの制御フロー自体は
       # reusable-dependency-deprecation-scan.yml・reusable-runtime-version-scan.yml
       # と完全に同一のため、共通action（tracking-issue-sync）へ切り出した。
@@ -96,21 +121,25 @@ jobs:
         with:
           script: |
             const fs = require("fs");
-            const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result.json", "utf-8"));
+            const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result-with-pr.json", "utf-8"));
             const rows = findings.map((f) => {
               const ids = f.vulnerabilities.map((v) => v.id).join(", ");
               const severity = f.vulnerabilities.map((v) => v.severityRating).filter(Boolean).join(", ") || "不明";
-              return `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} |`;
+              const relatedPr = f.relatedPr ? `#${f.relatedPr.number}` : "（無し）";
+              return `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} | ${relatedPr} |`;
             }).join("\n");
             const body = [
               "対象リポジトリの`package-lock.json`を対象にした定期スキャンで、既知の脆弱性が見つかりました。",
               "",
-              "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity |",
-              "|---|---|---|---|---|",
+              "「対応PR」列は、パッケージ名をタイトルに含むopenなPRが既に存在する場合のみ記載する。該当PRが既にRenovate等による対応中であることを示す目安であり、自動検知のため誤検出もあり得る。",
+              "",
+              "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity | 対応PR |",
+              "|---|---|---|---|---|---|",
               rows,
               "",
               "### 対応候補",
               "",
+              "- 対応PRが既にある場合は、そのPRのマージを待つ（新たな対応は不要）",
               "- 親パッケージ（間接依存の場合）に、該当パッケージを取り込んだ新バージョンが出ていればそちらへ更新する",
               "- 親パッケージ側が未対応の場合、`package.json`の`overrides`で該当パッケージのバージョンを強制固定する（互換性リスクがあるため、固定後は該当機能の動作確認が必要）",
               "- 影響が深刻かつ代替手段が無い場合、該当パッケージの採用自体を見直す",
@@ -147,14 +176,15 @@ jobs:
             if (!hasVulnerabilities) {
               body += "既知の脆弱性は検知されませんでした。\n";
             } else {
-              const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result.json", "utf-8"));
+              const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result-with-pr.json", "utf-8"));
               body += `検知件数: ${findings.length}件\n\n`;
-              body += "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity |\n";
-              body += "|---|---|---|---|---|\n";
+              body += "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity | 対応PR |\n";
+              body += "|---|---|---|---|---|---|\n";
               for (const f of findings) {
                 const ids = f.vulnerabilities.map((v) => v.id).join(", ");
                 const severity = f.vulnerabilities.map((v) => v.severityRating).filter(Boolean).join(", ") || "不明";
-                body += `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} |\n`;
+                const relatedPr = f.relatedPr ? `#${f.relatedPr.number}` : "（無し）";
+                body += `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} | ${relatedPr} |\n`;
               }
             }
             fs.writeFileSync("/tmp/full-scan-summary.md", body);
