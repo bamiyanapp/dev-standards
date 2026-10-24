@@ -1,3 +1,10 @@
+# [2.114.0](https://github.com/bamiyanapp/dev-standards/compare/v2.113.0...v2.114.0) (2026-10-24)
+
+
+### Features
+
+* reusable-canary-status.ymlにdocs反映・放置検知・直近実行取得を追加する ([#1208](https://github.com/bamiyanapp/dev-standards/issues/1208)) ([d54b1f3](https://github.com/bamiyanapp/dev-standards/commit/d54b1f3eb3d5e4106eeb318819b05e040f74741b)), closes [#1202](https://github.com/bamiyanapp/dev-standards/issues/1202)
+
 # [2.113.0](https://github.com/bamiyanapp/dev-standards/compare/v2.112.0...v2.113.0) (2026-10-24)
 
 
