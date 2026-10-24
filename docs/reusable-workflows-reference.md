@@ -271,7 +271,7 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 ブルーグリーン（stable/canary）デプロイパターンの現在の運用状態をJob Summaryへ出力する（issue #1196、#1199）。重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時を表示する。デプロイは一切行わない状態確認専用のworkflowである。`workflow_dispatch`での手動実行を想定する。
 
-karutaの`canary-status.yml`を一般化したものである。ただしTask分割（#1199〜#1202）の途中までを実装済みである。`docs/generated/`への反映・force_stable放置検知・直近のpromote-canary実行取得（#1202）は今後追加予定で、現時点ではまだ含まれていない。
+karutaの`canary-status.yml`を一般化したものである（#1199〜#1202で全機能を移植完了）。
 
 backend URLの解決は本ワークフロー自身では行わない。`resolve-serverless-backend-url`複合action等で呼び出し元があらかじめ解決する。解決結果は`canary_backend_url`・`stable_backend_url`として渡す（`reusable-promote-canary.yml`と同じ分離方針）。これにより本ワークフローはcheckout・Node.jsセットアップが不要な軽量な構成を保っている。
 
@@ -300,6 +300,11 @@ backend URLの解決は本ワークフロー自身では行わない。`resolve-
     canary_backend_url: ${{ steps.canary_url.outputs.backend-url }}
     stable_backend_url: ${{ steps.stable_url.outputs.backend-url }}
     frontend_domain: myapp.cloudfront.net
+    self_ref: v1.0.0
+    docs_output_path: docs/generated/canary-status.md
+    rollback_set_true_workflow: rollback-to-stable.yml
+    rollback_set_false_workflow: clear-force-stable.yml
+    promote_workflow_file: promote-canary.yml
   secrets:
     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -316,10 +321,19 @@ backend URLの解決は本ワークフロー自身では行わない。`resolve-
 | `frontend_domain` | frontendの`version.json`を配信するドメイン | `""`（省略時はfrontendバージョン表示を省略） |
 | `canary_frontend_version_path` / `stable_frontend_version_path` | `frontend_domain`からの`version.json`の相対パス | `/canary/version.json` / `/stable/version.json` |
 | `release_type_regex` | PR一覧へ含めるconventional commits種別を判定する正規表現 | `^(feat\|fix\|refactor)(\(\|!\|:)` |
+| `self_ref` | チェックアウトするdev-standards自身のgitタグ。`docs_output_path`・`rollback_set_true_workflow`使用時に必須 | `""` |
+| `docs_output_path` | Job Summaryと同内容を書き出すMarkdownファイルパス。指定すると`commit-via-pr`経由で自動コミットする | `""`（省略時はファイル出力しない） |
+| `rollback_set_true_workflow` / `rollback_set_false_workflow` | force_stable（kill switch）をtrue/falseに設定するconsumer側workflowのファイル名。両方指定した場合のみ放置検知する | `""` |
+| `rollback_max_age_hours` | force_stableがtrueに設定されてからこの時間を超えたら放置とみなす | `24` |
+| `promote_workflow_file` | 直近の実行結果を表示する対象のpromote-canary系workflowファイル名 | `promote-canary.yml` |
 
 backend/frontendのバージョンが不一致の場合（デプロイの部分失敗を示す異常値）は、Job Summaryへ両方を明示して警告表示する。
 
 2種のPR一覧もJob Summaryへ表示する（karuta issue #1475・#1478・#1622・#1791相当）。「キューイング中の変更」は、canary最終更新以降にmainへマージされたPRである。「canaryに反映済み・stable昇格待ちの変更」は、stable/canaryの配信中バージョンのgitタグ同士のrangeで算出する。タグが解決できない場合はタイムスタンプ区間へフォールバックする。`release_type_regex`に一致しないコミット種別（chore・docs等）は一覧から除外する。
+
+`rollback_set_true_workflow`・`rollback_set_false_workflow`を両方指定すると、force_stableの戻し忘れを検知する。検知には`check-rollback-staleness`複合actionを使う。放置時はJob Summaryへ警告表示する。
+
+`docs_output_path`を指定すると、Job Summaryと同内容をリポジトリへコミットする。コミットには`commit-via-pr`を使う。これによりGitからも運用状態を確認できる（issue #1472相当）。いずれの機能も、ローカルのcomposite actionを参照するため`self_ref`の指定が必要になる。
 
 ## `reusable-dependency-deprecation-scan.yml`
 

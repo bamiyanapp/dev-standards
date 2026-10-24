@@ -7,10 +7,10 @@ name: Reusable Canary Status
 # 専用のworkflow（workflow_call）である。
 #
 # Task 1（#1199）でKVS読み取り・CloudFormationスタックの状態取得・Job Summary
-# 出力を、Task 2（#1200）でbackend/frontendの配信中バージョン表示を実装した。
-# 本Task（#1201）では、キューイング中・反映済みのPR一覧算出を追加する。
-# docs/generated/への反映・force_stable放置検知・直近実行取得（#1202）は
-# 後続Taskで追加する。
+# 出力を、Task 2（#1200）でbackend/frontendの配信中バージョン表示を、Task 3
+# （#1201）でキューイング中・反映済みのPR一覧算出を実装した。本Task（#1202）
+# では、docs/generated/への反映・force_stable放置検知・直近のpromote-canary
+# 実行取得を追加する。これでkarutaのcanary-status.ymlの全機能を移植完了する
 #
 # 猶予期間の判定は、専用のタイムスタンプ管理を新設せず、backendのcanary
 # CloudFormationスタックのLastUpdatedTime（未更新の場合はCreationTime）を
@@ -78,11 +78,48 @@ on:
           （chore・docs等）を一覧から除外するために使う（karuta issue #1622相当）。
         type: string
         default: '^(feat|fix|refactor)(\(|!|:)'
+      self_ref:
+        description: >-
+          チェックアウトするdev-standards自身のgitタグ（例: v2.110.0）。
+          commit-via-pr・check-rollback-staleness複合actionをローカル参照する
+          ために必要（dev-standards#1071と同じ理由）。docs_output_path・
+          rollback_set_true_workflowのいずれも指定しない場合は未使用。
+        type: string
+        default: ""
+      docs_output_path:
+        description: >-
+          Job Summaryと同内容を書き出すMarkdownファイルパス（リポジトリルート
+          相対、例: docs/generated/canary-status.md）。指定するとcommit-via-pr
+          経由で自動コミットする。省略時（既定の空文字列）はファイル出力自体を
+          行わない。
+        type: string
+        default: ""
+      rollback_set_true_workflow:
+        description: "force_stable（kill switch）をtrueに設定するconsumer側workflowのファイル名（例: rollback-to-stable.yml）。rollback_set_false_workflowと両方指定した場合のみ放置検知を行う。"
+        type: string
+        default: ""
+      rollback_set_false_workflow:
+        description: "force_stableをfalseへ戻すconsumer側workflowのファイル名（例: clear-force-stable.yml）。"
+        type: string
+        default: ""
+      rollback_max_age_hours:
+        description: "force_stableがtrueに設定されてからこの時間を超えたら放置とみなす。"
+        type: number
+        default: 24
+      promote_workflow_file:
+        description: "直近の実行結果を表示する対象のpromote-canary系workflowファイル名。"
+        type: string
+        default: "promote-canary.yml"
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
+
+permissions:
+  contents: write # issue #1202: docs_output_path指定時、commit-via-pr経由でコミットするために必要
+  pull-requests: write # 同上。commit-via-prのPRフォールバック作成用
+  actions: read # issue #1202: 直近のpromote-canary実行取得（gh run list）・force_stable放置検知（workflow run履歴取得）に必要
 
 jobs:
   status:
@@ -282,6 +319,55 @@ jobs:
             echo "IN_CANARY_LINKS_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      # issue #1202。commit-via-pr・check-rollback-staleness複合actionを
+      # ローカル参照するために必要（dev-standards#1071と同じ理由）
+      - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
+        if: inputs.docs_output_path != '' || (inputs.rollback_set_true_workflow != '' && inputs.rollback_set_false_workflow != '')
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+
+      # dev-standards#950・karuta#1662・#1663相当。force_stable（kill switch）が
+      # trueのまま長時間放置されていないかを検知する
+      - name: force_stableの戻し忘れを検知する
+        id: staleness
+        if: inputs.rollback_set_true_workflow != '' && inputs.rollback_set_false_workflow != ''
+        uses: ./.dev-standards-actions/.github/actions/check-rollback-staleness
+        with:
+          github-token: ${{ github.token }}
+          set-true-workflow: ${{ inputs.rollback_set_true_workflow }}
+          set-false-workflow: ${{ inputs.rollback_set_false_workflow }}
+          max-age-hours: ${{ inputs.rollback_max_age_hours }}
+
+      # karuta issue #1609相当。チャット上の会話等でpromote-canary実行を指す
+      # 場合、どの実行を指しているかをドキュメント単独から追跡できるようにする
+      - name: 直近のpromote-canary実行を取得する
+        id: last_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          RUN_JSON=$(gh run list --repo "${{ github.repository }}" --workflow="${{ inputs.promote_workflow_file }}" --limit 1 --json databaseId,conclusion,status,createdAt,url --jq '.[0] // {}')
+          RUN_ID=$(echo "$RUN_JSON" | jq -r '.databaseId // ""')
+          RUN_URL=$(echo "$RUN_JSON" | jq -r '.url // ""')
+          RUN_RESULT=$(echo "$RUN_JSON" | jq -r '(.conclusion // .status) // ""')
+          RUN_CREATED_AT=$(echo "$RUN_JSON" | jq -r '.createdAt // ""')
+          if [ -n "$RUN_CREATED_AT" ]; then
+            RUN_CREATED_AT_JST=$(TZ=Asia/Tokyo date -d "$RUN_CREATED_AT" +"%Y-%m-%d %H:%M:%S JST")
+          else
+            RUN_CREATED_AT_JST="（取得できなかった）"
+          fi
+          if [ -n "$RUN_ID" ] && [ -n "$RUN_URL" ]; then
+            RUN_LINK="[run ${RUN_ID}](${RUN_URL})"
+          else
+            RUN_LINK="（取得できなかった）"
+          fi
+          echo "run_link=${RUN_LINK}" >> "$GITHUB_OUTPUT"
+          echo "run_result=${RUN_RESULT:-（取得できなかった）}" >> "$GITHUB_OUTPUT"
+          echo "run_created_at=${RUN_CREATED_AT_JST}" >> "$GITHUB_OUTPUT"
+
       - name: 概要を出力する
         if: always()
         run: |
@@ -309,6 +395,9 @@ jobs:
               echo "| canaryの配信中バージョン | ${{ steps.version.outputs.canary_version }} |"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+          {
+            echo "| 直近の${{ inputs.promote_workflow_file }}実行 | ${{ steps.last_run.outputs.run_link }}（${{ steps.last_run.outputs.run_created_at }}、結果: ${{ steps.last_run.outputs.run_result }}） |"
+          } >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.status.outputs.canary_exists }}" = "true" ]; then
             {
               echo ""
@@ -321,3 +410,30 @@ jobs:
               echo "${{ steps.status.outputs.queued_pr_links }}"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ "${{ steps.staleness.outputs.stale }}" = "true" ]; then
+            {
+              echo ""
+              echo "⚠️ force_stableが${{ steps.staleness.outputs.since }}からtrueのまま${{ inputs.rollback_max_age_hours }}時間超放置されている。戻し忘れの可能性がないか確認すること。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # issue #1472相当。Job Summaryは実行ごとに使い捨てで、Gitからは可視化
+      # できない。docs_output_pathを指定した場合、同内容をリポジトリ内の
+      # ファイルへも書き出し、commit-via-pr経由でコミットする
+      - name: docs_output_pathへ書き出す
+        id: write_docs
+        if: inputs.docs_output_path != ''
+        run: |
+          set -eu
+          cat "$GITHUB_STEP_SUMMARY" > "${{ inputs.docs_output_path }}"
+          echo "changed=$(git status --porcelain -- "${{ inputs.docs_output_path }}" | grep -q . && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: 変更をcommit-via-pr経由でコミットする
+        if: inputs.docs_output_path != '' && steps.write_docs.outputs.changed == 'true'
+        uses: ./.dev-standards-actions/.github/actions/commit-via-pr
+        with:
+          paths: ${{ inputs.docs_output_path }}
+          commit-subject: "chore(canary): canary運用状態を更新する [skip ci]"
+          commit-body: "reusable-canary-status.ymlによる自動コミットです（issue #1202）。"
+          branch-prefix: "chore/canary-status"
+          github-token: ${{ github.token }}
