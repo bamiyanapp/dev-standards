@@ -29,7 +29,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![アーキテクチャ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-1.png?54d8b6093f6f095a7d10ed665e6a9e7a8de28919)
+![アーキテクチャ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-1.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
 
 - API・フロントエンド配信を同一SAMスタックにまとめることで、`sam deploy`一発でバックエンド・フロントエンドホスティングの整合性（CORSのAllowOrigin等）を保てる
 - DynamoDBテーブルは`PAY_PER_REQUEST`課金にし、小規模プロダクトでの容量プランニングを不要にする
@@ -97,7 +97,7 @@ sequenceDiagram
 </details>
 <!-- jscpd:ignore-end -->
 
-![トークン交換フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-2.png?54d8b6093f6f095a7d10ed665e6a9e7a8de28919)
+![トークン交換フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/serverless-api-dynamodb-pattern-2.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
 
 - `verifyGoogleIdToken`は`oAuth2Client`を、`createSessionAuthenticator`は`secret`をそれぞれDI可能にしている。テストでは実際にGoogle APIへ通信しないfakeや固定secretへ差し替える
 - **署名鍵（`SESSION_SECRET`）の用意**: 自動生成を検討した。AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による方式である。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一する。これによりAWS側のIAM権限追加を不要にする
