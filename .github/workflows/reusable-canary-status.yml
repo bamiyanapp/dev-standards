@@ -1,0 +1,124 @@
+name: Reusable Canary Status
+
+# issue #1196（#1199、Task 1）。karutaのcanary-status.yml（issue #1462等）を
+# 一般化したもの。CloudFront KVS・CloudFormationスタックの状態（重み・
+# ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時）は、AWS CLIで
+# 見るしかなくPR・CIのログからは掴めない。デプロイは一切行わない状態確認
+# 専用のworkflow（workflow_call）である。
+#
+# 本Taskでは最小スライスとして、KVS読み取り・CloudFormationスタックの状態
+# 取得・Job Summary出力のみを実装する。backend/frontendの配信中バージョン
+# 取得（#1200）、PR一覧の算出（#1201）、docs/generated/への反映・force_stable
+# 放置検知・直近実行取得（#1202）は後続Taskで追加する。
+#
+# 猶予期間の判定は、専用のタイムスタンプ管理を新設せず、backendのcanary
+# CloudFormationスタックのLastUpdatedTime（未更新の場合はCreationTime）を
+# そのまま使う（reusable-promote-canary.ymlと同じ方式）。
+
+on:
+  workflow_call:
+    inputs:
+      canary_stack_name:
+        description: "backend canaryのCloudFormationスタック名。"
+        type: string
+        required: true
+      stable_stack_name:
+        description: "backend stableのCloudFormationスタック名。"
+        type: string
+        required: true
+      kvs_arn:
+        description: "canary_weight・force_stable・canary_queue_pendingを保持するCloudFront KeyValueStoreのARN。"
+        type: string
+        required: true
+      grace_period_hours:
+        description: "canaryデプロイからこの時間数が経過し、かつforce_stableが設定されていなければ昇格対象とする（reusable-promote-canary.ymlのgrace_period_hoursと同じ値を指定すること）。"
+        type: number
+        default: 20
+      aws_region:
+        description: "CloudFormationスタックが存在するAWSリージョン。"
+        type: string
+        default: "ap-northeast-1"
+      kvs_region:
+        description: "KVS操作APIが存在するAWSリージョン。"
+        type: string
+        default: "us-east-1"
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  status:
+    name: "運用状態を可視化する"
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
+    steps:
+      - name: KVSの値を取得する
+        id: kvs
+        run: |
+          set -eu
+          CANARY_WEIGHT=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "${{ inputs.kvs_arn }}" --key "canary_weight" --query Value --output text 2>/dev/null || echo "（未設定）")
+          FORCE_STABLE=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "${{ inputs.kvs_arn }}" --key "force_stable" --query Value --output text 2>/dev/null || echo "false")
+          PENDING=$(aws cloudfront-keyvaluestore get-key --region "${{ inputs.kvs_region }}" --kvs-arn "${{ inputs.kvs_arn }}" --key "canary_queue_pending" --query Value --output text 2>/dev/null || echo "false")
+          echo "canary_weight=${CANARY_WEIGHT}" >> "$GITHUB_OUTPUT"
+          echo "force_stable=${FORCE_STABLE}" >> "$GITHUB_OUTPUT"
+          echo "canary_queue_pending=${PENDING}" >> "$GITHUB_OUTPUT"
+
+      - name: canary/stableスタックの状態を取得する
+        id: status
+        run: |
+          set -eu
+          GRACE_PERIOD_HOURS="${{ inputs.grace_period_hours }}"
+
+          if aws cloudformation describe-stacks --stack-name "${{ inputs.stable_stack_name }}" >/dev/null 2>&1; then
+            STABLE_LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "${{ inputs.stable_stack_name }}" --query "Stacks[0].LastUpdatedTime" --output text)
+            if [ "$STABLE_LAST_UPDATED" = "None" ]; then
+              STABLE_LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "${{ inputs.stable_stack_name }}" --query "Stacks[0].CreationTime" --output text)
+            fi
+            echo "stable_last_updated=$(TZ=Asia/Tokyo date -d "$STABLE_LAST_UPDATED" +"%Y-%m-%d %H:%M:%S JST")" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable_last_updated=" >> "$GITHUB_OUTPUT"
+          fi
+
+          if ! aws cloudformation describe-stacks --stack-name "${{ inputs.canary_stack_name }}" >/dev/null 2>&1; then
+            echo "canary_exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "canary_exists=true" >> "$GITHUB_OUTPUT"
+
+          LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "${{ inputs.canary_stack_name }}" --query "Stacks[0].LastUpdatedTime" --output text)
+          if [ "$LAST_UPDATED" = "None" ]; then
+            LAST_UPDATED=$(aws cloudformation describe-stacks --stack-name "${{ inputs.canary_stack_name }}" --query "Stacks[0].CreationTime" --output text)
+          fi
+          LAST_UPDATED_EPOCH=$(date -d "$LAST_UPDATED" +%s)
+          echo "canary_last_updated=$(TZ=Asia/Tokyo date -d "@${LAST_UPDATED_EPOCH}" +"%Y-%m-%d %H:%M:%S JST")" >> "$GITHUB_OUTPUT"
+
+          ELIGIBLE_EPOCH=$(( LAST_UPDATED_EPOCH + GRACE_PERIOD_HOURS * 3600 ))
+          ELIGIBLE_AT=$(TZ=Asia/Tokyo date -d "@${ELIGIBLE_EPOCH}" +"%Y-%m-%d %H:%M:%S JST")
+          echo "promotion_eligible_at=${ELIGIBLE_AT}" >> "$GITHUB_OUTPUT"
+
+      - name: 概要を出力する
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## canary運用状態"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| canary_weight（canaryへ振り分ける割合） | ${{ steps.kvs.outputs.canary_weight }}% |"
+            echo "| force_stable（管理者ロールバック中か） | ${{ steps.kvs.outputs.force_stable }} |"
+            echo "| canary_queue_pending（反映待ちのマージがあるか） | ${{ steps.kvs.outputs.canary_queue_pending }} |"
+            echo "| canaryスタックが存在するか | ${{ steps.status.outputs.canary_exists }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.status.outputs.canary_exists }}" = "true" ]; then
+            {
+              echo "| stableの最終更新 | ${{ steps.status.outputs.stable_last_updated || '（stableスタックが存在しない）' }} |"
+              echo "| canaryの最終更新 | ${{ steps.status.outputs.canary_last_updated }} |"
+              echo "| 本番昇格の条件を満たす日時（この日時を過ぎたら昇格対象） | ${{ steps.status.outputs.promotion_eligible_at }}以降 |"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
