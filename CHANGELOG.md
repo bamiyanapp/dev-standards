@@ -1,3 +1,10 @@
+# [2.112.0](https://github.com/bamiyanapp/dev-standards/compare/v2.111.0...v2.112.0) (2026-10-24)
+
+
+### Features
+
+* reusable-canary-status.ymlにbackend/frontendの配信中バージョン表示を追加する ([#1206](https://github.com/bamiyanapp/dev-standards/issues/1206)) ([8b22d96](https://github.com/bamiyanapp/dev-standards/commit/8b22d96d8f7f0231a87e2cb74a7d2739d7da0d81)), closes [#1200](https://github.com/bamiyanapp/dev-standards/issues/1200)
+
 # [2.111.0](https://github.com/bamiyanapp/dev-standards/compare/v2.110.0...v2.111.0) (2026-10-24)
 
 
