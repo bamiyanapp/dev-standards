@@ -271,9 +271,25 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 ブルーグリーン（stable/canary）デプロイパターンの現在の運用状態をJob Summaryへ出力する（issue #1196、#1199）。重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時を表示する。デプロイは一切行わない状態確認専用のworkflowである。`workflow_dispatch`での手動実行を想定する。
 
-karutaの`canary-status.yml`を一般化したものである。ただしTask分割（#1199〜#1202）の最初のスライスのみを実装済みである。backend/frontendの配信中バージョン表示・PR一覧の算出は今後追加予定である。`docs/generated/`への反映・force_stable放置検知・直近のpromote-canary実行取得も同様に、現時点ではまだ含まれていない。
+karutaの`canary-status.yml`を一般化したものである。ただしTask分割（#1199〜#1202）の途中までを実装済みである。PR一覧の算出（#1201）は今後追加予定である。`docs/generated/`への反映・force_stable放置検知・直近のpromote-canary実行取得（#1202）も同様に、現時点ではまだ含まれていない。
+
+backend URLの解決は本ワークフロー自身では行わない。`resolve-serverless-backend-url`複合action等で呼び出し元があらかじめ解決する。解決結果は`canary_backend_url`・`stable_backend_url`として渡す（`reusable-promote-canary.yml`と同じ分離方針）。これにより本ワークフローはcheckout・Node.jsセットアップが不要な軽量な構成を保っている。
 
 ```yaml
+- name: canaryのbackend URLを解決する
+  id: canary_url
+  uses: bamiyanapp/dev-standards/.github/actions/resolve-serverless-backend-url@v1.0.0
+  with:
+    stage: canary
+    working-directory: backend
+
+- name: stableのbackend URLを解決する
+  id: stable_url
+  uses: bamiyanapp/dev-standards/.github/actions/resolve-serverless-backend-url@v1.0.0
+  with:
+    stage: stable
+    working-directory: backend
+
 - name: canaryの運用状態を可視化する
   uses: bamiyanapp/dev-standards/.github/workflows/reusable-canary-status.yml@v1.0.0
   with:
@@ -281,6 +297,9 @@ karutaの`canary-status.yml`を一般化したものである。ただしTask分
     stable_stack_name: myapp-backend-stable
     kvs_arn: ${{ steps.kvs.outputs.arn }}
     grace_period_hours: 20
+    canary_backend_url: ${{ steps.canary_url.outputs.backend-url }}
+    stable_backend_url: ${{ steps.stable_url.outputs.backend-url }}
+    frontend_domain: myapp.cloudfront.net
   secrets:
     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -293,6 +312,11 @@ karutaの`canary-status.yml`を一般化したものである。ただしTask分
 | `grace_period_hours` | 昇格までの猶予期間（時間数）。`reusable-promote-canary.yml`の`grace_period_hours`と同じ値を指定すること | `20` |
 | `aws_region` | CloudFormationスタックが存在するAWSリージョン | `ap-northeast-1` |
 | `kvs_region` | KVS操作APIが存在するAWSリージョン | `us-east-1` |
+| `canary_backend_url` / `stable_backend_url` | 各stageのbackendベースURL（`/get-version`エンドポイントを持つこと）。呼び出し元が解決して渡す | `""`（省略時はbackendバージョン表示を省略） |
+| `frontend_domain` | frontendの`version.json`を配信するドメイン | `""`（省略時はfrontendバージョン表示を省略） |
+| `canary_frontend_version_path` / `stable_frontend_version_path` | `frontend_domain`からの`version.json`の相対パス | `/canary/version.json` / `/stable/version.json` |
+
+backend/frontendのバージョンが不一致の場合（デプロイの部分失敗を示す異常値）は、Job Summaryへ両方を明示して警告表示する。
 
 ## `reusable-dependency-deprecation-scan.yml`
 
