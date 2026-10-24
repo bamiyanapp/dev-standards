@@ -1,0 +1,25 @@
+name: "Generate dev-standards version doc"
+description: >-
+  参照側リポジトリの`.github/workflows/*.yml`内の`uses: bamiyanapp/dev-standards/...@vX.Y.Z`
+  参照を走査し、採用中のdev-standardsバージョンを対象Markdownファイル（既定README.md）内の
+  マーカー（`<!-- dev-standards-version:start -->`〜`<!-- dev-standards-version:end -->`）間へ
+  書き込む複合action（issue #1197）。karuta issue #1898/#1899で実装したスクリプトを一般化した。
+  バージョンが複数混在する場合（workflowファイル間で更新漏れがある場合）は、不一致の旨を
+  明示する（特定のバージョンに丸めない）
+
+inputs:
+  markdown-path:
+    description: "更新対象のMarkdownファイルパス（リポジトリルート相対）。事前にマーカー2行を含めておくこと。"
+    required: false
+    default: "README.md"
+  workflows-dir:
+    description: "dev-standards参照を走査するworkflowsディレクトリ（リポジトリルート相対）。"
+    required: false
+    default: ".github/workflows"
+
+runs:
+  using: "composite"
+  steps:
+    - name: dev-standardsバージョン表示をMarkdownへ書き込む
+      shell: bash
+      run: node "${{ github.action_path }}/generate-dev-standards-version-doc.js" "${{ inputs.markdown-path }}" "${{ inputs.workflows-dir }}"

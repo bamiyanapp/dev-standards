@@ -350,3 +350,26 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 | `github-token` | PR作成・squash merge・ブランチ削除に使うトークン | （必須） |
 
 対象ブランチへのpushで後続workflowをトリガーする必要がある場合、`push-token`には`secrets.GITHUB_TOKEN`ではなく`secrets.BOT_TOKEN`等を渡すこと。`GITHUB_TOKEN`によるpushは新たなworkflow実行を作らないためである。
+
+## `.github/actions/generate-dev-standards-version-doc`（複合action）
+
+参照側リポジトリが採用中のdev-standardsバージョンをREADME等へ表示する（issue #1197）。`.github/workflows/*.yml`内の`uses: bamiyanapp/dev-standards/...@vX.Y.Z`参照を走査し、対象Markdownファイル内のマーカー間へ書き込む。karuta issue #1898/#1899の実装を一般化したもの。
+
+対象Markdownファイルへ、事前に以下のマーカー2行を含めておく必要がある。
+
+```markdown
+<!-- dev-standards-version:start -->
+<!-- dev-standards-version:end -->
+```
+
+```yaml
+- name: 採用中のdev-standardsバージョンをREADMEへ表示する
+  uses: bamiyanapp/dev-standards/.github/actions/generate-dev-standards-version-doc@v1.0.0
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `markdown-path` | 更新対象のMarkdownファイルパス（リポジトリルート相対） | `README.md` |
+| `workflows-dir` | dev-standards参照を走査するworkflowsディレクトリ（リポジトリルート相対） | `.github/workflows` |
+
+workflowファイル間でバージョンが混在する場合（更新漏れ）は、特定のバージョンに丸めず不一致の旨を明示する。本actionは対象ファイルを書き換えるだけでコミットは行わないため、呼び出し元が`commit-via-pr`等でコミットする必要がある。
