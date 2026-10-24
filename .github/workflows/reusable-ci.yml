@@ -2210,19 +2210,21 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    # secretsコンテキストはstepのif:条件では参照できないため、job env経由で
-    # boolean化してから後段のif:で使う（standards-check jobと同様）
-    env:
-      HAS_BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' }}
     steps:
       # issue #1012のフォローアップ。キャッシュバスティングの要否判定（後述）で
       # push前（github.event.before）時点のmermaidソースをgit show経由で読む必要が
       # あるため、既定のfetch-depth: 1（直近コミットのみ）では対象コミットが
       # ローカルに存在せず判定できない。このjobはChromiumインストール等で元々
       # 数分かかるため、全履歴取得のオーバーヘッドは相対的に小さい
+      #
+      # issue #1194: キャッシュバスティングをpull_requestイベントではそのPR自身の
+      # head branchへ直接pushする（後述）ため、detached HEADではなく明示的に
+      # そのブランチをチェックアウトする。pushイベントではgithub.refが元々
+      # ブランチを指すため従来どおり
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
           fetch-depth: 0
 
       # 無関係なPRで毎回Chromiumのセットアップ・レンダリングを行う無駄、および無関係な
@@ -2350,9 +2352,15 @@ jobs:
       # （github.event.before）から変化したかどうかで判定する。テキスト比較は
       # レンダラーの非決定性に影響されない。前回コミットの時点でファイルが
       # 存在しない場合等（新規追加等）は安全側に倒してバスティング対象とする
+      #
+      # issue #1194: pull_requestイベントでも実行する（従来はpushイベント限定）。
+      # 比較対象の「前回コミット」は、pushではgithub.event.before、pull_requestでは
+      # そのPRのbase branch時点（github.event.pull_request.base.sha）とする
       - name: ドキュメント内の最新図リンクをキャッシュバスティングする
         id: cache-bust
-        if: steps.publish-latest.outcome == 'success' && env.HAS_BOT_TOKEN == 'true'
+        if: |
+          steps.diagrams.outputs.found == 'true' &&
+          (github.event_name == 'pull_request' || steps.publish-latest.outcome == 'success')
         continue-on-error: true
         uses: actions/github-script@v9
         with:
@@ -2364,7 +2372,9 @@ jobs:
               path.join(process.cwd(), '.dev-standards-actions/.github/actions/render-mermaid-diagrams/extract-mermaid.js')
             );
             const sha = context.sha;
-            const beforeRef = '${{ github.event.before }}';
+            const beforeRef = context.eventName === 'pull_request'
+              ? '${{ github.event.pull_request.base.sha }}'
+              : '${{ github.event.before }}';
             const repo = '${{ github.repository }}';
             const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const manifest = JSON.parse(fs.readFileSync('mermaid-diagrams/manifest.json', 'utf-8'));
@@ -2403,9 +2413,40 @@ jobs:
             core.setOutput('changed', changedFiles.length > 0 ? 'true' : 'false');
             core.setOutput('files', changedFiles.join(' '));
 
-      # [skip ci]必須: このコミット自体がpushイベントを再トリガーし
-      # render-mermaid-diagrams jobを再実行すると、新しいcontext.shaで
-      # またキャッシュバスティング文字列を書き換えて再度pushする無限ループになる。
+      # issue #1194。従来はpushイベント（base_branchへのマージ後）でのみバスティング
+      # しており、反映にはcommit-via-pr経由の追従コミット（新ブランチ→PR作成→
+      # squash merge）が必要だった。この追従PRが、本来の変更とは別のエントリとして
+      # PR一覧・Actions実行履歴に残り続け見通しを悪くする、という指摘があった
+      # （参照側リポジトリでの実運用で判明）。
+      #
+      # pull_requestイベントでは、そのPR自身のhead branchへ直接pushすることで、
+      # 追従PRを発生させずバスティングをそのPRの変更に含める。GITHUB_TOKENに
+      # よるpushはActionsの新規workflow実行を誘発しない仕様（無限ループ対策として
+      # 組み込まれている既定動作）のため[skip ci]は不要。対象はPR自身のブランチ
+      # （mainのような「変更は必ずPR経由」のRulesets保護対象ではない）のため、
+      # BOT_TOKENでのbypassも不要で、job既定のGITHUB_TOKEN（contents: write）で
+      # 足りる
+      - name: バスティングした変更をこのPRブランチへ直接pushする
+        if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          # github.head_refは外部から操作可能な値であり、inline scriptへ直接
+          # 埋め込むとshell injectionの余地が生まれるため、環境変数経由で渡す
+          # （actionlintの警告、GitHub Actions Security Hardening推奨事項）
+          HEAD_REF: ${{ github.head_ref }}
+          FILES: ${{ steps.cache-bust.outputs.files }}
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- $FILES
+          git commit -m "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する" -m "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723、#1194）。"
+          git push origin "HEAD:${HEAD_REF}"
+
+      # 以下はpushイベント（base_branchへの直接マージ等、PRを経由しない例外的な
+      # ケース）向けのフォールバック。通常のPRフローでは上記のPRブランチへの
+      # 直接pushで既に反映済みのため、ここに到達するのは「PRブランチへの直接push
+      # 権限が無かった」等の例外的なケースのみを想定する
       #
       # base_branchが「変更は必ずPR経由」のリポジトリルール（Rulesets）で保護されている
       # 場合、この直接pushはGH013エラーで拒否される（issue #723）。karuta実機検証で、
@@ -2426,7 +2467,7 @@ jobs:
       # 連続失敗する事故（issue #905）も発生した。issue #1071で、呼び出し元が
       # 渡すinputs.self_refを使う方式へ変更し、手動更新を不要にした
       - name: dev-standardsをチェックアウトする（commit-via-pr用）
-        if: steps.cache-bust.outputs.changed == 'true'
+        if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'push'
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
@@ -2435,7 +2476,7 @@ jobs:
 
       - name: キャッシュバスティング済みリンクをcommit-via-pr経由でコミットする
         id: commit-via-pr
-        if: steps.cache-bust.outputs.changed == 'true'
+        if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'push'
         uses: ./.dev-standards-actions-commit-via-pr/.github/actions/commit-via-pr
         with:
           paths: ${{ steps.cache-bust.outputs.files }}
