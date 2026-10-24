@@ -267,6 +267,33 @@ stableがcanaryより新しいと判定した場合（上記）、キュー待�
 
 `canary_exists_kvs_key`を指定した場合、昇格・canaryスタック削除後はこのキーをfalseへ更新する。キュー待ち更新をcanaryへ反映した後はtrueへ更新する。`/canary/`への明示アクセス時、CloudFront Functions側でcanaryスタックが存在しない状態への誤ルーティングを避けたい場合に使う。stableへフォールバックさせる用途を想定する（karuta issue #1489）。
 
+## `reusable-canary-status.yml`
+
+ブルーグリーン（stable/canary）デプロイパターンの現在の運用状態をJob Summaryへ出力する（issue #1196、#1199）。重み・ロールバック状態・キュー待ち・最終更新時刻・昇格予定日時を表示する。デプロイは一切行わない状態確認専用のworkflowである。`workflow_dispatch`での手動実行を想定する。
+
+karutaの`canary-status.yml`を一般化したものである。ただしTask分割（#1199〜#1202）の最初のスライスのみを実装済みである。backend/frontendの配信中バージョン表示・PR一覧の算出は今後追加予定である。`docs/generated/`への反映・force_stable放置検知・直近のpromote-canary実行取得も同様に、現時点ではまだ含まれていない。
+
+```yaml
+- name: canaryの運用状態を可視化する
+  uses: bamiyanapp/dev-standards/.github/workflows/reusable-canary-status.yml@v1.0.0
+  with:
+    canary_stack_name: myapp-backend-canary
+    stable_stack_name: myapp-backend-stable
+    kvs_arn: ${{ steps.kvs.outputs.arn }}
+    grace_period_hours: 20
+  secrets:
+    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `canary_stack_name` / `stable_stack_name` | backend canary/stableのCloudFormationスタック名 | （必須） |
+| `kvs_arn` | `canary_weight`・`force_stable`・`canary_queue_pending`を保持するKVSのARN | （必須） |
+| `grace_period_hours` | 昇格までの猶予期間（時間数）。`reusable-promote-canary.yml`の`grace_period_hours`と同じ値を指定すること | `20` |
+| `aws_region` | CloudFormationスタックが存在するAWSリージョン | `ap-northeast-1` |
+| `kvs_region` | KVS操作APIが存在するAWSリージョン | `us-east-1` |
+
 ## `reusable-dependency-deprecation-scan.yml`
 
 更新PRの有無に関わらず、現時点でロックされている依存パッケージ全体を対象とする。npm registryの`deprecated`フラグを定期スキャンする（issue #969）。`dependency-risk-summary` job（`reusable-ci.yml`）のdeprecated検知は更新PR起点である。そのため、後継バージョンが存在しないまま非推奨化されたパッケージ（Renovateが更新PRを作らないケース）を検知できない限界がある。本ワークフローはこの限界を補う。定期実行（`schedule`トリガー）を想定する。
