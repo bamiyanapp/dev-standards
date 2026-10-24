@@ -1,3 +1,10 @@
+# [2.111.0](https://github.com/bamiyanapp/dev-standards/compare/v2.110.0...v2.111.0) (2026-10-24)
+
+
+### Features
+
+* canary運用状態の最小スライスをreusable-canary-status.ymlとして実装する ([#1204](https://github.com/bamiyanapp/dev-standards/issues/1204)) ([09db77a](https://github.com/bamiyanapp/dev-standards/commit/09db77a5f30578d7f46aa4c89db9cf24b164eda4)), closes [#1199](https://github.com/bamiyanapp/dev-standards/issues/1199)
+
 # [2.110.0](https://github.com/bamiyanapp/dev-standards/compare/v2.109.2...v2.110.0) (2026-10-24)
 
 
