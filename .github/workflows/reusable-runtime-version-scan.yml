@@ -79,6 +79,13 @@ jobs:
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
+      # issue #1188。scripts/runtime-version-scan.jsがsemverパッケージ（vulnerable/
+      # patched範囲の解釈）に依存するようになった。スクリプト自体は
+      # .dev-standards-actions配下にあるため、node_modulesも同じ場所に必要
+      - name: semverをインストールする（CVE照合用）
+        working-directory: .dev-standards-actions
+        run: npm install --no-save --no-audit --no-fund semver@7
+
       - name: 対象エンドポイントをファイルへ書き出す
         run: echo '${{ inputs.endpoints }}' > /tmp/runtime-version-scan-endpoints.json
 
@@ -98,24 +105,27 @@ jobs:
           script: |
             const fs = require("fs");
             const findings = JSON.parse(fs.readFileSync("/tmp/runtime-version-scan-result.json", "utf-8"));
+            const formatCve = (f) => {
+              if (f.error) return "-";
+              if (!f.vulnerabilities || f.vulnerabilities.length === 0) return "（無し）";
+              return f.vulnerabilities.map((v) => (v.cve.length > 0 ? v.cve.join(", ") : "(CVE番号無し)")).join("; ");
+            };
             const rows = findings.map((f) => {
-              if (f.error) return `| ${f.name} | - | - | ${f.error} |`;
-              return `| ${f.name} | ${f.currentVersion} | ${f.latestVersion} | - |`;
+              if (f.error) return `| ${f.name} | - | - | - | ${f.error} |`;
+              return `| ${f.name} | ${f.currentVersion} | ${f.latestVersion} | ${formatCve(f)} | - |`;
             }).join("\n");
             const body = [
               "対象エンドポイントのNode.jsランタイムバージョンを対象にした定期スキャンで、公式の最新パッチより古いものが見つかりました。",
               "",
-              "| エンドポイント | 現在のバージョン | 最新バージョン | エラー |",
-              "|---|---|---|---|",
+              "「既知の脆弱性（CVE）」列は、Node.js security working groupが公開する脆弱性データベースのうち、現在のバージョンが未パッチのまま該当するエントリを示す（`scripts/runtime-version-scan.js`の`findUnpatchedVulnerabilities()`）。このデータベース自体の更新ラグにより、セキュリティリリース直後は「（無し）」と表示される場合がある。",
+              "",
+              "| エンドポイント | 現在のバージョン | 最新バージョン | 既知の脆弱性（CVE） | エラー |",
+              "|---|---|---|---|---|",
               rows,
-              "",
-              "### 注意",
-              "",
-              "「最新パッチより古い」ことは、既知の脆弱性を持つことの確実な証明ではありません（最新パッチが脆弱性修正を含まないメンテナンスリリースの場合も検知します）。[Node.js公式のセキュリティリリースアナウンス](https://nodejs.org/en/blog/vulnerability/)を確認し、実際に対応が必要か判断してください。",
               "",
               "### 対応候補",
               "",
-              "- マネージドランタイム（AWS Lambda等）の場合、関数の再デプロイでAWS側の最新ランタイムへ載せ替える",
+              "- マネージドランタイム（[AWS Lambdaのランタイムサポート・非推奨スケジュール](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html)を参照）の場合、関数の再デプロイでAWS側の最新ランタイムへ載せ替える",
               "- 自己管理の環境の場合、Node.jsを最新パッチへ更新する",
               "",
               `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
@@ -145,13 +155,15 @@ jobs:
             } else {
               const findings = JSON.parse(fs.readFileSync("/tmp/runtime-version-scan-result.json", "utf-8"));
               body += `検知件数: ${findings.length}件\n\n`;
-              body += "| エンドポイント | 現在のバージョン | 最新バージョン | エラー |\n";
-              body += "|---|---|---|---|\n";
+              body += "| エンドポイント | 現在のバージョン | 最新バージョン | 既知の脆弱性（CVE） | エラー |\n";
+              body += "|---|---|---|---|---|\n";
               for (const f of findings) {
                 if (f.error) {
-                  body += `| ${f.name} | - | - | ${f.error} |\n`;
+                  body += `| ${f.name} | - | - | - | ${f.error} |\n`;
                 } else {
-                  body += `| ${f.name} | ${f.currentVersion} | ${f.latestVersion} | - |\n`;
+                  const vulns = f.vulnerabilities || [];
+                  const cve = vulns.length === 0 ? "（無し）" : vulns.map((v) => (v.cve.length > 0 ? v.cve.join(", ") : "(CVE番号無し)")).join("; ");
+                  body += `| ${f.name} | ${f.currentVersion} | ${f.latestVersion} | ${cve} | - |\n`;
                 }
               }
             }
