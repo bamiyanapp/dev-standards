@@ -291,8 +291,12 @@ flowchart TD
 |---|---|
 | `GITHUB_TOKEN` | GitHub Actions が自動的に提供するトークン。`BOT_TOKEN` 未設定時、`release` job の `@semantic-release/git`（バージョン更新コミットのpush）・`@semantic-release/github`（タグ・GitHub Release作成）のフォールバック先として使う |
 | `BOT_TOKEN` | `merge` job での実際の PR マージ（squash merge API 呼び出し）、および `release` job でのバージョン更新コミット・タグのpushに使用するボット用トークン（任意。未設定時は `GITHUB_TOKEN` にフォールバック）。**CDのトリガーを`base_branch`への`push`にしている場合、`GITHUB_TOKEN` による push ではCDが起動しない点に注意**（`GITHUB_TOKEN` によるイベントは新たな workflow 実行を作らないため）。この制約は上記「2. CDワークフロー」の**`schedule`トリガー方式では発生しない**（`schedule`イベントはどのトークンでの直前のpushかに関わらず設定した時刻に発火するため）。`enable_release: true` で運用する場合は `BOT_TOKEN` の設定を推奨する。**リポジトリに `BOT_TOKEN` シークレットを登録するだけでは不十分で、参照側の `ci.yml`/`cd.yml` が `reusable-ci.yml`/`reusable-cd.yml` 呼び出しの `secrets:` で明示的に `BOT_TOKEN: ${{ secrets.BOT_TOKEN }}` を転送する必要がある**（`workflow_call` の `secrets` はリポジトリ全体のシークレットを自動継承しないため、転送を忘れると `merge` job が常に `GITHUB_TOKEN` にフォールバックし、CDが一度も起動しないまま気づきにくい）。dev-standards 自身も過去にこの転送漏れによりCDが起動しない状態が続いていたため、参照側リポジトリの `ci.yml`/`cd.yml` を書く際は必ず両方の `secrets:` ブロックを確認すること |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | AWS CLI経由のデプロイ・運用操作に使う認証情報（ブルーグリーン運用系ワークフローが対象）。`reusable-backup-dynamodb.yml`・`reusable-canary-status.yml`・`reusable-promote-canary.yml`・`reusable-rollback-to-stable.yml`が`secrets:`で`required: true`として要求する。**`BOT_TOKEN`と同様、呼び出し元の`cd.yml`・`canary-status.yml`等が`secrets:`で明示的に転送する必要がある**。リポジトリまたはOrganizationレベルでSecretsを登録済みでも、呼び出し元での転送を書き忘れると「設定済みなのに未設定であるかのように」扱われる点に注意する |
+| `E2E_SECRETS_JSON` | `reusable-ci.yml`のE2Eテストが使う任意のJSON形式シークレット。E2E専用の認証情報（Cognitoユーザーのトークン等）をプロダクト固有のキーでまとめて渡す用途に使う。未設定時はE2Eテストの該当ステップがスキップされる。安全な設定・運用方法は[`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md)を参照する |
 
 プロダクト固有の環境変数（デプロイ先の認証情報など）は参照側リポジトリのドキュメントに記載する。
+
+**メンテナンス上の注意**: dev-standards側に新しいreusable workflowを追加し、`secrets:`で新たなSecretsを要求する場合、本表も必ず更新すること。本表はdev-standards全体のreusable workflowが要求しうるSecretsの網羅的な一覧である。新規プロダクト導入時にここを確認すれば、呼び出し元での`secrets:`転送漏れを事前に防げる。
 
 ---
 
