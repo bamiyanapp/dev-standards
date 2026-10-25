@@ -1,3 +1,10 @@
+## [2.114.1](https://github.com/bamiyanapp/dev-standards/compare/v2.114.0...v2.114.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* reusable-canary-status.ymlのdocs_output_path書き出しが空になる不具合を修正する ([#1211](https://github.com/bamiyanapp/dev-standards/issues/1211)) ([17dddf6](https://github.com/bamiyanapp/dev-standards/commit/17dddf640182c0ae47fbf522df27f68af1eb1a32))
+
 # [2.114.0](https://github.com/bamiyanapp/dev-standards/compare/v2.113.0...v2.114.0) (2026-10-24)
 
 
