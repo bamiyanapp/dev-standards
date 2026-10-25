@@ -368,10 +368,30 @@ jobs:
           echo "run_result=${RUN_RESULT:-（取得できなかった）}" >> "$GITHUB_OUTPUT"
           echo "run_created_at=${RUN_CREATED_AT_JST}" >> "$GITHUB_OUTPUT"
 
+      # issue #1472相当。Job Summaryは実行ごとに使い捨てで、Gitからは可視化
+      # できない。docs_output_pathを指定した場合、同内容をリポジトリ内の
+      # ファイルへも書き出す。
+      #
+      # dev-standards#1210: $GITHUB_STEP_SUMMARYはステップごとに異なる
+      # 一時ファイルを指す（ジョブ全体で共有される単一ファイルではない）。
+      # このため、本ステップでJob Summaryへの出力とdocs_output_pathへの
+      # 書き出しを別ステップに分離すると、後続ステップが$GITHUB_STEP_SUMMARY
+      # を読み出した時点ではその内容が常に空になる。本文を一度シェル関数
+      # out()でまとめ、$GITHUB_STEP_SUMMARYとdocs_output_pathの両方へ
+      # 同一ステップ内で書き出すことで回避する
       - name: 概要を出力する
+        id: write_docs
         if: always()
         run: |
           set -eu
+          DOCS_OUTPUT_PATH="${{ inputs.docs_output_path }}"
+          out() {
+            if [ -n "$DOCS_OUTPUT_PATH" ]; then
+              tee -a "$DOCS_OUTPUT_PATH"
+            else
+              cat
+            fi
+          }
           {
             echo "## canary運用状態"
             echo ""
@@ -381,23 +401,23 @@ jobs:
             echo "| force_stable（管理者ロールバック中か） | ${{ steps.kvs.outputs.force_stable }} |"
             echo "| canary_queue_pending（反映待ちのマージがあるか） | ${{ steps.kvs.outputs.canary_queue_pending }} |"
             echo "| canaryスタックが存在するか | ${{ steps.status.outputs.canary_exists }} |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | out >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.status.outputs.canary_exists }}" = "true" ]; then
             {
               echo "| stableの最終更新 | ${{ steps.status.outputs.stable_last_updated || '（stableスタックが存在しない）' }} |"
               echo "| canaryの最終更新 | ${{ steps.status.outputs.canary_last_updated }} |"
               echo "| 本番昇格の条件を満たす日時（この日時を過ぎたら昇格対象） | ${{ steps.status.outputs.promotion_eligible_at }}以降 |"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | out >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -n "${{ steps.version.outputs.stable_version }}" ]; then
             {
               echo "| stableの配信中バージョン | ${{ steps.version.outputs.stable_version }} |"
               echo "| canaryの配信中バージョン | ${{ steps.version.outputs.canary_version }} |"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | out >> "$GITHUB_STEP_SUMMARY"
           fi
           {
             echo "| 直近の${{ inputs.promote_workflow_file }}実行 | ${{ steps.last_run.outputs.run_link }}（${{ steps.last_run.outputs.run_created_at }}、結果: ${{ steps.last_run.outputs.run_result }}） |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | out >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.status.outputs.canary_exists }}" = "true" ]; then
             {
               echo ""
@@ -408,25 +428,17 @@ jobs:
               echo "### キューイング中の変更（canaryにも未反映・canary最終更新以降にmainへマージされたPR）"
               echo ""
               echo "${{ steps.status.outputs.queued_pr_links }}"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | out >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ "${{ steps.staleness.outputs.stale }}" = "true" ]; then
             {
               echo ""
               echo "⚠️ force_stableが${{ steps.staleness.outputs.since }}からtrueのまま${{ inputs.rollback_max_age_hours }}時間超放置されている。戻し忘れの可能性がないか確認すること。"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | out >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      # issue #1472相当。Job Summaryは実行ごとに使い捨てで、Gitからは可視化
-      # できない。docs_output_pathを指定した場合、同内容をリポジトリ内の
-      # ファイルへも書き出し、commit-via-pr経由でコミットする
-      - name: docs_output_pathへ書き出す
-        id: write_docs
-        if: inputs.docs_output_path != ''
-        run: |
-          set -eu
-          cat "$GITHUB_STEP_SUMMARY" > "${{ inputs.docs_output_path }}"
-          echo "changed=$(git status --porcelain -- "${{ inputs.docs_output_path }}" | grep -q . && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          if [ -n "$DOCS_OUTPUT_PATH" ]; then
+            echo "changed=$(git status --porcelain -- "$DOCS_OUTPUT_PATH" | grep -q . && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: 変更をcommit-via-pr経由でコミットする
         if: inputs.docs_output_path != '' && steps.write_docs.outputs.changed == 'true'
