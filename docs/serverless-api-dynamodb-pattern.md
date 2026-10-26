@@ -103,6 +103,16 @@ sequenceDiagram
 - **署名鍵（`SESSION_SECRET`）の用意**: 自動生成を検討した。AWS Secrets Managerの`AWS::SecretsManager::Secret`＋`GenerateSecretString`による方式である。しかしデプロイを実行するIAMユーザー（プロダクトごとに個別管理）が`secretsmanager:GetRandomPassword`権限を持っているとは限らない。権限が無い場合はスタック更新そのものが失敗する（Camp-Stock issue #212で実際に発生し、マージ済みのコードが本番へ反映されない状態が続いた）。下記「SAMテンプレートの要点」の通り、`GOOGLE_OAUTH_CLIENT_ID`と同じくGitHub Actions Secretsとして人間が一度だけ登録する運用に統一する。これによりAWS側のIAM権限追加を不要にする
 - Cookie自体（保持期間・Secure属性の付け方等）の設計は変わらない。**Cookieに保存する値がGoogle IDトークンからセッショントークンへ変わる点のみが変更点**である。双方ともJWT形状（`header.payload.signature`）のため、E2Eテストのfake authenticator（下記「テストパターン」）はどちらの値が来ても区別せず動作する
 
+### ログインできるアカウントを限定する（`OWNER_EMAILS`）
+
+Googleログインは、Googleアカウントを持つ誰でも通れる。管理画面など、特定の人だけに限る用途では、許可するメールアドレスの一覧（許可リスト）を使う。環境変数は`OWNER_EMAILS`（カンマ区切り）とする。
+
+- `POST /auth/session`でGoogleのIDトークンを検証したあと、メールアドレスが許可リストにあるかを確かめる。ない場合は403（例: `not_owner`）を返し、セッショントークンを渡さない。比較は大文字小文字を区別しない
+- セッショントークンの中身（クレーム）には、`sub`に加えて`email`を入れる
+- 各リクエストでも、セッションの`email`が許可リストにあるかを確かめる。期限内でも、リストから外したアカウントのセッションは、その場で使えなくなる
+- メールアドレスは、署名を検証したIDトークン（`email_verified`が`true`のもの）からだけ取り出す。リクエストの本文や、クライアントが送る値は使わない
+- 許可リストの値は人間にしか分からないため、人間が一度だけGitHub Actionsに登録する（SecretでもVariableでもよい）
+
 ## DynamoDBアクセスパターン
 
 - `repositories/*.js`はDynamoDB Document Client（`@aws-sdk/lib-dynamodb`）の薄いラッパーである。`get`/`put`/`list`/`delete`程度のシンプルなインターフェースを持つ
@@ -146,7 +156,26 @@ sequenceDiagram
 
   `backend/e2e/testServer.js`は`createFakeAuthenticator()`をこのファイルからimportする。`frontend/e2e/auth.js`側のログイン用ヘルパーは`loginAsE2EUser`をそのままre-exportするか薄くラップする。実際にセッショントークン（またはGoogle IDトークン）を保持しているCookie名（プロダクトごとに異なる）を`cookieName`引数で渡す。
 - 詳細な呼び出し規約（スクリーンショット報告等）は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「CIワークフロー」を参照
+- **`OWNER_EMAILS`の用意**: ログインできるアカウントを限定する場合に、デプロイへ渡す。値は人間にしか分からないため、人間が一度だけGitHub Actionsへ登録する（SecretでもVariableでもよい）。デプロイジョブの最初で、未登録なら、足りない名前だけを出して止める（値は出さない）
+- **`SESSION_SECRET`を登録せずに済ませる方式（任意）**: AWSのシークレットキーからHMAC-SHA256で導出できる
+  - 長所: 登録が要らない。同じキーからは同じ値になるので、デプロイのたびにセッションが切れない
+  - 注意点: AWSのキーを入れ替えると値が変わる。発行済みのセッションは使えなくなり、ログインし直しになる
+  - 値は`::add-mask::`でログに出さない。`SESSION_SECRET`が登録されていれば、そちらを優先する
+  - AWS側の自動生成（Secrets Manager）と異なり、追加のIAM権限は要らない
+
+導出の例を次に示す（64文字の値になる）。
+
+```sh
+printf 'app-session-secret' | openssl dgst -sha256 -hmac "$AWS_SECRET_ACCESS_KEY" -r | cut -d' ' -f1
+```
 
 ## 参考実装
 
 具体的なコードは[bamiyanapp/Camp-Stock](https://github.com/bamiyanapp/Camp-Stock)の`backend/`・`infra/template.yaml`を参照。
+
+Googleログインの許可リスト（`OWNER_EMAILS`）とOSLSでのデプロイの実装例は、[uchi-stock/opinion-map](https://github.com/uchi-stock/opinion-map)を参照。
+
+- `backend/src/lib/googleAuth.ts`: GoogleのIDトークンの検証
+- `backend/src/lib/jwt.ts`: セッショントークンの署名と検証
+- `backend/serverless.yml`: OSLSのデプロイ定義
+- `.github/workflows/deploy.yml`: 設定の確認、`SESSION_SECRET`の導出、デプロイ後の動作確認
