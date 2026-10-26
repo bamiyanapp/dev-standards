@@ -158,11 +158,16 @@ Googleログインは、Googleアカウントを持つ誰でも通れる。管�
 - 詳細な呼び出し規約（スクリーンショット報告等）は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「CIワークフロー」を参照
 - **`OWNER_EMAILS`の用意**: ログインできるアカウントを限定する場合に、デプロイへ渡す。値は人間にしか分からないため、人間が一度だけGitHub Actionsへ登録する（SecretでもVariableでもよい）。デプロイジョブの最初で、未登録なら、足りない名前だけを出して止める（値は出さない）
 - **`SESSION_SECRET`を登録せずに済ませる方式（任意）**: AWSのシークレットキーからHMAC-SHA256で導出できる
-  - 導出の例（64文字になる）: `printf 'app-session-secret' | openssl dgst -sha256 -hmac "$AWS_SECRET_ACCESS_KEY" -r | cut -d' ' -f1`
   - 長所: 登録が要らない。同じキーからは同じ値になるので、デプロイのたびにセッションが切れない
   - 注意点: AWSのキーを入れ替えると値が変わる。発行済みのセッションは使えなくなり、ログインし直しになる
   - 値は`::add-mask::`でログに出さない。`SESSION_SECRET`が登録されていれば、そちらを優先する
   - AWS側の自動生成（Secrets Manager）と異なり、追加のIAM権限は要らない
+
+導出の例を次に示す（64文字の値になる）。
+
+```sh
+printf 'app-session-secret' | openssl dgst -sha256 -hmac "$AWS_SECRET_ACCESS_KEY" -r | cut -d' ' -f1
+```
 
 ## 参考実装
 
