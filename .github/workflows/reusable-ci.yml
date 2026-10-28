@@ -518,7 +518,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
           cache: "npm"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
@@ -530,7 +530,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
           cache: "npm"
       - name: 依存パッケージをインストールする
         id: install
@@ -1416,7 +1416,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1425,7 +1425,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
       # scripts/bootstrap.jsの適用モード（--check無し）は、安全に自動修復できる
       # 項目（missingなsymlink・missingなcopy・管理区間マーカー付きdriftedなcopy）
       # のみを実際に修正し、それ以外（BLOCKED・マーカー無しのdriftedなcopy等、
@@ -1514,7 +1514,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1523,7 +1523,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       # sync-manifest（dev-standards本体＋参照側リポジトリのsync-manifest.local.json）に
       # 列挙されたsymlink/copyのtarget一覧を、jscpdの-iへ渡す除外対象として取得する
       # （issue #621）。これらは意図的にshared/側と同一化しているファイルのため、
@@ -1630,7 +1630,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1639,7 +1639,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: jscpdを実行する（ドキュメント重複チェック）
         run: |
           mapfile -t patterns < <(printf '%s' "${{ inputs.doc_duplication_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
@@ -1767,7 +1767,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1776,7 +1776,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       # 越境import・循環依存の検知対象はfrontend_dir・backend_dirのうち実在するものに
       # 限定する（単一パッケージ構成では一方のみ存在する。両方存在しない構成では
       # 何もスキャンせず成功扱いにする）
@@ -1822,7 +1822,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1831,7 +1831,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: textlintを実行する
         run: |
           mapfile -t targets < <(printf '%s' "${{ inputs.text_lint_paths }}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
@@ -1870,7 +1870,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1879,7 +1879,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: markdown-link-checkを実行する
         shell: bash
         run: |
@@ -1937,7 +1937,7 @@ jobs:
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: Node.jsセットアップの再試行前に待機する
         if: steps.setup-node-1.outcome == 'failure'
         shell: bash
@@ -1946,7 +1946,7 @@ jobs:
         if: steps.setup-node-1.outcome == 'failure'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
       - name: ドキュメント到達性チェックを実行する
         shell: bash
         env:
@@ -2261,7 +2261,7 @@ jobs:
         if: steps.gate.outputs.should_run == 'true'
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
 
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）。
       # v2.104.1で、mermaidブロック数と画像埋め込みリンク数の整合性を確認する
