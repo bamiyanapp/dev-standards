@@ -148,6 +148,15 @@ jobs:
           echo "force_stable=${FORCE_STABLE}" >> "$GITHUB_OUTPUT"
           echo "canary_queue_pending=${PENDING}" >> "$GITHUB_OUTPUT"
 
+      # dev-standards#1252: LastUpdatedTime取得（CreationTimeフォールバック付き）
+      # ロジックはreusable-promote-canary.ymlの「昇格対象かどうかを判定する」
+      # stepと重複している。複合actionへの切り出しを検討したが、`self_ref`が
+      # 現状任意入力（docs_output_path・rollback_*未指定時は未使用）であり、
+      # 常時使う複合action呼び出しを追加すると実質的に必須化してしまう
+      # （指定無しの呼び出し元はchecko outが既定ブランチを参照し、
+      # pin止めの原則が崩れる）。この必須化自体が破壊的変更にあたるため
+      # 見送った（詳細は#1252のコメント参照）。挙動を変更する場合は、本step・
+      # reusable-promote-canary.ymlの該当stepを揃えて修正すること
       - name: canary/stableスタックの状態を取得する
         id: status
         run: |
