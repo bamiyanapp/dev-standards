@@ -221,6 +221,11 @@ jobs:
         working-directory: ${{ inputs.workspaces && 'canary-validated' || format('canary-validated/{0}', inputs.backend_working_directory) }}
         run: npm ci
 
+      # dev-standards#1252: LastUpdatedTime取得（CreationTimeフォールバック付き）
+      # ロジックはreusable-canary-status.ymlの「canary/stableスタックの状態を
+      # 取得する」stepと重複している。共通化の検討結果は#1252のコメントを参照。
+      # 挙動を変更する場合は、本step・reusable-canary-status.ymlの該当stepを
+      # 揃えて修正すること
       - name: 昇格対象かどうかを判定する
         id: check
         run: |
