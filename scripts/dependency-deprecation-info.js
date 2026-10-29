@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 
 // issue #945。CVE/CVSS/KEV/EPSS（dependency-vulnerability-info.js等）は「既知の
 // 脆弱性が出ているか」を検知できるが、aws-sdk（v2系）のようにメンテナンスモード・
@@ -12,7 +13,6 @@ const fs = require("node:fs");
 // dependency-maintainer-info.jsと同じ構成（registryレスポンスを解析する純粋関数＋
 // 実際にHTTPリクエストを行うオーケストレーション関数の分離）で実装する
 
-const NPM_REGISTRY_BASE = "https://registry.npmjs.org";
 
 // registryの"GET /{name}"レスポンスから、指定バージョンのdeprecatedフィールドを
 // 抽出する。該当バージョンの情報自体が取得できない場合（削除されたバージョン等）は
@@ -23,13 +23,9 @@ function detectDeprecation(packageJson, version) {
   return versionInfo.deprecated ? { deprecated: versionInfo.deprecated } : null;
 }
 
-async function defaultFetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`npm registry request to ${url} failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
+const defaultFetchJson = createFetchJson({
+  formatError: (url, response) => `npm registry request to ${url} failed: ${response.status} ${response.statusText}`,
+});
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）
 // oldVersion・newVersionのいずれも無い変更（新規追加・削除のみ等）は対象外とする。

@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 
 // issue #1077。issue #1076（最終リリース日ベースの放置検知）は「更新が止まっているか」
 // という一次シグナルのみを見る。コントリビューター数・CI/テストの有無・ブランチ保護
@@ -13,7 +14,6 @@ const fs = require("node:fs");
 // （registry/APIレスポンスを解析する純粋関数＋実際にHTTPリクエストを行う
 // オーケストレーション関数の分離）で実装する
 
-const NPM_REGISTRY_BASE = "https://registry.npmjs.org";
 const SCORECARD_API_BASE = "https://api.securityscorecards.dev/projects";
 const SCORE_THRESHOLD_DEFAULT = 3; // 10点満点中。OpenSSF Scorecardの一般的な「懸念あり」水準
 
@@ -44,14 +44,8 @@ function detectLowScorecard(scorecardResponse, scoreThreshold = SCORE_THRESHOLD_
   return { score, flagged: score < scoreThreshold };
 }
 
-async function defaultFetchJson(url) {
-  const response = await fetch(url);
-  if (response.status === 404) return null; // プロジェクト未評価。エラーではない
-  if (!response.ok) {
-    throw new Error(`request to ${url} failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
+// プロジェクト未評価（404）はエラーではないためnullを返す
+const defaultFetchJson = createFetchJson({ notFoundReturnsNull: true });
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）。
 // 維持リスクの判定に使うため、oldVersionが存在する変更のみを対象にする。

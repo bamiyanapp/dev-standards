@@ -2,6 +2,7 @@
 
 const fs = require("node:fs");
 const { parseSemver } = require("./dependency-update-info.js");
+const { createFetchJson } = require("./lib/http-fetch.js");
 
 // issue #746 Phase 2（後半）。dev-standards自身のリリースに含まれる依存更新の
 // Risk判定結果（append-dependency-risk-history.jsがdocs/generated/
@@ -72,13 +73,9 @@ function buildSection(entries) {
   return body;
 }
 
-async function defaultFetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
+const defaultFetchJson = createFetchJson({
+  formatError: (url, response) => `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+});
 
 // actionChanges: github-actions-update-info.jsの出力（dependency-risk-summary jobの
 // /tmp/actions-update-info.json）。この中からdev-standards自身への参照の変更を探す

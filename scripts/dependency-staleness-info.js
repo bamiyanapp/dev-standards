@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 
 // issue #1076。CVE/CVSS/KEV/EPSS（dependency-vulnerability-info.js等）は「既知の
 // 脆弱性が公表されているか」を見る指標であり、npm registryのdeprecatedフラグ
@@ -16,7 +17,6 @@ const fs = require("node:fs");
 // dependency-deprecation-info.jsと同じ構成（registryレスポンスを解析する純粋関数＋
 // 実際にHTTPリクエストを行うオーケストレーション関数の分離）で実装する
 
-const NPM_REGISTRY_BASE = "https://registry.npmjs.org";
 const STALE_THRESHOLD_DAYS_DEFAULT = 730; // 2年
 
 // registryの"GET /{name}"レスポンスから、最終公開日時・経過日数・閾値判定結果を算出する。
@@ -32,13 +32,9 @@ function detectStaleness(packageJson, thresholdDays = STALE_THRESHOLD_DAYS_DEFAU
   return { lastPublishedAt: modified, ageDays, flagged: ageDays >= thresholdDays };
 }
 
-async function defaultFetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`npm registry request to ${url} failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
+const defaultFetchJson = createFetchJson({
+  formatError: (url, response) => `npm registry request to ${url} failed: ${response.status} ${response.statusText}`,
+});
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）。
 // 「このPRを適用せず現行バージョンに留まる場合の危険度」（維持リスク）の判定に使うため、
