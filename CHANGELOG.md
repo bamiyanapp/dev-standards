@@ -1,3 +1,10 @@
+## [2.114.3](https://github.com/bamiyanapp/dev-standards/compare/v2.114.2...v2.114.3) (2026-10-29)
+
+
+### Performance Improvements
+
+* dependency-*-info系4ファイルのnpm registry fetchループを並列化 ([#1248](https://github.com/bamiyanapp/dev-standards/issues/1248)) ([c6b382c](https://github.com/bamiyanapp/dev-standards/commit/c6b382c7055581a7c284c0b0a5da8b1278370778))
+
 ## [2.114.2](https://github.com/bamiyanapp/dev-standards/compare/v2.114.1...v2.114.2) (2026-10-29)
 
 
