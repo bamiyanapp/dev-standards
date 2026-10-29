@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 
 // issue #648（OSS依存更新の自動安全判定基盤 Phase 3）メンテナ/所有権異常の検知。
 // サプライチェーン攻撃（event-stream事件等）の典型的な先行指標は、メンテナ交代・
@@ -23,7 +24,6 @@ const fs = require("node:fs");
 // と同じ方針）。サンドボックス環境からnpm registry（registry.npmjs.org）への
 // 到達性は確認済みだが、fetchJsonImplは差し替え可能にしてモックでテストする
 
-const NPM_REGISTRY_BASE = "https://registry.npmjs.org";
 
 // registryの"GET /{name}"レスポンスから、oldVersion・newVersionそれぞれの公開者
 // （_npmUser.name）を抽出し、異なっていれば異常として返す。いずれかのバージョンの
@@ -37,13 +37,9 @@ function detectMaintainerChange(packageJson, oldVersion, newVersion) {
   return { oldPublisher, newPublisher };
 }
 
-async function defaultFetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`npm registry request to ${url} failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
+const defaultFetchJson = createFetchJson({
+  formatError: (url, response) => `npm registry request to ${url} failed: ${response.status} ${response.statusText}`,
+});
 
 // changes: dependency-update-info.jsのchanges（[{ name, oldVersion, newVersion, ... }]）
 // oldVersion・newVersionのいずれかが無い変更（新規追加・削除のみ等）は対象外とする。

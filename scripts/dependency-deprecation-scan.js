@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 const { extractDirectDependencyNames, packageNameFromKey } = require("./dependency-update-info.js");
 const { detectDeprecation } = require("./dependency-deprecation-info.js");
 
@@ -17,15 +18,10 @@ const { detectDeprecation } = require("./dependency-deprecation-info.js");
 // 検知件数が膨大になり、対応判断が難しい（自分では直接アップグレードできない）
 // パッケージまで通知してしまうため、既定では直接依存のみに絞る
 
-const NPM_REGISTRY_BASE = "https://registry.npmjs.org";
 
-async function defaultFetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`npm registry request to ${url} failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
+const defaultFetchJson = createFetchJson({
+  formatError: (url, response) => `npm registry request to ${url} failed: ${response.status} ${response.statusText}`,
+});
 
 // lockJson: package-lock.jsonの内容。戻り値: [{ name, version, deprecated }]
 // （name+versionの重複は除く。同名パッケージが複数バージョン存在する場合は
