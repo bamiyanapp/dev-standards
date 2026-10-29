@@ -3558,6 +3558,10 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const branchName = context.payload.pull_request.head.ref;
+            // このワークフロー実行（＝今まさに通過した全jobのテスト対象）が
+            // 起動した時点でのPR HEADのSHA。イベントpayloadの値のため、
+            // 起動後に別のpushがあってもこの値自体は変わらない
+            const expectedHeadSha = context.payload.pull_request.head.sha;
 
             // issue #1068。このjob（merge）はワークフロー実行全体の末尾（他の全jobの
             // 完了）を待つため、実行開始からここに至るまで数分かかることがある。
@@ -3586,13 +3590,25 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: prNumber,
-                  merge_method: "squash"
+                  merge_method: "squash",
+                  // issue #1256。このjobの開始からここに至るまでの間に別のpush
+                  // （例: Renovateによるrebase）でPRのHEADが変わっていた場合、
+                  // 一度もテストされていないコミットを誤ってマージしてしまう
+                  // レースコンディションがあった（karuta#1966で実際に発生、
+                  // マージ後に初めて実行されたLighthouse CIがassertion失敗した）。
+                  // shaを指定することで、HEADがこの実行のテスト対象と一致しない
+                  // 場合はGitHubが409を返すようにする
+                  sha: expectedHeadSha
                 });
                 mergeSha = data.sha;
                 core.setOutput("merge_sha", mergeSha);
                 console.log(`Successfully merged PR #${prNumber} as ${mergeSha}`);
                 break;
               } catch (error) {
+                if (error.status === 409) {
+                  console.log(`PR #${prNumber}'s head no longer matches the tested commit (${expectedHeadSha}). Skipping merge: ${error.message}`);
+                  return;
+                }
                 if (attempt === maxAttempts) {
                   console.error(`Failed to merge PR #${prNumber}:`, error.message);
                   throw error;

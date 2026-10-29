@@ -32,6 +32,10 @@ runs:
 
           const prNumber = context.payload.pull_request.number;
           const branchName = context.payload.pull_request.head.ref;
+          // この呼び出し元ワークフロー実行がテストした時点のコミットSHA
+          // （ワークフロー起動時点のイベントpayloadなので、起動後にPRへ別の
+          // pushがあってもこの値自体は変わらない）
+          const expectedHeadSha = context.payload.pull_request.head.sha;
 
           // issue #1068。reusable-ci.ymlのmergeジョブ（PR #1069）と同じ理由。
           // このactionを呼び出す側のgate jobも他jobの完了を待つため、実行開始
@@ -50,7 +54,14 @@ runs:
           }
 
           console.log(`Attempting to merge PR #${prNumber}`);
-          const mergeSha = await mergePrWithRetry({ github, context, pullNumber: prNumber });
+          // issue #1256。expectedHeadShaを渡すことで、この実行がテストした
+          // コミット以降にPRへ別のpushが割り込んでいた場合（例:
+          // Renovateによるrebase）、テストされていないコミットを誤って
+          // マージしないようにする
+          const mergeSha = await mergePrWithRetry({ github, context, pullNumber: prNumber, expectedHeadSha });
+          if (mergeSha === null) {
+            return;
+          }
           core.setOutput("merge_sha", mergeSha);
 
           console.log(`Attempting to delete branch: ${branchName}`);
