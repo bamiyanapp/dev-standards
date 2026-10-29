@@ -45,17 +45,19 @@ const defaultFetchJson = createFetchJson({
 // oldVersion・newVersionのいずれかが無い変更（新規追加・削除のみ等）は対象外とする。
 // 戻り値: [{ name, oldVersion, newVersion, oldPublisher, newPublisher }]
 // （公開者が変化したパッケージのみを含む配列。変化が無いパッケージは含めない）
+// issue #1241: 対象パッケージごとのnpm registry fetchは互いに依存しないため、
+// Promise.allで並列化してCI実行時間を短縮する（戻り値の順序はtargetsの順序を維持する）
 async function fetchMaintainerAnomalies(changes, { fetchJsonImpl = defaultFetchJson } = {}) {
   const targets = changes.filter((c) => c.oldVersion != null && c.newVersion != null);
-  const anomalies = [];
-  for (const change of targets) {
-    const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
-    const result = detectMaintainerChange(packageJson, change.oldVersion, change.newVersion);
-    if (result) {
-      anomalies.push({ name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion, ...result });
-    }
-  }
-  return anomalies;
+  const anomalies = await Promise.all(
+    targets.map(async (change) => {
+      const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
+      const result = detectMaintainerChange(packageJson, change.oldVersion, change.newVersion);
+      if (!result) return null;
+      return { name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion, ...result };
+    }),
+  );
+  return anomalies.filter((anomaly) => anomaly !== null);
 }
 
 function main() {
