@@ -1,3 +1,10 @@
+## [2.114.5](https://github.com/bamiyanapp/dev-standards/compare/v2.114.4...v2.114.5) (2026-10-29)
+
+
+### Bug Fixes
+
+* pull_requestイベントでのmermaidキャッシュバスティング無限ループを修正 ([#1260](https://github.com/bamiyanapp/dev-standards/issues/1260)) ([5938ff4](https://github.com/bamiyanapp/dev-standards/commit/5938ff4087e84565530d7c8e8ed29cd316bd5ed4))
+
 ## [2.114.4](https://github.com/bamiyanapp/dev-standards/compare/v2.114.3...v2.114.4) (2026-10-29)
 
 
