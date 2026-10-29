@@ -1,3 +1,10 @@
+## [2.114.2](https://github.com/bamiyanapp/dev-standards/compare/v2.114.1...v2.114.2) (2026-10-29)
+
+
+### Bug Fixes
+
+* resolve-serverless-backend-urlが対象stage未存在時に異常終了する不具合を修正する ([#1237](https://github.com/bamiyanapp/dev-standards/issues/1237)) ([a9ee636](https://github.com/bamiyanapp/dev-standards/commit/a9ee636dcc720c75e5a3b0fa07cc203485cce868))
+
 ## [2.114.1](https://github.com/bamiyanapp/dev-standards/compare/v2.114.0...v2.114.1) (2026-10-25)
 
 
