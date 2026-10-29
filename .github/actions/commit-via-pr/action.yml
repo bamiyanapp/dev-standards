@@ -146,6 +146,7 @@ runs:
         git checkout -b "$BRANCH"
         git push --force origin "$BRANCH"
         echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+        echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Create and merge the pull request
       id: create-and-merge-pr
@@ -197,8 +198,14 @@ runs:
           core.setOutput("pr-number", String(pr.number));
 
           // pushで作成したブランチ直後はGitHub側のmergeable判定が追いついていない
-          // ことがあるため、短い間隔でリトライする
-          await mergePrWithRetry({ github, context, pullNumber: pr.number });
+          // ことがあるため、短い間隔でリトライする。issue #1256。expectedHeadShaに
+          // このactionが実際にpushしたコミットのSHAを渡し、マージ時点でブランチが
+          // 他から書き換えられていないことを確認する
+          const expectedHeadSha = "${{ steps.push-new-branch.outputs.sha }}";
+          const mergeSha = await mergePrWithRetry({ github, context, pullNumber: pr.number, expectedHeadSha });
+          if (mergeSha === null) {
+            return;
+          }
 
           await deleteBranchIgnoringNotFound({ github, context, branchName: branch });
 

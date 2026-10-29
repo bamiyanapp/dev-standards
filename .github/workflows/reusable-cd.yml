@@ -274,6 +274,7 @@ jobs:
           git checkout -b "$BRANCH"
           git push --force origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       # 新しいブランチからbase_branchへのPRを作成し、API経由でsquash mergeする。
       # 「PR経由の変更」としてリポジトリルールを満たしたうえでbase_branchへ反映する。
@@ -291,6 +292,7 @@ jobs:
           github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const branch = "${{ steps.push-release-branch.outputs.branch }}";
+            const expectedHeadSha = "${{ steps.push-release-branch.outputs.sha }}";
             const tag = "${{ steps.check-release.outputs.tag }}";
             const baseBranch = context.ref.replace("refs/heads/", "");
 
@@ -338,12 +340,20 @@ jobs:
                   repo: context.repo.repo,
                   pull_number: pr.number,
                   merge_method: "squash",
+                  // issue #1256。このactionが実際にpushしたコミットのSHAと
+                  // 一致しない場合はマージしない（ブランチが他から書き換え
+                  // られていないことの確認）
+                  sha: expectedHeadSha,
                 });
                 mergeSha = data.sha;
                 core.setOutput("merge_sha", mergeSha);
                 console.log(`Successfully merged release PR #${pr.number} as ${mergeSha}`);
                 break;
               } catch (error) {
+                if (error.status === 409) {
+                  console.log(`Release PR #${pr.number}'s head no longer matches the pushed commit (${expectedHeadSha}). Skipping merge: ${error.message}`);
+                  return;
+                }
                 if (attempt === maxAttempts) {
                   console.error(`Failed to merge release PR #${pr.number}:`, error.message);
                   throw error;

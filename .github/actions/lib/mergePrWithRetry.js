@@ -6,13 +6,20 @@
 // 個別に実装していたため共通化する。
 
 // pull_number: squash mergeするPR番号
+// expectedHeadSha: このマージを承認したCI実行がテストしたコミットのSHA（任意）。
+//   指定した場合、GitHubの`pulls.merge()`へ`sha`として渡す。マージ実行までの間に
+//   別のpushでPRのHEADが変わっていた場合（issue #1256）、GitHubは409を返す。
+//   この場合はテストされていないコミットをマージしてしまうことを防ぐため、
+//   リトライせず即座にスキップする（戻り値はnull）。新しいHEADに対しては
+//   別のCI実行が改めて判定するため、ここでエラーにする必要はない
 // maxAttempts: リトライ上限（既定5回）
 // sleep: リトライ間隔の待機に使う関数（テスト用に差し替え可能。既定はsetTimeout）
-// 戻り値: マージ後に生成されたコミットのSHA
+// 戻り値: マージ後に生成されたコミットのSHA。expectedHeadSha不一致でスキップした場合はnull
 async function mergePrWithRetry({
   github,
   context,
   pullNumber,
+  expectedHeadSha,
   maxAttempts = 5,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }) {
@@ -23,10 +30,17 @@ async function mergePrWithRetry({
         repo: context.repo.repo,
         pull_number: pullNumber,
         merge_method: "squash",
+        ...(expectedHeadSha ? { sha: expectedHeadSha } : {}),
       });
       console.log(`Successfully merged PR #${pullNumber} as ${data.sha}`);
       return data.sha;
     } catch (error) {
+      if (expectedHeadSha && error.status === 409) {
+        console.log(
+          `PR #${pullNumber}'s head no longer matches the tested commit (${expectedHeadSha}). Skipping merge: ${error.message}`,
+        );
+        return null;
+      }
       if (attempt === maxAttempts) {
         console.error(`Failed to merge PR #${pullNumber}:`, error.message);
         throw error;
