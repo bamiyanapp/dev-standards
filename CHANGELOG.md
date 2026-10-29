@@ -1,3 +1,10 @@
+## [2.114.4](https://github.com/bamiyanapp/dev-standards/compare/v2.114.3...v2.114.4) (2026-10-29)
+
+
+### Bug Fixes
+
+* squash merge実行時にPR HEADのSHAを検証し、テストされていないコミットのマージを防ぐ ([#1257](https://github.com/bamiyanapp/dev-standards/issues/1257)) ([3148197](https://github.com/bamiyanapp/dev-standards/commit/31481971501c6c5c0785a2e21ef91c66aad503b6))
+
 ## [2.114.3](https://github.com/bamiyanapp/dev-standards/compare/v2.114.2...v2.114.3) (2026-10-29)
 
 
