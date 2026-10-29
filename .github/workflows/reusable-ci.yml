@@ -2355,7 +2355,21 @@ jobs:
       #
       # issue #1194: pull_requestイベントでも実行する（従来はpushイベント限定）。
       # 比較対象の「前回コミット」は、pushではgithub.event.before、pull_requestでは
-      # そのPRのbase branch時点（github.event.pull_request.base.sha）とする
+      # そのPRのbase branch時点（github.event.pull_request.base.sha）とする。
+      #
+      # issue #1259。pull_requestの場合、上記を常にbase branch時点に固定していた
+      # ことが無限ループを引き起こしていた。このstep自身がバスティングの追従
+      # コミットをPRブランチへ直接pushすると（issue #1194）、新たなsynchronize
+      # イベントが発火する。このとき比較対象が依然base branch時点のままだと、
+      # PR内に残る「最初の正当なmermaidソース変更」が常に「baseと比較して変化
+      # あり」と判定されてしまい、内容が変わっていない追従コミット自身に対しても
+      # 毎回バスティングが再発動し、無限に追従コミットが生成され続けていた
+      # （実機でPR #1258において2回連続の誤発動を確認）。
+      # synchronizeイベントはpull_requestペイロードにもpush相当のbefore（この
+      # pushより前のPRブランチ上のSHA）を含むため、それが取得できる場合は
+      # 直前コミットとの比較に切り替える（push側の設計と対称にする）。
+      # opened等、synchronize以外のアクション（before が無い）ではbase branch
+      # 時点のまま比較する
       - name: ドキュメント内の最新図リンクをキャッシュバスティングする
         id: cache-bust
         if: |
@@ -2372,8 +2386,9 @@ jobs:
               path.join(process.cwd(), '.dev-standards-actions/.github/actions/render-mermaid-diagrams/extract-mermaid.js')
             );
             const sha = context.sha;
+            const pullRequestSynchronizeBefore = '${{ github.event.before }}';
             const beforeRef = context.eventName === 'pull_request'
-              ? '${{ github.event.pull_request.base.sha }}'
+              ? (pullRequestSynchronizeBefore || '${{ github.event.pull_request.base.sha }}')
               : '${{ github.event.before }}';
             const repo = '${{ github.repository }}';
             const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
