@@ -29,11 +29,32 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
   - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある。例えば `shared/pwa/` 配下のPWAキャッシュ更新パターンである（詳細は [`service-worker-update-pattern.md`](service-worker-update-pattern.md) 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述する。すると`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
 - [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): Claude Codeの `@import` 構文で解決可能なMarkdownである。そのためシンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
 
+## reusable workflowへ破壊的変更を加える際の手順
+
+issue #1071での`self_ref`必須入力（デフォルト値なし）追加は、Renovateの自動バージョン更新PRが`uses:`行のタグ文字列のみを書き換えるという前提を見落としていた。`with:`ブロックへ新規必須入力は追記されない。`self_ref`導入を含むバージョンへRenovate経由で自動更新した参照側リポジトリ（karuta以外は未対応のまま放置された）がある。結果、`ci`ジョブが1件も起動しない`startup_failure`が多発した（issue #1231・#1232）。actionlintはリモート参照のreusable workflow呼び出しに対して必須入力の不足を検出できない（本リポジトリ自身で再現確認済み）。このため、ローカルの静的チェックでは事前に検知できない。
+
+このため、**reusable workflow（`reusable-*.yml`）へ新規の必須入力（`required: true`かつデフォルト値なし）を追加する変更は、常に破壊的変更として扱う**。該当する変更の際は、以下を全て満たすこと。
+
+- [ ] 可能な限り`required: false`＋妥当な`default`を設ける設計を優先検討する。必須化がどうしても必要な場合のみ、以下の手順に進む
+- [ ] [`consumer-repositories.md`](consumer-repositories.md)に記載された**全参照側リポジトリ**について、追従対応（companion PR、`with:`ブロックへの新規入力追加）を同じ作業の中で行う。1リポジトリ（karuta等）のみの対応で完了とみなさない
+- [ ] アクセスできないリポジトリがある場合、[`consumer-repositories.md`](consumer-repositories.md)自身の運用方針（「アクセスできないリポジトリは未確認と記載する」）に従う。当該リポジトリ側に追従issueを起票し、本リポジトリ側のissueに「未確認」と書くだけで終わらせない
+- [ ] 変更を含むバージョンのリリースノート・該当reusable workflowの`description`に、破壊的変更である旨と対応方法を明記する
+- [ ] 参照側リポジトリで、Renovateによるバージョン更新PRをマージする際は、新規必須入力が追加されていないかをリリースノートで確認する運用を徹底する。マージ後は、CIジョブが実際に1件以上起動していることも確認する（`startup_failure`はジョブ0件・ログに原因が出ないため、チェックを怠ると長期間気づかれないリスクが高い）
+
 ## `reusable-ci.yml`
 
 参照側の `.github/workflows/ci.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。
 
-以下、入力を機能ごとに章立てする。各表のセルは1文程度の要約とし、複数の観点（背景・経緯・デフォルト以外の挙動）を持つ入力は表の直後に箇条書きで補足する。
+**`self_ref`は必須入力である**（issue #1220）。`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。`github.workflow_ref`等の動的解決では代替できない（詳細は[「reusable workflowへ破壊的変更を加える際の手順」](#reusable-workflowへ破壊的変更を加える際の手順)参照）。
+
+```yaml
+uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0
+with:
+  self_ref: v1.0.0 # uses:のrefと必ず同じ値にする
+  # ...他の入力
+```
+
+以下、`self_ref`以外の入力を機能ごとに章立てする。各表のセルは1文程度の要約とし、複数の観点（背景・経緯・デフォルト以外の挙動）を持つ入力は表の直後に箇条書きで補足する。
 
 ### テスト・ビルド対象
 

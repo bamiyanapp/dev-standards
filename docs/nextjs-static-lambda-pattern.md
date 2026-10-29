@@ -84,6 +84,7 @@ jobs:
   ci:
     uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@<固定タグ>
     with:
+      self_ref: <固定タグ> # 必須入力。uses:のrefと必ず同じ値にする（issue #1220）
       frontend_dir: frontend
       backend_dir: backend
       node_version: '24'
