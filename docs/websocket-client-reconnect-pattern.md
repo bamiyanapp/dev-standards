@@ -55,7 +55,7 @@
 stateDiagram-v2
     [*] --> idle
     idle --> connecting: 接続開始
-    connecting --> connected: onopen
+    connecting --> connected: onopen（pending送信を再送、上記4.）
     connecting --> connecting: onclose（リトライ上限未満、短い間隔で再試行）
     connected --> connecting: onclose（リトライ上限未満、短い間隔で再試行）
     connecting --> error: onclose（リトライ上限到達）
