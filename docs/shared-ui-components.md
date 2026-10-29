@@ -4,6 +4,31 @@
 
 ## 提供するコンポーネント
 
+目的のコンポーネントを探しやすくするため、一覧表を示す。詳細は各項目のリンク先を参照する。
+
+| コンポーネント | 用途 |
+|---|---|
+| [`common-theme.css`](#sharedui-common-themecss) | フレームワーク非依存の共通テーマ（フォント・フェードイン/アウト等） |
+| [`bootstrap-theme.css`](#sharedui-bootstrap-themecss) | Bootstrap 5.3向けダークモード対応テーマ |
+| [`NavigationOverlay.jsx`](#shareduinavigationoverlayjsx) | 全ページ遷移時の読み込み中オーバーレイ |
+| [`BackToTop.jsx`](#shareduibacktotopjsx) | 他ページへ戻るリンク |
+| [`SpeculationRules.jsx`](#shareduispeculationrulesjsx) | Speculation Rules APIによる他ページのprefetch |
+| [`BackendCacheWarmer.jsx`](#sharedpwabackendcachewarmerjsx) | 初回訪問時のバックエンドAPIキャッシュ温め |
+| [`resizeTextareaToFitContent.js`](#sharedresizetextareatofitcontentjs) | textareaを入力内容に応じて高さ可変にする |
+| [`ShareButton.jsx`](#shareduisharebuttonjsx) | QRコード表示・URLコピーの共有ボタン＋モーダル |
+| [`getAppVersionDefine.js`・`formatBuildTime.js`](#shareduigetappversiondefinejs・shareduiformatbuildtimejs) | トップページのバージョン・更新日時表示 |
+| [`createVersionJsonPlugin.js`](#shareduicreateversionjsonpluginjs) | `dist/version.json`書き出しVite複合プラグイン |
+| [`wadodon.mp3`](#sharedsfxwadodonmp3) | 太鼓のイントロ音（出題の合図等） |
+| [`click.mp3`・`shock.mp3`](#sharedsfxclickmp3・sharedsfxshockmp3) | 決定/クリック音、不正解・警告のブザー音 |
+| [`success.mp3`・`failure.mp3`](#sharedsfxsuccessmp3--sharedsfxfailuremp3) | 操作の成功・失敗を通知する汎用効果音 |
+| [`success-2.mp3`](#sharedsfxsuccess-2mp3) | `success.mp3`の別バリエーション |
+| [`ErrorBoundary.jsx`](#shareduierrorboundaryjsx) | 未捕捉例外時のError Boundary・クライアントエラー報告 |
+| [手動切り替えリンクパターン](#手動切り替えリンクパターンブルーグリーンカナリアデプロイ) | ブルーグリーン/カナリアでのstable切り替え導線（パターンのみ、コンポーネント非提供） |
+| [`useLocalStorageState.js`](#sharedhooksuselocalstoragestatejs) | `localStorage`とReact stateの双方向同期hook |
+| [`useSessionStorageState.js`](#sharedhooksusesessionstoragestatejs) | `sessionStorage`とReact stateの双方向同期hook（JSON対応） |
+| [`useValueChange.js`](#sharedhooksusevaluechangejs) | 前回値との比較による同期的state更新hook |
+| [`useWakeLock.js`](#sharedhooksusewakelockjs) | 画面スリープ防止hook（フィーチャー検出付き） |
+
 ### `shared/ui/common-theme.css`
 
 フレームワーク非依存の共通テーマ（issue #236）。共通フォント（[`frontend-ui-conventions.md`](frontend-ui-conventions.md)）・フェードイン/アウトの共通ユーティリティ（`.fade-in`/`.fade-out`）を提供する。ボタン押下時の軽い触覚的フィードバックも提供する。Bootstrap・Tailwind等どのCSSフレームワークを使うプロダクトでも利用できる。Bootstrap固有のダークモード対応は含まない。それが必要な場合は下記`bootstrap-theme.css`を使う。
