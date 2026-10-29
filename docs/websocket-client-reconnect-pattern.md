@@ -55,7 +55,7 @@
 stateDiagram-v2
     [*] --> idle
     idle --> connecting: 接続開始
-    connecting --> connected: onopen
+    connecting --> connected: onopen（pending送信を再送、上記4.）
     connecting --> connecting: onclose（リトライ上限未満、短い間隔で再試行）
     connected --> connecting: onclose（リトライ上限未満、短い間隔で再試行）
     connecting --> error: onclose（リトライ上限到達）
@@ -70,7 +70,7 @@ stateDiagram-v2
 </details>
 <!-- jscpd:ignore-end -->
 
-![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
+![状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/websocket-client-reconnect-pattern.png?e0b3bde887e59a03cc2014387721f04725161c04)
 
 ## 実例
 
