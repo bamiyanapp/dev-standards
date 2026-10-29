@@ -33,20 +33,23 @@ const defaultFetchJson = createFetchJson({
 // oldDeprecated・newDeprecatedは、それぞれのバージョンがdeprecatedの場合のみメッセージ
 // 文字列を持ち、該当しない場合はキー自体を含めない。いずれのバージョンも
 // deprecatedでないパッケージは戻り値の配列に含めない
+// issue #1241: 対象パッケージごとのnpm registry fetchは互いに依存しないため、
+// Promise.allで並列化してCI実行時間を短縮する（戻り値の順序はtargetsの順序を維持する）
 async function fetchDeprecationInfo(changes, { fetchJsonImpl = defaultFetchJson } = {}) {
   const targets = changes.filter((c) => c.oldVersion != null || c.newVersion != null);
-  const results = [];
-  for (const change of targets) {
-    const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
-    const oldResult = change.oldVersion != null ? detectDeprecation(packageJson, change.oldVersion) : null;
-    const newResult = change.newVersion != null ? detectDeprecation(packageJson, change.newVersion) : null;
-    if (!oldResult && !newResult) continue;
-    const entry = { name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion };
-    if (oldResult) entry.oldDeprecated = oldResult.deprecated;
-    if (newResult) entry.newDeprecated = newResult.deprecated;
-    results.push(entry);
-  }
-  return results;
+  const entries = await Promise.all(
+    targets.map(async (change) => {
+      const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
+      const oldResult = change.oldVersion != null ? detectDeprecation(packageJson, change.oldVersion) : null;
+      const newResult = change.newVersion != null ? detectDeprecation(packageJson, change.newVersion) : null;
+      if (!oldResult && !newResult) return null;
+      const entry = { name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion };
+      if (oldResult) entry.oldDeprecated = oldResult.deprecated;
+      if (newResult) entry.newDeprecated = newResult.deprecated;
+      return entry;
+    }),
+  );
+  return entries.filter((entry) => entry !== null);
 }
 
 function main() {

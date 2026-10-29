@@ -46,16 +46,19 @@ const defaultFetchJson = createFetchJson({
 // issue #1086: 判定不能（time.modifiedが取得できない）パッケージのみ対象外とし、
 // 閾値未満（flagged: false）のパッケージも含めて全件返す（Risk Summaryでの
 // 実測値表示に使うため）。閾値への該当判定自体はflaggedで示す
+// issue #1241: 対象パッケージごとのnpm registry fetchは互いに依存しないため、
+// Promise.allで並列化してCI実行時間を短縮する（戻り値の順序はtargetsの順序を維持する）
 async function fetchStalenessInfo(changes, { fetchJsonImpl = defaultFetchJson, thresholdDays = STALE_THRESHOLD_DAYS_DEFAULT, now } = {}) {
   const targets = changes.filter((c) => c.oldVersion != null && c.production !== false);
-  const results = [];
-  for (const change of targets) {
-    const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
-    const result = detectStaleness(packageJson, thresholdDays, now);
-    if (!result) continue;
-    results.push({ name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion, ...result });
-  }
-  return results;
+  const results = await Promise.all(
+    targets.map(async (change) => {
+      const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
+      const result = detectStaleness(packageJson, thresholdDays, now);
+      if (!result) return null;
+      return { name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion, ...result };
+    }),
+  );
+  return results.filter((result) => result !== null);
 }
 
 function main() {

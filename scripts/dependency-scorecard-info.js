@@ -56,20 +56,24 @@ const defaultFetchJson = createFetchJson({ notFoundReturnsNull: true });
 // issue #1086: GitHubリポジトリが特定できない・Scorecard未評価（判定不能）の
 // パッケージのみ対象外とし、閾値以上（flagged: false）のパッケージも含めて
 // 全件返す（Risk Summaryでの実測値表示に使うため）
+// issue #1241: 対象パッケージごとのfetch（npm registry→scorecard APIの2段階）は
+// パッケージ間で互いに依存しないため、Promise.allで並列化してCI実行時間を短縮する
+// （戻り値の順序はtargetsの順序を維持する）
 async function fetchScorecardInfo(changes, { fetchJsonImpl = defaultFetchJson, scoreThreshold = SCORE_THRESHOLD_DEFAULT } = {}) {
   const targets = changes.filter((c) => c.oldVersion != null && c.production !== false);
-  const results = [];
-  for (const change of targets) {
-    const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
-    const githubRepo = extractGitHubRepo(packageJson?.repository);
-    if (!githubRepo) continue;
+  const results = await Promise.all(
+    targets.map(async (change) => {
+      const packageJson = await fetchJsonImpl(`${NPM_REGISTRY_BASE}/${change.name}`);
+      const githubRepo = extractGitHubRepo(packageJson?.repository);
+      if (!githubRepo) return null;
 
-    const scorecardResponse = await fetchJsonImpl(`${SCORECARD_API_BASE}/github.com/${githubRepo.owner}/${githubRepo.repo}`);
-    const result = detectLowScorecard(scorecardResponse, scoreThreshold);
-    if (!result) continue;
-    results.push({ name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion, ...githubRepo, ...result });
-  }
-  return results;
+      const scorecardResponse = await fetchJsonImpl(`${SCORECARD_API_BASE}/github.com/${githubRepo.owner}/${githubRepo.repo}`);
+      const result = detectLowScorecard(scorecardResponse, scoreThreshold);
+      if (!result) return null;
+      return { name: change.name, oldVersion: change.oldVersion, newVersion: change.newVersion, ...githubRepo, ...result };
+    }),
+  );
+  return results.filter((result) => result !== null);
 }
 
 function main() {
