@@ -356,12 +356,30 @@ backend/frontendのバージョンが不一致の場合（デプロイの部分�
 
 `docs_output_path`を指定すると、Job Summaryと同内容をリポジトリへコミットする。コミットには`commit-via-pr`を使う。これによりGitからも運用状態を確認できる（issue #1472相当）。いずれの機能も、ローカルのcomposite actionを参照するため`self_ref`の指定が必要になる。
 
+## `reusable-dependency-full-scan.yml`
+
+既存の`dependency-risk-summary` job（`reusable-ci.yml`）は、PRの`package-lock.json`差分に対してのみ動作する。このため、Renovateが更新PRを出さない限り一度も実行されない（issue #1095）。間接依存は親パッケージのバージョン範囲内で解決される。範囲外の新バージョンが必要な脆弱性修正は、Renovateが通常検知できない（`lockFileMaintenance`有効化後も残るギャップ、issue #1094参照）。
+
+本ワークフローは更新PRの有無に関わらず、呼び出し元リポジトリで現時点でロックされている依存パッケージ全体（直接・間接問わず）を対象とする。スケジュール実行等で定期的にスキャンし、検知結果をトラッキング用issueへ反映する（新規作成、または既存issueの本文更新）。`reusable-dependency-deprecation-scan.yml`と同じ設計に揃える。
+
+**`self_ref`は必須入力である**（`reusable-ci.yml`と同様。issue #1220・#1243）。`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `self_ref` | `uses:`行のrefと同じ値（必須） | （必須） |
+| `lockfile_path` | スキャン対象の`package-lock.json`のパス（リポジトリルート相対） | `package-lock.json` |
+| `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] 依存パッケージの既知脆弱性検知（定期スキャン）` |
+| `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: medium"]` |
+
 ## `reusable-dependency-deprecation-scan.yml`
 
 更新PRの有無に関わらず、現時点でロックされている依存パッケージ全体を対象とする。npm registryの`deprecated`フラグを定期スキャンする（issue #969）。`dependency-risk-summary` job（`reusable-ci.yml`）のdeprecated検知は更新PR起点である。そのため、後継バージョンが存在しないまま非推奨化されたパッケージ（Renovateが更新PRを作らないケース）を検知できない限界がある。本ワークフローはこの限界を補う。定期実行（`schedule`トリガー）を想定する。
 
+**`self_ref`は必須入力である**（`reusable-ci.yml`と同様。issue #1220・#1243）。`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。
+
 | 入力 | 説明 | デフォルト |
 |---|---|---|
+| `self_ref` | `uses:`行のrefと同じ値（必須） | （必須） |
 | `lockfile_path` | スキャン対象の`package-lock.json`のパス | `package-lock.json` |
 | `direct_only` | 直接依存のみを対象とするか（falseでtransitive依存まで含める） | `true` |
 | `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] 依存パッケージのdeprecated（サポート終了）検知` |
@@ -377,8 +395,11 @@ backend/frontendのバージョンが不一致の場合（デプロイの部分�
 
 最新パッチより古いエンドポイントについては、Node.js security working groupが公開する脆弱性データベース（issue #1188）も照会する。参照先は`raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json`である。現在のバージョンが`vulnerable`範囲（npm semver range記法）に該当し、かつ`patched`範囲には該当しない（＝未パッチ）場合のみ対象とする。該当エントリのCVE ID・severityを、issue本文・Job Summaryの「既知の脆弱性（CVE）」列へ記載する。この照合には`semver`パッケージの`satisfies()`を使う。
 
+**`self_ref`は必須入力である**（`reusable-ci.yml`と同様。issue #1220・#1243）。`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。
+
 | 入力 | 説明 | デフォルト |
 |---|---|---|
+| `self_ref` | `uses:`行のrefと同じ値（必須） | （必須） |
 | `endpoints` | スキャン対象のエンドポイント一覧（JSON配列文字列、`[{"name":"...","url":"..."}]`形式） | （必須） |
 | `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] ランタイムのNode.jsバージョン遅延検知（定期スキャン）` |
 | `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: medium"]` |
