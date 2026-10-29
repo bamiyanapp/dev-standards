@@ -32,5 +32,11 @@ runs:
       run: |
         set -eu
         INFO=$(npx osls info --stage "${{ inputs.stage }}" --verbose 2>/dev/null || true)
-        BACKEND_URL=$(echo "$INFO" | grep -oE "https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/${{ inputs.stage }}" | head -1)
+        # issue #1236: composite actionのshell: bashは既定でpipefail有効のため、
+        # 対象stageが存在せずgrepが一致を見つけられない（終了コード1）場合、
+        # head自体は成功してもパイプライン全体がpipefail経由で失敗扱いとなり、
+        # set -euでステップ全体が異常終了してしまう。outputs.backend-urlの
+        # 説明が約束する「解決できなかった場合は空文字列」を守るため、
+        # パイプライン自体の終了コードを明示的に0へ正規化する
+        BACKEND_URL=$(echo "$INFO" | grep -oE "https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/${{ inputs.stage }}" | head -1 || true)
         echo "backend_url=${BACKEND_URL}" >> "$GITHUB_OUTPUT"
