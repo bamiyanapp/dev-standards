@@ -26,6 +26,10 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
+          const { mergePrWithRetry, deleteBranchIgnoringNotFound } = require(
+            "${{ github.action_path }}/../lib/mergePrWithRetry.js"
+          );
+
           const prNumber = context.payload.pull_request.number;
           const branchName = context.payload.pull_request.head.ref;
 
@@ -46,47 +50,11 @@ runs:
           }
 
           console.log(`Attempting to merge PR #${prNumber}`);
-          let mergeSha = "";
-          // pushで作成したコミット直後はGitHub側のmergeable判定が
-          // 追いついていないことがあるため、短い間隔でリトライする
-          const maxAttempts = 5;
-          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-              const { data } = await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                merge_method: "squash"
-              });
-              mergeSha = data.sha;
-              core.setOutput("merge_sha", mergeSha);
-              console.log(`Successfully merged PR #${prNumber} as ${mergeSha}`);
-              break;
-            } catch (error) {
-              if (attempt === maxAttempts) {
-                console.error(`Failed to merge PR #${prNumber}:`, error.message);
-                throw error;
-              }
-              console.log(`Merge attempt ${attempt} failed (${error.message}), retrying...`);
-              await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
-            }
-          }
+          const mergeSha = await mergePrWithRetry({ github, context, pullNumber: prNumber });
+          core.setOutput("merge_sha", mergeSha);
 
-          try {
-            console.log(`Attempting to delete branch: ${branchName}`);
-            await github.rest.git.deleteRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `heads/${branchName}`
-            });
-            console.log(`Successfully deleted branch: ${branchName}`);
-          } catch (error) {
-            if (error.status === 422 || error.message.includes("Reference does not exist")) {
-              console.log(`Branch ${branchName} already deleted or not found.`);
-            } else {
-              console.error(`Failed to delete branch ${branchName}:`, error.message);
-            }
-          }
+          console.log(`Attempting to delete branch: ${branchName}`);
+          await deleteBranchIgnoringNotFound({ github, context, branchName });
 
 outputs:
   merge-sha:
