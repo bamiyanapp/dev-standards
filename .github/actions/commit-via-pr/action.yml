@@ -154,6 +154,10 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
+          const { mergePrWithRetry, deleteBranchIgnoringNotFound } = require(
+            "${{ github.action_path }}/../lib/mergePrWithRetry.js"
+          );
+
           const branch = "${{ steps.push-new-branch.outputs.branch }}";
           const baseBranch = "${{ inputs.base-branch }}";
           const title = "${{ inputs.pr-title }}" || "${{ inputs.commit-subject }}";
@@ -194,38 +198,9 @@ runs:
 
           // pushで作成したブランチ直後はGitHub側のmergeable判定が追いついていない
           // ことがあるため、短い間隔でリトライする
-          const maxAttempts = 5;
-          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-              await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                merge_method: "squash",
-              });
-              console.log(`Successfully merged PR #${pr.number}`);
-              break;
-            } catch (error) {
-              if (attempt === maxAttempts) {
-                console.error(`Failed to merge PR #${pr.number}:`, error.message);
-                throw error;
-              }
-              console.log(`Merge attempt ${attempt} failed (${error.message}), retrying...`);
-              await new Promise((resolve) => setTimeout(resolve, attempt * 3000));
-            }
-          }
+          await mergePrWithRetry({ github, context, pullNumber: pr.number });
 
-          try {
-            await github.rest.git.deleteRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `heads/${branch}`,
-            });
-          } catch (error) {
-            if (!(error.status === 422 || error.message.includes("Reference does not exist"))) {
-              console.error(`Failed to delete branch ${branch}:`, error.message);
-            }
-          }
+          await deleteBranchIgnoringNotFound({ github, context, branchName: branch });
 
     - name: Decide the reflection method for outputs
       id: decide-method
