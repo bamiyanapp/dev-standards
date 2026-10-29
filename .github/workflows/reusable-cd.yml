@@ -277,6 +277,12 @@ jobs:
 
       # 新しいブランチからbase_branchへのPRを作成し、API経由でsquash mergeする。
       # 「PR経由の変更」としてリポジトリルールを満たしたうえでbase_branchへ反映する。
+      # dev-standards#1242で共通化した.github/actions/lib/mergePrWithRetry.js
+      # （merge-pr・commit-via-pr composite actionが利用）と同じロジックである。
+      # 本workflowはreusable workflowであり、composite actionのような
+      # github.action_path経由のrequireができないため、ここではインライン実装の
+      # ままにしている（dev-standards#1251）。挙動を変更する場合は3箇所（本step・
+      # merge-pr・commit-via-pr）を揃えて修正すること。
       - name: リリースPRを作成してマージする
         if: steps.check-release.outputs.release_needs_pr == 'true'
         id: merge-release-pr
