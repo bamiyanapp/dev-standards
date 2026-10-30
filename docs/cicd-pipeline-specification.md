@@ -381,10 +381,12 @@ semantic-release による `vX.Y.Z` 形式のタグを発行する。参照側�
 ```yaml
 uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@vX.Y.Z
 with:
-  self_ref: vX.Y.Z # 必須入力。上記のrefと必ず同じ値にする（issue #1220）
+  self_ref: vX.Y.Z # 任意入力だが推奨。上記のrefと同じ値にする（issue #1261で必須から任意へ変更）
 ```
 
-`self_ref`は必須入力であり、省略すると`startup_failure`（ジョブ0件）でCI全体が起動しなくなる。詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「`reusable-ci.yml`」を参照する。
+`self_ref`は任意入力（`required: false`、デフォルト`""`）である。省略してもCI全体は起動する。カバレッジ閾値チェック等のオプション機能のみが`::warning::`付きでスキップされる（対象機能の一覧は参照先ドキュメントを参照）。
+
+詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「`reusable-ci.yml`」を参照する。
 
 タグ更新の検知には Renovate の `github-actions` マネージャーを使う。`config:recommended`（上記1の `renovate.json` が既に `extends` している）には`github-actions` マネージャーが標準で含まれている。そのため、`git-submodules` のような追加の明示的な有効化は不要である。参照側リポジトリの `renovate.json` に変更を加えなくても、`uses: ...@vX.Y.Z` 形式の参照を Renovate が自動的に検知する。新しいタグが発行されるたびに更新 PR を作成する。
 
