@@ -1,3 +1,10 @@
+## [2.114.6](https://github.com/bamiyanapp/dev-standards/compare/v2.114.5...v2.114.6) (2026-10-30)
+
+
+### Bug Fixes
+
+* self_refを必須入力から任意入力へ緩和する(reusable-ci.yml) ([#1262](https://github.com/bamiyanapp/dev-standards/issues/1262)) ([9498177](https://github.com/bamiyanapp/dev-standards/commit/94981777760e02fc1b9e86b8dc132bd644cd74ee))
+
 ## [2.114.5](https://github.com/bamiyanapp/dev-standards/compare/v2.114.4...v2.114.5) (2026-10-29)
 
 
