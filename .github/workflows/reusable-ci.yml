@@ -421,7 +421,7 @@ on:
       self_ref:
         description: >-
           呼び出し元が本workflowを`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@<ref>`
-          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する必須入力。
+          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する任意入力。
           本workflow内でdev-standards自身をローカルcomposite action・スクリプト用に
           再チェックアウトする8箇所で使う（issue #1071）。
           `github.workflow_ref`は呼び出し元トップレベルワークフロー自身の参照しか返さず、
@@ -431,8 +431,19 @@ on:
           渡してもらう方式にした。呼び出し元の`uses:`行のrefとこの入力の値が一致している
           ことの検証は呼び出し元リポジトリ側の責務とする（例: dev-standards自身の
           `node scripts/check-workflows.js`に相当するチェックを参照側に追加する等）。
+          issue #1261: 当初`required: true`としていたが、Renovate経由のバージョン更新PR
+          （`uses:`タグ文字列の書き換えのみで`with:`ブロックへは追従できない）が
+          新規必須入力の追加を跨いでマージされた場合、参照側リポジトリのCIが
+          `startup_failure`で無警告・全停止する実害が複数リポジトリで発生した
+          （issue #1231・#1232）。self_refを使う8箇所は全てオプション機能
+          （`coverage_threshold`・`enable_e2e_test`・`enable_mermaid_render`・
+          `enable_lighthouse_ci`・`enable_dependency_risk_summary`のいずれかで
+          ゲートされるstep・job）に閉じているため、未指定時は該当機能のみを
+          `::warning::`付きでスキップする設計へ変更し、`required: false`とした。
+          省略時も他の機能・ジョブには影響しない。
         type: string
-        required: true
+        required: false
+        default: ""
     secrets:
       BOT_TOKEN:
         required: false
@@ -734,15 +745,21 @@ jobs:
       # たびに手動更新する運用だったが、更新漏れが繰り返し発生した。呼び出し元が
       # 渡すinputs.self_ref（uses:で指定したrefと同じ値）を使う方式へ変更し、
       # 手動更新そのものを不要にした
+      # issue #1261: self_refが未指定の場合（required: falseへ緩和した。詳細は
+      # 本workflow冒頭のself_ref入力の説明を参照）、この機能のみを明示的な警告
+      # 付きでスキップする
+      - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
+        if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
+        run: echo "::warning::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
-        if: inputs.coverage_threshold > 0
+        if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
-        if: inputs.coverage_threshold > 0
+        if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
           working-directory: ${{ inputs.frontend_dir }}
@@ -885,8 +902,11 @@ jobs:
         working-directory: ${{ inputs.backend_dir }}
         run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
+      - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
+        if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
+        run: echo "::warning::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
-        if: inputs.coverage_threshold > 0
+        if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
@@ -901,7 +921,7 @@ jobs:
       # 改めて判定する。
       - name: カバレッジ閾値を確認する（1回目/2回）
         id: coverage-check-1
-        if: inputs.coverage_threshold > 0
+        if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         continue-on-error: true
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
@@ -912,11 +932,11 @@ jobs:
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
       - name: カバレッジ閾値の再確認前にbackendテストを再実行する
-        if: inputs.coverage_threshold > 0 && steps.coverage-check-1.outcome == 'failure'
+        if: inputs.coverage_threshold > 0 && inputs.self_ref != '' && steps.coverage-check-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
         run: npx -c 'node --no-flush-bytecode "$(command -v vitest)" run --coverage --coverage.reporter=text --coverage.reporter=json-summary --no-isolate --no-file-parallelism'
       - name: カバレッジ閾値を確認する（2回目/2回、flakyな可能性がある計測値の再試行）
-        if: inputs.coverage_threshold > 0 && steps.coverage-check-1.outcome == 'failure'
+        if: inputs.coverage_threshold > 0 && inputs.self_ref != '' && steps.coverage-check-1.outcome == 'failure'
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
           working-directory: ${{ inputs.backend_dir }}
@@ -996,15 +1016,18 @@ jobs:
         working-directory: ${{ matrix.package.dir }}
         run: npm test --if-present
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
+      - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
+        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref == ''
+        run: echo "::warning::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
-        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
+        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       - name: カバレッジ閾値を確認する
-        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0
+        if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref != ''
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
           working-directory: ${{ matrix.package.dir }}
@@ -1106,15 +1129,21 @@ jobs:
       # 顕在化した不具合の発生源そのもの（if: always()で必ず実行されるため、
       # coverage_thresholdが0のfrontend-test/backend-testでは潜在化していた同じ
       # 不具合が最初に表面化した）
+      # issue #1261: self_ref未指定時はE2Eカバレッジ表示・スクリーンショット
+      # ベースライン比較（いずれも本チェックアウトに依存）のみをスキップする。
+      # E2Eテスト自体の成否判定には影響しない
+      - name: self_ref未指定によりE2Eカバレッジ表示等をスキップすることを警告する
+        if: always() && inputs.self_ref == ''
+        run: echo "::warning::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
-        if: always()
+        if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
       - name: E2Eカバレッジを表示する
-        if: always()
+        if: always() && inputs.self_ref != ''
         uses: ./.dev-standards-actions/.github/actions/check-coverage-threshold
         with:
           working-directory: ${{ inputs.frontend_dir }}
@@ -1211,7 +1240,7 @@ jobs:
       - name: E2Eスクリーンショットを直前のベースラインと比較する
         id: compare-screenshots
         if: >-
-          always() && steps.screenshots.outputs.found == 'true' &&
+          always() && inputs.self_ref != '' && steps.screenshots.outputs.found == 'true' &&
           github.event_name == 'pull_request' && steps.baseline-checkout.outcome == 'success'
         continue-on-error: true
         uses: ./.dev-standards-actions/.github/actions/compare-e2e-screenshots
@@ -2232,11 +2261,20 @@ jobs:
       # mermaid_doc_pathsで指定したファイルが実際に変更されたかを判定する。判定できない
       # 場合（push イベント、または変更ファイル一覧の取得に失敗した場合）は、見落としを
       # 避けるため常に実行する側にフォールバックする
+      # issue #1261: self_ref未指定の場合、本jobの全ステップ（レンダリング・
+      # 画像リンク整合性確認・キャッシュバスティング）はdev-standards自身の
+      # ローカルチェックアウトに依存するため実行できない。should_runをfalseに
+      # 固定することで後続ステップ全体を一括スキップし、明示的に警告する
       - name: 対象ドキュメントが変更されたか判定する
         id: gate
         uses: actions/github-script@v9
         with:
           script: |
+            if ('${{ inputs.self_ref }}' === '') {
+              core.warning('self_refが指定されていないため、mermaid図レンダリング・キャッシュバスティングをスキップしました');
+              core.setOutput('should_run', 'false');
+              return;
+            }
             const targetPaths = `${{ inputs.mermaid_doc_paths }}`.split(/[\n,]/).map((p) => p.trim()).filter(Boolean);
             if (context.eventName !== 'pull_request') {
               core.setOutput('should_run', 'true');
@@ -2731,8 +2769,15 @@ jobs:
       #
       # そのため、issue #1071で呼び出し元が渡すinputs.self_ref（uses:で指定した
       # refと同じ値）を使う方式へ変更した。これにより手動更新運用自体を廃止した
+      # issue #1261: self_ref未指定時はlighthouse-ci-summary.js（dev-standards
+      # 自身のスクリプト）によるカテゴリ別スコア表示のみをスキップし、生ログは
+      # そのまま表示する。lhci本体の実行・assertion失敗の伝播（enable_lighthouse_ci_gating）
+      # には影響しない
+      - name: self_ref未指定によりLighthouseサマリー整形をスキップすることを警告する
+        if: always() && inputs.self_ref == ''
+        run: echo "::warning::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
-        if: always()
+        if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
           repository: bamiyanapp/dev-standards
@@ -2753,6 +2798,16 @@ jobs:
               echo "Lighthouse CIの実行に失敗した（設定ファイル未配置の可能性がある）。"
               echo ""
               echo "参照側リポジトリの\`${{ inputs.frontend_dir }}\`配下に\`@lhci/cli\`パッケージと\`lighthouserc.json\`（計測対象URL・起動コマンド・assertions）を用意すること。"
+            } >> /tmp/lighthouse-summary.md
+          elif [ -z "${{ inputs.self_ref }}" ]; then
+            {
+              echo "<details>"
+              echo "<summary>生ログを表示</summary>"
+              echo ""
+              echo '```'
+              cat /tmp/lhci-stdout.log
+              echo '```'
+              echo "</details>"
             } >> /tmp/lighthouse-summary.md
           else
             {
@@ -2839,11 +2894,23 @@ jobs:
       # 場合）は見落としを避けるため常に実行する側にフォールバックする。
       # action_filesはgithub-actions-update-info.js（issue #666）へそのまま渡すための
       # 変更ファイル一覧（JSON配列文字列）
+      # issue #1261: self_ref未指定の場合、本jobの各ステップ（更新情報生成・
+      # 脆弱性/維持リスク判定・Risk Summaryコメント等）はdev-standards自身の
+      # ローカルチェックアウトに依存するため実行できない。should_runをfalseに
+      # 固定することで一括スキップし、明示的に警告する
       - name: package-lock.json / GitHub Actions参照が変更されたか判定する
         id: gate
         uses: actions/github-script@v9
         with:
           script: |
+            if ('${{ inputs.self_ref }}' === '') {
+              core.warning('self_refが指定されていないため、依存更新Risk Summaryをスキップしました');
+              core.setOutput('package_lock_changed', 'false');
+              core.setOutput('actions_changed', 'false');
+              core.setOutput('action_files', '[]');
+              core.setOutput('should_run', 'false');
+              return;
+            }
             try {
               const files = await github.paginate(github.rest.pulls.listFiles, {
                 owner: context.repo.owner,

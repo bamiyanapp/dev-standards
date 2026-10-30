@@ -200,7 +200,7 @@ jobs:
   ci:
     uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@vX.Y.Z
     with:
-      self_ref: vX.Y.Z # 必須入力。uses:のrefと必ず同じ値にする（issue #1220）
+      self_ref: vX.Y.Z # 任意入力だが推奨。uses:のrefと同じ値にする（issue #1261で必須から任意へ変更）
       packages: '[{"dir":"frontend","build":true,"coverage_threshold":70,"node_version":22}]'
       enable_standards_check: true
       enable_duplication_check: true

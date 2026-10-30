@@ -45,12 +45,24 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 
 参照側の `.github/workflows/ci.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。
 
-**`self_ref`は必須入力である**（issue #1220）。`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。`github.workflow_ref`等の動的解決では代替できない（詳細は[「reusable workflowへ破壊的変更を加える際の手順」](#reusable-workflowへ破壊的変更を加える際の手順)参照）。
+**`self_ref`は任意入力である**（`required: false`、デフォルト`""`。issue #1261）。指定する場合は`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。`github.workflow_ref`等の動的解決では代替できない（詳細は[「reusable workflowへ破壊的変更を加える際の手順」](#reusable-workflowへ破壊的変更を加える際の手順)参照）。
+
+当初（issue #1220）は`required: true`としていた。しかしRenovate経由のバージョン更新PRは`uses:`行のタグ文字列のみを書き換え、`with:`ブロックへは追従できない。この前提を見落としていた。新規必須入力の追加を跨いでマージされた参照側リポジトリでは、CIが`startup_failure`で無警告・全停止する実害が複数リポジトリで発生した（issue #1231・#1232）。
+
+`self_ref`を使う8箇所は、以下いずれかのオプション機能フラグでゲートされるステップ・ジョブに閉じている。
+
+- `coverage_threshold`（カバレッジ閾値チェック）
+- `enable_e2e_test`（E2Eスクリーンショット比較）
+- `enable_mermaid_render`（mermaidレンダリング）
+- `enable_lighthouse_ci`（Lighthouse CIの詳細サマリ）
+- `enable_dependency_risk_summary`（依存更新Risk Summary）
+
+そのためissue #1261で、未指定時は該当機能のみを`::warning::`付きでスキップする設計へ変更した。省略しても他の機能・ジョブには影響しない。ただし上記の機能を使う場合は指定を推奨する。
 
 ```yaml
 uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0
 with:
-  self_ref: v1.0.0 # uses:のrefと必ず同じ値にする
+  self_ref: v1.0.0 # uses:のrefと同じ値にする（省略可。省略時は上記オプション機能のみ::warning::付きでスキップ）
   # ...他の入力
 ```
 
