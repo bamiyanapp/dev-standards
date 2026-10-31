@@ -99,10 +99,12 @@
 | Electric-Chair-Arena（電気イスゲームAI対戦） | [bamiyanapp.github.io/Electric-Chair-Arena/](https://bamiyanapp.github.io/Electric-Chair-Arena/) | [bamiyanapp/Electric-Chair-Arena](https://github.com/bamiyanapp/Electric-Chair-Arena) |
 | hanko-master-kentei（ハンコ捺印の作法をテーマにした風刺Webアプリ） | [bamiyanapp.github.io/hanko-master-kentei/](https://bamiyanapp.github.io/hanko-master-kentei/) | [bamiyanapp/hanko-master-kentei](https://github.com/bamiyanapp/hanko-master-kentei) |
 | shock-lab（車両サスペンション物理シミュレータ） | [bamiyanapp.github.io/shock-lab/](https://bamiyanapp.github.io/shock-lab/) | [bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab) |
+| opinion-map（イベントの意見を匿名で集め、AIで整理する地図） | [dq63ds5qh9abj.cloudfront.net](https://dq63ds5qh9abj.cloudfront.net/) | [uchi-stock/opinion-map](https://github.com/uchi-stock/opinion-map) |
 
 - **Camp-Stock**: cd.yml実行時にCloudFormation/SAMのスタック出力からCloudFrontドメインを動的に取得する構成である。そのため、コードの静的確認だけでは固定URLを特定できない。Google OAuthログインで保護されている（許可リスト等は無く、Googleアカウントを持つ人であれば誰でもログインしフルアクセスの利用者になれる点に留意）。
 - **examination**: CloudFront配信で、現時点で確認できた実際のドメイン。スタックを削除・再作成しない限り変わらない想定だが、Google OAuthログインで保護された家族限定利用。
 - **kingyo**: CloudFormationのスタック出力から動的に取得したドメイン。ログイン機構は無く全員共通ランキングを扱う仕様のため、一般公開の入り口として案内して問題ない。
+- **opinion-map**: 参加者はログイン不要で投稿できる。管理画面（/admin）だけ、管理者の一覧に載ったGoogleアカウントでログインする。公開URLはCloudFrontのドメインで、deploy workflowで作成したスタックから得た。
 
 ハブページ（[bamiyanapp.github.io/dev-standards](https://bamiyanapp.github.io/dev-standards/)）からも同じ一覧・各アプリへのリダイレクト用ショートカット（`/go/<id>/`）にアクセスできる。
 <!-- apps-table:end -->
