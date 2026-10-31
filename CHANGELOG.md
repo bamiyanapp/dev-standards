@@ -1,3 +1,10 @@
+# [2.115.0](https://github.com/bamiyanapp/dev-standards/compare/v2.114.6...v2.115.0) (2026-10-31)
+
+
+### Features
+
+* **shared/hooks:** ブラウザ標準SpeechRecognitionの共有フックを追加 ([#1271](https://github.com/bamiyanapp/dev-standards/issues/1271)) ([d18a38e](https://github.com/bamiyanapp/dev-standards/commit/d18a38e4c11bf8a61c61558b36770735500046e2))
+
 ## [2.114.6](https://github.com/bamiyanapp/dev-standards/compare/v2.114.5...v2.114.6) (2026-10-30)
 
 
