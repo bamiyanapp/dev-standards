@@ -28,6 +28,7 @@
 | [`useSessionStorageState.js`](#sharedhooksusesessionstoragestatejs) | `sessionStorage`とReact stateの双方向同期hook（JSON対応） |
 | [`useValueChange.js`](#sharedhooksusevaluechangejs) | 前回値との比較による同期的state更新hook |
 | [`useWakeLock.js`](#sharedhooksusewakelockjs) | 画面スリープ防止hook（フィーチャー検出付き） |
+| [`useSpeechRecognition.js`](#sharedhooksusespeechrecognitionjs) | ブラウザ標準音声認識hook（フィーチャー検出付き） |
 
 ### `shared/ui/common-theme.css`
 
@@ -346,6 +347,29 @@ flowchart TD
 
 ![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
 
+### `shared/hooks/useSpeechRecognition.js`
+
+ブラウザ標準の音声認識（`SpeechRecognition`/`webkitSpeechRecognition`）を1回分（`start()`〜結果またはエラーまで）実行するhook。examination#78で導入したロジックをdev-standards#1270で切り出した。標準のDOM型定義に含まれていない（Chrome系ブラウザ独自実装が事実上の標準として広く使われているのみ）ため、`useWakeLock.js`と同様にフィーチャー検出のみ行う。未対応環境（iOS Safari・Firefox等）では`isSupported`が`false`になり、`start()`は何もしない。
+
+```jsx
+const { isSupported, start } = useSpeechRecognition({
+  lang: "ja-JP", // 既定値のため省略可
+  onResult: (transcript) => {
+    /* 認識結果を受け取ったとき */
+  },
+  onError: (error) => {
+    /* ブラウザから認識エラーが通知されたとき */
+  },
+  onNoResult: () => {
+    /* 発話が検出できずに終了したとき（結果・エラーいずれも無いまま終了） */
+  },
+});
+
+<button onClick={start} disabled={!isSupported}>話す</button>
+```
+
+音声合成（`SpeechSynthesis`）側は標準のDOM型定義に含まれるため、本hookの対象外とする（プロダクト固有の声選択ロジック等は利用側に委ねる）。
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
@@ -366,6 +390,7 @@ flowchart TD
     { "source": "shared/hooks/useSessionStorageState.js", "target": "app/top/src/hooks/useSessionStorageState.js" },
     { "source": "shared/hooks/useValueChange.js", "target": "app/top/src/hooks/useValueChange.js" },
     { "source": "shared/hooks/useWakeLock.js", "target": "app/top/src/hooks/useWakeLock.js" },
+    { "source": "shared/hooks/useSpeechRecognition.js", "target": "app/top/src/hooks/useSpeechRecognition.js" },
     { "source": "shared/sfx/wadodon.mp3", "target": "app/top/public/wadodon.mp3" },
     { "source": "shared/sfx/click.mp3", "target": "app/top/public/click.mp3" },
     { "source": "shared/sfx/shock.mp3", "target": "app/top/public/shock.mp3" },
