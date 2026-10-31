@@ -71,6 +71,15 @@
       "repoUrl": "https://github.com/bamiyanapp/shock-lab",
       "loginRequired": false,
       "note": null
+    },
+    {
+      "id": "opinion-map",
+      "name": "opinion-map",
+      "description": "イベントの意見を匿名で集め、AIで整理する地図",
+      "url": "https://dq63ds5qh9abj.cloudfront.net/",
+      "repoUrl": "https://github.com/uchi-stock/opinion-map",
+      "loginRequired": false,
+      "note": "参加者はログイン不要で投稿できる。管理画面（/admin）だけ、管理者の一覧に載ったGoogleアカウントでログインする。公開URLはCloudFrontのドメインで、deploy workflowで作成したスタックから得た。"
     }
   ]
 }
