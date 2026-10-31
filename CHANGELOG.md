@@ -1,3 +1,10 @@
+## [2.115.1](https://github.com/bamiyanapp/dev-standards/compare/v2.115.0...v2.115.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* **shared/hooks:** useSpeechRecognitionのレンダー中ref読み取りを修正 ([#1273](https://github.com/bamiyanapp/dev-standards/issues/1273)) ([6aeea6a](https://github.com/bamiyanapp/dev-standards/commit/6aeea6a3d23466853a002c0e0b3dcbeb951f86e5))
+
 # [2.115.0](https://github.com/bamiyanapp/dev-standards/compare/v2.114.6...v2.115.0) (2026-10-31)
 
 
