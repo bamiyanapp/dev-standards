@@ -9,10 +9,18 @@ function getSpeechRecognitionCtor() {
 }
 
 // 音声認識を1回分（start〜結果またはエラーまで）実行するフック。
-// lang: 認識言語（既定"ja-JP"）
-// onResult(transcript): 認識結果を受け取ったときに呼ばれる
-// onError(error): ブラウザから認識エラーが通知されたときに呼ばれる
-// onNoResult(): 発話が検出できずに終了した（結果もエラーも無いまま終わった）ときに呼ばれる
+// JSDocの型注釈は、allowJs経由でこのファイルを直接importするTypeScript側
+// （.tsx）での型チェックのために必要（examination#582調査、dev-standards#1270）。
+// JSDocが無いと、デフォルト値`{}`のみから引数の型が推論され、onResult等の
+// プロパティが「存在しないプロパティ」としてコンパイルエラーになる
+/**
+ * @param {object} [options]
+ * @param {string} [options.lang] 認識言語（既定"ja-JP"）
+ * @param {(transcript: string) => void} [options.onResult] 認識結果を受け取ったときに呼ばれる
+ * @param {(error: string) => void} [options.onError] ブラウザから認識エラーが通知されたときに呼ばれる
+ * @param {() => void} [options.onNoResult] 発話が検出できずに終了した（結果もエラーも無いまま終わった）ときに呼ばれる
+ * @returns {{ isSupported: boolean, start: () => void }}
+ */
 export function useSpeechRecognition({ lang = "ja-JP", onResult, onError, onNoResult } = {}) {
   // ctorはマウント後に変わらない値のため、useRefではなくuseStateで保持し
   // レンダー中に.currentを読む形（React的に非推奨）を避ける
