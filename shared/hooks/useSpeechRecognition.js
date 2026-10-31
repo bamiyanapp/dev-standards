@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // SpeechRecognition（音声認識）は標準のDOM型定義に含まれていない（Chrome系ブラウザ
 // 独自実装が事実上の標準として広く使われているのみ）ため、フィーチャー検出のみ行う。
@@ -14,12 +14,15 @@ function getSpeechRecognitionCtor() {
 // onError(error): ブラウザから認識エラーが通知されたときに呼ばれる
 // onNoResult(): 発話が検出できずに終了した（結果もエラーも無いまま終わった）ときに呼ばれる
 export function useSpeechRecognition({ lang = "ja-JP", onResult, onError, onNoResult } = {}) {
-  const ctorRef = useRef(getSpeechRecognitionCtor());
+  // ctorはマウント後に変わらない値のため、useRefではなくuseStateで保持し
+  // レンダー中に.currentを読む形（React的に非推奨）を避ける
+  const [SpeechRecognitionCtor] = useState(() => getSpeechRecognitionCtor());
   const callbacksRef = useRef({ onResult, onError, onNoResult });
-  callbacksRef.current = { onResult, onError, onNoResult };
+  useEffect(() => {
+    callbacksRef.current = { onResult, onError, onNoResult };
+  }, [onResult, onError, onNoResult]);
 
   const start = useCallback(() => {
-    const SpeechRecognitionCtor = ctorRef.current;
     if (!SpeechRecognitionCtor) return;
 
     const recognition = new SpeechRecognitionCtor();
@@ -44,7 +47,7 @@ export function useSpeechRecognition({ lang = "ja-JP", onResult, onError, onNoRe
     };
 
     recognition.start();
-  }, [lang]);
+  }, [lang, SpeechRecognitionCtor]);
 
-  return { isSupported: !!ctorRef.current, start };
+  return { isSupported: !!SpeechRecognitionCtor, start };
 }
