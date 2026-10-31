@@ -1,3 +1,10 @@
+## [2.115.2](https://github.com/bamiyanapp/dev-standards/compare/v2.115.1...v2.115.2) (2026-10-31)
+
+
+### Bug Fixes
+
+* **shared/hooks:** useSpeechRecognitionにJSDoc型注釈を追加 ([#1274](https://github.com/bamiyanapp/dev-standards/issues/1274)) ([7e6bf19](https://github.com/bamiyanapp/dev-standards/commit/7e6bf196f9fbaa58a08447439631f0fa47a32388))
+
 ## [2.115.1](https://github.com/bamiyanapp/dev-standards/compare/v2.115.0...v2.115.1) (2026-10-31)
 
 
