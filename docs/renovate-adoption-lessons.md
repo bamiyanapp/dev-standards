@@ -50,6 +50,19 @@ mainへのマージ頻度が高いリポジトリでは、Renovate PRのブラ�
 
 **対処**: `renovate.json`に`rebaseWhen: "behind-base-branch"`を設定し、mainが更新されるたびにRenovateがブランチを自動的に作り直すようにした。これにより、CIが常に最新mainとの組み合わせで実行されるようになった。
 
+### 5. 更新PRをマージせずクローズすると、そのメジャーラインが恒久的に提案されなくなる（issue #1290）
+
+karutaで`vite-plugin-pwa`のメジャー更新PR（`risk: high`ラベル付き）が、`不要と判断する`という1行コメントのみでクローズされていた。Renovateはこのクローズを検知すると、以下の自動返信を残す。
+
+> Because you closed this PR without merging, Renovate will ignore this update. You will not get PRs for any future `2.x` releases. But if you manually upgrade to `2.x` then Renovate will re-enable minor and patch updates automatically.
+
+つまり、クローズという1アクションが「そのメジャーライン全体を今後一切提案しない」という恒久的な抑制につながる。この抑制の重さに対して、クローズ時に要求される記録は実質無い（空コメントでも成立する）。抑制された更新はDependency Dashboardの「PR Closed (Blocked)」節に残り続けるが、これを定期的に確認する仕組みが無いと、理由も再検討の機会も失われたまま放置される。
+
+**対処方針**:
+
+- **クローズ時の記録を必須化する**: Renovateの更新PR（特に`risk: high`等メジャー更新）を人間判断でマージせずにクローズする際は、理由・再検討条件を本文程度の分量でコメントに残す。理由が複雑な場合は追跡issueを起票し、PRコメントからリンクする
+- **再検討のきっかけを作る**: `pr-sweep` Skillの巡回対象へ、Dependency Dashboardの「PR Closed (Blocked)」節の一覧化・報告を追加する。アクションはせず、再開の判断は人間に委ねる（詳細は`pr-sweep` Skill参照）
+
 ```jsonc
 {
   "rebaseWhen": "behind-base-branch"
