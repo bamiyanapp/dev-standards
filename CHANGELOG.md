@@ -1,3 +1,10 @@
+## [2.115.4](https://github.com/bamiyanapp/dev-standards/compare/v2.115.3...v2.115.4) (2026-11-03)
+
+
+### Bug Fixes
+
+* secret-scan jobをgitleaks-actionからgitleaks CLI直接実行へ移行 ([#1286](https://github.com/bamiyanapp/dev-standards/issues/1286)) ([9614ffd](https://github.com/bamiyanapp/dev-standards/commit/9614ffd6ef19cb254895391cdc389ea68399ab6a))
+
 ## [2.115.3](https://github.com/bamiyanapp/dev-standards/compare/v2.115.2...v2.115.3) (2026-11-03)
 
 
