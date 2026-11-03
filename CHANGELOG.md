@@ -1,3 +1,10 @@
+## [2.115.5](https://github.com/bamiyanapp/dev-standards/compare/v2.115.4...v2.115.5) (2026-11-03)
+
+
+### Bug Fixes
+
+* semantic-release失敗時の原因不明な422エラーと残骸ブランチを解消 ([#1287](https://github.com/bamiyanapp/dev-standards/issues/1287)) ([932e248](https://github.com/bamiyanapp/dev-standards/commit/932e248e64a4cc00da72ef260303255caa3f575d))
+
 ## [2.115.4](https://github.com/bamiyanapp/dev-standards/compare/v2.115.3...v2.115.4) (2026-11-03)
 
 
