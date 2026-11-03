@@ -1,3 +1,10 @@
+## [2.115.6](https://github.com/bamiyanapp/dev-standards/compare/v2.115.5...v2.115.6) (2026-11-03)
+
+
+### Bug Fixes
+
+* 依存フルスキャンがdevDependencies経由のみの脆弱性を除外するようにする ([#1289](https://github.com/bamiyanapp/dev-standards/issues/1289)) ([8ea82df](https://github.com/bamiyanapp/dev-standards/commit/8ea82df1e4a63f9e59953d6cac338d4b78feffcc))
+
 ## [2.115.5](https://github.com/bamiyanapp/dev-standards/compare/v2.115.4...v2.115.5) (2026-11-03)
 
 
