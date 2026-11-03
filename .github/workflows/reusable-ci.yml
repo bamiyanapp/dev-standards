@@ -1818,7 +1818,19 @@ jobs:
             echo "Neither ${{ inputs.frontend_dir }}/ nor ${{ inputs.backend_dir }}/ exists; nothing to check."
             exit 0
           fi
-          npx --yes dependency-cruiser@16 --config dependency-cruiser.config.cjs --output-type err "${targets[@]}"
+          # issue #1269: npxのデフォルト環境にtypescriptが入っていないと、
+          # dependency-cruiserは.ts/.tsxを解析せずJS系ファイルのみを読む。TypeScript
+          # プロジェクトでは越境import等の違反があってもCIが空振りで成功してしまうため、
+          # typescriptをpeerとして明示的に取得する（-pを2つ指定する場合、パッケージ名と
+          # 実行コマンド名が一致しないためdepcruiseを明示する必要がある）
+          if find "${targets[@]}" \( -name '*.ts' -o -name '*.tsx' \) -print -quit | grep -q .; then
+            TS_MODULE_COUNT=$(npx --yes -p typescript@5 -p dependency-cruiser@16 depcruise --config dependency-cruiser.config.cjs --output-type json "${targets[@]}" \
+              | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const j=JSON.parse(d);console.log(j.modules.filter(m=>/\.tsx?$/.test(m.source)).length)})')
+            if [ "$TS_MODULE_COUNT" = "0" ]; then
+              echo "::warning::対象ディレクトリに.ts/.tsxファイルが存在するが、dependency-cruiserの解析結果に1件も含まれていない。アーキテクチャチェックが空振りしている可能性がある"
+            fi
+          fi
+          npx --yes -p typescript@5 -p dependency-cruiser@16 depcruise --config dependency-cruiser.config.cjs --output-type err "${targets[@]}"
 
   # ESLint・stylelintはコード（JS/CSS）向け、CodeQLはセキュリティ向けの静的解析であるのに
   # 対し、Markdownドキュメント（docs/*.md等）の日本語文章そのものの品質（文体の不統一・
@@ -3199,7 +3211,10 @@ jobs:
             echo '{"modules":[]}' > /tmp/depcruise-output.json
             exit 0
           fi
-          npx --yes dependency-cruiser@16 --config dependency-cruiser.config.cjs --output-type json "${targets[@]}" > /tmp/depcruise-output.json
+          # issue #1269: architecture-check jobと同根。typescriptが無いと.ts/.tsxが
+          # 解析されず、ブラスト半径（npm依存のimport解決）もTypeScriptプロジェクトで
+          # 空振りする
+          npx --yes -p typescript@5 -p dependency-cruiser@16 depcruise --config dependency-cruiser.config.cjs --output-type json "${targets[@]}" > /tmp/depcruise-output.json
 
       # 重要パス（決済・認証等）の宣言は参照側リポジトリ自身の責務。リポジトリルートに
       # dependency-risk-critical-paths.jsonが無い場合はdependency-blast-radius.js側で
