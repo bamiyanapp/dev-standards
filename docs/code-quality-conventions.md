@@ -57,7 +57,8 @@ npm workspacesモノレポ（`frontend/`・`backend/`が同一リポジトリ）
 - **共有設定**: `commitlint.config.cjs`・`stylelint.config.cjs`・`textlint.config.cjs`と同様の方式である。dev-standardsルートの`dependency-cruiser.config.cjs`をsymlinkでそのまま利用する（`sync-manifest.json`にエントリ済み）。プロダクト固有のカスタマイズは想定しない
 - **検知対象**: 循環依存と、`frontend/`↔`backend/`間の越境import（frontend側からbackend内部モジュールへの直接import等）の2種類
 - **単一パッケージ構成では該当しない**: frontend/backendの単一パッケージ構成（[`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md)）を考える。この構成では越境importルールの対象パスが存在しない。循環依存の検知のみが有効に働く
-- **CIへの組み込み**: `reusable-ci.yml`の`enable_architecture_check: true`を指定するだけでよい。`architecture-check` jobがnpx経由でdependency-cruiser本体を取得し実行するため、devDependenciesへの追加は不要。詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「`reusable-ci.yml`」を参照。[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」も参照
+- **CIへの組み込み**: `reusable-ci.yml`の`enable_architecture_check: true`を指定するだけでよい。`architecture-check` jobがnpx経由でdependency-cruiser本体・typescriptを取得し実行するため、devDependenciesへの追加は不要。詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「`reusable-ci.yml`」を参照。[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」も参照
+- **TypeScriptプロジェクトでの解析漏れ対策**（issue #1269）: dependency-cruiserは、実行環境にtypescriptが無い場合を考える。この場合`.ts`/`.tsx`を解析せず、JS系ファイルのみを読む。検知漏れのまま「有効化しただけで安心する」事故を防ぐため、`architecture-check` jobはtypescriptを明示的に取得して実行する。加えて、対象ディレクトリに`.ts`/`.tsx`が存在する場合を考える。解析結果に1件も含まれないときは`::warning::`を出す
 
 ## 参考実装
 
