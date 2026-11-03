@@ -264,6 +264,7 @@ flowchart TD
 
 - **`renovate.json`の`lockFileMaintenance`**（issue #1094）: 週次でlockfile全体を再生成するPRを作成する。親パッケージのバージョン範囲内で解決可能な新しいバージョンへ、Renovateが提案を出さなくても定期的に取り込まれるようになる
 - **`reusable-dependency-full-scan.yml`**（issue #1095）: `dependency-risk-summary` jobはPRに対して動作する。その対象は`package-lock.json`差分のみである。本機能はそれとは独立に動作する。呼び出し元リポジトリの`package-lock.json`全体を定期スキャンする。`scripts/dependency-full-scan.js`が全パッケージ（直接・間接問わず）を抽出する。既存の`dependency-vulnerability-info.js`（OSV.dev照会）を再利用して脆弱性を検知する。検知した場合、固定タイトルの単一Issueへ結果を反映する。これはdependency-deprecation-scan（issue #969）と同じ設計であり、実行毎に新規Issueを積み重ねない。`reusable-ci.yml`同様のreusable workflowとして提供する。参照側リポジトリ（karuta等）が独自のscheduleトリガー付きworkflowから呼び出す構成とする
+  - **スキャン対象は本番コードから到達可能な依存のみ**（issue #1288）: `package-lock.json`の各エントリは`dev`フラグを持つ。これはnpmが付与するフラグで、devDependencies経由のみ（本番コードから到達不可能）であることを意味する。全ての出現箇所が`dev: true`であるパッケージは、OSV照会自体を行わない（同一name+versionが複数箇所に存在する場合、1箇所でも本番到達経路があれば対象に含める）。`eslint`・`@lhci/cli`・`semantic-release`等のdevDependencies配下のみに存在する脆弱性は、実行時のアプリケーションコードへ一切露出しない。これを無視すると、対応不要な項目が毎回issueに列挙され続けるノイズになっていた。devDependencies側のサプライチェーンリスク（新規install script検知等）は、本スキャンの対象外である。上述のSupply Chainチェックという別の関心事で扱う
 
 ### 3つの定期スキャン系セーフティネットの関係（issue #1174）
 

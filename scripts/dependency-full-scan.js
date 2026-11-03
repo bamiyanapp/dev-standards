@@ -12,15 +12,21 @@ const { fetchVulnerabilityInfo } = require("./dependency-vulnerability-info.js")
 // ネットとして、mainブランチのpackage-lock.jsonを対象にした定期フルスキャンを追加する
 
 // package-lock.json（npm lockfileVersion 3）の全パッケージエントリ（直接・間接問わず）
-// から { name, version, direct } の一覧を抽出する。同名パッケージが複数バージョンで
-// 存在する場合（ネストしたnode_modules配下）はいずれも対象に含める
-// （name+versionで重複除去し、同じ組み合わせの再チェックは避ける）
+// から { name, version, direct, devOnly } の一覧を抽出する。同名パッケージが複数
+// バージョンで存在する場合（ネストしたnode_modules配下）はいずれも対象に含める
+// （name+versionで重複除去し、同じ組み合わせの再チェックは避ける）。
+//
+// issue #1288: 同一name+versionが複数箇所に存在する場合、各エントリの"dev"フラグ
+// （npmが付与する、本番コードから到達不可能＝devDependencies経由のみという意味）が
+// 一致しないことがある（例: 同じバージョンのパッケージが、production依存の
+// chainと、lintツール等のdevDependencies専用chainの両方から解決される場合）。
+// この場合、1箇所でも本番到達経路（dev !== true）があれば、そのname+version全体を
+// 本番到達可能（devOnly: false）として扱う（安全側に倒す）。
 function extractAllPackages(lockJson) {
   const packages = lockJson?.packages ?? {};
   const directNames = extractDirectDependencyNames(lockJson);
 
-  const seen = new Set();
-  const result = [];
+  const byKey = new Map();
   for (const [key, entry] of Object.entries(packages)) {
     if (key === "") continue;
     const name = packageNameFromKey(key);
@@ -28,12 +34,17 @@ function extractAllPackages(lockJson) {
     if (!name || !version) continue;
 
     const dedupeKey = `${name}@${version}`;
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
-
-    result.push({ name, version, direct: directNames.has(name) });
+    const isDevHere = entry.dev === true;
+    const existing = byKey.get(dedupeKey);
+    if (existing) {
+      existing.devOnly = existing.devOnly && isDevHere;
+    } else {
+      byKey.set(dedupeKey, { name, version, direct: directNames.has(name), devOnly: isDevHere });
+    }
   }
-  return result.sort((a, b) => (a.name === b.name ? a.version.localeCompare(b.version) : a.name.localeCompare(b.name)));
+  return [...byKey.values()].sort((a, b) =>
+    a.name === b.name ? a.version.localeCompare(b.version) : a.name.localeCompare(b.name),
+  );
 }
 
 // issue #1111。OSV.devのquerybatch APIには1リクエストあたりのクエリ件数上限が
@@ -62,7 +73,12 @@ function chunk(array, size) {
 // ワークフロー側のJob Summary・Issueの有無で確認できる）
 // fetchJsonImpl: テスト用に差し替え可能なHTTP呼び出し実装（既定はグローバルfetch）
 async function scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl, chunkSize = OSV_QUERYBATCH_CHUNK_SIZE } = {}) {
-  const packages = extractAllPackages(lockJson);
+  const allPackages = extractAllPackages(lockJson);
+  // issue #1288: devDependencies経由のみ（本番コードから到達不可能）のパッケージは
+  // OSV照会自体を行わない。対象はCVE等の脆弱性スキャンのみであり、devDependencies側の
+  // サプライチェーンリスク（新規install script等）はdependency-risk-judgment.mdの
+  // Supply Chainチェックという別の関心事で扱う
+  const packages = allPackages.filter((p) => !p.devOnly);
   const options = fetchJsonImpl ? { fetchJsonImpl } : {};
 
   const results = [];
