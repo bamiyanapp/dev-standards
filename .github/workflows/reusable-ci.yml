@@ -284,10 +284,13 @@ on:
           検知する`secret-scan` jobを実行するかどうか（bamiyanapp/dev-standards#892）。
           CodeQL（SAST）はコードの脆弱性パターンを検知するものであり、ハードコード
           された具体的な秘密情報の検出とは別物のため、別ジョブとして提供する。
-          `gitleaks/gitleaks-action`を使い、PRのbase_branchとの差分のみを対象に
-          スキャンする（リポジトリ全履歴を毎回スキャンすると、既存履歴に残る
-          過去の誤検知で詰まるため）。誤検知を許可する場合は、参照側リポジトリの
-          ルートに`.gitleaks.toml`を置いてallowlistを設定する
+          gitleaks CLI本体（MIT、issue #1268で`gitleaks/gitleaks-action`から
+          移行。actionはv3から商用ライセンスが必要になり、組織（Organization）
+          のリポジトリでは`GITLEAKS_LICENSE`無しで失敗する）を使い、PRの
+          base_branchとの差分のみを対象にスキャンする（リポジトリ全履歴を
+          毎回スキャンすると、既存履歴に残る過去の誤検知で詰まるため）。
+          誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`
+          を置いてallowlistを設定する
           （https://github.com/gitleaks/gitleaks#configuration）。
         type: boolean
         default: false
@@ -2210,6 +2213,10 @@ jobs:
       !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest
+    env:
+      # issue #1268: gitleaks CLI自体（MIT）のバージョン。Renovateのcustom regex
+      # manager（renovate.json参照）がこの行を検知し更新PRを作成する
+      GITLEAKS_VERSION: "8.30.1"
     steps:
       # PRのbase_branchとの差分のみを対象にスキャンする（GITLEAKS_CONFIGで
       # 全履歴スキャンに切り替えることも可能だが、既存履歴に残る過去の誤検知
@@ -2218,11 +2225,37 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      # issue #1268: gitleaks/gitleaks-actionはv3から商用ライセンスが必要になった
+      # （個人アカウントは不要だが、Organizationのリポジトリでは
+      # GITLEAKS_LICENSEが必須。uchi-stock配下等の組織リポジトリで
+      # enable_secret_scanが使えなくなっていた）。gitleaks本体（CLI、MIT、
+      # https://github.com/gitleaks/gitleaks/blob/master/LICENSE）は無料のまま
+      # 使えるため、action経由ではなくリリースバイナリを直接取得して実行する。
+      # ダウンロードURL・アセット名の規則（gitleaks_<version>_<os>_<arch>.tar.gz）は
+      # gitleaks-action自身の内部実装（src/gitleaks.js、downloadURL関数）と同じもの
+      - name: gitleaksをインストールする
+        run: |
+          set -eu
+          curl -sSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSL -o /tmp/gitleaks_checksums.txt \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          EXPECTED=$(grep "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz\$" /tmp/gitleaks_checksums.txt | awk '{print $1}')
+          ACTUAL=$(sha256sum /tmp/gitleaks.tar.gz | awk '{print $1}')
+          if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "gitleaksバイナリのチェックサムが一致しない（expected=$EXPECTED actual=$ACTUAL）" >&2
+            exit 1
+          fi
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          sudo install /tmp/gitleaks /usr/local/bin/gitleaks
+      # gitleaks-action（pull_requestイベント時）と同じ範囲・オプションでスキャンする
+      # （--log-opts相当の範囲指定はsrc/gitleaks.jsのScan関数を参照）。
+      # --redactでシークレット本文自体をログへ出力しない
       - name: gitleaksを実行する
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_NOTIFY_USER_LIST: ""
+        run: |
+          set -eu
+          gitleaks detect --redact -v --exit-code=1 \
+            --log-opts="--no-merges --first-parent ${{ github.event.pull_request.base.sha }}^..${{ github.event.pull_request.head.sha }}"
 
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され
