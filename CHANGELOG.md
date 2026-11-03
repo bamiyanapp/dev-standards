@@ -1,3 +1,10 @@
+## [2.115.3](https://github.com/bamiyanapp/dev-standards/compare/v2.115.2...v2.115.3) (2026-11-03)
+
+
+### Bug Fixes
+
+* architecture-check/blast-radiusのdependency-cruiserがTypeScriptを解析しない問題を修正 ([#1285](https://github.com/bamiyanapp/dev-standards/issues/1285)) ([fbce041](https://github.com/bamiyanapp/dev-standards/commit/fbce041873319ce7556a4dffac7d25ca93c5e48e))
+
 ## [2.115.2](https://github.com/bamiyanapp/dev-standards/compare/v2.115.1...v2.115.2) (2026-10-31)
 
 
