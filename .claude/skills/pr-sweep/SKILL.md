@@ -1,6 +1,6 @@
 ---
 name: pr-sweep
-description: 対象リポジトリのopen PRを横断的に巡回し、コンフリクト（mergeable_state=dirty）を解消し、放置PRをリストアップして報告する。Dependency Dashboardの「PR Closed (Blocked)」節（Renovateが恒久的に提案を止めた更新）も一覧化して報告するSkill。/loopでの定期実行を想定する。
+description: 対象リポジトリのopen PRを横断的に巡回し、コンフリクト（mergeable_state=dirty）を解消し、放置PRをリストアップして報告する。Dependency Dashboardの「PR Closed (Blocked)」節（Renovateが恒久的に提案を止めた更新）も一覧化して報告する。さらに、抑制中のパッケージに後から脆弱性スキャンでCVEが検知されていないかを突き合わせて報告するSkill。/loopでの定期実行を想定する。
 user_invocable: true
 ---
 
@@ -14,6 +14,7 @@ user_invocable: true
 2. 古いまま放置されている（`mergeable_state: behind`）PRを検出し、必要に応じてmainを取り込む
 3. 上記以外の放置PR（CIが通っているが人間の承認待ちのまま等）はリストアップして報告する。マージ判断自体は行わない
 4. Dependency Dashboard（Renovateが自動生成するissue）の「PR Closed (Blocked)」節を一覧化して報告する（issue #1290）
+5. 抑制中パッケージへの脆弱性検知の突き合わせを行う（issue #1292）
 
 本Skillは既存PRの状態を拾う「巡回」専用であり、新規PRの作成やコード変更そのものは行わない（コンフリクト解消に伴うmainの取り込み・競合解消を除く）。
 
@@ -25,7 +26,8 @@ user_invocable: true
    - `behind`（古いまま放置、コンフリクトなし）: baseブランチを取り込んでpushする（コンフリクトが無ければ機械的な操作のため、人への確認は不要）
    - `clean`等（問題なし）: 次のPRへ進む
 3. 「Dependency Dashboardの『PR Closed (Blocked)』節の確認」を行う
-4. 巡回結果をまとめて報告する（「報告フォーマット」参照）
+4. 「抑制中パッケージへの脆弱性検知の突き合わせ」を行う
+5. 巡回結果をまとめて報告する（「報告フォーマット」参照）
 
 ## Dependency Dashboardの「PR Closed (Blocked)」節の確認
 
@@ -38,6 +40,16 @@ Renovateの更新PRをマージせずクローズすると、Renovateはその�
    - クローズ理由・再検討条件が明記されている: そのまま報告対象に含める
    - クローズ理由が記録されていない、または不十分（例: 「不要と判断する」のみ）: 「記録不足」として報告対象に含める
 5. 本Skill自体はこの一覧の再開（`unignore`・PR再作成等）を行わない。マージ判断と同様、再検討の判断は人間に委ねる
+
+## 抑制中パッケージへの脆弱性検知の突き合わせ
+
+Renovateのクローズ時抑制は、クローズ理由を問わずメジャーライン全体へ無条件にかかる。脆弱性修正アラート（`vulnerabilityAlerts`等）がこの抑制をバイパスするかは未確証であり、不安定という報告もある。詳細は[`docs/renovate-adoption-lessons.md`](https://github.com/bamiyanapp/dev-standards/blob/main/docs/renovate-adoption-lessons.md)「5.」を参照する。この不確実性に対処するため、Renovateの提案状態を見ない独立したスキャン（`dependency-full-scan.js`、issue #1095/#1288）がある。その結果と、抑制中パッケージ一覧を突き合わせる。
+
+1. 前節で取得した抑制中パッケージ名一覧を使う（抑制中の更新が無い場合はこの節全体をスキップする）
+2. 対象リポジトリで`dependency-full-scan.js`の直近実行結果issue（固定issue、タイトル・ラベル等で判別）を探す。無い場合（フルスキャン未導入）はこの節をスキップする
+3. そのissue本文に列挙された脆弱性検知パッケージ名一覧を抽出する
+4. 両方の一覧に同名パッケージが含まれる場合、「Renovateから自動提案が止まっている状態で脆弱性が検知されている」ことを報告対象に含める
+5. 本Skill自体はここでも更新判断（`unignore`操作・PR手動再作成等）を行わない。再検討の判断は人間に委ねる
 
 ## コンフリクト解消
 
@@ -73,7 +85,10 @@ CIが通っているが人間の承認待ちのまま等の放置PRは、以下�
 ### 4. Dependency Dashboardで恒久的に提案停止中の更新
 - パッケージ名・元PR番号・クローズ日・クローズ時のコメント（記録不足の場合はその旨を明記）
 
-### 5. 問題なし
+### 5. 提案停止中かつ脆弱性検知済みのパッケージ
+- パッケージ名・検知元のスキャン結果issueへのリンク・該当CVE概要
+
+### 6. 問題なし
 - 巡回対象のうち、特に対応不要だったPRの件数のみ（個別列挙は不要）
 
 ## ルール
@@ -82,4 +97,5 @@ CIが通っているが人間の承認待ちのまま等の放置PRは、以下�
 - PR（MR）の承認・マージは一切行わない（CLAUDE.md「PR（MR）承認・マージ禁止」）
 - 他者が作成したブランチの履歴を書き換えない（rebase・amend・force-push禁止、git-workflow Skill参照）
 - Dependency Dashboardの「PR Closed (Blocked)」節に対し、再開（`unignore`チェックボックスの操作・PR再作成等）は一切行わない。一覧化・報告のみ行い、再検討の判断は人間に委ねる
+- 抑制中パッケージへの脆弱性検知についても、`unignore`操作・PR手動再作成等のアクションは一切行わない。一覧化・報告のみ行い、更新判断は人間に委ねる
 - `/loop`での定期実行（例: 1日1回）を想定する。1回の実行で全リポジトリを対象にする必要はなく、ループの呼び出し元が対象リポジトリを指定する
