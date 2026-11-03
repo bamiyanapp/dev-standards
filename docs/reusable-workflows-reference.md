@@ -194,6 +194,17 @@ with:
 
 `secrets.BOT_TOKEN`（任意）を渡すと、`release` jobでのバージョン更新コミット・タグのpush、GitHub Release作成に利用される。**`base_branch`へのpushがCDワークフローのトリガーとなる**。**そのため`enable_release: true`で運用する場合は`BOT_TOKEN`の設定を推奨する**（`GITHUB_TOKEN`によるpushはCDをトリガーしない）。
 
+`enable_release: true`で運用する場合を考える。参照側リポジトリのルート`package.json`の`devDependencies`に、`semantic-release`本体と以下のプラグインが必要（issue #1267）。`release` jobは`npm ci`のみを行い、これらをインストールしない。不足している場合、`npx semantic-release`が`Cannot find module '@semantic-release/changelog'`等で即座に失敗する。
+
+- `semantic-release`
+- `@semantic-release/changelog`
+- `@semantic-release/commit-analyzer`
+- `@semantic-release/exec`
+- `@semantic-release/git`
+- `@semantic-release/github`
+- `@semantic-release/npm`
+- `@semantic-release/release-notes-generator`
+
 ## `reusable-codeql.yml`
 
 参照側の `.github/workflows/codeql.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-codeql.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。参照側の`codeql.yml`自体の`on:`に`push`・`pull_request`・`schedule`（週次等の定期実行、コード変更が無い期間もクエリセット更新を検知するため推奨）を設定する。指定できる入力は以下の通り。

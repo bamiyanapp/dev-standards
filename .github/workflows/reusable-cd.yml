@@ -218,17 +218,31 @@ jobs:
       # package.jsonには新バージョンが既に書き込まれているため、これを信頼できる
       # 取得元として使う（直接pushが成功した場合も内容は同一のため、どちらの
       # ケースでも正しく動作する）。
+      #
+      # issue #1267: release_needs_prの判定にはRELEASE_PREPARED（ローカルで
+      # 実際にコミットが作られたか）も必須条件として加える。必須devDependencies
+      # （semantic-release本体・各プラグイン）が参照側に無い場合、npx
+      # semantic-release自体がコミット作成前に`Cannot find module`で即座に
+      # 失敗する。このときoutcomeは'failure'だがローカルにコミットは1件も
+      # 作られていない（RELEASE_PREPARED=false）。この条件を見ずに
+      # outcome=failureのみでrelease_needs_pr=trueとしていたため、TAGが空の
+      # まま`chore/release-`ブランチをpushし、base_branchとの差分ゼロのまま
+      # PR作成が422（No commits between...）で失敗していた。失敗ログの末尾が
+      # この422になるため、本来の原因（devDependencies不足）が埋もれて
+      # わかりにくい。加えて、push済みの空ブランチが残骸として残る。
       - name: ローカルでリリースが準備されたか確認する
         id: check-release
         run: |
           AFTER_SHA=$(git rev-parse HEAD)
           echo "after_sha=$AFTER_SHA" >> "$GITHUB_OUTPUT"
           if [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
+            RELEASE_PREPARED=true
             VERSION=$(node -p "require('./package.json').version")
             echo "release_prepared=true" >> "$GITHUB_OUTPUT"
             echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           else
+            RELEASE_PREPARED=false
             echo "release_prepared=false" >> "$GITHUB_OUTPUT"
             echo "tag=" >> "$GITHUB_OUTPUT"
             echo "version=" >> "$GITHUB_OUTPUT"
@@ -247,13 +261,25 @@ jobs:
             # （後続の「Create GitHub Release」ステップで行う）。
             echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
             echo "release_pushed_directly=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.semantic-release.outcome }}" = "failure" ]; then
+          elif [ "${{ steps.semantic-release.outcome }}" = "failure" ] && [ "$RELEASE_PREPARED" = "true" ]; then
             echo "release_needs_pr=true" >> "$GITHUB_OUTPUT"
             echo "release_pushed_directly=false" >> "$GITHUB_OUTPUT"
           else
             echo "release_needs_pr=false" >> "$GITHUB_OUTPUT"
             echo "release_pushed_directly=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # issue #1267: 上記のelse分岐（release_needs_pr=false）には、「リリース対象
+      # コミットが無かった（正常）」と「semantic-release自体が設定不備等で
+      # コミット作成前に失敗した（異常）」の両方が含まれてしまう。後者を区別せず
+      # 握り潰すとジョブ全体が成功扱いになり、必須devDependencies不足等の設定不備に
+      # 誰も気づけなくなる。release_prepared=falseのままsemantic-release自体が
+      # 失敗していた場合のみ、原因を明示してジョブを失敗させる
+      - name: semantic-releaseがリリースコミット作成前に失敗した場合、ジョブを失敗させる
+        if: steps.semantic-release.outcome == 'failure' && steps.check-release.outputs.release_prepared == 'false' && steps.check-release.outputs.release_pushed_directly == 'false'
+        run: |
+          echo "::error::semantic-releaseの実行が失敗し、リリース用コミットも作成されませんでした。必須のdevDependencies（semantic-release本体・@semantic-release/changelog・commit-analyzer・exec・git・github・npm・release-notes-generator）が参照側リポジトリのpackage.jsonに揃っているか確認してください。詳細はdocs/reusable-workflows-reference.mdの「enable_shared_release_config」説明を参照してください。"
+          exit 1
 
       # ローカルに作成済みのバージョン更新コミットを新しいブランチへpushする
       # （base_branchではない新規ブランチ名のため、ブランチ保護の対象外）。
