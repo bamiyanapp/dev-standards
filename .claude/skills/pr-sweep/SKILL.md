@@ -1,6 +1,6 @@
 ---
 name: pr-sweep
-description: 対象リポジトリのopen PRを横断的に巡回し、コンフリクト（mergeable_state=dirty）を解消し、放置PRをリストアップして報告するSkill。/loopでの定期実行を想定する。
+description: 対象リポジトリのopen PRを横断的に巡回し、コンフリクト（mergeable_state=dirty）を解消し、放置PRをリストアップして報告する。Dependency Dashboardの「PR Closed (Blocked)」節（Renovateが恒久的に提案を止めた更新）も一覧化して報告するSkill。/loopでの定期実行を想定する。
 user_invocable: true
 ---
 
@@ -13,6 +13,7 @@ user_invocable: true
 1. コンフリクト（`mergeable_state: dirty`）を検出し、可能であれば解消する
 2. 古いまま放置されている（`mergeable_state: behind`）PRを検出し、必要に応じてmainを取り込む
 3. 上記以外の放置PR（CIが通っているが人間の承認待ちのまま等）はリストアップして報告する。マージ判断自体は行わない
+4. Dependency Dashboard（Renovateが自動生成するissue）の「PR Closed (Blocked)」節を一覧化して報告する（issue #1290）
 
 本Skillは既存PRの状態を拾う「巡回」専用であり、新規PRの作成やコード変更そのものは行わない（コンフリクト解消に伴うmainの取り込み・競合解消を除く）。
 
@@ -23,7 +24,20 @@ user_invocable: true
    - `dirty`（コンフリクト）: 「コンフリクト解消」へ進む
    - `behind`（古いまま放置、コンフリクトなし）: baseブランチを取り込んでpushする（コンフリクトが無ければ機械的な操作のため、人への確認は不要）
    - `clean`等（問題なし）: 次のPRへ進む
-3. 巡回結果をまとめて報告する（「報告フォーマット」参照）
+3. 「Dependency Dashboardの『PR Closed (Blocked)』節の確認」を行う
+4. 巡回結果をまとめて報告する（「報告フォーマット」参照）
+
+## Dependency Dashboardの「PR Closed (Blocked)」節の確認
+
+Renovateの更新PRをマージせずクローズすると、Renovateはそのメジャーライン全体への将来の提案を恒久的に停止する。この抑制は、クローズ時に理由が十分記録されないまま発生しやすい。そのため、再検討の機会が構造的に失われやすい。詳細は[`docs/renovate-adoption-lessons.md`](https://github.com/bamiyanapp/dev-standards/blob/main/docs/renovate-adoption-lessons.md)「5.」を参照する。
+
+1. 対象リポジトリでタイトルが`Dependency Dashboard`、作成者が`renovate[bot]`のissueを探す。存在しない場合（Renovate未導入または本体が無効化されている）はこの節をスキップする
+2. issue本文の「## PR Closed (Blocked)」節を探す。無い場合（現在抑制中の更新が無い）はスキップする
+3. 節内の各項目（パッケージ名・リンクされた元PR番号）を抽出する
+4. 各項目について、元PRのクローズ時コメントを確認する（`pull_request_read`の`get_comments`）
+   - クローズ理由・再検討条件が明記されている: そのまま報告対象に含める
+   - クローズ理由が記録されていない、または不十分（例: 「不要と判断する」のみ）: 「記録不足」として報告対象に含める
+5. 本Skill自体はこの一覧の再開（`unignore`・PR再作成等）を行わない。マージ判断と同様、再検討の判断は人間に委ねる
 
 ## コンフリクト解消
 
@@ -56,7 +70,10 @@ CIが通っているが人間の承認待ちのまま等の放置PRは、以下�
 ### 3. 放置PR一覧
 - 「放置PRの報告」の内容
 
-### 4. 問題なし
+### 4. Dependency Dashboardで恒久的に提案停止中の更新
+- パッケージ名・元PR番号・クローズ日・クローズ時のコメント（記録不足の場合はその旨を明記）
+
+### 5. 問題なし
 - 巡回対象のうち、特に対応不要だったPRの件数のみ（個別列挙は不要）
 
 ## ルール
@@ -64,4 +81,5 @@ CIが通っているが人間の承認待ちのまま等の放置PRは、以下�
 - 新規PRの作成・既存PRへの機能追加は行わない（本Skillの対象外）
 - PR（MR）の承認・マージは一切行わない（CLAUDE.md「PR（MR）承認・マージ禁止」）
 - 他者が作成したブランチの履歴を書き換えない（rebase・amend・force-push禁止、git-workflow Skill参照）
+- Dependency Dashboardの「PR Closed (Blocked)」節に対し、再開（`unignore`チェックボックスの操作・PR再作成等）は一切行わない。一覧化・報告のみ行い、再検討の判断は人間に委ねる
 - `/loop`での定期実行（例: 1日1回）を想定する。1回の実行で全リポジトリを対象にする必要はなく、ループの呼び出し元が対象リポジトリを指定する
