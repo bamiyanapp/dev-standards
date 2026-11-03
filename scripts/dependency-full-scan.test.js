@@ -13,8 +13,8 @@ test("extractAllPackages: 直接・間接の全パッケージをname/version付
     },
   };
   assert.deepEqual(extractAllPackages(lockJson), [
-    { name: "bar", version: "2.0.0", direct: false },
-    { name: "foo", version: "1.2.3", direct: true },
+    { name: "bar", version: "2.0.0", direct: false, devOnly: false },
+    { name: "foo", version: "1.2.3", direct: true, devOnly: false },
   ]);
 });
 
@@ -27,8 +27,8 @@ test("extractAllPackages: ネストしたnode_modulesで同名異バージョン
     },
   };
   assert.deepEqual(extractAllPackages(lockJson), [
-    { name: "foo", version: "1.0.0", direct: false },
-    { name: "foo", version: "2.0.0", direct: false },
+    { name: "foo", version: "1.0.0", direct: false, devOnly: false },
+    { name: "foo", version: "2.0.0", direct: false, devOnly: false },
   ]);
 });
 
@@ -40,7 +40,28 @@ test("extractAllPackages: 同一name+versionの重複エントリは1件にま�
       "node_modules/parent/node_modules/foo": { version: "1.0.0" },
     },
   };
-  assert.deepEqual(extractAllPackages(lockJson), [{ name: "foo", version: "1.0.0", direct: false }]);
+  assert.deepEqual(extractAllPackages(lockJson), [{ name: "foo", version: "1.0.0", direct: false, devOnly: false }]);
+});
+
+test("extractAllPackages: dev:trueのエントリはdevOnly:trueとして抽出する", () => {
+  const lockJson = {
+    packages: {
+      "": { dependencies: {} },
+      "node_modules/foo": { version: "1.0.0", dev: true },
+    },
+  };
+  assert.deepEqual(extractAllPackages(lockJson), [{ name: "foo", version: "1.0.0", direct: false, devOnly: true }]);
+});
+
+test("extractAllPackages: 同一name+versionが本番経路・dev経路の両方に存在する場合はdevOnly:falseにする（安全側）", () => {
+  const lockJson = {
+    packages: {
+      "": { dependencies: {} },
+      "node_modules/foo": { version: "1.0.0", dev: true },
+      "node_modules/parent/node_modules/foo": { version: "1.0.0" },
+    },
+  };
+  assert.deepEqual(extractAllPackages(lockJson), [{ name: "foo", version: "1.0.0", direct: false, devOnly: false }]);
 });
 
 test("extractAllPackages: versionを持たないエントリ（linkされたワークスペース自身等）は除外する", () => {
@@ -51,7 +72,7 @@ test("extractAllPackages: versionを持たないエントリ（linkされたワ�
       "node_modules/foo": { version: "1.0.0" },
     },
   };
-  assert.deepEqual(extractAllPackages(lockJson), [{ name: "foo", version: "1.0.0", direct: false }]);
+  assert.deepEqual(extractAllPackages(lockJson), [{ name: "foo", version: "1.0.0", direct: false, devOnly: false }]);
 });
 
 test("scanLockFileForVulnerabilities: 脆弱性が1件も無いパッケージは結果から除外する", async () => {
@@ -115,6 +136,27 @@ test("scanLockFileForVulnerabilities: 脆弱性が見つかったパッケージ
       ],
     },
   ]);
+});
+
+test("scanLockFileForVulnerabilities: devDependencies経由のみのパッケージはOSV照会対象から除外する（issue #1288）", async () => {
+  const lockJson = {
+    packages: {
+      "": { dependencies: { foo: "^1.0.0" } },
+      "node_modules/foo": { version: "1.0.0" },
+      "node_modules/eslint/node_modules/bar": { version: "2.0.0", dev: true },
+    },
+  };
+  let queriedNames;
+  const fetchJsonImpl = async (url, { body } = {}) => {
+    if (url.endsWith("/querybatch")) {
+      queriedNames = JSON.parse(body).queries.map((q) => q.package.name);
+      return { results: queriedNames.map(() => ({ vulns: [] })) };
+    }
+    throw new Error(`unexpected URL: ${url}`);
+  };
+
+  await scanLockFileForVulnerabilities(lockJson, { fetchJsonImpl });
+  assert.deepEqual(queriedNames, ["foo"]);
 });
 
 test("scanLockFileForVulnerabilities: パッケージが1件も無い場合はネットワークアクセスせず空配列を返す", async () => {
