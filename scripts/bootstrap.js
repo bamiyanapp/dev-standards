@@ -37,24 +37,33 @@ function loadManifest(devStandardsDir) {
 function loadLocalManifest(repoRoot) {
   const localManifestPath = path.join(repoRoot, "sync-manifest.local.json");
   if (!fs.existsSync(localManifestPath)) {
-    return { symlinks: [], symlinkAllInDir: [], copies: [] };
+    return { symlinks: [], symlinkAllInDir: [], copies: [], overrides: [] };
   }
   const parsed = JSON.parse(fs.readFileSync(localManifestPath, "utf-8"));
   return {
     symlinks: parsed.symlinks || [],
     symlinkAllInDir: parsed.symlinkAllInDir || [],
     copies: parsed.copies || [],
+    overrides: parsed.overrides || [],
   };
 }
 
 // dev-standards本体のマニフェストと参照側リポジトリのローカルマニフェストを
 // 単純に連結する。source/targetの意味（sourceはdev-standardsディレクトリ相対、
-// targetはリポジトリルート相対）はどちらのマニフェストのエントリでも変わらない
+// targetはリポジトリルート相対）はどちらのマニフェストのエントリでも変わらない。
+// ただしローカルマニフェストのoverrides（targetパスの配列）に含まれるtargetは、
+// dev-standards本体のマニフェスト側エントリから除外する（issue #1295）。
+// 参照側リポジトリが共有設定ファイルを意図的に実ファイル（dev-standards側を
+// requireして一部ルールを上書きする等）へ置き換えたい場合に使う。bootstrap.jsは
+// このtargetを一切管理対象にしないため、symlinkでなくても「blocked」エラーに
+// ならない
 function mergeManifests(manifest, localManifest) {
+  const overrides = new Set(localManifest.overrides || []);
+  const filterOverridden = (entries) => (entries || []).filter((entry) => !overrides.has(entry.target));
   return {
-    symlinks: [...(manifest.symlinks || []), ...(localManifest.symlinks || [])],
-    symlinkAllInDir: [...(manifest.symlinkAllInDir || []), ...(localManifest.symlinkAllInDir || [])],
-    copies: [...(manifest.copies || []), ...(localManifest.copies || [])],
+    symlinks: [...filterOverridden(manifest.symlinks), ...(localManifest.symlinks || [])],
+    symlinkAllInDir: [...filterOverridden(manifest.symlinkAllInDir), ...(localManifest.symlinkAllInDir || [])],
+    copies: [...filterOverridden(manifest.copies), ...(localManifest.copies || [])],
   };
 }
 
