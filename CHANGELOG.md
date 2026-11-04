@@ -1,3 +1,10 @@
+# [2.116.0](https://github.com/bamiyanapp/dev-standards/compare/v2.115.6...v2.116.0) (2026-11-04)
+
+
+### Features
+
+* **scripts/bootstrap:** sync-manifest.local.jsonでoverridesを指定できるようにする ([#1296](https://github.com/bamiyanapp/dev-standards/issues/1296)) ([3272dd9](https://github.com/bamiyanapp/dev-standards/commit/3272dd91cb0b7d0a322d91adfd8e89bde4b0b938))
+
 ## [2.115.6](https://github.com/bamiyanapp/dev-standards/compare/v2.115.5...v2.115.6) (2026-11-03)
 
 
