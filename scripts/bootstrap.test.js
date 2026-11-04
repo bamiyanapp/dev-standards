@@ -226,7 +226,7 @@ test("flags a copy target with no managed-region markers as drifted and does not
 
 test("loadLocalManifest returns empty arrays when the consumer repo has no local manifest", () => {
   const { repoRoot } = makeFixture();
-  assert.deepEqual(loadLocalManifest(repoRoot), { symlinks: [], symlinkAllInDir: [], copies: [] });
+  assert.deepEqual(loadLocalManifest(repoRoot), { symlinks: [], symlinkAllInDir: [], copies: [], overrides: [] });
 });
 
 test("loadLocalManifest reads sync-manifest.local.json from the repo root when present", () => {
@@ -242,6 +242,22 @@ test("loadLocalManifest reads sync-manifest.local.json from the repo root when p
     symlinks: [{ source: "shared/pwa/UpdateNotifier.jsx", target: "app/top/src/components/UpdateNotifier.jsx" }],
     symlinkAllInDir: [],
     copies: [],
+    overrides: [],
+  });
+});
+
+test("loadLocalManifest reads the overrides array when present", () => {
+  const { repoRoot } = makeFixture();
+  fs.writeFileSync(
+    path.join(repoRoot, "sync-manifest.local.json"),
+    JSON.stringify({ overrides: ["textlint.config.cjs"] })
+  );
+
+  assert.deepEqual(loadLocalManifest(repoRoot), {
+    symlinks: [],
+    symlinkAllInDir: [],
+    copies: [],
+    overrides: ["textlint.config.cjs"],
   });
 });
 
@@ -266,6 +282,28 @@ test("mergeManifests concatenates entries from both manifests without mutating t
   assert.deepEqual(merged.symlinkAllInDir, [{ source: "dir-a", target: "dir-a" }]);
   assert.deepEqual(merged.copies, [{ source: "c", target: "c" }]);
   assert.equal(manifest.symlinks.length, 1, "does not mutate the base manifest");
+});
+
+test("mergeManifests drops base manifest entries whose target is listed in the local manifest's overrides", () => {
+  const manifest = {
+    symlinks: [
+      { source: "textlint.config.cjs", target: "textlint.config.cjs" },
+      { source: "commitlint.config.cjs", target: "commitlint.config.cjs" },
+    ],
+    symlinkAllInDir: [],
+    copies: [],
+  };
+  const localManifest = {
+    symlinks: [],
+    symlinkAllInDir: [],
+    copies: [],
+    overrides: ["textlint.config.cjs"],
+  };
+
+  const merged = mergeManifests(manifest, localManifest);
+
+  assert.deepEqual(merged.symlinks, [{ source: "commitlint.config.cjs", target: "commitlint.config.cjs" }]);
+  assert.equal(manifest.symlinks.length, 2, "does not mutate the base manifest");
 });
 
 test("a repo-specific local manifest entry is picked up by computePlan/applyPlan alongside the shared manifest", () => {

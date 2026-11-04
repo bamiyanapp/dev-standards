@@ -49,6 +49,7 @@ Markdownドキュメント（`docs/*.md`・`README.md`・`.claude/skills/**/*.md
   - **【重要】`max-lines`を`textlint.config.cjs`の`rules`オブジェクトへ書いてはならない**（issue #595）。`--rulesdir`経由でのみ解決できる独自ルールを設定ファイルの`rules`へ併記すると問題が起きる。textlintの設定ファイル読み込み処理は「宣言された全ルールを通常のnpmパッケージとして解決しようとし、1つでも失敗すると設定ファイル全体のルールを無言で0件にする」という挙動をとる。この結果、`preset-ja-technical-writing`側が丸ごと機能しなくなる（CIは常に成功を返すため気付きにくい）。`max-lines`自体は`options.max || 200`で既定値を自前で持っているため、`--rulesdir textlint-rules`を渡すだけで（設定ファイルへの追記無しに）有効化される
 - **CIへの組み込み**: stylelintのように参照側リポジトリのpackage.jsonへtextlint本体を追加する必要はない。`reusable-ci.yml`の`enable_text_lint: true`を指定するだけでよい。`text_lint_paths`（`mermaid_doc_paths`と同形式のカンマ/改行区切りglob）も指定する。`text-lint` jobがnpx経由でtextlint本体・presetを取得し、`--rulesdir textlint-rules`で独自ルールも合わせて実行する。詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)「`reusable-ci.yml`」を参照。[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」も参照
 - **導入前の確認**: 上記の調整・無効化理由は、いずれも「長い複文・常体で統一する」というdev-standardsの文体を前提にしている。プロダクト側のドキュメントがですます調中心、または短文中心の文体を採用している場合は、この共有設定をそのまま使わず、プロダクト側で個別に調整することを検討する
+- **プロダクト固有の例外**（issue #1295）: プロダクト名等の固有名詞が`max-kanji-continuous-len`（漢字連続長）へ誤検知される場合を考える。共有設定へ小さな例外のみ加えたい場合である。`textlint.config.cjs`を`sync-manifest.local.json`へ`overrides: ["textlint.config.cjs"]`で登録する。これによりsymlink管理の対象から外れる。参照側リポジトリ自身の`textlint.config.cjs`を実ファイルとして用意する。`require("./dev-standards/textlint.config.cjs")`で共有設定を取り込んだ上で`rules`を上書きする（examination#615が実例）。`overrides`に登録しないままsymlinkを実ファイルへ置き換えると、`bootstrap.js`が`blocked`状態を検知しCIが失敗する
 
 ## アーキテクチャ違反検知（dependency-cruiser）
 
