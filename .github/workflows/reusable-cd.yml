@@ -27,6 +27,10 @@ on:
         description: "変換後のJSON出力先パス（リポジトリルート基準）。enable_changelog_json=trueの場合のみ使用。"
         type: string
         default: "frontend/src/changelog.json"
+      enable_release_sbom:
+        description: "リリース成立時、CycloneDX形式のSBOM（package-lock.jsonから生成）をGitHub Releaseのアセットとして添付するかどうか（issue #1306）。PRごとのSBOM生成（reusable-ci.yml）とは別に、リリース済みバージョンのSBOMを恒久的に残す用途。"
+        type: boolean
+        default: false
     secrets:
       BOT_TOKEN:
         required: false
@@ -467,3 +471,32 @@ jobs:
           else
             echo "sha=" >> "$GITHUB_OUTPUT"
           fi
+
+      # issue #1306。PRごとのSBOM生成（reusable-ci.ymlのSBOMを生成するステップ）は
+      # ワークフローのartifactとして保存されるが、デフォルトの保持期間で失効する
+      # ため「そのバージョンが実際にリリースされた時点の依存構成」を恒久的に
+      # 参照する手段が無い。GitHub Releaseのアセットとして添付すれば、タグが
+      # 残る限りSBOMも残る。--package-lock-onlyによりnode_modulesの実インストール
+      # 無しにpackage-lock.jsonのみから生成できるため、npm ci等は不要。
+      # cyclonedx-npmはカレントディレクトリのpackage.json/package-lock.jsonを
+      # 読むため、release-commit-shaの内容をgit worktreeへ展開してから実行する
+      # （現在のチェックアウトを汚さないため）。
+      - name: リリース済みコミットのpackage-lock.jsonからSBOMを生成する
+        id: release-sbom
+        if: inputs.enable_release_sbom && steps.release-commit-sha.outputs.sha != ''
+        continue-on-error: true
+        run: |
+          WORKTREE=$(mktemp -d)
+          git worktree add --detach "$WORKTREE" "${{ steps.release-commit-sha.outputs.sha }}"
+          (cd "$WORKTREE" && npx --yes @cyclonedx/cyclonedx-npm@6 --package-lock-only --output-file /tmp/release-sbom.json)
+          git worktree remove --force "$WORKTREE"
+
+      - name: SBOMをGitHub Releaseへ添付する
+        if: steps.release-sbom.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.check-release.outputs.tag }}
+        run: |
+          cp /tmp/release-sbom.json "sbom-${TAG}.cdx.json"
+          gh release upload "$TAG" "sbom-${TAG}.cdx.json" --clobber
