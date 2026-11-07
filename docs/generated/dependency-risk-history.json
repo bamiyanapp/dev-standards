@@ -1366,5 +1366,17 @@
     "staleRiskReasons": [
       "現行バージョンにCritical/High severityのCVEが残っています"
     ]
+  },
+  {
+    "version": "2.118.0",
+    "date": "2026-11-07T12:05:02.702Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]

@@ -1,3 +1,10 @@
+# [2.118.0](https://github.com/bamiyanapp/dev-standards/compare/v2.117.0...v2.118.0) (2026-11-07)
+
+
+### Features
+
+* **secret-scan:** 検知範囲・可視性を強化する ([#1314](https://github.com/bamiyanapp/dev-standards/issues/1314)) ([a94d33b](https://github.com/bamiyanapp/dev-standards/commit/a94d33b815d5ea39efd2bac543651cad5403cfcd))
+
 # [2.117.0](https://github.com/bamiyanapp/dev-standards/compare/v2.116.1...v2.117.0) (2026-11-07)
 
 
