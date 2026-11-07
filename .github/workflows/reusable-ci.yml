@@ -2252,10 +2252,30 @@ jobs:
       # （--log-opts相当の範囲指定はsrc/gitleaks.jsのScan関数を参照）。
       # --redactでシークレット本文自体をログへ出力しない
       - name: gitleaksを実行する
+        id: gitleaks
         run: |
           set -eu
+          COMMIT_RANGE="${{ github.event.pull_request.base.sha }}^..${{ github.event.pull_request.head.sha }}"
+          echo "scanned_commit_count=$(git rev-list --no-merges --first-parent --count "$COMMIT_RANGE")" >> "$GITHUB_OUTPUT"
           gitleaks detect --redact -v --exit-code=1 \
-            --log-opts="--no-merges --first-parent ${{ github.event.pull_request.base.sha }}^..${{ github.event.pull_request.head.sha }}"
+            --log-opts="--no-merges --first-parent $COMMIT_RANGE"
+
+      # issue #1307。検知0件の場合、スキャン自体が実行されたのか・何件を対象に
+      # 確認したのかがJob Summary・ジョブログのどちらにも出ておらず、スマホ
+      # オンリーの開発環境から「スキャンが効いているか」を確認する手段が無かった。
+      # alwaysでこのステップ自体を実行し、成功/失敗いずれでも対象コミット数を出す
+      - name: 概要を出力する
+        if: always()
+        run: |
+          {
+            echo "## シークレットスキャン"
+            echo ""
+            if [ "${{ steps.gitleaks.outcome }}" = "success" ]; then
+              echo "検知対象コミット数: ${{ steps.gitleaks.outputs.scanned_commit_count }}件。シークレットは検知されませんでした。"
+            else
+              echo "シークレットが検知されました。詳細はこのジョブのログを確認してください（本文はredact済み）。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # GitHubのMarkdownビューア自体は```mermaid```フェンスをネイティブにレンダリングするが、
   # PR差分ビュー・GitHub CLI/API経由でのファイル取得等では単なるテキストとして表示され

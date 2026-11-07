@@ -140,7 +140,7 @@ with:
 - `enable_mermaid_render`: 対象はGitHubのPR差分ビュー・API経由でのファイル取得等である。これらの場面ではmermaidがネイティブレンダリングされない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に画像リンクを一度だけ手動で埋め込んでおく。画像リンクの形式は`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`である。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）
 - `enable_text_lint`: ESLint・stylelintはコード向け、CodeQLはセキュリティ向けの静的解析である。これに対し、こちらはMarkdownドキュメントの文章品質（文体の不統一・表記ゆれ等）を検知する（[bamiyanapp/dev-standards#436](https://github.com/bamiyanapp/dev-standards/issues/436)）。共有設定（`textlint.config.cjs`）はdev-standardsからsymlinkで配布するため、参照側リポジトリはこのjobの有効化と`text_lint_paths`の指定のみでよい
 - `enable_dead_link_check`: ドキュメントのリファクタリング・ファイル移動・リネームでリンク切れが発生することがある。この種のリンク切れは`text-lint`・`doc-duplication-check`では検知できないため、別ジョブとして提供する（[bamiyanapp/dev-standards#603](https://github.com/bamiyanapp/dev-standards/issues/603)）。外部URL（`http`/`https`）は一時的な障害でCIが不安定になることを避けるため検証対象から除外し、相対パスのリンクのみを検証する
-- `enable_secret_scan`: CodeQL（SAST）はコードの脆弱性パターンを検知するものである。これは誤ってコミットされた具体的な秘密情報（APIキー・トークン等）の検出とは別物のため、別ジョブとして提供する（[bamiyanapp/dev-standards#892](https://github.com/bamiyanapp/dev-standards/issues/892)）。gitleaks CLI本体（MIT）をバイナリ直接取得で使い、PRのbase_branchとの差分のみを対象にスキャンする。当初は`gitleaks/gitleaks-action`を使っていた。しかしv3から商用ライセンスが必要になり、組織（Organization）のリポジトリで使えなくなったため、CLI直接実行へ移行した（[bamiyanapp/dev-standards#1268](https://github.com/bamiyanapp/dev-standards/issues/1268)）。誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`を置いてallowlistを設定する
+- `enable_secret_scan`: CodeQL（SAST）はコードの脆弱性パターンを検知するものである。これは誤ってコミットされた具体的な秘密情報（APIキー・トークン等）の検出とは別物のため、別ジョブとして提供する（[bamiyanapp/dev-standards#892](https://github.com/bamiyanapp/dev-standards/issues/892)）。gitleaks CLI本体（MIT）をバイナリ直接取得で使い、PRのbase_branchとの差分のみを対象にスキャンする。当初は`gitleaks/gitleaks-action`を使っていた。しかしv3から商用ライセンスが必要になり、組織（Organization）のリポジトリで使えなくなったため、CLI直接実行へ移行した（[bamiyanapp/dev-standards#1268](https://github.com/bamiyanapp/dev-standards/issues/1268)）。誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`を置いてallowlistを設定する。検知0件の場合も、スキャン対象コミット数をJob Summaryへ出力する（issue #1307）。リポジトリ全体の履歴まで遡及してスキャンする場合は、別ワークフロー（`reusable-secret-full-scan.yml`、後述）を併用する
 
 ### CI実行回数削減
 
@@ -410,6 +410,22 @@ backend/frontendのバージョンが不一致の場合（デプロイの部分�
 | `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: medium"]` |
 
 検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。
+
+## `reusable-secret-full-scan.yml`
+
+`reusable-ci.yml`の`secret-scan` jobは、PRのbase_branchとの差分のみを対象にスキャンする（既存履歴に残る過去の誤検知で詰まるリスクを避けるため）。このため、過去に誤ってコミットされ既にmainへマージ済みのシークレットは、PR差分スキャンの対象に一度も入らず検知できないギャップが生まれる（issue #1307）。
+
+本ワークフローはリポジトリ全体の履歴を対象に定期スキャン（`schedule`トリガー）を行い、検知結果をトラッキング用issueへ反映する。`reusable-dependency-full-scan.yml`と同じ設計に揃える。
+
+**`self_ref`は必須入力である**（`reusable-ci.yml`と同様。issue #1220・#1243）。`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `self_ref` | `uses:`行のrefと同じ値（必須） | （必須） |
+| `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] シークレット遡及スキャン（定期スキャン）` |
+| `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: high"]` |
+
+検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。シークレット本文自体はissue本文にもJob Summaryにも出力しない（redact済み）。ファイル・コミット・ルールIDのみを列挙するため、実際の機密情報かどうかは各リポジトリの担当者が確認する必要がある。
 
 ## `reusable-runtime-version-scan.yml`
 
