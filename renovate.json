@@ -19,8 +19,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "issue #1268: reusable-ci.ymlのsecret-scan jobはgitleaks CLI（action経由ではなくバイナリ直接取得、商用ライセンス不要）を使う。GITHUB_ACTIONSマネージャーの対象外のため、バージョン文字列を正規表現で検知する",
-      "managerFilePatterns": ["^\\.github/workflows/reusable-ci\\.yml$"],
+      "description": "issue #1268・#1307: reusable-ci.ymlのsecret-scan job、reusable-secret-full-scan.ymlのスキャンjobはいずれもgitleaks CLI（action経由ではなくバイナリ直接取得、商用ライセンス不要）を使う。GITHUB_ACTIONSマネージャーの対象外のため、バージョン文字列を正規表現で検知する",
+      "managerFilePatterns": ["^\\.github/workflows/reusable-ci\\.yml$", "^\\.github/workflows/reusable-secret-full-scan\\.yml$"],
       "matchStrings": ["GITLEAKS_VERSION: \"(?<currentValue>.*?)\""],
       "depNameTemplate": "gitleaks/gitleaks",
       "datasourceTemplate": "github-releases",
