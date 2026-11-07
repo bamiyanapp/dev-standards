@@ -1,3 +1,10 @@
+## [2.116.1](https://github.com/bamiyanapp/dev-standards/compare/v2.116.0...v2.116.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **renovate:** stylelintとstylelint-config-standardをグループ化する ([#1311](https://github.com/bamiyanapp/dev-standards/issues/1311)) ([3caef81](https://github.com/bamiyanapp/dev-standards/commit/3caef811beec704e169d8a5aec8c663646fab5d6))
+
 # [2.116.0](https://github.com/bamiyanapp/dev-standards/compare/v2.115.6...v2.116.0) (2026-11-04)
 
 
