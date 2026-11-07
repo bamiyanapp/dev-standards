@@ -1,3 +1,10 @@
+# [2.119.0](https://github.com/bamiyanapp/dev-standards/compare/v2.118.0...v2.119.0) (2026-11-07)
+
+
+### Features
+
+* **dependency-scan:** 脆弱性のMTTR（対応時間）を計測する ([#1315](https://github.com/bamiyanapp/dev-standards/issues/1315)) ([a5d62a0](https://github.com/bamiyanapp/dev-standards/commit/a5d62a09d1987b01ddb6a0cfc5151af07e1d16ca))
+
 # [2.118.0](https://github.com/bamiyanapp/dev-standards/compare/v2.117.0...v2.118.0) (2026-11-07)
 
 
