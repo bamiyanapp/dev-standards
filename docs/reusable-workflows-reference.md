@@ -41,6 +41,30 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 - [ ] 変更を含むバージョンのリリースノート・該当reusable workflowの`description`に、破壊的変更である旨と対応方法を明記する
 - [ ] 参照側リポジトリで、Renovateによるバージョン更新PRをマージする際は、新規必須入力が追加されていないかをリリースノートで確認する運用を徹底する。マージ後は、CIジョブが実際に1件以上起動していることも確認する（`startup_failure`はジョブ0件・ログに原因が出ないため、チェックを怠ると長期間気づかれないリスクが高い）
 
+## `self_ref`入力をRenovateの更新対象へ加える（参照側リポジトリのrenovate.json）
+
+`self_ref`は各`reusable-*.yml`呼び出しの`with:`ブロックに書く、`uses:`行と同じdev-standardsバージョンを渡すプレーンな文字列入力である。Renovateの`github-actions`マネージャーは`uses:`行のみを依存として追跡し、`self_ref:`はテキストとしか認識しない。そのため、Renovateが`uses:`を自動更新するたびに`self_ref:`だけが古いまま取り残される。この事故は構造的に再発する（karuta#1924・#2001・#2040で3回発生、issue #1316）。
+
+参照側リポジトリの`renovate.json`へ以下の`customManagers`エントリを追加すると、Renovateが`self_ref:`も検知・更新対象に加える。
+
+```jsonc
+{
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "self_refはuses:行と同じdev-standardsバージョンを指すべきだが、Renovateのgithub-actionsマネージャーはプレーンな文字列入力であるself_ref:を検知しない。正規表現で明示的に検知対象へ加える",
+      "managerFilePatterns": ["^\\.github/workflows/.*\\.yml$"],
+      "matchStrings": ["self_ref: v(?<currentValue>[\\d.]+)"],
+      "depNameTemplate": "bamiyanapp/dev-standards",
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
+}
+```
+
+`uses:`行（`github-actions`マネージャー）と`self_ref:`行（上記customManager）は別々のPRとして提案されうる。同じバージョンへ揃えて1PRでまとめたい場合は、`packageRules`で両方の`depName`（`bamiyanapp/dev-standards`）を`groupName`で束ねる。
+
 ## `reusable-ci.yml`
 
 参照側の `.github/workflows/ci.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。
