@@ -1,3 +1,10 @@
+# [2.117.0](https://github.com/bamiyanapp/dev-standards/compare/v2.116.1...v2.117.0) (2026-11-07)
+
+
+### Features
+
+* **cd:** リリース成立時にSBOMをGitHub Releaseへ添付する ([#1313](https://github.com/bamiyanapp/dev-standards/issues/1313)) ([6704db6](https://github.com/bamiyanapp/dev-standards/commit/6704db690cfa6823776c49edc78a3b1052b71154))
+
 ## [2.116.1](https://github.com/bamiyanapp/dev-standards/compare/v2.116.0...v2.116.1) (2026-11-07)
 
 
