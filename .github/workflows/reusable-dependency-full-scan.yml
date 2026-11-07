@@ -158,6 +158,49 @@ jobs:
           close-comment: "再スキャンの結果、既知の脆弱性が検知されなくなったため自動クローズします。"
           github-token: ${{ github.token }}
 
+      # issue #1308。「CVEを確実に検知する」側の仕組み（#1288・#1292）は強化してきた
+      # 一方、検知後どれくらいの時間で解消されているか（対応時間、MTTR）が見えない
+      # ままだった。トラッキングissue（上記）は検知内容が変わるたびに本文が上書き
+      # される構造のため、個々の脆弱性がいつ検知・いつ解消されたかの時系列情報が
+      # どこにも残らない。台帳ファイル（docs/generated/配下、永続化）で
+      # name+version単位の初回検知日時を追跡し、スキャン結果から消えた
+      # （＝解消されたとみなす）タイミングでMTTR履歴へ追記する。
+      - name: MTTR台帳・履歴を更新する
+        id: mttr
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { updateLedger, summarizeMttr } = require("./.dev-standards-actions/scripts/dependency-mttr-tracker.js");
+
+            const findings = "${{ steps.scan.outputs.has_vulnerabilities }}" === "true"
+              ? JSON.parse(fs.readFileSync("/tmp/full-scan-result.json", "utf-8"))
+              : [];
+
+            const ledgerPath = "docs/generated/dependency-vulnerability-mttr-ledger.json";
+            const historyPath = "docs/generated/dependency-vulnerability-mttr-history.json";
+            const ledger = fs.existsSync(ledgerPath) ? JSON.parse(fs.readFileSync(ledgerPath, "utf-8")) : [];
+            const history = fs.existsSync(historyPath) ? JSON.parse(fs.readFileSync(historyPath, "utf-8")) : [];
+
+            const now = new Date().toISOString();
+            const { ledger: nextLedger, resolved } = updateLedger(ledger, findings, now);
+            const nextHistory = [...history, ...resolved];
+
+            fs.mkdirSync("docs/generated", { recursive: true });
+            fs.writeFileSync(ledgerPath, `${JSON.stringify(nextLedger, null, 2)}\n`);
+            fs.writeFileSync(historyPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
+
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const summary = summarizeMttr(nextHistory, thirtyDaysAgo);
+            fs.writeFileSync("/tmp/mttr-summary.json", JSON.stringify(summary));
+          '
+
+      - name: MTTR台帳・履歴をcommit-via-pr経由でコミットする
+        uses: ./.dev-standards-actions/.github/actions/commit-via-pr
+        with:
+          paths: docs/generated/dependency-vulnerability-mttr-ledger.json docs/generated/dependency-vulnerability-mttr-history.json
+          commit-subject: "chore(security): 依存パッケージ脆弱性のMTTR台帳を更新する [skip ci]"
+          branch-prefix: chore/dependency-mttr
+
       # dev-standards#1149: 検知結果の詳細（パッケージ名・バージョン・直接/間接・
       # 脆弱性ID・Severity）は従来トラッキングissueの本文にのみ書き込んでおり、
       # Job Summary・ジョブログには件数のみしか出していなかった。issueタブへの
@@ -185,6 +228,20 @@ jobs:
                 const severity = f.vulnerabilities.map((v) => v.severityRating).filter(Boolean).join(", ") || "不明";
                 const relatedPr = f.relatedPr ? `#${f.relatedPr.number}` : "（無し）";
                 body += `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} | ${relatedPr} |\n`;
+              }
+            }
+
+            // issue #1308。検知はできているが、実際にどれくらいの時間で解消されて
+            // いるか（MTTR）がここまで見えなかった。直近30日間に解消された脆弱性の
+            // 件数・平均対応日数を常に表示する（該当0件の場合も、集計自体が
+            // 行われたことが分かるようその旨を明示する）
+            if (fs.existsSync("/tmp/mttr-summary.json")) {
+              const mttr = JSON.parse(fs.readFileSync("/tmp/mttr-summary.json", "utf-8"));
+              body += "\n### 直近30日のMTTR（対応時間）\n\n";
+              if (mttr.count === 0) {
+                body += "直近30日間に解消された脆弱性はありません。\n";
+              } else {
+                body += `解消件数: ${mttr.count}件、平均対応日数: ${mttr.averageMttrDays.toFixed(1)}日\n`;
               }
             }
             fs.writeFileSync("/tmp/full-scan-summary.md", body);
