@@ -14,7 +14,7 @@ const SAMPLE_VULN_INFO = [
         cveIds: ["CVE-2024-00001"],
         summary: "example",
         severityRating: "HIGH",
-        cvssVectors: [],
+        cvssVectors: ["CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"],
       },
     ],
   },
@@ -26,7 +26,15 @@ const SAMPLE_EXPLOIT_INFO = [{ cveId: "CVE-2024-00001", kev: true, epssScore: 0.
 test("buildSecurityRows: パッケージ・CVE・exploit情報を1行にまとめる", () => {
   const rows = buildSecurityRows(SAMPLE_VULN_INFO, SAMPLE_EXPLOIT_INFO);
   assert.deepEqual(rows, [
-    { package: "foo", id: "GHSA-aaaa", cveId: "CVE-2024-00001", severityRating: "HIGH", kev: true, epssScore: 0.975 },
+    {
+      package: "foo",
+      id: "GHSA-aaaa",
+      cveId: "CVE-2024-00001",
+      severityRating: "HIGH",
+      cvssVectors: ["CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"],
+      kev: true,
+      epssScore: 0.975,
+    },
   ]);
 });
 
@@ -62,8 +70,46 @@ test("renderSecuritySection: 脆弱性が1件も無い場合は短い完了メ�
 
 test("renderSecuritySection: 脆弱性がある場合は表とKEV警告を含む", () => {
   const body = renderSecuritySection(SAMPLE_VULN_INFO, SAMPLE_EXPLOIT_INFO);
-  assert.match(body, /\| foo \| CVE-2024-00001 \| HIGH \| ⚠️ 該当 \|/);
+  assert.match(body, /\| foo \| CVE-2024-00001 \| HIGH \| CVSS:3\.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:H\/I:H\/A:H \| ⚠️ 該当 \| 97\.5% \|/);
   assert.match(body, /KEV（Known Exploited Vulnerability/);
+});
+
+// issue #1328: 見出しに「CVSS」とあるのに表にCVSS情報が出ていない指摘を受け、
+// OSVが返すベクタ文字列をそのまま列として追加した（数値計算は行わない）
+test("renderSecuritySection: CVSSベクタが無い場合は「不明」と表示する", () => {
+  const vulnInfo = [
+    { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-dddd", cveIds: ["CVE-2024-11111"], severityRating: "LOW", cvssVectors: [] }] },
+  ];
+  const body = renderSecuritySection(vulnInfo, []);
+  assert.match(body, /\| foo \| CVE-2024-11111 \| LOW \| 不明 \|/);
+});
+
+test("renderSecuritySection: 複数のCVSSベクタがある場合はセル内で改行して列挙する", () => {
+  const vulnInfo = [
+    {
+      name: "foo",
+      version: "1.0.0",
+      vulnerabilities: [
+        {
+          id: "GHSA-eeee",
+          cveIds: ["CVE-2024-22222"],
+          severityRating: "CRITICAL",
+          cvssVectors: ["CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"],
+        },
+      ],
+    },
+  ];
+  const body = renderSecuritySection(vulnInfo, []);
+  assert.match(body, /CVSS:3\.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:H\/I:H\/A:H<br>CVSS:4\.0\/AV:N\/AC:L\/AT:N\/PR:N\/UI:N\/VC:H\/VI:H\/VA:H\/SC:N\/SI:N\/SA:N/);
+});
+
+// issue #1328: 「上位◯%ile相当」の注記が冗長との指摘を受け、単純なパーセント表記にした
+test("renderSecuritySection: EPSSは単純なパーセント表記になる（上位%ile注記は無し）", () => {
+  const exploitInfo = [{ cveId: "CVE-2024-00001", kev: false, epssScore: 0.002, epssPercentile: 0.998 }];
+  const body = renderSecuritySection(SAMPLE_VULN_INFO, exploitInfo);
+  assert.match(body, /\| 0\.2% \|/);
+  assert.doesNotMatch(body, /上位/);
+  assert.doesNotMatch(body, /%ile/);
 });
 
 // issue #1323: 「維持リスク」の理由（更新前バージョンのCVE残存）と「Security」
