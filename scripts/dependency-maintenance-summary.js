@@ -21,7 +21,9 @@ const fs = require("node:fs");
 // 戻り値: Risk Summaryコメントへ追記するMarkdown断片。両方が空の場合は
 // 「対象パッケージはありませんでした」の短い文のみを返す
 function renderMaintenanceSection(stalenessInfo, scorecardInfo) {
-  let body = "### メンテナンス状態（放置検知・Scorecard確認）\n\n";
+  // issue #1323: 維持リスク（現行バージョンに留まる場合の危険度）の判定材料にのみ
+  // 使われる情報のため、維持リスク見出しの下位セクションとして#### にする
+  let body = "#### メンテナンス状態（放置検知・Scorecard確認）\n\n";
 
   if (stalenessInfo.length === 0 && scorecardInfo.length === 0) {
     return body + "対象パッケージはありませんでした（`package-lock.json`の変更が無い、またはnpm registryから情報を取得できませんでした）。\n";

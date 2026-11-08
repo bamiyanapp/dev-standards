@@ -61,8 +61,10 @@ function countConsumerRepositories(markdown) {
 // 伝えないよう注記自体を省略する（呼び出し側でnullチェックする想定）
 function renderFanOutNote(count) {
   if (count === 0) return null;
+  // issue #1323: 適用リスク（このPRを適用すること自体の危険度）の判定材料にのみ
+  // 使われる情報のため、適用リスク見出しの下位セクションとして#### にする
   return (
-    "### ファンアウト\n\n" +
+    "#### ファンアウト\n\n" +
     `⚠️ この変更は複数リポジトリから参照される**dev-standards自体**への更新です。` +
     `既知の参照側リポジトリが**${count}件**あります` +
     "（[docs/consumer-repositories.md](https://github.com/bamiyanapp/dev-standards/blob/main/docs/consumer-repositories.md)参照）。" +
