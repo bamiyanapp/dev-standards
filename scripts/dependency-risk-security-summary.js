@@ -57,11 +57,13 @@ function formatKev(kev) {
 }
 
 // issue #1328: 数値スコアの自前計算は行わず（dependency-vulnerability-info.jsの
-// コメント参照）、OSVが返すベクタ文字列をそのまま表示する。複数バージョン
-// （CVSS_V3・CVSS_V4等）のベクタが同時に存在する場合はセル内で改行して列挙する
+// コメント参照）、ベクタ文字列自体も冗長（"CVSS:3.1/AV:N/AC:L/..."）なため全文は
+// 表示しない。先頭の"CVSS:"の直後に付くバージョン番号のみを抽出して表示する。
+// 複数バージョン（CVSS_V3・CVSS_V4等）が同時に存在する場合はカンマ区切りで列挙する
 function formatCvssVectors(cvssVectors) {
   if (!cvssVectors || cvssVectors.length === 0) return "不明";
-  return cvssVectors.join("<br>");
+  const versions = cvssVectors.map((v) => v.match(/^CVSS:([\d.]+)\//)?.[1] ?? v);
+  return versions.join(", ");
 }
 
 // buildSecurityRowsの結果をRisk Summaryコメントへ追記するMarkdown断片へ整形する。
@@ -82,9 +84,9 @@ function renderSecuritySection(vulnerabilityInfo, exploitInfo, versionLabel = "�
   }
 
   let body = `${heading}\n\n`;
-  body += "| パッケージ | CVE | Severity | CVSSベクタ | KEV | EPSS |\n|---|---|---|---|---|---|\n";
+  body += "| パッケージ | CVE | Severity | CVSSバージョン | EPSS | KEV |\n|---|---|---|---|---|---|\n";
   for (const row of rows) {
-    body += `| ${row.package} | ${row.cveId ?? row.id} | ${row.severityRating ?? "不明"} | ${formatCvssVectors(row.cvssVectors)} | ${formatKev(row.kev)} | ${formatEpss(row.epssScore)} |\n`;
+    body += `| ${row.package} | ${row.cveId ?? row.id} | ${row.severityRating ?? "不明"} | ${formatCvssVectors(row.cvssVectors)} | ${formatEpss(row.epssScore)} | ${formatKev(row.kev)} |\n`;
   }
   if (rows.some((r) => r.kev === true)) {
     body += "\n⚠️ KEV（Known Exploited Vulnerability、実際に悪用が確認されている脆弱性）に該当するものがあります。優先的に確認してください。\n";

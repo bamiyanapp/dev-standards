@@ -70,12 +70,13 @@ test("renderSecuritySection: 脆弱性が1件も無い場合は短い完了メ�
 
 test("renderSecuritySection: 脆弱性がある場合は表とKEV警告を含む", () => {
   const body = renderSecuritySection(SAMPLE_VULN_INFO, SAMPLE_EXPLOIT_INFO);
-  assert.match(body, /\| foo \| CVE-2024-00001 \| HIGH \| CVSS:3\.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:H\/I:H\/A:H \| ⚠️ 該当 \| 97\.5% \|/);
+  assert.match(body, /\| foo \| CVE-2024-00001 \| HIGH \| 3\.1 \| 97\.5% \| ⚠️ 該当 \|/);
   assert.match(body, /KEV（Known Exploited Vulnerability/);
 });
 
 // issue #1328: 見出しに「CVSS」とあるのに表にCVSS情報が出ていない指摘を受け、
-// OSVが返すベクタ文字列をそのまま列として追加した（数値計算は行わない）
+// ベクタ文字列（冗長なため全文ではなくバージョン番号のみ）を列として追加した
+// （数値計算は行わない）。KEVは右端の列へ移した
 test("renderSecuritySection: CVSSベクタが無い場合は「不明」と表示する", () => {
   const vulnInfo = [
     { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-dddd", cveIds: ["CVE-2024-11111"], severityRating: "LOW", cvssVectors: [] }] },
@@ -84,7 +85,7 @@ test("renderSecuritySection: CVSSベクタが無い場合は「不明」と表�
   assert.match(body, /\| foo \| CVE-2024-11111 \| LOW \| 不明 \|/);
 });
 
-test("renderSecuritySection: 複数のCVSSベクタがある場合はセル内で改行して列挙する", () => {
+test("renderSecuritySection: 複数のCVSSバージョンがある場合はカンマ区切りで列挙する", () => {
   const vulnInfo = [
     {
       name: "foo",
@@ -100,7 +101,7 @@ test("renderSecuritySection: 複数のCVSSベクタがある場合はセル内�
     },
   ];
   const body = renderSecuritySection(vulnInfo, []);
-  assert.match(body, /CVSS:3\.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:H\/I:H\/A:H<br>CVSS:4\.0\/AV:N\/AC:L\/AT:N\/PR:N\/UI:N\/VC:H\/VI:H\/VA:H\/SC:N\/SI:N\/SA:N/);
+  assert.match(body, /\| 3\.1, 4\.0 \|/);
 });
 
 // issue #1328: 「上位◯%ile相当」の注記が冗長との指摘を受け、単純なパーセント表記にした
