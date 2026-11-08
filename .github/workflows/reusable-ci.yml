@@ -3323,11 +3323,13 @@ jobs:
       # （.dev-standards-actions/配下は参照側リポジトリでも常にチェックアウトされるが、
       # そのdocs/consumer-repositories.mdはdev-standards自身のものであり、参照側
       # リポジトリ自身の依存更新とは無関係なため誤って表示しないようにする）
+      # issue #1330: dependency-update-info.jsonを追加引数で渡し、全変更がproduction:
+      # false（devDependency経由のみ）の場合は注記自体を省略する
       - name: ファンアウト注記を生成する
         id: fanout
         if: steps.dependency-info.outcome == 'success' && github.repository == 'bamiyanapp/dev-standards'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/consumer-repositories.js .dev-standards-actions/docs/consumer-repositories.md > /tmp/fanout-note.md
+        run: node .dev-standards-actions/scripts/consumer-repositories.js .dev-standards-actions/docs/consumer-repositories.md /tmp/dependency-update-info.json > /tmp/fanout-note.md
 
       # job結果の整形（純粋なMarkdown生成）はscripts/dependency-risk-ci-results.jsの
       # CLIへ切り出し、`node script.js > 出力ファイル`という他のPhase 1スクリプトと

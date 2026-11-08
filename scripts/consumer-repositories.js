@@ -56,6 +56,17 @@ function countConsumerRepositories(markdown) {
   return listConsumerRepositories(markdown).length;
 }
 
+// issue #1330。changes（dependency-update-info.jsの出力）が全てproduction: falseの
+// 場合、ファンアウト件数を0扱いにする。dev-standards自身のdevDependency（テスト専用
+// 等、実例: jsdomとその間接依存）の更新は、参照側リポジトリがdev-standardsの
+// npm依存を一切継承しない（scripts/・workflowファイルのsymlink/参照のみ）ため、
+// 参照側には影響しない。changesが空（GitHub Actions参照の更新のみ等）の場合は
+// 判定材料が無いため、安全側に倒して除外しない（従来通りcountをそのまま使う）
+function isProductionImpacting(changes) {
+  if (!changes || changes.length === 0) return true;
+  return changes.some((c) => c.production !== false);
+}
+
 // Risk Summaryへ追記するファンアウト注記のMarkdown断片を生成する。
 // count === 0（一覧の解析に失敗した・一覧が空等）の場合は、誤って「影響なし」と
 // 伝えないよう注記自体を省略する（呼び出し側でnullチェックする想定）
@@ -77,8 +88,13 @@ function renderFanOutNote(count) {
 // （Markdown注記本文はdependency-risk-classifier.jsにとって不要で、数値のみで十分）
 function main() {
   const docPath = process.argv[2] ?? DEFAULT_DOC_PATH;
+  const dependencyUpdateInfoPath = process.argv[3];
   const markdown = fs.readFileSync(docPath, "utf-8");
-  const count = countConsumerRepositories(markdown);
+  let count = countConsumerRepositories(markdown);
+  if (dependencyUpdateInfoPath && fs.existsSync(dependencyUpdateInfoPath)) {
+    const { changes } = JSON.parse(fs.readFileSync(dependencyUpdateInfoPath, "utf-8"));
+    if (!isProductionImpacting(changes)) count = 0;
+  }
   const note = renderFanOutNote(count);
   if (note) console.log(note);
   if (process.env.GITHUB_OUTPUT) {
@@ -94,5 +110,6 @@ module.exports = {
   parseConsumerRepositoriesTable,
   listConsumerRepositories,
   countConsumerRepositories,
+  isProductionImpacting,
   renderFanOutNote,
 };
