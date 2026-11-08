@@ -1,3 +1,10 @@
+# [2.121.0](https://github.com/bamiyanapp/dev-standards/compare/v2.120.2...v2.121.0) (2026-11-08)
+
+
+### Features
+
+* **ci:** Security表のCVSSをベクタから計算した数値スコアで表示する ([#1333](https://github.com/bamiyanapp/dev-standards/issues/1333)) ([153850e](https://github.com/bamiyanapp/dev-standards/commit/153850e31ab9bb686addec7e752836705cdb550d))
+
 ## [2.120.2](https://github.com/bamiyanapp/dev-standards/compare/v2.120.1...v2.120.2) (2026-11-08)
 
 
