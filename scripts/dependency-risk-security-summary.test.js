@@ -68,15 +68,17 @@ test("renderSecuritySection: 脆弱性が1件も無い場合は短い完了メ�
   assert.doesNotMatch(body, /\|/); // テーブルを含まない
 });
 
-test("renderSecuritySection: 脆弱性がある場合は表とKEV警告を含む", () => {
+// issue #1331: ベクタ"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"はFIRST公式
+// 参照計算機でも9.8になる、広く知られた例（Base Score最大値域の代表例）
+test("renderSecuritySection: 脆弱性がある場合はCVSSスコアを含む表とKEV警告を含む", () => {
   const body = renderSecuritySection(SAMPLE_VULN_INFO, SAMPLE_EXPLOIT_INFO);
-  assert.match(body, /\| foo \| CVE-2024-00001 \| HIGH \| 3\.1 \| 97\.5% \| ⚠️ 該当 \|/);
+  assert.match(body, /\| foo \| CVE-2024-00001 \| HIGH \| 9\.8 \(CVSS:3\.1\) \| 97\.5% \| ⚠️ 該当 \|/);
   assert.match(body, /KEV（Known Exploited Vulnerability/);
 });
 
 // issue #1328: 見出しに「CVSS」とあるのに表にCVSS情報が出ていない指摘を受け、
-// ベクタ文字列（冗長なため全文ではなくバージョン番号のみ）を列として追加した
-// （数値計算は行わない）。KEVは右端の列へ移した
+// ベクタから計算したCVSS数値スコアを列として追加した（issue #1331、
+// ae-cvss-calculatorへ計算を委譲。自前実装はしない）。KEVは右端の列へ移した
 test("renderSecuritySection: CVSSベクタが無い場合は「不明」と表示する", () => {
   const vulnInfo = [
     { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-dddd", cveIds: ["CVE-2024-11111"], severityRating: "LOW", cvssVectors: [] }] },
@@ -85,7 +87,7 @@ test("renderSecuritySection: CVSSベクタが無い場合は「不明」と表�
   assert.match(body, /\| foo \| CVE-2024-11111 \| LOW \| 不明 \|/);
 });
 
-test("renderSecuritySection: 複数のCVSSバージョンがある場合はカンマ区切りで列挙する", () => {
+test("renderSecuritySection: 複数のCVSSバージョンがある場合はそれぞれのスコアをカンマ区切りで列挙する", () => {
   const vulnInfo = [
     {
       name: "foo",
@@ -101,7 +103,19 @@ test("renderSecuritySection: 複数のCVSSバージョンがある場合はカ�
     },
   ];
   const body = renderSecuritySection(vulnInfo, []);
-  assert.match(body, /\| 3\.1, 4\.0 \|/);
+  assert.match(body, /\| 9\.8 \(CVSS:3\.1\), 9\.3 \(CVSS:4\.0\) \|/);
+});
+
+test("renderSecuritySection: 計算できないベクタ（パース失敗等）はバージョン番号のみ表示にフォールバックする", () => {
+  const vulnInfo = [
+    {
+      name: "foo",
+      version: "1.0.0",
+      vulnerabilities: [{ id: "GHSA-ffff", cveIds: ["CVE-2024-33333"], severityRating: "LOW", cvssVectors: ["CVSS:99.9/not-a-real-vector"] }],
+    },
+  ];
+  const body = renderSecuritySection(vulnInfo, []);
+  assert.match(body, /\| 99\.9 \|/);
 });
 
 // issue #1328: 「上位◯%ile相当」の注記が冗長との指摘を受け、単純なパーセント表記にした
