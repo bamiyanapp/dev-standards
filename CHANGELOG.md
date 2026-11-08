@@ -1,3 +1,10 @@
+## [2.119.1](https://github.com/bamiyanapp/dev-standards/compare/v2.119.0...v2.119.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* **risk:** メンテナ変化で新旧メールドメインが一致する場合はmediumへ緩和する ([#1321](https://github.com/bamiyanapp/dev-standards/issues/1321)) ([00c9f7a](https://github.com/bamiyanapp/dev-standards/commit/00c9f7a9a38d909b5d81bf9c75c3e718f3cfcc39))
+
 # [2.119.0](https://github.com/bamiyanapp/dev-standards/compare/v2.118.0...v2.119.0) (2026-11-07)
 
 
