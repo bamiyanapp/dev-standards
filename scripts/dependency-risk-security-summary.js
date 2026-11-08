@@ -34,6 +34,7 @@ function buildSecurityRows(vulnerabilityInfo, exploitInfo) {
           id: vuln.id,
           cveId,
           severityRating: vuln.severityRating,
+          cvssVectors: vuln.cvssVectors ?? [],
           kev: exploit ? exploit.kev : null,
           epssScore: exploit ? exploit.epssScore : null,
         });
@@ -43,15 +44,26 @@ function buildSecurityRows(vulnerabilityInfo, exploitInfo) {
   return rows;
 }
 
+// issue #1328: 「上位◯%ile相当」の注記は冗長なため、単純なパーセント表記に簡素化する
 function formatEpss(epssScore) {
   if (epssScore == null) return "不明";
-  return `${epssScore.toFixed(3)}（上位${(100 - epssScore * 100).toFixed(1)}%ile相当）`;
+  return `${(epssScore * 100).toFixed(1)}%`;
 }
 
 function formatKev(kev) {
   if (kev === true) return "⚠️ 該当";
   if (kev === false) return "該当なし";
   return "不明";
+}
+
+// issue #1328: 数値スコアの自前計算は行わず（dependency-vulnerability-info.jsの
+// コメント参照）、ベクタ文字列自体も冗長（"CVSS:3.1/AV:N/AC:L/..."）なため全文は
+// 表示しない。先頭の"CVSS:"の直後に付くバージョン番号のみを抽出して表示する。
+// 複数バージョン（CVSS_V3・CVSS_V4等）が同時に存在する場合はカンマ区切りで列挙する
+function formatCvssVectors(cvssVectors) {
+  if (!cvssVectors || cvssVectors.length === 0) return "不明";
+  const versions = cvssVectors.map((v) => v.match(/^CVSS:([\d.]+)\//)?.[1] ?? v);
+  return versions.join(", ");
 }
 
 // buildSecurityRowsの結果をRisk Summaryコメントへ追記するMarkdown断片へ整形する。
@@ -72,9 +84,9 @@ function renderSecuritySection(vulnerabilityInfo, exploitInfo, versionLabel = "�
   }
 
   let body = `${heading}\n\n`;
-  body += "| パッケージ | CVE | Severity | KEV | EPSS |\n|---|---|---|---|---|\n";
+  body += "| パッケージ | CVE | Severity | CVSSバージョン | EPSS | KEV |\n|---|---|---|---|---|---|\n";
   for (const row of rows) {
-    body += `| ${row.package} | ${row.cveId ?? row.id} | ${row.severityRating ?? "不明"} | ${formatKev(row.kev)} | ${formatEpss(row.epssScore)} |\n`;
+    body += `| ${row.package} | ${row.cveId ?? row.id} | ${row.severityRating ?? "不明"} | ${formatCvssVectors(row.cvssVectors)} | ${formatEpss(row.epssScore)} | ${formatKev(row.kev)} |\n`;
   }
   if (rows.some((r) => r.kev === true)) {
     body += "\n⚠️ KEV（Known Exploited Vulnerability、実際に悪用が確認されている脆弱性）に該当するものがあります。優先的に確認してください。\n";
