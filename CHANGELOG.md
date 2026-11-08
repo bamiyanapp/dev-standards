@@ -1,3 +1,10 @@
+## [2.119.2](https://github.com/bamiyanapp/dev-standards/compare/v2.119.1...v2.119.2) (2026-11-08)
+
+
+### Bug Fixes
+
+* **ci:** Risk Summaryコメントの構成を見直し、Recommended Actionと各リスクのSecurity情報の対応を明確にする ([#1325](https://github.com/bamiyanapp/dev-standards/issues/1325)) ([3369e76](https://github.com/bamiyanapp/dev-standards/commit/3369e766faaa6d95061af0561b9380ce3634764b))
+
 ## [2.119.1](https://github.com/bamiyanapp/dev-standards/compare/v2.119.0...v2.119.1) (2026-11-08)
 
 
