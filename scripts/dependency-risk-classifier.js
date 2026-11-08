@@ -80,10 +80,21 @@ function classifyRisk({
     const names = installScriptAnomalies.map((a) => a.name).join(", ");
     reasons.push(`新規にinstall scriptを持つようになったパッケージがあります: ${names}`);
   }
+  let maintainerAnomalyEscalatedHigh = false;
   if (maintainerAnomalies.length > 0) {
-    level = escalate(level, "high");
+    // issue #1320。新旧メンテナのメールドメインが一致し（フリーメール
+    // ブロックリスト対象外）、組織内の公開パイプライン移行等とみなせる
+    // 場合のみMediumへ緩和する。1件でもドメイン不一致（または判定不能）が
+    // あれば、安全側に倒してHighのまま確実にエスカレーションする
+    maintainerAnomalyEscalatedHigh = !maintainerAnomalies.every((a) => a.sameOrganizationDomain === true);
     const names = maintainerAnomalies.map((a) => a.name).join(", ");
-    reasons.push(`メンテナ（公開者）が変化したパッケージがあります: ${names}`);
+    if (!maintainerAnomalyEscalatedHigh) {
+      level = escalate(level, "medium");
+      reasons.push(`メンテナ（公開者）が変化したパッケージがありますが、新旧メールドメインが一致しているため緩和しています: ${names}`);
+    } else {
+      level = escalate(level, "high");
+      reasons.push(`メンテナ（公開者）が変化したパッケージがあります: ${names}`);
+    }
   }
 
   if (!securityDataAvailable) {
@@ -141,7 +152,7 @@ function classifyRisk({
   // 脆弱だから新しい方がまし」という比較が成り立たない理由（PR自体の危険性・複雑さ）であり、
   // 「維持リスクが高いから」を理由に無審査で自動マージしてよい対象ではないため
   const nonVulnerabilityHighDriver =
-    isUnclassifiable || ciFailures.hasUnexplainedFailure || installScriptAnomalies.length > 0 || maintainerAnomalies.length > 0;
+    isUnclassifiable || ciFailures.hasUnexplainedFailure || installScriptAnomalies.length > 0 || maintainerAnomalyEscalatedHigh;
   const blastRadiusCausedHigh = blastRadiusImpact && levelBeforeBlastRadius !== "high" && level === "high";
   const vulnerabilityOnlyHigh =
     level === "high" && !nonVulnerabilityHighDriver && !blastRadiusCausedHigh && (hasCriticalOrHighCve || hasKev);

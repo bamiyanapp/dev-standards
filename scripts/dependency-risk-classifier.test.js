@@ -115,6 +115,47 @@ test("classifyRisk: メンテナ（公開者）が変化したパッケージが
   assert.ok(result.reasons.some((r) => r.includes("メンテナ") && r.includes("foo")));
 });
 
+test("classifyRisk: メンテナ変化でも新旧メールドメインが一致していればmediumへ緩和する（issue #1320）", () => {
+  const result = classifyRisk(
+    baseInput({
+      maintainerAnomalies: [
+        { name: "tslib", oldVersion: "2.8.1", newVersion: "2.9.1", oldPublisher: "typescript-bot", newPublisher: "microsoft1es", sameOrganizationDomain: true },
+      ],
+    }),
+  );
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("メンテナ") && r.includes("緩和") && r.includes("tslib")));
+});
+
+test("classifyRisk: メンテナ変化が複数件あり1件でもドメイン不一致ならhighのまま（issue #1320）", () => {
+  const result = classifyRisk(
+    baseInput({
+      maintainerAnomalies: [
+        { name: "foo", oldVersion: "1.0.0", newVersion: "1.1.0", oldPublisher: "alice", newPublisher: "same-org", sameOrganizationDomain: true },
+        { name: "bar", oldVersion: "2.0.0", newVersion: "2.1.0", oldPublisher: "carol", newPublisher: "mallory", sameOrganizationDomain: false },
+      ],
+    }),
+  );
+  assert.equal(result.level, "high");
+});
+
+test("classifyRisk: vulnerabilityOnlyHigh: ドメイン一致によりmedium止まりのメンテナ変化が重なってもtrueのまま（issue #1320）", () => {
+  const result = classifyRisk(
+    baseInput({
+      vulnerabilityInfo: [
+        { name: "foo", version: "1.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "HIGH", cvssVectors: [] }] },
+      ],
+      exploitInfo: [],
+      securityDataAvailable: true,
+      maintainerAnomalies: [
+        { name: "tslib", oldVersion: "2.8.1", newVersion: "2.9.1", oldPublisher: "typescript-bot", newPublisher: "microsoft1es", sameOrganizationDomain: true },
+      ],
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.equal(result.vulnerabilityOnlyHigh, true);
+});
+
 test("classifyRisk: 新バージョンがdeprecatedでもエスカレーションせずreasonのみ追加する（issue #945、自動マージをブロックしない）", () => {
   const result = classifyRisk(
     baseInput({ deprecationInfo: [{ name: "aws-sdk", oldVersion: "2.1691.0", newVersion: "2.1692.0", newDeprecated: "maintenance mode" }] }),

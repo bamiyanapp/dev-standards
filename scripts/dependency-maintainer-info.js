@@ -25,16 +25,76 @@ const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 // 到達性は確認済みだが、fetchJsonImplは差し替え可能にしてモックでテストする
 
 
+// issue #1320。karuta#2054のレビューで、tslibのメンテナ変化
+// （typescript-bot@microsoft.com → microsoft1es@microsoft.com）が実際には
+// 同一組織内の公開パイプライン移行であり、実害が無いにもかかわらずHighへ
+// 無条件エスカレーションされ、人間がnpm registryを都度手動確認する負荷が
+// 生じていた。固定の「信頼ドメイン」ホワイトリストは、npm registryの
+// _npmUser.emailが暗号学的に検証されていない（公開者の自己申告値）ため、
+// リストに載ったドメインへの偽装でエスカレーション自体を回避できてしまう。
+// 代わりに「新旧メンテナのメールドメインが一致しているか」を見る。
+//
+// ただしgmail.com等のフリーメール・パブリックメールプロバイダは誰でも
+// 同一ドメインで新規アカウントを作成できるため、「ドメイン一致」が組織内の
+// 継続性を保証しない。旧メンテナ・新メンテナ（実は攻撃者の別アカウント）が
+// 共に同じフリーメールプロバイダを使っていた場合に判定を回避できてしまう
+// 抜け道が生じる。既知のフリーメール・パブリックメールプロバイダのドメインを
+// ブロックリスト化し、該当する場合はドメイン一致でも緩和対象外（真の意味での
+// 「同一組織」とはみなさない）とする。このブロックリストはホワイトリストと
+// 安全側の性質が異なる。リスト漏れ（未知のフリーメールプロバイダ）は
+// 「誤って緩和してしまう」側に倒れるが、ホワイトリストのように「リストに
+// 載ったドメインへの積極的な偽装」で回避される弱点は持たない
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "protonmail.com",
+  "proton.me",
+  "icloud.com",
+  "aol.com",
+  "mail.com",
+  "zoho.com",
+  "yandex.com",
+  "gmx.com",
+  "163.com",
+  "qq.com",
+]);
+
+function extractEmailDomain(email) {
+  if (!email || typeof email !== "string" || !email.includes("@")) return null;
+  return email.split("@")[1].toLowerCase();
+}
+
+// oldEmail・newEmailのドメインが一致し、かつそのドメインがフリーメール
+// ブロックリストに該当しない場合のみtrueを返す（「同一組織内の変化」とみなせる）
+function isSameOrganizationDomain(oldEmail, newEmail) {
+  const oldDomain = extractEmailDomain(oldEmail);
+  const newDomain = extractEmailDomain(newEmail);
+  if (!oldDomain || !newDomain) return false;
+  if (oldDomain !== newDomain) return false;
+  return !FREE_EMAIL_DOMAINS.has(oldDomain);
+}
+
 // registryの"GET /{name}"レスポンスから、oldVersion・newVersionそれぞれの公開者
-// （_npmUser.name）を抽出し、異なっていれば異常として返す。いずれかのバージョンの
-// 公開者情報が取得できない場合（削除されたバージョン等）は判定不能としてnullを返す
+// （_npmUser.name/email）を抽出し、異なっていれば異常として返す。いずれかの
+// バージョンの公開者情報が取得できない場合（削除されたバージョン等）は
+// 判定不能としてnullを返す。sameOrganizationDomainは、新旧メールドメインが
+// 一致し、かつフリーメールブロックリストに該当しない場合にtrueとなる
+// （dependency-risk-classifier.js側でHighからMediumへの緩和判定に使う）
 function detectMaintainerChange(packageJson, oldVersion, newVersion) {
   const versions = packageJson?.versions ?? {};
-  const oldPublisher = versions[oldVersion]?._npmUser?.name ?? null;
-  const newPublisher = versions[newVersion]?._npmUser?.name ?? null;
+  const oldUser = versions[oldVersion]?._npmUser ?? null;
+  const newUser = versions[newVersion]?._npmUser ?? null;
+  const oldPublisher = oldUser?.name ?? null;
+  const newPublisher = newUser?.name ?? null;
   if (!oldPublisher || !newPublisher) return null;
   if (oldPublisher === newPublisher) return null;
-  return { oldPublisher, newPublisher };
+  return {
+    oldPublisher,
+    newPublisher,
+    sameOrganizationDomain: isSameOrganizationDomain(oldUser?.email, newUser?.email),
+  };
 }
 
 const defaultFetchJson = createFetchJson({
@@ -86,4 +146,6 @@ if (require.main === module) {
 module.exports = {
   detectMaintainerChange,
   fetchMaintainerAnomalies,
+  isSameOrganizationDomain,
+  extractEmailDomain,
 };
