@@ -1,3 +1,10 @@
+## [2.120.2](https://github.com/bamiyanapp/dev-standards/compare/v2.120.1...v2.120.2) (2026-11-08)
+
+
+### Bug Fixes
+
+* **ci:** ファンアウト注記をproduction依存の変更が無い場合は表示しないようにする ([#1332](https://github.com/bamiyanapp/dev-standards/issues/1332)) ([6f6f896](https://github.com/bamiyanapp/dev-standards/commit/6f6f8962cdca09eb0e8c321e1c5191ac5402c396))
+
 ## [2.120.1](https://github.com/bamiyanapp/dev-standards/compare/v2.120.0...v2.120.1) (2026-11-08)
 
 

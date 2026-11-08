@@ -1438,5 +1438,18 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.120.2",
+    "date": "2026-11-08T21:46:17.562Z",
+    "riskLevel": "high",
+    "riskReasons": [
+      "major update、またはバージョン比較不能な更新（ダウングレード等）が含まれています",
+      "メンテナ（公開者）が変化したパッケージがありますが、新旧メールドメインの一致、またはnpm Trusted Publishing（OIDC検証済み）への移行が確認できたため緩和しています: tr46"
+    ],
+    "staleRiskLevel": "medium",
+    "staleRiskReasons": [
+      "現行バージョンにCritical/High severityのCVEが残っています"
+    ]
   }
 ]
