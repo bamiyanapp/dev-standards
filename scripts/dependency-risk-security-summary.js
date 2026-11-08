@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const { fromVector } = require("ae-cvss-calculator");
 
 // issue #646（OSS依存更新の自動安全判定基盤 Phase 1）Task H。
 // dependency-vulnerability-info.js（Task C、OSV.devからのCVE/severity取得）と
@@ -56,14 +57,31 @@ function formatKev(kev) {
   return "不明";
 }
 
-// issue #1328: 数値スコアの自前計算は行わず（dependency-vulnerability-info.jsの
-// コメント参照）、ベクタ文字列自体も冗長（"CVSS:3.1/AV:N/AC:L/..."）なため全文は
-// 表示しない。先頭の"CVSS:"の直後に付くバージョン番号のみを抽出して表示する。
-// 複数バージョン（CVSS_V3・CVSS_V4等）が同時に存在する場合はカンマ区切りで列挙する
+// issue #1331: 数値Base Scoreの自前実装は誤りやすい（dependency-vulnerability-info.js
+// のコメント参照）ため避けるが、FIRST公式仕様に準拠した確立されたライブラリ
+// （ae-cvss-calculator、CVSS 2.0/3.0/3.1/4.0対応）に計算を委譲するのは問題ない。
+// ライブラリが対応できないベクタ（未対応バージョン・パース失敗等）は例外を握りつぶし、
+// バージョン番号のみの表示へフォールバックする（安全側、表示自体を止めない）
+function calculateCvssScore(vectorString) {
+  try {
+    const vector = fromVector(vectorString);
+    const { overall } = vector.calculateScores();
+    if (typeof overall !== "number") return null;
+    return { score: overall, versionName: vector.getVectorName() };
+  } catch {
+    return null;
+  }
+}
+
+// 複数バージョン（CVSS_V3・CVSS_V4等）のベクタが同時に存在する場合はカンマ区切りで列挙する
 function formatCvssVectors(cvssVectors) {
   if (!cvssVectors || cvssVectors.length === 0) return "不明";
-  const versions = cvssVectors.map((v) => v.match(/^CVSS:([\d.]+)\//)?.[1] ?? v);
-  return versions.join(", ");
+  const formatted = cvssVectors.map((v) => {
+    const calculated = calculateCvssScore(v);
+    if (calculated) return `${calculated.score} (${calculated.versionName})`;
+    return v.match(/^CVSS:([\d.]+)\//)?.[1] ?? v;
+  });
+  return formatted.join(", ");
 }
 
 // buildSecurityRowsの結果をRisk Summaryコメントへ追記するMarkdown断片へ整形する。
@@ -84,7 +102,7 @@ function renderSecuritySection(vulnerabilityInfo, exploitInfo, versionLabel = "�
   }
 
   let body = `${heading}\n\n`;
-  body += "| パッケージ | CVE | Severity | CVSSバージョン | EPSS | KEV |\n|---|---|---|---|---|---|\n";
+  body += "| パッケージ | CVE | Severity | CVSSスコア | EPSS | KEV |\n|---|---|---|---|---|---|\n";
   for (const row of rows) {
     body += `| ${row.package} | ${row.cveId ?? row.id} | ${row.severityRating ?? "不明"} | ${formatCvssVectors(row.cvssVectors)} | ${formatEpss(row.epssScore)} | ${formatKev(row.kev)} |\n`;
   }
