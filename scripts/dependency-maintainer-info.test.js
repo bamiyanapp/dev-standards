@@ -2,7 +2,13 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { detectMaintainerChange, fetchMaintainerAnomalies, isSameOrganizationDomain, extractEmailDomain } = require("./dependency-maintainer-info.js");
+const {
+  detectMaintainerChange,
+  fetchMaintainerAnomalies,
+  isSameOrganizationDomain,
+  extractEmailDomain,
+  isNpmTrustedPublisher,
+} = require("./dependency-maintainer-info.js");
 
 test("detectMaintainerChange: 公開者が異なる場合は異常として返す（メール無しのためsameOrganizationDomainはfalse）", () => {
   const packageJson = {
@@ -15,6 +21,7 @@ test("detectMaintainerChange: 公開者が異なる場合は異常として返�
     oldPublisher: "alice",
     newPublisher: "bob",
     sameOrganizationDomain: false,
+    newPublisherIsTrustedPublisher: false,
   });
 });
 
@@ -29,6 +36,7 @@ test("detectMaintainerChange: 同一の企業ドメインへの変化はsameOrga
     oldPublisher: "typescript-bot",
     newPublisher: "microsoft1es",
     sameOrganizationDomain: true,
+    newPublisherIsTrustedPublisher: false,
   });
 });
 
@@ -43,6 +51,7 @@ test("detectMaintainerChange: 異なるドメインへの変化はsameOrganizati
     oldPublisher: "alice",
     newPublisher: "mallory",
     sameOrganizationDomain: false,
+    newPublisherIsTrustedPublisher: false,
   });
 });
 
@@ -57,7 +66,38 @@ test("detectMaintainerChange: 同一のフリーメールドメインへの変�
     oldPublisher: "alice",
     newPublisher: "mallory",
     sameOrganizationDomain: false,
+    newPublisherIsTrustedPublisher: false,
   });
+});
+
+// issue #1326。tr46（dev-standards#1322のレビューで確認）の実例: ドメイン不一致
+// （d@domenic.me → npm-oidc-no-reply@github.com）だが、npm Trusted Publishing
+// （GitHub Actions OIDC、npm registry自身が検証済み）への正当な移行だった
+test("detectMaintainerChange: 新バージョンがnpm Trusted Publishing経由の場合はnewPublisherIsTrustedPublisherがtrue（ドメイン不一致でも）", () => {
+  const packageJson = {
+    versions: {
+      "6.0.0": { _npmUser: { name: "domenic", email: "d@domenic.me" } },
+      "7.0.0": {
+        _npmUser: {
+          name: "GitHub Actions",
+          email: "npm-oidc-no-reply@github.com",
+          trustedPublisher: { id: "github", oidcConfigId: "a91eb11a-de72-42d5-a7c1-771e9ba852d9" },
+        },
+      },
+    },
+  };
+  assert.deepEqual(detectMaintainerChange(packageJson, "6.0.0", "7.0.0"), {
+    oldPublisher: "domenic",
+    newPublisher: "GitHub Actions",
+    sameOrganizationDomain: false,
+    newPublisherIsTrustedPublisher: true,
+  });
+});
+
+test("isNpmTrustedPublisher: trustedPublisherフィールドの有無を判定する", () => {
+  assert.equal(isNpmTrustedPublisher({ trustedPublisher: { id: "github" } }), true);
+  assert.equal(isNpmTrustedPublisher({ name: "alice" }), false);
+  assert.equal(isNpmTrustedPublisher(null), false);
 });
 
 test("extractEmailDomain: メールアドレスからドメインを抽出する", () => {
@@ -105,7 +145,15 @@ test("fetchMaintainerAnomalies: 公開者が変化したパッケージのみを
   };
   const result = await fetchMaintainerAnomalies(changes, { fetchJsonImpl });
   assert.deepEqual(result, [
-    { name: "foo", oldVersion: "1.0.0", newVersion: "1.1.0", oldPublisher: "alice", newPublisher: "mallory", sameOrganizationDomain: false },
+    {
+      name: "foo",
+      oldVersion: "1.0.0",
+      newVersion: "1.1.0",
+      oldPublisher: "alice",
+      newPublisher: "mallory",
+      sameOrganizationDomain: false,
+      newPublisherIsTrustedPublisher: false,
+    },
   ]);
 });
 

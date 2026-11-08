@@ -61,6 +61,25 @@ const FREE_EMAIL_DOMAINS = new Set([
   "qq.com",
 ]);
 
+// issue #1326。karuta#2054・dev-standards#1322のレビューで、tr46のメンテナ変化
+// （domenic → GitHub Actions）が実際にはnpmのTrusted Publishing（GitHub Actions
+// OIDC経由での自動publish）への移行であり、isSameOrganizationDomain（メール
+// ドメイン一致）では救えない正当なケースだった（移行元・移行先のメールドメインが
+// 異なるため）。
+//
+// _npmUser.trustedPublisherは、公開者の自己申告値であるemail/nameとは異なり、
+// npm registry自身がGitHub ActionsのOIDCトークンを検証した結果として記録する
+// 値である。これを偽装するには対象パッケージに紐づくGitHubリポジトリへの
+// 書き込み権限（Actions実行権限）自体を奪取する必要があり、その時点で既に
+// 別の重大なサプライチェーン侵害が成立している（＝本検知より上流の問題）。
+// そのためドメインホワイトリストより安全性の高い緩和根拠として扱えるが、
+// 乗っ取り後に攻撃者自身のGitHub ActionsでTrusted Publisherを設定して
+// publishするケースも理論上あり得るため、無条件にLowへ緩和するのではなく、
+// isSameOrganizationDomainと同様「Highからmediumへの緩和」に留める
+function isNpmTrustedPublisher(npmUser) {
+  return Boolean(npmUser?.trustedPublisher);
+}
+
 function extractEmailDomain(email) {
   if (!email || typeof email !== "string" || !email.includes("@")) return null;
   return email.split("@")[1].toLowerCase();
@@ -77,11 +96,11 @@ function isSameOrganizationDomain(oldEmail, newEmail) {
 }
 
 // registryの"GET /{name}"レスポンスから、oldVersion・newVersionそれぞれの公開者
-// （_npmUser.name/email）を抽出し、異なっていれば異常として返す。いずれかの
-// バージョンの公開者情報が取得できない場合（削除されたバージョン等）は
-// 判定不能としてnullを返す。sameOrganizationDomainは、新旧メールドメインが
-// 一致し、かつフリーメールブロックリストに該当しない場合にtrueとなる
-// （dependency-risk-classifier.js側でHighからMediumへの緩和判定に使う）
+// （_npmUser.name/email/trustedPublisher）を抽出し、異なっていれば異常として返す。
+// いずれかのバージョンの公開者情報が取得できない場合（削除されたバージョン等）は
+// 判定不能としてnullを返す。sameOrganizationDomain（新旧メールドメイン一致）・
+// newPublisherIsTrustedPublisher（新バージョンがnpm Trusted Publishing経由）の
+// いずれかがtrueの場合、dependency-risk-classifier.js側でHighからMediumへ緩和する
 function detectMaintainerChange(packageJson, oldVersion, newVersion) {
   const versions = packageJson?.versions ?? {};
   const oldUser = versions[oldVersion]?._npmUser ?? null;
@@ -94,6 +113,7 @@ function detectMaintainerChange(packageJson, oldVersion, newVersion) {
     oldPublisher,
     newPublisher,
     sameOrganizationDomain: isSameOrganizationDomain(oldUser?.email, newUser?.email),
+    newPublisherIsTrustedPublisher: isNpmTrustedPublisher(newUser),
   };
 }
 
@@ -148,4 +168,5 @@ module.exports = {
   fetchMaintainerAnomalies,
   isSameOrganizationDomain,
   extractEmailDomain,
+  isNpmTrustedPublisher,
 };

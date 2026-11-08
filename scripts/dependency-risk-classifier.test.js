@@ -127,7 +127,30 @@ test("classifyRisk: メンテナ変化でも新旧メールドメインが一致
   assert.ok(result.reasons.some((r) => r.includes("メンテナ") && r.includes("緩和") && r.includes("tslib")));
 });
 
-test("classifyRisk: メンテナ変化が複数件あり1件でもドメイン不一致ならhighのまま（issue #1320）", () => {
+// issue #1326。tr46（dev-standards#1322のレビューで確認）の実例: ドメイン不一致
+// （domenic → GitHub Actions）だが、npm Trusted Publishing（OIDC検証済み）への
+// 正当な移行だったため、sameOrganizationDomainが無くてもmediumへ緩和する
+test("classifyRisk: メンテナ変化でも新バージョンがnpm Trusted Publishing経由であればmediumへ緩和する（issue #1326）", () => {
+  const result = classifyRisk(
+    baseInput({
+      maintainerAnomalies: [
+        {
+          name: "tr46",
+          oldVersion: "6.0.0",
+          newVersion: "7.0.0",
+          oldPublisher: "domenic",
+          newPublisher: "GitHub Actions",
+          sameOrganizationDomain: false,
+          newPublisherIsTrustedPublisher: true,
+        },
+      ],
+    }),
+  );
+  assert.equal(result.level, "medium");
+  assert.ok(result.reasons.some((r) => r.includes("メンテナ") && r.includes("緩和") && r.includes("tr46")));
+});
+
+test("classifyRisk: メンテナ変化が複数件あり1件でもドメイン不一致・Trusted Publisher非該当ならhighのまま（issue #1320, #1326）", () => {
   const result = classifyRisk(
     baseInput({
       maintainerAnomalies: [
