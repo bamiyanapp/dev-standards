@@ -1,3 +1,10 @@
+## [2.120.1](https://github.com/bamiyanapp/dev-standards/compare/v2.120.0...v2.120.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* **ci:** Security表にCVSSベクタ列を追加し、EPSS表記を単純なパーセント表示にする ([#1329](https://github.com/bamiyanapp/dev-standards/issues/1329)) ([659257b](https://github.com/bamiyanapp/dev-standards/commit/659257b74481733fe66881e3e1e0afe71fcba6a8))
+
 # [2.120.0](https://github.com/bamiyanapp/dev-standards/compare/v2.119.2...v2.120.0) (2026-11-08)
 
 
