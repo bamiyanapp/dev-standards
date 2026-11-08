@@ -3199,11 +3199,14 @@ jobs:
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-exploit-info.js /tmp/vulnerability-info.json > /tmp/exploit-info.json
 
+      # issue #1323: 「適用リスク」（更新後バージョン）側のSecurity情報であることを
+      # 見出しに明示する。旧バージョン向けの同等セクションはold-vulnerability-info等を
+      # 生成した後にold-security-summaryステップで生成する
       - name: セキュリティ概要セクションを生成する
         id: security-summary
         if: steps.exploit-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-risk-security-summary.js /tmp/vulnerability-info.json /tmp/exploit-info.json > /tmp/security-section.md
+        run: node .dev-standards-actions/scripts/dependency-risk-security-summary.js /tmp/vulnerability-info.json /tmp/exploit-info.json 更新後バージョン > /tmp/security-section.md
 
       # issue #689（業務影響度・ブラスト半径）: 変更された直接依存パッケージが
       # プロダクトコードのどこでimportされているかをdependency-cruiser（architecture-check
@@ -3293,6 +3296,16 @@ jobs:
         if: steps.old-vulnerability-info.outcome == 'success'
         continue-on-error: true
         run: node .dev-standards-actions/scripts/dependency-exploit-info.js /tmp/old-vulnerability-info.json > /tmp/old-exploit-info.json
+
+      # issue #1323: 「維持リスク」（更新前バージョン）側のSecurity情報であることを
+      # 見出しに明示する。これが無いと、新バージョン向けの「Security」セクション
+      # （既知の脆弱性なし）と「維持リスク」の理由（現行バージョンにCVE残存）が
+      # 矛盾して見えてしまう
+      - name: 旧バージョンのセキュリティ概要セクションを生成する
+        id: old-security-summary
+        if: steps.old-exploit-info.outcome == 'success'
+        continue-on-error: true
+        run: node .dev-standards-actions/scripts/dependency-risk-security-summary.js /tmp/old-vulnerability-info.json /tmp/old-exploit-info.json 更新前バージョン > /tmp/old-security-section.md
 
       # issue #701。blast-radius-info.jsonを3rd引数で渡し、重要パスに該当する場合は
       # 維持リスクをlow→mediumへ1段階昇格する（high昇格はCVE/KEVのみを根拠とする設計を
@@ -3430,8 +3443,29 @@ jobs:
             }
 
             let body = '## Risk Summary（依存更新）\n\n';
+            // issue #1323: 「Recommended Action」はこのコメントで最も重要な結論のため、
+            // 理由一覧の後ろ（旧実装）ではなく最上部へ見出し付きで配置する
             if (riskResult) {
-              body += `**適用リスク（このPRを適用する場合）: ${riskLabelText[riskResult.level]}**\n\n`;
+              body += `## ⚠️ Recommended Action: ${describeRecommendedAction(riskResult.level, staleRiskResult?.level, riskResult.vulnerabilityOnlyHigh)}\n\n`;
+            }
+            // issue #1323: 維持リスク（放置した場合の危険度）を適用リスクより先に
+            // 表示する。それぞれの直下に、対応するバージョン（維持リスク=更新前、
+            // 適用リスク=更新後）のSecurity情報と、各リスク軸の判定にのみ使われる
+            // 情報（メンテナンス状態／Tests・ファンアウト）を配置する
+            if (staleRiskResult) {
+              body += `### 維持リスク（このPRを適用せず現行バージョンに留まる場合）: ${riskLabelText[staleRiskResult.level]}\n\n`;
+              body += '理由:\n';
+              for (const reason of staleRiskResult.reasons) body += `- ${reason}\n`;
+              body += '\n';
+              if (fs.existsSync('/tmp/old-security-section.md')) {
+                body += fs.readFileSync('/tmp/old-security-section.md', 'utf-8') + '\n';
+              }
+              if (fs.existsSync('/tmp/maintenance-section.md')) {
+                body += fs.readFileSync('/tmp/maintenance-section.md', 'utf-8') + '\n';
+              }
+            }
+            if (riskResult) {
+              body += `### 適用リスク（このPRを適用する場合）: ${riskLabelText[riskResult.level]}\n\n`;
               body += '理由:\n';
               for (const reason of riskResult.reasons) body += `- ${reason}\n`;
               body += '\n';
@@ -3443,15 +3477,22 @@ jobs:
                 }
                 body += '\n</details>\n\n';
               }
-            }
-            if (staleRiskResult) {
-              body += `**維持リスク（このPRを適用せず現行バージョンに留まる場合）: ${riskLabelText[staleRiskResult.level]}**\n\n`;
-              body += '理由:\n';
-              for (const reason of staleRiskResult.reasons) body += `- ${reason}\n`;
-              body += '\n';
-            }
-            if (riskResult) {
-              body += `Recommended Action: ${describeRecommendedAction(riskResult.level, staleRiskResult?.level, riskResult.vulnerabilityOnlyHigh)}\n\n`;
+              if (fs.existsSync('/tmp/security-section.md')) {
+                body += fs.readFileSync('/tmp/security-section.md', 'utf-8') + '\n';
+              } else if (packageLockChanged) {
+                // issue #727: package-lock.jsonの変更があったにもかかわらず
+                // security-section.mdが無い場合のみ、実際の取得失敗として表示する
+                body += '_CVE/CVSS/EPSS/KEV情報の取得に失敗しました（外部API呼び出しエラー等）。必要に応じて手動でご確認ください。_\n\n';
+              }
+              // packageLockChangedがfalse（GitHub Actionsのバージョン更新のみ等）の
+              // 場合は、CVE/CVSS自体が対象外なだけで失敗ではないため、何も表示しない
+              // （issue #727）
+              if (fs.existsSync('/tmp/ci-results-section.md')) {
+                body += fs.readFileSync('/tmp/ci-results-section.md', 'utf-8') + '\n';
+              }
+              if (fs.existsSync('/tmp/fanout-note.md')) {
+                body += fs.readFileSync('/tmp/fanout-note.md', 'utf-8') + '\n';
+              }
             }
             if (summary.total > 0) {
               body += `対象: ${summary.total}件（直接: ${summary.direct}件 / 間接: ${summary.transitive}件）\n\n`;
@@ -3487,30 +3528,10 @@ jobs:
               if (section.trim().length > 0) body += section + '\n';
             }
 
-            if (fs.existsSync('/tmp/ci-results-section.md')) {
-              body += fs.readFileSync('/tmp/ci-results-section.md', 'utf-8') + '\n';
-            }
-
-            if (fs.existsSync('/tmp/fanout-note.md')) {
-              body += fs.readFileSync('/tmp/fanout-note.md', 'utf-8') + '\n';
-            }
-
-            if (fs.existsSync('/tmp/security-section.md')) {
-              body += fs.readFileSync('/tmp/security-section.md', 'utf-8') + '\n';
-            } else if (packageLockChanged) {
-              // issue #727: package-lock.jsonの変更があったにもかかわらず
-              // security-section.mdが無い場合のみ、実際の取得失敗として表示する
-              body += '_CVE/CVSS/EPSS/KEV情報の取得に失敗しました（外部API呼び出しエラー等）。必要に応じて手動でご確認ください。_\n';
-            }
-            // packageLockChangedがfalse（GitHub Actionsのバージョン更新のみ等）の場合は、
-            // CVE/CVSS自体が対象外なだけで失敗ではないため、何も表示しない（issue #727）
-
+            // issue #1323: SBOMはどちらのリスク判定（適用・維持）にも入力されない
+            // 独立した透明性情報のため、どちらの見出しにも紐づけず現状の位置のまま
             if (fs.existsSync('/tmp/sbom-section.md')) {
               body += fs.readFileSync('/tmp/sbom-section.md', 'utf-8') + '\n';
-            }
-
-            if (fs.existsSync('/tmp/maintenance-section.md')) {
-              body += fs.readFileSync('/tmp/maintenance-section.md', 'utf-8') + '\n';
             }
 
             await github.rest.issues.createComment({

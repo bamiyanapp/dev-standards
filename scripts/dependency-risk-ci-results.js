@@ -97,7 +97,9 @@ function analyzeCiFailures(summary) {
 
 // summarizeCiResultsの戻り値をRisk Summaryコメントへ追記するMarkdown断片へ整形する
 function renderCiResultsSection(summary) {
-  let body = "### Tests / Static Analysis\n\n";
+  // issue #1323: 適用リスク（このPRを適用すること自体の危険度）の判定材料にのみ
+  // 使われる情報のため、適用リスク見出しの下位セクションとして#### にする
+  let body = "#### Tests / Static Analysis\n\n";
   body += "| job | 結果 |\n|---|---|\n";
   const allEntries = [...summary.tests, ...summary.staticAnalysis];
   for (const entry of allEntries) {

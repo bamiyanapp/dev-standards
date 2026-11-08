@@ -66,6 +66,19 @@ test("renderSecuritySection: 脆弱性がある場合は表とKEV警告を含む
   assert.match(body, /KEV（Known Exploited Vulnerability/);
 });
 
+// issue #1323: 「維持リスク」の理由（更新前バージョンのCVE残存）と「Security」
+// セクション（更新後バージョンの判定）が別バージョンを見ていることが分からず
+// 矛盾して見えたため、見出しにどちらのバージョンかを明示するようにした
+test("renderSecuritySection: versionLabel省略時は見出しに「更新後バージョン」が入る（デフォルト）", () => {
+  const body = renderSecuritySection(SAMPLE_VULN_INFO, SAMPLE_EXPLOIT_INFO);
+  assert.match(body, /^#### Security（CVE\/CVSS\/EPSS\/KEV、更新後バージョン）/);
+});
+
+test("renderSecuritySection: versionLabelに「更新前バージョン」を渡すと見出しに反映される", () => {
+  const body = renderSecuritySection(SAMPLE_VULN_INFO, SAMPLE_EXPLOIT_INFO, "更新前バージョン");
+  assert.match(body, /^#### Security（CVE\/CVSS\/EPSS\/KEV、更新前バージョン）/);
+});
+
 test("renderSecuritySection: KEV該当が無ければ警告文を含まない", () => {
   const exploitInfo = [{ cveId: "CVE-2024-00001", kev: false, epssScore: 0.01, epssPercentile: 0.1 }];
   const body = renderSecuritySection(SAMPLE_VULN_INFO, exploitInfo);

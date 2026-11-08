@@ -55,14 +55,23 @@ function formatKev(kev) {
 }
 
 // buildSecurityRowsの結果をRisk Summaryコメントへ追記するMarkdown断片へ整形する。
-// 脆弱性が1件も無い場合は、調査不要であることが伝わる短い文のみを返す
-function renderSecuritySection(vulnerabilityInfo, exploitInfo) {
+// 脆弱性が1件も無い場合は、調査不要であることが伝わる短い文のみを返す。
+//
+// versionLabel: 「適用リスク」（更新後バージョン）・「維持リスク」（更新前バージョン）
+// どちらの軸のSecurity情報かをコメント上で明示するための見出し文言（issue #1323）。
+// dependency-vulnerability-info.jsはoldVersion引数の有無で新旧どちらのバージョンの
+// 情報を取得するかを切り替えるが、その区別が本セクション単体では分からず、「維持リスク」
+// の理由（旧バージョンのCVE）と矛盾して見えることがあったため、見出しで明示する
+function renderSecuritySection(vulnerabilityInfo, exploitInfo, versionLabel = "更新後バージョン") {
+  // issue #1323: 適用リスク・維持リスクそれぞれの見出しの下位セクションとして
+  // #### にする（versionLabelでどちらのバージョンの情報かを見出しに明示する）
+  const heading = `#### Security（CVE/CVSS/EPSS/KEV、${versionLabel}）`;
   const rows = buildSecurityRows(vulnerabilityInfo, exploitInfo);
   if (rows.length === 0) {
-    return "### Security（CVE/CVSS/EPSS/KEV）\n\n既知の脆弱性は見つかりませんでした（[OSV.dev](https://osv.dev)で確認）。\n";
+    return `${heading}\n\n既知の脆弱性は見つかりませんでした（[OSV.dev](https://osv.dev)で確認）。\n`;
   }
 
-  let body = "### Security（CVE/CVSS/EPSS/KEV）\n\n";
+  let body = `${heading}\n\n`;
   body += "| パッケージ | CVE | Severity | KEV | EPSS |\n|---|---|---|---|---|\n";
   for (const row of rows) {
     body += `| ${row.package} | ${row.cveId ?? row.id} | ${row.severityRating ?? "不明"} | ${formatKev(row.kev)} | ${formatEpss(row.epssScore)} |\n`;
@@ -74,15 +83,17 @@ function renderSecuritySection(vulnerabilityInfo, exploitInfo) {
 }
 
 function main() {
-  const [, , vulnerabilityInfoPath, exploitInfoPath] = process.argv;
+  const [, , vulnerabilityInfoPath, exploitInfoPath, versionLabel] = process.argv;
   if (!vulnerabilityInfoPath || !exploitInfoPath) {
-    console.error("Usage: node dependency-risk-security-summary.js <dependency-vulnerability-info.json> <dependency-exploit-info.json>");
+    console.error(
+      "Usage: node dependency-risk-security-summary.js <dependency-vulnerability-info.json> <dependency-exploit-info.json> [versionLabel]",
+    );
     process.exitCode = 1;
     return;
   }
   const vulnerabilityInfo = JSON.parse(fs.readFileSync(vulnerabilityInfoPath, "utf-8"));
   const exploitInfo = JSON.parse(fs.readFileSync(exploitInfoPath, "utf-8"));
-  console.log(renderSecuritySection(vulnerabilityInfo, exploitInfo));
+  console.log(versionLabel ? renderSecuritySection(vulnerabilityInfo, exploitInfo, versionLabel) : renderSecuritySection(vulnerabilityInfo, exploitInfo));
 }
 
 if (require.main === module) {
