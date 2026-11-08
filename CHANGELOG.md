@@ -1,3 +1,10 @@
+# [2.120.0](https://github.com/bamiyanapp/dev-standards/compare/v2.119.2...v2.120.0) (2026-11-08)
+
+
+### Features
+
+* **deps:** メンテナ変化検知にnpm Trusted Publishingへの移行を緩和条件として追加する ([#1327](https://github.com/bamiyanapp/dev-standards/issues/1327)) ([d5973d3](https://github.com/bamiyanapp/dev-standards/commit/d5973d373a134cb6ae58cacbd6e8b76bc1253083))
+
 ## [2.119.2](https://github.com/bamiyanapp/dev-standards/compare/v2.119.1...v2.119.2) (2026-11-08)
 
 
