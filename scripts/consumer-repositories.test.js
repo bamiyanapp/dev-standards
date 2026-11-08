@@ -6,6 +6,7 @@ const {
   parseConsumerRepositoriesTable,
   listConsumerRepositories,
   countConsumerRepositories,
+  isProductionImpacting,
   renderFanOutNote,
 } = require("./consumer-repositories.js");
 
@@ -81,6 +82,28 @@ test("renderFanOutNote: 0件の場合はnullを返す（解析失敗等で誤っ
   assert.equal(renderFanOutNote(0), null);
 });
 
+// issue #1330。jsdomとその間接依存（devDependency経由のみ）の更新では、参照側
+// リポジトリに一切影響しない（dev-standards自身のnpm依存は継承されない）ため
+// ファンアウト注記を省略する
+test("isProductionImpacting: 全件production:falseの場合はfalseを返す", () => {
+  const changes = [
+    { name: "jsdom", production: false },
+    { name: "tr46", production: false },
+  ];
+  assert.equal(isProductionImpacting(changes), false);
+});
+
+test("isProductionImpacting: 1件でもproductionがtrue（またはフィールド無し）ならtrueを返す", () => {
+  assert.equal(isProductionImpacting([{ name: "express", production: true }]), true);
+  assert.equal(isProductionImpacting([{ name: "express" }]), true);
+  assert.equal(isProductionImpacting([{ name: "jsdom", production: false }, { name: "express" }]), true);
+});
+
+test("isProductionImpacting: changesが空・未定義の場合は安全側に倒してtrueを返す（判定材料が無いため除外しない）", () => {
+  assert.equal(isProductionImpacting([]), true);
+  assert.equal(isProductionImpacting(undefined), true);
+});
+
 test("CLI: GITHUB_OUTPUTが設定されている場合はcountを書き込む", () => {
   const { execFileSync } = require("node:child_process");
   const fs = require("node:fs");
@@ -99,5 +122,29 @@ test("CLI: GITHUB_OUTPUTが設定されている場合はcountを書き込む", 
   });
 
   assert.match(fs.readFileSync(githubOutputPath, "utf-8"), /count=2/);
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("CLI: dependency-update-info.jsonが全件production:falseの場合はcount=0になる", () => {
+  const { execFileSync } = require("node:child_process");
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "consumer-repositories-test-"));
+  const docPath = path.join(tmpDir, "consumer-repositories.md");
+  const updateInfoPath = path.join(tmpDir, "dependency-update-info.json");
+  const githubOutputPath = path.join(tmpDir, "github-output.txt");
+  fs.writeFileSync(docPath, SAMPLE_MARKDOWN);
+  fs.writeFileSync(updateInfoPath, JSON.stringify({ changes: [{ name: "jsdom", production: false }] }));
+  fs.writeFileSync(githubOutputPath, "");
+
+  const stdout = execFileSync(process.execPath, [path.join(__dirname, "consumer-repositories.js"), docPath, updateInfoPath], {
+    encoding: "utf-8",
+    env: { ...process.env, GITHUB_OUTPUT: githubOutputPath },
+  });
+
+  assert.match(fs.readFileSync(githubOutputPath, "utf-8"), /count=0/);
+  assert.equal(stdout.trim(), "");
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
