@@ -82,15 +82,22 @@ function classifyRisk({
   }
   let maintainerAnomalyEscalatedHigh = false;
   if (maintainerAnomalies.length > 0) {
-    // issue #1320。新旧メンテナのメールドメインが一致し（フリーメール
-    // ブロックリスト対象外）、組織内の公開パイプライン移行等とみなせる
-    // 場合のみMediumへ緩和する。1件でもドメイン不一致（または判定不能）が
-    // あれば、安全側に倒してHighのまま確実にエスカレーションする
-    maintainerAnomalyEscalatedHigh = !maintainerAnomalies.every((a) => a.sameOrganizationDomain === true);
+    // issue #1320: 新旧メンテナのメールドメインが一致し（フリーメールブロックリスト
+    // 対象外）、組織内の公開パイプライン移行等とみなせる場合はMediumへ緩和する。
+    // issue #1326: 新バージョンの公開者がnpm Trusted Publishing（GitHub Actions
+    // OIDC、npm registry自身が検証済み）経由の場合も同様に緩和する。公開者の
+    // 自己申告値（メール）とは検証主体が異なり、ドメインホワイトリストより
+    // 安全性の高い根拠のため（dependency-maintainer-info.jsのコメント参照）。
+    // いずれにも該当しない（または判定不能な）ケースが1件でもあれば、
+    // 安全側に倒してHighのまま確実にエスカレーションする
+    const isMitigated = (a) => a.sameOrganizationDomain === true || a.newPublisherIsTrustedPublisher === true;
+    maintainerAnomalyEscalatedHigh = !maintainerAnomalies.every(isMitigated);
     const names = maintainerAnomalies.map((a) => a.name).join(", ");
     if (!maintainerAnomalyEscalatedHigh) {
       level = escalate(level, "medium");
-      reasons.push(`メンテナ（公開者）が変化したパッケージがありますが、新旧メールドメインが一致しているため緩和しています: ${names}`);
+      reasons.push(
+        `メンテナ（公開者）が変化したパッケージがありますが、新旧メールドメインの一致、またはnpm Trusted Publishing（OIDC検証済み）への移行が確認できたため緩和しています: ${names}`,
+      );
     } else {
       level = escalate(level, "high");
       reasons.push(`メンテナ（公開者）が変化したパッケージがあります: ${names}`);

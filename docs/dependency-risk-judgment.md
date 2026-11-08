@@ -68,7 +68,7 @@ CVE/CVSS/KEVチェック（上記）は「既知の脆弱性があるかどう�
 | チェック | 検知対象 | Riskへの使い方 |
 |---|---|---|
 | 新規install script | インストール時に実行されるコードの有無の変化（`package-lock.json`の`hasInstallScript`フラグ比較のみ、外部通信無し） | 異常変化としてHighへ格上げする材料 |
-| メンテナ（公開者）変更 | npm registryの公開者情報（`_npmUser.name`）の変化 | takeover等のシグナルとしてHighへ格上げする材料。新旧メールドメインが一致する場合はMediumへ緩和する（詳細は次節） |
+| メンテナ（公開者）変更 | npm registryの公開者情報（`_npmUser.name`）の変化 | takeover等のシグナルとしてHighへ格上げする材料。新旧メールドメインが一致する場合、または新バージョンがnpm Trusted Publishing経由の場合はMediumへ緩和する（詳細は次節） |
 | SBOM生成 | 実際に含まれるコンポーネントと依存関係そのもの | Risk判定には使わない。影響範囲の追跡・監査のための証跡 |
 
 ### 新規install scriptの検知（例）
@@ -84,6 +84,10 @@ npm registry上の公開者（npmアカウント名）が異なる場合に検�
 固定の「信頼できるドメイン」のホワイトリストは採用しない。npm registryの`_npmUser.email`は暗号学的に検証されていない公開者の自己申告値である。そのため、ホワイトリストに載ったドメインへ偽装するだけでエスカレーション自体を回避できてしまう。代わりに「新旧メールドメインが一致するか」のみを見るが、これにも別種の抜け道がある。`gmail.com`等のフリーメール・パブリックメールプロバイダは誰でも同一ドメインで新規アカウントを作成できる。そのため、攻撃者が旧メンテナと同じフリーメールプロバイダの別アカウントを使えばドメイン一致を偽装できる。この抜け道を防ぐため、既知のフリーメール・パブリックメールプロバイダをブロックリスト化する。該当する場合はドメイン一致でも緩和しない（`FREE_EMAIL_DOMAINS`、`scripts/dependency-maintainer-info.js`）。
 
 このブロックリスト方式は、ホワイトリスト方式と安全側の性質が異なる。ホワイトリストはリスト漏れが安全側（過剰にHighのまま）だが「リストに載ったドメインへの偽装」で回避される弱点を持つ。ブロックリストはリスト漏れ（未知のフリーメールプロバイダ）が「誤って緩和してしまう」側に倒れる。ただし、既知の主要プロバイダを押さえておけば同一ドメインの別アカウント取得という安易な回避は防げる。1回の更新に複数のメンテナ変化が含まれる場合、1件でもドメイン不一致（または判定不能）があれば安全側に倒してHighのまま確実にエスカレーションする。
+
+**npm Trusted Publishingへの移行によるリスク緩和（issue #1326）**。dev-standards#1322のレビューで、間接依存`tr46`のメンテナ変化を確認した。公開者は`domenic`から`GitHub Actions`へ変わっていた。メールドメインは一致しない（`d@domenic.me`→`npm-oidc-no-reply@github.com`）。しかし実際にはnpmのTrusted Publishing（GitHub Actions OIDC経由での自動publish）への移行だった。ドメイン一致判定では救えない正当なケースである。
+
+`_npmUser.trustedPublisher`フィールドは、公開者の自己申告値であるemail/nameとは異なる。**npm registry自身がGitHub ActionsのOIDCトークンを検証した結果**として記録する値である（`isNpmTrustedPublisher()`で判定する）。実体は`scripts/dependency-maintainer-info.js`にある。これを偽装するには対象パッケージに紐づくGitHubリポジトリへの書き込み権限（Actions実行権限）自体を奪取する必要がある。その時点で既に別の重大なサプライチェーン侵害が成立している。そのためドメインホワイトリストより安全性の高い緩和根拠として扱える。ただし乗っ取り後に攻撃者自身のGitHub ActionsでTrusted Publisherを設定してpublishするケースも理論上あり得る。そのため無条件にLowへ緩和するのではなく、ドメイン一致と同様「Highからmediumへの緩和」に留める。
 
 ### SBOM（Software Bill of Materials）
 
@@ -111,7 +115,7 @@ flowchart TD
 
 ### Risk Engineとの接続
 
-install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力される。install scriptの検知は無条件でHighへ格上げする。メンテナ変更の検知は、新旧メールドメインが一致する場合（フリーメールブロックリスト対象外）のみMediumへ緩和し、それ以外はHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
+install script・メンテナ変更の検知結果は、適用リスク分類（`classifyRisk()`、`scripts/dependency-risk-classifier.js`）へそのまま入力される。install scriptの検知は無条件でHighへ格上げする。メンテナ変更の検知は、新旧メールドメインが一致する場合（フリーメールブロックリスト対象外）、または新バージョンがnpm Trusted Publishing経由の場合のみMediumへ緩和する。それ以外はHighへ格上げする。一方、SBOMの生成結果（`sbom.json`・要約）は適用リスク分類には渡されない。Risk Summaryコメント上の別セクションとして表示されるのみである。
 
 <!-- jscpd:ignore-start -->
 <details>
