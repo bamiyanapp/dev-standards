@@ -1,3 +1,10 @@
+# [2.123.0](https://github.com/bamiyanapp/dev-standards/compare/v2.122.0...v2.123.0) (2026-11-12)
+
+
+### Features
+
+* devDependencyのみのmajor updateをHighへ昇格しないようにする ([#1352](https://github.com/bamiyanapp/dev-standards/issues/1352)) ([ab208c0](https://github.com/bamiyanapp/dev-standards/commit/ab208c0f4efe02161d6a703cf003579714ca2046)), closes [#1351](https://github.com/bamiyanapp/dev-standards/issues/1351)
+
 # [2.122.0](https://github.com/bamiyanapp/dev-standards/compare/v2.121.2...v2.122.0) (2026-11-12)
 
 
