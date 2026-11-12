@@ -23,9 +23,12 @@ const defaultFetchJson = createFetchJson({
   formatError: (url, response) => `npm registry request to ${url} failed: ${response.status} ${response.statusText}`,
 });
 
-// lockJson: package-lock.jsonの内容。戻り値: [{ name, version, deprecated }]
+// lockJson: package-lock.jsonの内容。戻り値: [{ name, version, deprecated, direct }]
 // （name+versionの重複は除く。同名パッケージが複数バージョン存在する場合は
-// バージョンごとに1件とする）
+// バージョンごとに1件とする）。directOnly=falseの場合、間接依存もスキャン対象に
+// 含めつつ、各結果にdirect（直接依存かどうか）を付与する（issue #1349）。
+// 呼び出し元（reusable-dependency-deprecation-scan.yml）がIssue本文で直接/間接を
+// 区別して表示し、間接依存には「自力でアップグレードできない」ことを明示するため
 async function scanForDeprecated(lockJson, { directOnly = true, fetchJsonImpl = defaultFetchJson } = {}) {
   const directNames = extractDirectDependencyNames(lockJson);
   const packages = lockJson?.packages ?? {};
@@ -50,7 +53,7 @@ async function scanForDeprecated(lockJson, { directOnly = true, fetchJsonImpl = 
     }
     for (const version of versions) {
       const detected = detectDeprecation(packageJson, version);
-      if (detected) results.push({ name, version, deprecated: detected.deprecated });
+      if (detected) results.push({ name, version, deprecated: detected.deprecated, direct: directNames.has(name) });
     }
   }
   return results;
