@@ -3621,6 +3621,34 @@ jobs:
       # /tmp配下のJSONファイルを直接読み直す（同一job内なので永続している）。
       # 誤って人間作成のPRを自動クローズしてしまう事故を避けるため、PR作成者がbot
       # アカウント（Renovate等）の場合のみ対象とする
+      #
+      # issue #1344: 以前は上記の条件（risk_level=high かつ stale_risk_level=low）
+      # だけで即座に自動クローズしていたが、frontend-test等の単発のflakyテスト失敗
+      # だけでhighと判定されることがあり（bamiyanapp/karuta#2139で実際に発生、
+      # そのPR自体はlintプラグインのバージョン更新のみで本体ロジックとは無関係だった）、
+      # 無関係な依存更新PRが誤って自動クローズされてしまっていた。同一PRへの過去の
+      # Risk Summaryコメントに「自動マージの対象です」（=過去の実行ではlow判定
+      # だった）が含まれる場合、CI結果が実行ごとに変動している可能性が高いと判断し、
+      # 自動クローズを見送りHuman Review止まりにする。既存のknown-flaky-ci-patterns.js
+      # 登録簿（job単位の粒度）とは別に、個々のテストの不安定性を問わず「同一PRでの
+      # 判定結果の変動」という事実のみで救済できるようにする
+      - name: 自動クローズ可否の判定に使う過去のRisk Summaryコメントを取得する
+        id: history
+        if: inputs.enable_dependency_risk_auto_close && steps.gate.outputs.should_run == 'true'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+            const hadLowJudgementBefore = comments.some(
+              (c) => c.body.includes('依存更新Risk Summary') && c.body.includes('自動マージの対象です'),
+            );
+            core.setOutput('had_low_judgement_before', hadLowJudgementBefore ? 'true' : 'false');
+
       - name: 適用リスクHigh・維持リスクLowのPRをクローズする（bot作成のみ対象）
         if: inputs.enable_dependency_risk_auto_close && steps.gate.outputs.should_run == 'true'
         continue-on-error: true
@@ -3641,6 +3669,19 @@ jobs:
               staleRiskResult = JSON.parse(fs.readFileSync('/tmp/stale-risk-classification.json', 'utf-8'));
             }
             if (!riskResult || riskResult.level !== 'high' || !staleRiskResult || staleRiskResult.level !== 'low') {
+              return;
+            }
+            if ('${{ steps.history.outputs.had_low_judgement_before }}' === 'true') {
+              core.info('このPRは過去の実行でlow判定だった実績があるため、CI結果の変動（flakyの疑い）と判断し自動クローズを見送る');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body:
+                  '適用リスクが高いと判定されましたが（上記Risk Summary参照）、このPRは過去の実行では' +
+                  '低リスクと判定されていました。CI結果が実行ごとに変動している（flakyの疑い）可能性があるため、' +
+                  '自動クローズせずHuman Reviewに委ねます（bamiyanapp/dev-standards#1344）。',
+              });
               return;
             }
             await github.rest.issues.createComment({
