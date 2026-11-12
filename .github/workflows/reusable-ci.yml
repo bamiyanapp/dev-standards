@@ -292,6 +292,10 @@ on:
           誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`
           を置いてallowlistを設定する
           （https://github.com/gitleaks/gitleaks#configuration）。
+          標準ルールセットの`generic-api-key`は、key/token/secret/password等を
+          含む変数名への代入＋高エントロピー文字列を検知するため、AWS/GitHub等の
+          既知形式以外のハードコードされたクレデンシアルもある程度捕捉できる
+          （issue #1337、詳細はdocs/hardcoded-credential-detection-pattern.md参照）。
         type: boolean
         default: false
       enable_bundle_size_check:

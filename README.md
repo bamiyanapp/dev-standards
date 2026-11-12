@@ -77,6 +77,7 @@
 - [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
 - [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
 - [`renovate-adoption-lessons.md`](docs/renovate-adoption-lessons.md): Renovate導入初期に集中して発生する依存更新PRのCI失敗事例と`renovate.json`側の対処パターン
+- [`hardcoded-credential-detection-pattern.md`](docs/hardcoded-credential-detection-pattern.md): ソースコードにハードコードされたクレデンシャルを検知する仕組み。gitleaksの`generic-api-key`ルールと誤検知対応
 
 ### 個人情報・リポジトリ運用
 
