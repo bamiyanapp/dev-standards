@@ -22,7 +22,11 @@ on:
         type: string
         default: "package-lock.json"
       direct_only:
-        description: "trueの場合、直接依存のみを対象とする（既定）。transitive依存まで含めると、呼び出し元が自力でアップグレードできないパッケージまで通知してしまうため"
+        description: >-
+          trueの場合、直接依存のみを対象とする（既定）。falseにすると間接依存も
+          対象に含める。間接依存は呼び出し元が自力でアップグレードできないため、
+          issue #1349でトラッキングissueの表示を直接/間接で区別するようにした
+          （間接依存のみを理由に通知が積み上がる懸念への対応）
         type: boolean
         default: true
       tracking_issue_title:
@@ -92,6 +96,11 @@ jobs:
       # reusable-dependency-full-scan.yml・reusable-runtime-version-scan.ymlと
       # 完全に同一のため、共通action（tracking-issue-sync）へ切り出した。
       # 本文組み立て（表の列・文言）のみ、ここで呼び出し元として行う
+      #
+      # issue #1349: direct_only=falseの場合、間接依存（direct: false）も
+      # 一覧に含まれる。間接依存は呼び出し元が直接アップグレードできないため、
+      # 対応候補を分けて示す（親パッケージ経由の更新待ちであることを明示し、
+      # 「対応できないのに通知された」という負担感を減らす）
       - name: Issue本文を組み立てる
         id: body
         if: steps.scan.outputs.has_deprecated == 'true'
@@ -100,16 +109,25 @@ jobs:
           script: |
             const fs = require("fs");
             const deprecated = JSON.parse(fs.readFileSync("/tmp/deprecation-scan.json", "utf-8"));
-            const rows = deprecated.map((d) => `| ${d.name} | ${d.version} | ${d.deprecated} |`).join("\n");
+            const rows = deprecated
+              .map((d) => `| ${d.name} | ${d.version} | ${d.direct ? "直接" : "間接"} | ${d.deprecated} |`)
+              .join("\n");
+            const hasIndirect = deprecated.some((d) => !d.direct);
             const body = [
               "npm registry上でdeprecated（非推奨）と判定されている依存パッケージが見つかりました。",
               "後継バージョンが存在しない（Renovate等が更新PRを作らない）ため、通常のRisk Summaryでは検知できません。",
               "",
-              "| パッケージ | バージョン | deprecatedメッセージ |",
-              "|---|---|---|",
+              "| パッケージ | バージョン | 直接/間接 | deprecatedメッセージ |",
+              "|---|---|---|---|",
               rows,
               "",
-              "対応候補: 後継パッケージへの移行、または許容できるリスクとして明示的にクローズする。",
+              "対応候補（直接依存）: 後継パッケージへの移行、または許容できるリスクとして明示的にクローズする。",
+              ...(hasIndirect
+                ? [
+                    "対応候補（間接依存）: 自力でアップグレードできないため、まず親パッケージ側の対応状況を確認する。" +
+                      "親パッケージの更新待ちで良いと判断できれば、その旨を明記してクローズする。",
+                  ]
+                : []),
               "",
               `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
             ].join("\n");

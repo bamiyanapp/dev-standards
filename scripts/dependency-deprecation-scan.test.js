@@ -26,10 +26,10 @@ test("scanForDeprecated: 直接依存のdeprecatedパッケージのみを返す
   };
   const fetchJsonImpl = async (url) => fixtures[url.split("/").pop()];
   const result = await scanForDeprecated(lockJson, { fetchJsonImpl });
-  assert.deepEqual(result, [{ name: "aws-sdk", version: "2.1691.0", deprecated: "maintenance mode" }]);
+  assert.deepEqual(result, [{ name: "aws-sdk", version: "2.1691.0", deprecated: "maintenance mode", direct: true }]);
 });
 
-test("scanForDeprecated: directOnly=falseの場合は間接依存も対象にする", async () => {
+test("scanForDeprecated: directOnly=falseの場合は間接依存も対象にし、direct:falseを付与する", async () => {
   const lockJson = buildLock({
     rootDependencies: {},
     packages: { "node_modules/transitive-only": { version: "1.0.0" } },
@@ -39,7 +39,26 @@ test("scanForDeprecated: directOnly=falseの場合は間接依存も対象にす
   };
   const fetchJsonImpl = async (url) => fixtures[url.split("/").pop()];
   const result = await scanForDeprecated(lockJson, { directOnly: false, fetchJsonImpl });
-  assert.deepEqual(result, [{ name: "transitive-only", version: "1.0.0", deprecated: "use foo instead" }]);
+  assert.deepEqual(result, [{ name: "transitive-only", version: "1.0.0", deprecated: "use foo instead", direct: false }]);
+});
+
+test("scanForDeprecated: directOnly=falseでも直接依存にはdirect:trueを付与する", async () => {
+  const lockJson = buildLock({
+    rootDependencies: { "aws-sdk": "^2.1691.0" },
+    packages: {
+      "node_modules/aws-sdk": { version: "2.1691.0" },
+      "node_modules/transitive-only": { version: "1.0.0" },
+    },
+  });
+  const fixtures = {
+    "aws-sdk": { versions: { "2.1691.0": { deprecated: "maintenance mode" } } },
+    "transitive-only": { versions: { "1.0.0": { deprecated: "use foo instead" } } },
+  };
+  const fetchJsonImpl = async (url) => fixtures[url.split("/").pop()];
+  const result = await scanForDeprecated(lockJson, { directOnly: false, fetchJsonImpl });
+  assert.equal(result.length, 2);
+  assert.ok(result.some((r) => r.name === "aws-sdk" && r.direct === true));
+  assert.ok(result.some((r) => r.name === "transitive-only" && r.direct === false));
 });
 
 test("scanForDeprecated: deprecatedでないパッケージは結果に含めない", async () => {
