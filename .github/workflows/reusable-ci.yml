@@ -2923,7 +2923,14 @@ jobs:
     # needsコンテキスト経由でAPI呼び出し無しに取得するため、これらをneedsに含める
     # （issue #646 Task E）。これによりこのjobの実行はCI全体の完了を待つ形になるが、
     # Risk Summaryに実際のテスト結果を含めるには元々必要な順序であり、問題にはならない
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, architecture-check, duplication-check]
+    #
+    # issue #1345: 以前はここに一部のjob（commitlint・frontend-test・backend-test・
+    # package-test・frontend-e2e-test・architecture-check・duplication-check）のみを
+    # 含めていたが、merge jobより狭い範囲だったため、standards-check・secret-scan・
+    # lighthouse-ci等の完了前に「自動マージの対象です」という判定を投稿してしまう
+    # ことがあった。merge job（このファイル内）のneedsからdependency-risk-summary
+    # 自身を除いた全件と一致させ、CI全体の完了後にのみ投稿されるようにする
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
     if: |
       always() &&
       inputs.enable_dependency_risk_summary &&
