@@ -21,13 +21,15 @@ ESLintレベル（ソースコードのAST解析）でハードコードされ�
 サンドボックス環境でgitleaks CLI（v8.30.1）を直接実行し、既知形式に該当しない変数名でも検知されることを確認した。
 
 ```js
-// 検知対象ファイル（例）
-const AWS_SECRET_ACCESS_KEY = "pXE4GmhXFU80h06cAO/eTrDqrHiLo2ppR2KPFvBE"; // generic-api-keyで検知
-const apiSecretKey = "vnVG8HkERJHL2ZtvDs4kS7r2OJP5PlmnEXO1PhTm"; // generic-api-keyで検知
-const githubToken = "ghp_UB3O1a6QlbtdSu8uiX5K4Kykfoo0wRHJqgKw"; // github-pat（既知形式）で検知
+// 検知対象ファイル（例、XはランダムなASCII英数字・記号に置き換えたプレースホルダー）
+const AWS_SECRET_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; // generic-api-keyで検知
+const apiSecretKey = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; // generic-api-keyで検知
+const githubToken = "ghp_" + "X".repeat(36); // github-pat（既知形式）で検知
 ```
 
-再現手順: 上記のようなランダム文字列を含むファイルをコミットし、`gitleaks detect --source . --redact -v`を実行する。`generic-api-key`・`github-pat`等のRuleIDとともに検知結果が出力されることを確認できる。
+本書自体がgitleaksのスキャン対象になる。実際にランダム生成した文字列をそのまま埋め込むと、`generic-api-key`・`github-pat`ルールに本当に検知されCIが落ちる（実際に起きた）。上記はプレースホルダーに置き換えてある。
+
+再現検証時は、ローカル環境で実際にランダムな文字列を生成したファイルを作る。それをコミットしてから`gitleaks detect --source . --redact -v`を実行する（dev-standardsリポジトリへはコミットしないこと）。`generic-api-key`・`github-pat`等のRuleIDとともに検知結果が出力されることを確認できる。
 
 `AKIA`で始まるAWSアクセスキーID等、公式ドキュメントでよく使われる既知のサンプル値（例: `AKIAIOSFODNN7EXAMPLE`）がある。これらはgitleaksの標準allowlistにより誤検知として除外される。実機検証では、サンプル値ではなくランダム生成した文字列を使う必要がある。
 
