@@ -1,3 +1,10 @@
+## [2.121.2](https://github.com/bamiyanapp/dev-standards/compare/v2.121.1...v2.121.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* Risk Summaryが実行ごとに変動したPRの自動クローズを見送る ([#1348](https://github.com/bamiyanapp/dev-standards/issues/1348)) ([ea8ccaa](https://github.com/bamiyanapp/dev-standards/commit/ea8ccaadc52d81678343074d916145aebc7c615a)), closes [#2138](https://github.com/bamiyanapp/dev-standards/issues/2138) [#1344](https://github.com/bamiyanapp/dev-standards/issues/1344)
+
 ## [2.121.1](https://github.com/bamiyanapp/dev-standards/compare/v2.121.0...v2.121.1) (2026-11-12)
 
 
