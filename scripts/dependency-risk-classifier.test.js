@@ -50,6 +50,64 @@ test("classifyRisk: update type「other」（ダウングレード等）もhigh"
   assert.equal(result.level, "high");
 });
 
+// issue #1351: devDependencyのみのmajor update/other updateはHighへ昇格しない
+test("classifyRisk: changesが全てproduction:falseのmajor updateはlow", () => {
+  const result = classifyRisk(
+    baseInput({
+      updateSummary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 1, minor: 0, patch: 0, other: 0 } },
+      changes: [{ name: "stylelint", oldVersion: "17.0.0", newVersion: "18.0.0", updateType: "major", direct: true, production: false }],
+    }),
+  );
+  assert.equal(result.level, "low");
+  assert.ok(result.reasons.some((r) => r.includes("devDependency")));
+});
+
+test("classifyRisk: changesにproduction:trueのmajor updateが1件でも混在する場合はhigh", () => {
+  const result = classifyRisk(
+    baseInput({
+      updateSummary: { total: 2, direct: 2, transitive: 0, byUpdateType: { major: 2, minor: 0, patch: 0, other: 0 } },
+      changes: [
+        { name: "stylelint", oldVersion: "17.0.0", newVersion: "18.0.0", updateType: "major", direct: true, production: false },
+        { name: "react", oldVersion: "18.0.0", newVersion: "19.0.0", updateType: "major", direct: true, production: true },
+      ],
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.ok(result.reasons.some((r) => r.includes("major update") && !r.includes("devDependency")));
+});
+
+test("classifyRisk: changesがother updateでも全てproduction:falseならlow", () => {
+  const result = classifyRisk(
+    baseInput({
+      updateSummary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 0, minor: 0, patch: 0, other: 1 } },
+      changes: [{ name: "eslint-plugin-import-x", oldVersion: "4.18.1", newVersion: "4.17.1", updateType: "other", direct: true, production: false }],
+    }),
+  );
+  assert.equal(result.level, "low");
+});
+
+test("classifyRisk: changes未指定（null）の場合はupdateSummaryのみで従来通り判定する（後方互換）", () => {
+  const result = classifyRisk(
+    baseInput({ updateSummary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 1, minor: 0, patch: 0, other: 0 } } }),
+  );
+  assert.equal(result.level, "high");
+});
+
+test("classifyRisk: devDependencyのみのmajor updateでも、CVE/KEV等の他の理由があれば引き続きhigh", () => {
+  const result = classifyRisk(
+    baseInput({
+      updateSummary: { total: 1, direct: 1, transitive: 0, byUpdateType: { major: 1, minor: 0, patch: 0, other: 0 } },
+      changes: [{ name: "stylelint", oldVersion: "17.0.0", newVersion: "18.0.0", updateType: "major", direct: true, production: false }],
+      vulnerabilityInfo: [
+        { name: "stylelint", version: "18.0.0", vulnerabilities: [{ id: "GHSA-x", cveIds: ["CVE-2024-1"], severityRating: "HIGH", cvssVectors: [] }] },
+      ],
+      exploitInfo: [],
+    }),
+  );
+  assert.equal(result.level, "high");
+  assert.ok(result.reasons.some((r) => r.includes("CVE")));
+});
+
 test("classifyRisk: Critical/High severityのCVEが残っている場合はhigh", () => {
   const result = classifyRisk(
     baseInput({
