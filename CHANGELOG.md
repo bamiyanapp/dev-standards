@@ -1,3 +1,10 @@
+# [2.122.0](https://github.com/bamiyanapp/dev-standards/compare/v2.121.2...v2.122.0) (2026-11-12)
+
+
+### Features
+
+* 依存deprecatedスキャンが間接依存も対象にできるようにする ([#1350](https://github.com/bamiyanapp/dev-standards/issues/1350)) ([bce41bf](https://github.com/bamiyanapp/dev-standards/commit/bce41bfd17eb6a1a53f6117730d872696f2b5f8c)), closes [#1349](https://github.com/bamiyanapp/dev-standards/issues/1349)
+
 ## [2.121.2](https://github.com/bamiyanapp/dev-standards/compare/v2.121.1...v2.121.2) (2026-11-12)
 
 
