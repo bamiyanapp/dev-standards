@@ -183,7 +183,7 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 
 | 条件 | 昇格先 | 補足 |
 |---|---|---|
-| major update、またはバージョン比較不能な更新（ダウングレード等）を含む | 🔴 High | `update type`が`other`の場合も含む |
+| major update、またはバージョン比較不能な更新（ダウングレード等）を含む | 🔴 High | `update type`が`other`の場合も含む。ただし変更が全てdevDependency（`production: false`、下記参照）の場合は昇格しない（[#1351](https://github.com/bamiyanapp/dev-standards/issues/1351)） |
 | Critical/High severityのCVEが残っている | 🔴 High | |
 | KEV（Known Exploited Vulnerability）に該当する | 🔴 High | |
 | 既知flakyパターンで説明できないCI失敗がある | 🔴 High | |
@@ -196,6 +196,14 @@ scorecard CLIを自前で実行する方式ではなく、認証不要の公開�
 | 上記いずれにも該当しない | 🟢 Low | |
 
 `vulnerability_only_high`は、最終判定がHighかつmajor update・説明不能なCI失敗・Supply Chain異常のいずれにも該当しない場合に限り`true`になる。すなわち、CVE/KEVの残存のみが理由の場合である（ブラスト半径はMedium止まりのためHigh到達の理由にはならない）。
+
+### devDependency（lint/test/buildツール等）のmajor updateの扱い（[#1351](https://github.com/bamiyanapp/dev-standards/issues/1351)）
+
+karuta#2136（`stylelint` 17→18）・karuta#2138（`eslint-plugin-import-x`のrangeダウングレード扱い）を考える。いずれもmajor update・バージョン比較不能な更新を理由にHigh判定・自動クローズされた。実際にはテスト結果が全てsuccessだった。CIが通ること自体で安全性を確認できていた。breaking changeの影響は主にビルドエラー・lintエラーとしてCIに現れる。このため、production依存のmajor updateとは危険度の性質が異なる。
+
+このため、`dependency-update-info.js`の`changes`（`production`フィールド付き、「update type・直接/間接判定」参照）を使う。major update・バージョン比較不能な更新に該当する変更を考える。これが**全て**`production: false`（devDependency経由のみで到達し、本番コードに含まれないパッケージ）の場合は、この理由によるHighへの昇格は行わない。production依存の変更が1件でも混在する場合は、安全側に倒して従来通りHighのままとする。
+
+本緩和の対象はmajor update判定のみである。CVE/KEV・Supply Chainチェック（install script異常・メンテナ変化）等、他のエスカレーション条件はdevDependencyであっても引き続きそのまま適用される。`classifyRisk()`が`changes`を受け取らない（`null`）場合を考える。既存の呼び出し元との後方互換性のため、この場合は従来通り`updateSummary`のみで判定する。
 
 以前は直接依存の更新件数が閾値（既定2件）以上の場合も「変更の複雑さ」を理由にMediumへ昇格させていたが、この条件は削除した（issue #1159）。判定結果マトリクス上、適用リスクLow/Medium行はいずれも維持リスクを問わず常に「自動適用」である。このため、この条件はマージを止める実効性を持たなかった。件数自体は破壊的変更・脆弱性・サプライチェーン異常のいずれとも相関しない。また`lockFileMaintenance`等の正常な運用でも頻繁に発生する。このため、本来注目すべき理由（major update・CVE/KEV等）をreason欄で埋もれさせるノイズになっていた。
 

@@ -26,6 +26,10 @@ function escalate(current, next) {
 
 // input:
 //   updateSummary: dependency-update-info.jsのsummary（{total, direct, transitive, byUpdateType}）
+//   changes: dependency-update-info.jsのchanges（[{name, updateType, production, ...}]）。
+//     省略時（null）はproductionフィールドが無い前提で、updateSummaryのみによる
+//     従来の判定にフォールバックする（issue #1351。テストコード等、既存の呼び出し元
+//     との後方互換性のため）
 //   vulnerabilityInfo, exploitInfo: dependency-vulnerability-info.js/dependency-exploit-info.jsの出力。
 //     securityDataAvailableがfalseの場合は無視される（空配列扱い）
 //   securityDataAvailable: OSV.dev等への問い合わせが成功したか（falseの場合、既知の脆弱性が
@@ -34,6 +38,7 @@ function escalate(current, next) {
 //   fanOutCount: consumer-repositories.jsの出力（dev-standards自体の更新でない場合はnull）
 function classifyRisk({
   updateSummary,
+  changes = null,
   vulnerabilityInfo = [],
   exploitInfo = [],
   securityDataAvailable,
@@ -47,10 +52,27 @@ function classifyRisk({
   let level = "low";
   const reasons = [];
 
-  const isUnclassifiable = (updateSummary.byUpdateType.major ?? 0) > 0 || (updateSummary.byUpdateType.other ?? 0) > 0;
+  // issue #1351: major update・バージョン比較不能な更新であっても、変更が全て
+  // devDependency（production: false、lint/test/buildツール等でランタイムに
+  // 含まれない）のみの場合はHighへ昇格しない。stylelint・eslint-plugin-import-x等の
+  // breaking changeは、CIが通ること自体で安全性を確認できるため、人間の確認を
+  // 必須にする理由が無い（bamiyanapp/karuta#2136・#2138で実際に過剰ブロックが発生した）。
+  // production依存が1件でも混在する場合は、安全側に倒して従来通りの判定を維持する。
+  // CVE/KEV・Supply Chain異常（install script・メンテナ変化）等の他のHigh判定条件は、
+  // devDependencyであっても引き続き適用される（下記の各エスカレーションは
+  // production/changesの影響を受けない）
+  const majorOrOtherChanges = changes != null ? changes.filter((c) => c.updateType === "major" || c.updateType === "other") : null;
+  const isUnclassifiable =
+    majorOrOtherChanges != null
+      ? majorOrOtherChanges.some((c) => c.production !== false)
+      : (updateSummary.byUpdateType.major ?? 0) > 0 || (updateSummary.byUpdateType.other ?? 0) > 0;
   if (isUnclassifiable) {
     level = escalate(level, "high");
     reasons.push("major update、またはバージョン比較不能な更新（ダウングレード等）が含まれています");
+  } else if (majorOrOtherChanges != null && majorOrOtherChanges.length > 0) {
+    reasons.push(
+      "major update、またはバージョン比較不能な更新（ダウングレード等）が含まれていますが、全てdevDependency（本番コードに含まれない）のため自動マージを止めていません",
+    );
   }
 
   const securityRows = securityDataAvailable ? buildSecurityRows(vulnerabilityInfo, exploitInfo) : [];
@@ -193,7 +215,7 @@ function main() {
     return;
   }
 
-  const { summary } = JSON.parse(fs.readFileSync(updateInfoPath, "utf-8"));
+  const { summary, changes } = JSON.parse(fs.readFileSync(updateInfoPath, "utf-8"));
   const vulnerabilityInfo = readJsonFileIfExists(vulnerabilityInfoPath);
   const exploitInfo = readJsonFileIfExists(exploitInfoPath);
   const securityDataAvailable = vulnerabilityInfo != null && exploitInfo != null;
@@ -203,6 +225,7 @@ function main() {
 
   const result = classifyRisk({
     updateSummary: summary,
+    changes: changes ?? null,
     vulnerabilityInfo: vulnerabilityInfo ?? [],
     exploitInfo: exploitInfo ?? [],
     securityDataAvailable,
