@@ -1,3 +1,10 @@
+## [2.121.1](https://github.com/bamiyanapp/dev-standards/compare/v2.121.0...v2.121.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* 依存更新Risk SummaryをCI全ジョブ完了後に投稿する ([#1346](https://github.com/bamiyanapp/dev-standards/issues/1346)) ([b9c13e7](https://github.com/bamiyanapp/dev-standards/commit/b9c13e7f28763c8f3298ef6037f8945785586829)), closes [#1345](https://github.com/bamiyanapp/dev-standards/issues/1345)
+
 # [2.121.0](https://github.com/bamiyanapp/dev-standards/compare/v2.120.2...v2.121.0) (2026-11-08)
 
 
