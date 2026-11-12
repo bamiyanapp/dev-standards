@@ -30,6 +30,7 @@
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス
 - [`repository-contents.md`](docs/repository-contents.md): このリポジトリに含まれるファイル・ディレクトリの一覧
 - [`documentation-format-conventions.md`](docs/documentation-format-conventions.md): ドキュメントの表現形式（文章・表・mermaid図）の選び方
+- [`product-readme-structure-guideline.md`](docs/product-readme-structure-guideline.md): 参照側リポジトリ（アプリ本体）のトップレベルREADME.mdが備えるべき記載観点（必須項目・該当時のみ記載する項目）
 
 ### フロントエンド
 
