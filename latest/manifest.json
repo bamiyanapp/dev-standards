@@ -80,29 +80,29 @@
     "fileName": "serverless-static-site-pattern-2.png"
   },
   {
-    "sourceFile": "docs/dependency-risk-judgment.md",
+    "sourceFile": "docs/dependency-risk-judgment-renovate-logic.md",
     "index": 1,
-    "fileName": "dependency-risk-judgment-1.png"
+    "fileName": "dependency-risk-judgment-renovate-logic-1.png"
   },
   {
-    "sourceFile": "docs/dependency-risk-judgment.md",
+    "sourceFile": "docs/dependency-risk-judgment-renovate-logic.md",
     "index": 2,
-    "fileName": "dependency-risk-judgment-2.png"
+    "fileName": "dependency-risk-judgment-renovate-logic-2.png"
   },
   {
-    "sourceFile": "docs/dependency-risk-judgment.md",
+    "sourceFile": "docs/dependency-risk-judgment-renovate-logic.md",
     "index": 3,
-    "fileName": "dependency-risk-judgment-3.png"
+    "fileName": "dependency-risk-judgment-renovate-logic-3.png"
   },
   {
-    "sourceFile": "docs/dependency-risk-judgment.md",
+    "sourceFile": "docs/dependency-risk-judgment-renovate-logic.md",
     "index": 4,
-    "fileName": "dependency-risk-judgment-4.png"
+    "fileName": "dependency-risk-judgment-renovate-logic-4.png"
   },
   {
-    "sourceFile": "docs/dependency-risk-judgment.md",
-    "index": 5,
-    "fileName": "dependency-risk-judgment-5.png"
+    "sourceFile": "docs/dependency-risk-judgment-periodic-scans.md",
+    "index": 1,
+    "fileName": "dependency-risk-judgment-periodic-scans.png"
   },
   {
     "sourceFile": "docs/async-job-polling-pattern.md",
