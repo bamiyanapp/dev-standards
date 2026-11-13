@@ -28,7 +28,7 @@ flowchartの方向は、原則`TD`（上から下）で統一する（issue #107
 
 ノードが5〜6個を超える一本道の`flowchart TD`は、縦に長くなりすぎることがあるため、以下のいずれかで縦横比を整える。
 
-- 関連するノードを`subgraph`でグループ化し、一本の長い鎖を複数の短い塊に分割する（実例: [`dependency-risk-judgment.md`](dependency-risk-judgment.md)の判定フロー全体図、[`ops-monitoring-pattern.md`](ops-monitoring-pattern.md)の監視フロー図）。判断基準は縦横比であり、`TD`方向を維持したまま`subgraph`で縦の長さを抑える。単に方向を変える（`TD`→`LR`）ことは縦横比の解決策として採用しない（上記のとおり`TD`統一を優先するため）
+- 関連するノードを`subgraph`でグループ化し、一本の長い鎖を複数の短い塊に分割する（実例: [`dependency-risk-judgment-renovate-logic.md`](dependency-risk-judgment-renovate-logic.md)の判定フロー全体図、[`ops-monitoring-pattern.md`](ops-monitoring-pattern.md)の監視フロー図）。判断基準は縦横比であり、`TD`方向を維持したまま`subgraph`で縦の長さを抑える。単に方向を変える（`TD`→`LR`）ことは縦横比の解決策として採用しない（上記のとおり`TD`統一を優先するため）
 - ノード数自体が多く、`subgraph`分割をしても縦横どちらの辺も長くなってしまう場合は、1つの図に収めようとせず、関心事ごとに複数の図へ分割する
 
 いずれの対処でも、`@mermaid-js/mermaid-cli`でローカルレンダリングし、出力画像の縦横比が1:4〜4:1程度に収まることを確認してから採用する。
