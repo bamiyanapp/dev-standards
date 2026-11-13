@@ -41,7 +41,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-1.png?bdde62555eadd10c62518f040f8dc44814084578)
+![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-1.png?546fec4e0ee220ec535264374fb33877250372fe)
 
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
@@ -109,7 +109,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-2.png?bdde62555eadd10c62518f040f8dc44814084578)
+![依存関係チェーンの例 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-2.png?546fec4e0ee220ec535264374fb33877250372fe)
 
 上記の依存関係が分かっていれば、`library C`に新規CVEが公表された場合、`library B`・`library A`経由で`Application`まで影響が及ぶことを即座に追跡できる。
 
@@ -134,7 +134,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-3.png?bdde62555eadd10c62518f040f8dc44814084578)
+![Risk Engineとの接続 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-3.png?546fec4e0ee220ec535264374fb33877250372fe)
 
 ## deprecated（サポート終了）検知（[#945](https://github.com/bamiyanapp/dev-standards/issues/945)）
 
@@ -263,7 +263,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![merge gate判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-4.png?bdde62555eadd10c62518f040f8dc44814084578)
+![merge gate判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-renovate-logic-4.png?546fec4e0ee220ec535264374fb33877250372fe)
 
 - `vulnerability_only_high`による救済は、放置（維持リスクHigh）の方が危険な場合に限る（[#690](https://github.com/bamiyanapp/dev-standards/issues/690)）。新旧どちらを選ぶかという比較が成り立たないmajor update・CI失敗・supply chain異常が理由のHighは対象外（[#700](https://github.com/bamiyanapp/dev-standards/issues/700)）。ブラスト半径はMedium止まりのためHighの理由にはならない（[#1040](https://github.com/bamiyanapp/dev-standards/issues/1040)）
 - `enable_dependency_risk_summary`が`false`の場合はrisk_level・stale_risk_level自体が生成されないため、常に従来どおりの動作になる
