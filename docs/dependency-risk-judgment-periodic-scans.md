@@ -40,7 +40,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![3つの定期スキャン系セーフティネットの関係 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-periodic-scans-1.png)
+![3つの定期スキャン系セーフティネットの関係 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-periodic-scans.png)
 
 `lockFileMaintenance`は、あくまで親パッケージのバージョン範囲内で解決可能な更新のみをカバーする。親パッケージ自体が古すぎて、より新しい間接依存を許容しない（range外にある）ケースは`lockFileMaintenance`だけでは検知できない。この残存ギャップを`reusable-dependency-full-scan.yml`が補う。
 
