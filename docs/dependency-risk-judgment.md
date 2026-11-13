@@ -43,6 +43,30 @@ flowchart TD
 
 ![依存更新Risk判定フロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/dependency-risk-judgment-1.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
 
+## 外部データソース一覧
+
+本仕組みが参照する外部APIを一覧にする。個別の使われ方は、各データソースに対応する後続の節を参照する。いずれも認証不要の公開API・公開データセットであり、APIキー等の秘密情報は使わない。
+
+| データソース（URL） | 取得内容 | 使用スクリプト |
+|---|---|---|
+| `api.osv.dev/v1`（OSV.dev） | CVE/CVSSの既知の脆弱性情報（新旧バージョン両方） | `dependency-vulnerability-info.js` |
+| `www.cisa.gov/.../known_exploited_vulnerabilities.json`（CISA KEVカタログ） | 実際に悪用が確認された脆弱性（Known Exploited Vulnerability）かどうか | `dependency-exploit-info.js` |
+| `api.first.org/data/v1/epss`（EPSS API） | 脆弱性が実際に悪用される確率スコア（EPSS） | `dependency-exploit-info.js` |
+| `registry.npmjs.org/{name}`（npm registry） | `deprecated`フィールド（サポート終了検知） | `dependency-deprecation-info.js`・`dependency-deprecation-scan.js` |
+| `registry.npmjs.org/{name}`（npm registry） | `time.modified`（最終リリース日、放置検知） | `dependency-staleness-info.js` |
+| `registry.npmjs.org/{name}`（npm registry） | `_npmUser`（公開者情報、メンテナ変更・Trusted Publishing検知） | `dependency-maintainer-info.js` |
+| `registry.npmjs.org/{name}`（npm registry） | 週次の全体スキャン対象パッケージ情報 | `dependency-full-scan.js` |
+| `api.securityscorecards.dev/projects/github.com/{owner}/{repo}`（OpenSSF Scorecard公開データセットAPI） | パッケージの質的なメンテナンス状態スコア（10点満点） | `dependency-scorecard-info.js` |
+| `nodejs.org/dist/index.json`（Node.js公式リリース一覧） | 稼働中Node.jsバージョンの最新性チェック | `runtime-version-scan.js` |
+| `raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json` | Node.js本体の既知脆弱性データベース | `runtime-version-scan.js` |
+| `raw.githubusercontent.com/bamiyanapp/dev-standards/...`（dev-standards自身のリポジトリ） | dev-standards自身のリリース時点でのRisk判定履歴（重複判定の回避） | `dependency-risk-history-lookup.js` |
+
+一方、以下は外部通信をせず、`package-lock.json`等の既存ファイル内の情報のみで判定する。
+
+- `dependency-package-anomaly-info.js`（新規install script検知）: `package-lock.json`内の`hasInstallScript`フラグ比較のみ
+- `dependency-sbom-summary.js`: SBOM生成自体は別ツール（CI側の`@cyclonedx/cdxgen`等）の出力を要約するのみ
+- `dependency-update-info.js`・`github-actions-update-info.js`: いずれも`package-lock.json`・workflowファイルのdiffのみ
+
 ## Risk Summaryの投稿（`enable_dependency_risk_summary`）
 
 対象は`package-lock.json`・`.github/workflows/*.yml`・`.github/actions/*/action.yml`のいずれかが変更されたPRである。このPRに対し、以下をまとめたRisk Summaryを投稿する。Phase 1は[#646](https://github.com/bamiyanapp/dev-standards/issues/646)、Phase 3は[#648](https://github.com/bamiyanapp/dev-standards/issues/648)を参照。目的は、Renovate等が作成した依存更新PRのリスク判断を補助する情報を用意することである。人間が調査を始める前にこの情報を提示する。各ステップは`continue-on-error: true`のため、このjobの失敗が`merge` jobをブロックすることはない。
