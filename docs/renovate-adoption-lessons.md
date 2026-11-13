@@ -88,4 +88,4 @@ Renovateには脆弱性アラート専用の仕組み（`vulnerabilityAlerts`/`o
 
 ## 関連ドキュメント
 
-- [`dependency-risk-judgment.md`](dependency-risk-judgment.md): 依存更新PRの適用リスク・維持リスク判定とmerge gate連携（本ドキュメントが扱う「CIが落ちる」問題とは別観点の、「危険な更新を自動マージさせない」ための仕組み）
+- [`dependency-risk-judgment-renovate-logic.md`](dependency-risk-judgment-renovate-logic.md): 依存更新PRの適用リスク・維持リスク判定とmerge gate連携（本ドキュメントが扱う「CIが落ちる」問題とは別観点の、「危険な更新を自動マージさせない」ための仕組み）

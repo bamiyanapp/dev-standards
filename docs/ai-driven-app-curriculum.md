@@ -170,7 +170,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md) |
 | GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md) |
 | 依存更新の自動化（Renovate） | リポジトリルートに`renovate.json`があり、`git-submodules`マネージャーが明示的に有効化されている（Renovateのデフォルトでは無効）。GitHub Appのインストール先はOrganization（個人アカウントだと効かない）。Mendダッシュボードの動作モードが「自動化されたPR」になっており、依存更新PRが自動的に作成される | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「dev-standards submoduleの自動更新（Renovate）について」 |
-| 依存更新の運用・SBOM | 上記Renovate等が作成した依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | [`dependency-risk-judgment.md`](dependency-risk-judgment.md) |
+| 依存更新の運用・SBOM | 上記Renovate等が作成した依存更新PRに対し、`enable_dependency_risk_summary`で適用リスク・維持リスク判定（Risk Summary）およびSBOM（CycloneDX）が投稿される | [`dependency-risk-judgment-renovate-logic.md`](dependency-risk-judgment-renovate-logic.md) |
 | 運用監視 | サイレント障害（Lambdaエラー等）をCloudWatch Alarm等で検知し通知する仕組みがある（バックエンドAPIを持つ場合） | [`ops-monitoring-pattern.md`](ops-monitoring-pattern.md) |
 | フロントエンドエラー報告 | ErrorBoundaryが捕捉した例外をサーバーサイドへロギングする仕組みがある（採用する場合） | [`client-error-reporting-pattern.md`](client-error-reporting-pattern.md) |
 | UI規約 | バージョン・更新日時の表示等、横断的なUI規約に従っている（採用する場合） | [`frontend-ui-conventions.md`](frontend-ui-conventions.md) |

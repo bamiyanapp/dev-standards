@@ -71,7 +71,9 @@
 ### CI/CD・運用
 
 - [`cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md): `reusable-ci.yml` / `reusable-cd.yml`の仕様
-- [`dependency-risk-judgment.md`](docs/dependency-risk-judgment.md): 依存更新PRの適用リスク・維持リスク判定（issue #645）とmerge gate連携のフロー・詳細
+- [`dependency-risk-judgment.md`](docs/dependency-risk-judgment.md): 依存更新Risk判定（issue #645）の入口。外部データソース一覧
+- [`dependency-risk-judgment-renovate-logic.md`](docs/dependency-risk-judgment-renovate-logic.md): PR単位の適用リスク・維持リスク判定とmerge gate連携のフロー・詳細
+- [`dependency-risk-judgment-periodic-scans.md`](docs/dependency-risk-judgment-periodic-scans.md): PRの作成を待たない定期スキャン（推移的依存のセーフティネット等）
 - [`e2e-coverage-pattern.md`](docs/e2e-coverage-pattern.md): PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
 - [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
