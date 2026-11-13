@@ -1,3 +1,10 @@
+## [2.123.1](https://github.com/bamiyanapp/dev-standards/compare/v2.123.0...v2.123.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* periodic-scans.mdのmermaid画像リンクの連番を削除する ([#1359](https://github.com/bamiyanapp/dev-standards/issues/1359)) ([1504411](https://github.com/bamiyanapp/dev-standards/commit/1504411d5257d491ef8dca7bb15703221bc1f5b3))
+
 # [2.123.0](https://github.com/bamiyanapp/dev-standards/compare/v2.122.0...v2.123.0) (2026-11-12)
 
 
