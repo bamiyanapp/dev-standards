@@ -36,8 +36,13 @@ export default defineConfig({
           ['console-summary'],
         ],
         // ビルド成果物（自プロダクトのオリジン配下のみ）を対象にする。CDNやAPIへの
-        // リクエスト等、対象外のエントリまでレポートに含めないようentryFilterで絞る
-        entryFilter: (entry) => entry.url.includes('/<リポジトリ名>/'),
+        // リクエスト等、対象外のエントリまでレポートに含めないようentryFilterで絞る。
+        // includes()ではなくpathnameの先頭一致（startsWith）を使うこと。例えば
+        // base: '/'のアプリでentry.url.includes('/assets/')のような短い文字列判定に
+        // すると、同一オリジン上の別アプリの絶対パス（/other-app/assets/foo.js等）を
+        // 部分文字列としてマッチしてしまう。1リポジトリに複数の独立したSPAを持つ構成
+        // （下記「複数アプリ構成の場合」参照）で実際に発生した
+        entryFilter: (entry) => new URL(entry.url).pathname.startsWith('/<リポジトリ名>/'),
         // node_modules（依存パッケージのソース）を除外し、自プロダクトのsrc/配下のみを
         // 対象にする。省略するとnode_modules配下の大量のファイルがレポートに混入する
         sourceFilter: {
@@ -114,6 +119,47 @@ cat coverage/coverage-summary.json   # totalと各src/*.jsxファイルのpctが
 
 `node_modules/**`のエントリが混入している場合は`sourceFilter`の設定を見直す。ソースファイル単位のエントリ（`src/components/Foo.jsx`等）が出てこない場合を考える。ビルド後のバンドルファイル単位（`assets/index-xxxxx.js`）しか出てこない場合である。その場合はソースマップが有効になっているか確認する。
 
+## 複数アプリ構成（1リポジトリに複数の独立したSPA）の場合
+
+examinationのように、1リポジトリに複数の独立したVite SPAを持つ構成がある。全アプリが同一の本番ドメイン上で動く場合、`entryFilter`を「リポジトリ名」単位ではなく**アプリごとの`base`パス**単位で絞る必要がある。
+
+```js
+import { defineConfig, devices } from '@playwright/test';
+
+export function buildPlaywrightConfig({ defineConfig, devices, reportName, basePath }) {
+  return defineConfig({
+    // ...
+    reporter: [
+      ['html'],
+      ['monocart-reporter', {
+        name: reportName,
+        coverage: {
+          outputDir: './coverage',
+          reports: [['json-summary'], ['console-summary']],
+          // 自アプリの`vite.config.js`の`build.base`と同じ値をbasePathとして渡す
+          entryFilter: (entry) => new URL(entry.url).pathname.startsWith(`${basePath}assets/`),
+          sourceFilter: { '**/node_modules/**': false, 'src/**': true },
+        },
+      }],
+    ],
+    // ...
+  });
+}
+```
+
+各アプリの呼び出し側（`playwright.config.js`）で、自身の`vite.config.js`と同じ`base`値を渡す。
+
+```js
+export default buildPlaywrightConfig({
+  defineConfig,
+  devices,
+  reportName: 'アプリ名 E2E Report',
+  basePath: '/サブパス/', // vite.config.jsのbaseと同じ値
+});
+```
+
+`basePath`を渡さず全アプリで同じ`entryFilter`（例: `/assets/`のみでの判定）を使うとどうなるか。あるアプリのE2Eテスト実行中に、別アプリのJSが何らかの理由（Service Workerの先読み、ブラウザコンテキストの再利用等）で実行された場合、そのカバレッジまで巻き込まれてしまう。この結果、カバレッジの集計対象（`Total`）が通常時の数十倍に跳ね上がる異常が実際に発生した。examinationで2回再現している（bamiyanapp/examination#687、dev-standards#1360）。
+
 ## 実例
 
-uchi-stock（`bamiyanapp/uchi-stock`、issue #412・PR #413）が本パターンの実装例。
+uchi-stock（`bamiyanapp/uchi-stock`、issue #412・PR #413）が単一アプリ構成の実装例。examination（`bamiyanapp/examination`、issue #687）が複数アプリ構成の実装例。
