@@ -1,3 +1,10 @@
+## [2.123.2](https://github.com/bamiyanapp/dev-standards/compare/v2.123.1...v2.123.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* **docs:** E2Eカバレッジパターンに複数アプリ構成向けの指針を追加する ([#1362](https://github.com/bamiyanapp/dev-standards/issues/1362)) ([31ce95e](https://github.com/bamiyanapp/dev-standards/commit/31ce95e8cbd823b829d504399c9c61829cad9d77)), closes [dev-standards#1360](https://github.com/dev-standards/issues/1360)
+
 ## [2.123.1](https://github.com/bamiyanapp/dev-standards/compare/v2.123.0...v2.123.1) (2026-11-13)
 
 
