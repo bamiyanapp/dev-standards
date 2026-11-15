@@ -85,7 +85,7 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 
 | 名前 | 用途 |
 |---|---|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub ActionsからAWSリソースを操作するIAMユーザーの認証情報 |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub ActionsからAWSリソースを操作するIAMユーザーの認証情報（Organizationで設定済み。参照側での個別登録は不要。[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「共通の環境変数」参照） |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebaseサービスアカウントキー（JSON文字列）。Lambda環境変数として渡す |
 | `VITE_USER_POOL_ID`等 | フロントエンドのFirebase設定値（プロジェクトIDやAPIキー等、Viteの`VITE_`prefix環境変数としてビルド時に埋め込む） |
 

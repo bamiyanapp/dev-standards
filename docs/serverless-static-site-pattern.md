@@ -146,7 +146,7 @@ Lambda@Edgeが処理する動的パス（コールバック・ログアウト・
 
 | 名前 | 用途 |
 |---|---|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub ActionsからAWSリソースを操作するIAMユーザーの認証情報 |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub ActionsからAWSリソースを操作するIAMユーザーの認証情報（Organizationで設定済み。参照側での個別登録は不要。[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「共通の環境変数」参照） |
 | `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Google Cloud ConsoleでCognito連携用に作成したOAuthクライアント |
 
 S3バケット名・Cognitoドメインprefixは全AWSアカウント間・リージョン内でそれぞれグローバルに一意である必要があるため、既定値の重複時に上書きできるVariableとして用意しておく。
