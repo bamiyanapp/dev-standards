@@ -17,6 +17,18 @@ function jsonResponse(origin, statusCode, body, { credentials = false } = {}) {
   };
 }
 
+// CORSヘッダーを付けないJSONレスポンス（dev-standards#1379）。API Gateway（HTTP API）側で
+// CORSを処理する構成や、サーバー間の内部APIでは、Lambda側でAccess-Control-*を付ける必要が
+// 無いため、jsonResponse（originが第1引数）とは別名で提供する。jsonResponseのシグネチャは
+// 既存の参照側（karuta等）が使っているため変えない
+function plainJsonResponse(statusCode, body) {
+  return {
+    statusCode,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+}
+
 function badRequest(origin, message) {
   return jsonResponse(origin, 400, { message });
 }
@@ -33,4 +45,4 @@ function serverError(origin, error, { includeMessage = false } = {}) {
   return jsonResponse(origin, 500, body);
 }
 
-module.exports = { jsonResponse, badRequest, notFound, serverError };
+module.exports = { jsonResponse, plainJsonResponse, badRequest, notFound, serverError };

@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { jsonResponse, badRequest, notFound, serverError } = require("./httpResponse.js");
+const { jsonResponse, plainJsonResponse, badRequest, notFound, serverError } = require("./httpResponse.js");
 
 test("jsonResponse: statusCode・CORSヘッダー・JSON文字列化されたbodyを返す", () => {
   const response = jsonResponse("https://example.com", 200, { ok: true });
@@ -78,4 +78,12 @@ test("serverError: エラーをconsole.errorへログ出力する", () => {
   } finally {
     console.error = originalConsoleError;
   }
+});
+
+test("plainJsonResponse: CORSヘッダー無しでContent-Typeとstatus・JSON bodyを返す", () => {
+  const response = plainJsonResponse(401, { message: "Unauthorized" });
+
+  assert.equal(response.statusCode, 401);
+  assert.deepEqual(response.headers, { "Content-Type": "application/json" });
+  assert.equal(response.body, JSON.stringify({ message: "Unauthorized" }));
 });
