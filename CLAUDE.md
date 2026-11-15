@@ -43,6 +43,7 @@ Claudeは設計・実装・PRのTest plan・完了報告のいずれにおいて
 - Claude自身の実行環境（サンドボックス）のエグレスプロキシ制約で対象（本番ドメイン等）へ直接アクセスできない場合も、安易に人間へ手動確認を依頼しない。[`sandbox-unreachable-investigation`](.claude/skills/sandbox-unreachable-investigation/SKILL.md) Skillに従い、GitHub Actionsの一時workflowでの自己解決を先に検討する
 - E2E等でスクリーンショットによる視覚的な確認が必要な場合、Playwright HTMLレポート（アーティファクトzip）はスマートフォンからの閲覧が事実上困難なため避ける。代わりに`reusable-ci.yml`のE2Eスクリーンショット報告機能を使う。詳細は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)「1. CIワークフロー」を参照。Job Summary・PRコメントへ画像として直接埋め込む
 - Markdownドキュメントの1行が長すぎてスマートフォンでの閲覧（GitHubのdiffビュー・raw表示）が困難な場合、物理行を単純に折り返さない。日本語テキストの途中で改行すると、レンダリング時に改行位置へ不要な半角スペースが挿入されることを実機検証で確認している（issue #442）。読みにくさの実体は冗長な文（1文に複数の因果関係・手順を詰め込んでいる等）であることが多いため、文自体を短く分割・簡潔化して対処する
+- Organizationレベルで設定済みのSecrets（`AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`等）の準備を、ユーザーへ尋ねない・依頼しない。`secrets.<NAME>`で参照する前提で進める。存在や権限の確認は、値を表示しない一時workflowで自己解決する。詳細は[`docs/cicd-pipeline-specification.md`](docs/cicd-pipeline-specification.md)「共通の環境変数」を参照
 - 検証端末はiPhone（iOS Safari）である。iOS SafariにはVibration API等、他のブラウザ・OSには存在するWeb APIが実装されていないことがある。そうしたAPIに依存する機能を設計・実装する際は、フィーチャー検出（`typeof`チェック等）を行う。非対応環境でも例外を投げず正常に動作すること（または対象外として設計上明示すること）を設計時点で考慮する。模範実装として`shared/hooks/useWakeLock.js`（[`docs/shared-ui-components.md`](docs/shared-ui-components.md)参照）がある
 
 # Execution Loop

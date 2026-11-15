@@ -302,6 +302,18 @@ flowchart TD
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
 - `GOOGLE_OAUTH_REFRESH_TOKEN`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
+**Organizationレベルで登録済みのSecretsは、ユーザーへ準備を尋ねない。** 上の一覧にあるSecretsには、AWSの鍵も含まれる。参照側リポジトリでの個別登録は依頼しない。`secrets.<NAME>`で参照する前提で、設計・実装を進める。
+
+`AWS_REGION`はOrganizationレベルでは設定されていない。参照側のIaC（`serverless.yml`等）でリージョンを明示する。
+
+Secretsの有無・鍵の有効性・権限を確認したい場合も、ユーザーへ尋ねない。値を表示しない一時workflowで確かめる。考え方は[`sandbox-unreachable-investigation`](../.claude/skills/sandbox-unreachable-investigation/SKILL.md)と同じである。Claude自身のサンドボックスからは、Secretsの一覧を取得できないためである。確認は、次の要領で行う。
+
+- 存在: `env`へ`${{ secrets.NAME }}`を渡し、空かどうかだけを出力する。値は出力しない
+- 有効性・権限: `aws sts get-caller-identity`の成否と、読み取り系のコマンド（`aws lambda list-functions`等）の成否だけを出力する。アカウントIDやARNは出力しない
+- 確認用のworkflowはPRに含めず、確認後に削除する
 
 **メンテナンス上の注意**: dev-standards側に新しいreusable workflowを追加し、`secrets:`で新たなSecretsを要求する場合、本表も必ず更新すること。本表はdev-standards全体のreusable workflowが要求しうるSecretsの網羅的な一覧である。新規プロダクト導入時にここを確認すれば、呼び出し元での`secrets:`転送漏れを事前に防げる。
 

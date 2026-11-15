@@ -113,7 +113,7 @@ jobs:
 
 | 名前 | 用途 |
 |---|---|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub ActionsからLambda/API Gateway/DynamoDBを操作するIAMユーザーの認証情報（`deploy-serverless`複合actionへ渡す） |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub ActionsからLambda/API Gateway/DynamoDBを操作するIAMユーザーの認証情報（`deploy-serverless`複合actionへ渡す）（Organizationで設定済み。参照側での個別登録は不要。[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「共通の環境変数」参照） |
 | （GitHub Pages用の追加Secretsは不要） | `deploy-github-pages`複合actionは`GITHUB_TOKEN`のみで動作する |
 
 ## 初回セットアップ時によくある失敗
