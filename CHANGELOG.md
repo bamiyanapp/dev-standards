@@ -1,3 +1,10 @@
+# [2.124.0](https://github.com/bamiyanapp/dev-standards/compare/v2.123.2...v2.124.0) (2026-11-15)
+
+
+### Features
+
+* shared Lambda共通ヘルパーと設定生成スクリプトを追加 ([#1379](https://github.com/bamiyanapp/dev-standards/issues/1379)) ([#1387](https://github.com/bamiyanapp/dev-standards/issues/1387)) ([93247b6](https://github.com/bamiyanapp/dev-standards/commit/93247b6c8b61e00d124f930487c78c40ebbef674))
+
 ## [2.123.2](https://github.com/bamiyanapp/dev-standards/compare/v2.123.1...v2.123.2) (2026-11-14)
 
 
