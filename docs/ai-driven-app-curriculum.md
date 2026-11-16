@@ -199,6 +199,8 @@ Claude Code on the webでは、`/model`コマンドでセッションのモデ�
 
 大きな機能追加の後など、プロダクトが一段育った区切りで繰り返し実施する。
 
+Lambda + API Gateway + DynamoDB構成のプロダクトでは、複数のプロダクトで繰り返し見つかった項目を[`serverless-api-hardening-checklist.md`](serverless-api-hardening-checklist.md)にまとめている。棚卸しの依頼時に、このチェックリストとの照合もあわせて指示する。
+
 ### プロンプトの例
 
 ```
@@ -216,3 +218,4 @@ Claude Code on the webでは、`/model`コマンドでセッションのモデ�
 - [`standard-tech-stack.md`](standard-tech-stack.md): 技術構成の索引・新規プロジェクトの立ち上げ手順
 - [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): CI/CDパイプラインの詳細仕様
 - [`code-quality-conventions.md`](code-quality-conventions.md): lintルールの推奨値
+- [`serverless-api-hardening-checklist.md`](serverless-api-hardening-checklist.md): サーバーレスAPIの堅牢化チェックリスト（フェーズ5の棚卸しの観点）
