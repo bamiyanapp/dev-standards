@@ -8,4 +8,4 @@ permissions:
   contents: read
 jobs:
   call:
-    uses: bamiyanapp/dev-standards/.github/workflows/reusable-probe-self-ref.yml@d398702bec70c8545700802c0e00e79fcd9a0815
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-probe-self-ref.yml@45a5565d2d4c684e8aa921319f5ff5983a3d3159
