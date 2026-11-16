@@ -2546,8 +2546,16 @@ jobs:
       # よるpushはActionsの新規workflow実行を誘発しない仕様（無限ループ対策として
       # 組み込まれている既定動作）のため[skip ci]は不要。対象はPR自身のブランチ
       # （mainのような「変更は必ずPR経由」のRulesets保護対象ではない）のため、
-      # BOT_TOKENでのbypassも不要で、job既定のGITHUB_TOKEN（contents: write）で
-      # 足りる
+      # BOT_TOKENでのbypassは不要（push自体はGITHUB_TOKEN（contents: write）で足りる）。
+      # ただし、CIを承認なしで実行させるには、BOT_TOKENでpushするのがよい（下のissue #1395の説明を参照）
+      # issue #1395: GITHUB_TOKENでpushしたコミット（作者・pushした主体がgithub-actions[bot]）に
+      # 対するpull_requestのCIは、GitHubの仕様で「action_required」（人が「Approve and run
+      # workflows」を押すまで実行されない）になり、自動マージが止まる。スマホオンリーの運用では
+      # 毎回の承認操作が負担になるため、BOT_TOKEN（人のアカウントのトークン）が設定されて
+      # いれば、それでpushする。人のアカウントがpushした扱いになり、CIは承認なしで実行される
+      # （同じ理由で、symlinkドリフトの自動修復（上のstandards-checkジョブ）もBOT_TOKENでpushしている）。
+      # コミットの作者名はgithub-actions[bot]のままにする（自動コミットだと分かるように）。
+      # BOT_TOKEN未設定の場合は、従来どおりGITHUB_TOKENでpushする（その場合は承認が必要になりうる）
       - name: バスティングした変更をこのPRブランチへ直接pushする
         if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'pull_request'
         continue-on-error: true
@@ -2557,13 +2565,20 @@ jobs:
           # （actionlintの警告、GitHub Actions Security Hardening推奨事項）
           HEAD_REF: ${{ github.head_ref }}
           FILES: ${{ steps.cache-bust.outputs.files }}
+          REPO: ${{ github.repository }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           set -eu
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -- $FILES
-          git commit -m "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する" -m "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723、#1194）。"
-          git push origin "HEAD:${HEAD_REF}"
+          git commit -m "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する" -m "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723、#1194、#1395）。"
+          if [ -n "${BOT_TOKEN:-}" ]; then
+            git push "https://x-access-token:${BOT_TOKEN}@github.com/${REPO}.git" "HEAD:${HEAD_REF}"
+          else
+            echo "::notice::BOT_TOKENが未設定のため、GITHUB_TOKENでpushします。このコミットのCIは、承認（Approve and run workflows）が必要になることがあります"
+            git push origin "HEAD:${HEAD_REF}"
+          fi
 
       # 以下はpushイベント（base_branchへの直接マージ等、PRを経由しない例外的な
       # ケース）向けのフォールバック。通常のPRフローでは上記のPRブランチへの
