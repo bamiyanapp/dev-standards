@@ -1,3 +1,10 @@
+## [2.124.1](https://github.com/bamiyanapp/dev-standards/compare/v2.124.0...v2.124.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* mermaidキャッシュバスティングのpushをBOT_TOKENで行い、CIの承認待ちを避ける ([#1396](https://github.com/bamiyanapp/dev-standards/issues/1396)) ([b78054f](https://github.com/bamiyanapp/dev-standards/commit/b78054f9ce4711a9ee9e24a4bfe3bb701d38ebf0)), closes [#1316](https://github.com/bamiyanapp/dev-standards/issues/1316) [#1316](https://github.com/bamiyanapp/dev-standards/issues/1316) [#1316](https://github.com/bamiyanapp/dev-standards/issues/1316) [#1316](https://github.com/bamiyanapp/dev-standards/issues/1316) [#1316](https://github.com/bamiyanapp/dev-standards/issues/1316) [#1395](https://github.com/bamiyanapp/dev-standards/issues/1395) [#1395](https://github.com/bamiyanapp/dev-standards/issues/1395)
+
 # [2.124.0](https://github.com/bamiyanapp/dev-standards/compare/v2.123.2...v2.124.0) (2026-11-15)
 
 

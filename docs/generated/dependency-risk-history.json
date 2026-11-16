@@ -1547,5 +1547,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.124.1",
+    "date": "2026-11-16T10:24:46.193Z",
+    "riskLevel": "high",
+    "riskReasons": [
+      "メンテナ（公開者）が変化したパッケージがあります: parse5"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]
