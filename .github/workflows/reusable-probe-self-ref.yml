@@ -1,0 +1,31 @@
+# 一時的な検証用（issue #1316）。検証後に削除する
+name: probe-self-ref (reusable)
+on:
+  workflow_call: {}
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 再利用ワークフロー自身の参照が取れるか確認する
+        env:
+          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          echo "job_workflow_sha=[$JOB_WORKFLOW_SHA]"
+          echo "workflow_sha=[$WORKFLOW_SHA]"
+          echo "workflow_ref=[$WORKFLOW_REF]"
+          echo "sha=[$SHA]"
+      - name: job_workflow_shaでdev-standards自身をチェックアウトできるか確認する
+        if: github.job_workflow_sha != ''
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ github.job_workflow_sha }}
+          path: .dev-standards-actions
+      - name: チェックアウトしたコミットを表示する
+        if: github.job_workflow_sha != ''
+        run: git -C .dev-standards-actions rev-parse HEAD
