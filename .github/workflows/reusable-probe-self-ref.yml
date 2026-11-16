@@ -8,24 +8,15 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: 再利用ワークフロー自身の参照が取れるか確認する
+      - name: run APIのreferenced_workflowsから自身の参照が取れるか確認する（追加権限なし）
         env:
-          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
-          WORKFLOW_SHA: ${{ github.workflow_sha }}
-          WORKFLOW_REF: ${{ github.workflow_ref }}
-          SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "job_workflow_sha=[$JOB_WORKFLOW_SHA]"
-          echo "workflow_sha=[$WORKFLOW_SHA]"
-          echo "workflow_ref=[$WORKFLOW_REF]"
-          echo "sha=[$SHA]"
-      - name: job_workflow_shaでdev-standards自身をチェックアウトできるか確認する
-        if: github.job_workflow_sha != ''
-        uses: actions/checkout@v7
-        with:
-          repository: bamiyanapp/dev-standards
-          ref: ${{ github.job_workflow_sha }}
-          path: .dev-standards-actions
-      - name: チェックアウトしたコミットを表示する
-        if: github.job_workflow_sha != ''
-        run: git -C .dev-standards-actions rev-parse HEAD
+          echo "--- with token (contents: read only)"
+          curl -sS -o with.json -w "status=%{http_code}\n" -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" || true
+          jq -c '.referenced_workflows // .message' with.json || head -c 300 with.json
+          echo "--- without token"
+          curl -sS -o without.json -w "status=%{http_code}\n" -H "Accept: application/vnd.github+json" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" || true
+          jq -c '.referenced_workflows // .message' without.json || head -c 300 without.json
+          echo "--- resolved"
+          jq -r '[.referenced_workflows[]? | select(.path | startswith("bamiyanapp/dev-standards/.github/workflows/reusable-probe-self-ref.yml@"))][0].sha // "NONE"' with.json | sed 's/^/resolved_sha=/'
