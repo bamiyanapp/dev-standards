@@ -1,0 +1,11 @@
+# 一時的な検証用（issue #1316）。検証後に削除する
+name: probe-self-ref
+on:
+  push:
+    branches:
+      - claude/brave-goodall-y1e0n1
+permissions:
+  contents: read
+jobs:
+  call:
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-probe-self-ref.yml@d398702bec70c8545700802c0e00e79fcd9a0815
