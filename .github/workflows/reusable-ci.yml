@@ -2360,7 +2360,7 @@ jobs:
           path: .dev-standards-actions
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "26"
       - name: js-yamlをインストールする
         run: npm install --no-save --prefix /tmp/yaml-tools js-yaml@4
       - name: IAM Actionの不足を検査する
