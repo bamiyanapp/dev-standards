@@ -3322,7 +3322,13 @@ jobs:
                 pull_number: context.payload.pull_request.number,
                 per_page: 100,
               });
-              const packageLockChanged = files.some((f) => f.filename === 'package-lock.json');
+              // issue #1368: 任意の階層のpackage-lock.json（node_modules配下は除く）を対象にする。
+              // 以前は、ルートのpackage-lock.jsonの完全一致だけで、app/*/等の変更は判定を受けなかった
+              const lockPaths = [...new Set(files.map((f) => f.filename).filter((f) => /(^|\/)package-lock\.json$/.test(f) && !f.split('/').includes('node_modules')))].sort();
+              const packageLockChanged = lockPaths.length > 0;
+              core.setOutput('package_lock_paths', JSON.stringify(lockPaths));
+              // ルートのlockfileだけの場合は、従来と同じ処理（1組のlockfileを比べる）にする
+              core.setOutput('multi_lockfile', String(lockPaths.length > 0 && !(lockPaths.length === 1 && lockPaths[0] === 'package-lock.json')));
               const actionFiles = files
                 .map((f) => f.filename)
                 .filter((f) => /^\.github\/workflows\/.*\.ya?ml$/.test(f) || /^\.github\/actions\/[^/]+\/action\.ya?ml$/.test(f));
@@ -3345,9 +3351,22 @@ jobs:
         id: fetch-base
         if: steps.gate.outputs.package_lock_changed == 'true'
         continue-on-error: true
+        env:
+          LOCK_PATHS: ${{ steps.gate.outputs.package_lock_paths }}
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
         run: |
           git fetch --depth 1 origin ${{ github.event.pull_request.base.sha }}
-          git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            # issue #1368: パスごとに、base側のlockfileを取得する。このPRで新しく追加されたlockfileは、
+            # base側に無いため、取得できなくてもよい（空のlockfileとして扱う）
+            printf '%s' "$LOCK_PATHS" > /tmp/lockfile-paths.json
+            mkdir -p /tmp/base-locks
+            for p in $(jq -r '.[]' /tmp/lockfile-paths.json); do
+              git show "${{ github.event.pull_request.base.sha }}:$p" > "/tmp/base-locks/${p//\//__}" 2>/dev/null || rm -f "/tmp/base-locks/${p//\//__}"
+            done
+          else
+            git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
+          fi
 
       # GitHub Actions/reusable workflow参照の変更分（action_files）について、
       # base側の内容だけを別途取得する。head側はこのjobのデフォルトcheckoutに
@@ -3409,7 +3428,14 @@ jobs:
         id: dependency-info
         if: steps.fetch-base.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+        env:
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
+        run: |
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            node .dev-standards-actions/scripts/dependency-lockfiles.js update-info /tmp/base-locks /tmp/lockfile-paths.json > /tmp/dependency-update-info.json
+          else
+            node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+          fi
 
       # GitHub Actions/reusable workflow参照のバージョン更新情報（issue #666）。
       # fetch-actions-baseが取得したbase側のファイル内容と、head側（デフォルトcheckoutの
@@ -3438,7 +3464,14 @@ jobs:
         id: package-anomaly
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-package-anomaly-info.js /tmp/base-package-lock.json package-lock.json > /tmp/package-anomaly-info.json
+        env:
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
+        run: |
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            node .dev-standards-actions/scripts/dependency-lockfiles.js anomaly-info /tmp/base-locks /tmp/lockfile-paths.json > /tmp/package-anomaly-info.json
+          else
+            node .dev-standards-actions/scripts/dependency-package-anomaly-info.js /tmp/base-package-lock.json package-lock.json > /tmp/package-anomaly-info.json
+          fi
 
       # issue #648（Phase 3）メンテナ/所有権異常の検知。npm registryへの問い合わせを
       # 伴う（osv.dev等と同様、このサンドボックスでは疎通確認済みだが、実際の
@@ -3498,7 +3531,7 @@ jobs:
       # ツール（jscpd・dependency-cruiser等）と同じくメジャーバージョン固定で呼ぶ
       - name: SBOMを生成する
         id: sbom
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
         continue-on-error: true
         run: npx --yes @cyclonedx/cyclonedx-npm@6 --package-lock-only --output-file /tmp/sbom.json
 
@@ -3565,18 +3598,18 @@ jobs:
       # 結果を参照するようになったため、このステップはそれより前に実行する必要がある
       - name: ブラスト半径判定用にNode.jsをセットアップする（1回目/2回）
         id: setup-node-blast-radius-1
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
       - name: ブラスト半径判定用Node.jsセットアップの再試行前に待機する
-        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true' && steps.setup-node-blast-radius-1.outcome == 'failure'
         shell: bash
         run: sleep 10
       - name: ブラスト半径判定用にNode.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         id: setup-node-blast-radius-2
-        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true' && steps.setup-node-blast-radius-1.outcome == 'failure'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
@@ -3596,7 +3629,7 @@ jobs:
           fi
       - name: ブラスト半径判定用にdependency-cruiserを実行する
         id: blast-radius-cruise
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
         continue-on-error: true
         run: |
           targets=()
@@ -3843,10 +3876,15 @@ jobs:
                 body += `| ${updateTypeLabel[type]} | ${count} |\n`;
               }
               body += '\n<details><summary>変更されたパッケージ一覧</summary>\n\n';
-              body += '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
+              // issue #1368: 複数のlockfileを変更したPRでは、同じ更新を1件にまとめ、影響するlockfileを出す
+              const multiLock = changes.some((c) => Array.isArray(c.lockfiles));
+              body += multiLock
+                ? '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 | 影響するlockfile |\n|---|---|---|---|---|---|\n'
+                : '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
               for (const c of changes) {
-                body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |\n`;
+                body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |${multiLock ? ` ${(c.lockfiles || []).join('<br>')} |` : ''}\n`;
               }
+              if (multiLock) body += '\n複数のlockfileを変更したPRのため、ブラスト半径とSBOMの判定は、スキップしました。\n';
               body += '\n</details>\n\n';
             }
 
