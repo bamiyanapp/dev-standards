@@ -1,3 +1,10 @@
+# [2.137.0](https://github.com/bamiyanapp/dev-standards/compare/v2.136.0...v2.137.0) (2026-11-17)
+
+
+### Features
+
+* 残っている調査用の一時workflow（tmp-*）を警告する ([#1444](https://github.com/bamiyanapp/dev-standards/issues/1444)) ([1934c54](https://github.com/bamiyanapp/dev-standards/commit/1934c54f58ac83d3b08cbdc91e8c872682291be5)), closes [#1403](https://github.com/bamiyanapp/dev-standards/issues/1403)
+
 # [2.136.0](https://github.com/bamiyanapp/dev-standards/compare/v2.135.0...v2.136.0) (2026-11-17)
 
 
