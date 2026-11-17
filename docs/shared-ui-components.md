@@ -370,6 +370,16 @@ const { isSupported, start } = useSpeechRecognition({
 
 音声合成（`SpeechSynthesis`）側は標準のDOM型定義に含まれるため、本hookの対象外とする（プロダクト固有の声選択ロジック等は利用側に委ねる）。
 
+### 共有コンポーネントのテスト規約
+
+共有コンポーネントを追加・変更するときは、テストを伴う。
+
+- `shared/ui`・`shared/pwa`のコンポーネントは、同じディレクトリの`*.test.jsx`でテストする
+- `*.test.jsx`はVitest（jsdom）が実行する。設定は`vitest.config.mjs`である
+- `*.test.js`は従来どおり`node --test`が実行する。拡張子で実行系が分かれる
+- どちらも`npm test`で実行され、dev-standardsのCIで検証される
+- 参照側は、symlinkで取り込んだ共有コンポーネントのテストを複製しない
+
 ### `sync-manifest.local.json`への追加例
 
 ```json
