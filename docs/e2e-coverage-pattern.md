@@ -64,6 +64,17 @@ export default buildPlaywrightConfig({
 - 再試行で成功したテスト（flaky）は、失敗に含めず、件数だけを出す
 - エラーメッセージのANSIエスケープシーケンスは除去する。`E2E_SECRETS_JSON`の値がメッセージに含まれていたら、伏せ字にする
 
+### 計測対象の急変と、想定外のパスの検知
+
+`check-coverage-threshold`複合actionは、率（%）に加えて、計測対象を確認する（issue #1366）。率だけを見ると、計測対象が意図せず広がっても、率が下がった回だけが閾値割れとして現れる。examinationでは、`entryFilter`の穴で他アプリのコードが混入し、`Branches`の分母が約123から8177へ跳ね上がった。原因の特定に約1週間かかった。
+
+- **ファイル別の内訳**: 集計対象のファイルを、分母（statements）の大きい順に上位20件、Job Summaryへ表で出す。残りは件数で示す
+- **想定外のパスの警告**: `node_modules`を含むパスと、`allowed-path-prefixes`（既定: `src/`）以外で始まるパスが1件でもあれば、警告する
+- **分母の急変**: `baseline-total-file`にbaseブランチの`total`のJSONを渡すと、各指標の分母を比較する。2倍超または半分未満で警告し、5倍超または5分の1未満で失敗する（`total-warn-ratio`・`total-fail-ratio`で変更できる）。ベースラインが無ければ、比較をスキップする
+- テスト対象のソースを大きく増減させたPRでは、正当な変化である。その場合は、PRにその旨を書く。mainへマージすれば、ベースラインが更新される
+
+ベースラインの保存と取得（baseブランチへのpush時に専用ブランチへ保存し、PR時に取得して`baseline-total-file`へ渡す）は、`reusable-ci.yml`へまだ組み込んでいない。
+
 ## 3. `vite.config.js`にソースマップを追加
 
 ```js
