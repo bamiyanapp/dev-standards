@@ -1,3 +1,10 @@
+# [2.132.0](https://github.com/bamiyanapp/dev-standards/compare/v2.131.0...v2.132.0) (2026-11-17)
+
+
+### Features
+
+* E2Eテストの失敗の理由を、Job SummaryとPRコメントへ出す ([#1438](https://github.com/bamiyanapp/dev-standards/issues/1438)) ([8704e00](https://github.com/bamiyanapp/dev-standards/commit/8704e00265c7b2818121d48bf3179af060bba67f)), closes [#1365](https://github.com/bamiyanapp/dev-standards/issues/1365)
+
 # [2.131.0](https://github.com/bamiyanapp/dev-standards/compare/v2.130.0...v2.131.0) (2026-11-17)
 
 
