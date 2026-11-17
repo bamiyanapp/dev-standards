@@ -27,6 +27,7 @@
 | [`useLocalStorageState.js`](#sharedhooksuselocalstoragestatejs) | `localStorage`とReact stateの双方向同期hook |
 | [`useSessionStorageState.js`](#sharedhooksusesessionstoragestatejs) | `sessionStorage`とReact stateの双方向同期hook（JSON対応） |
 | [`useValueChange.js`](#sharedhooksusevaluechangejs) | 前回値との比較による同期的state更新hook |
+| [`useAutoRefresh.js`](#sharedhooksuseautorefreshjs) | 画面の再表示時・表示中の一定間隔で再取得を促すhook |
 | [`useWakeLock.js`](#sharedhooksusewakelockjs) | 画面スリープ防止hook（フィーチャー検出付き） |
 | [`useSpeechRecognition.js`](#sharedhooksusespeechrecognitionjs) | ブラウザ標準音声認識hook（フィーチャー検出付き） |
 
@@ -314,6 +315,15 @@ useValueChange(connectionStatus, (current, previous) => {
 ```
 
 `onChange`は副作用を伴わない同期的なstate更新のみを行うこと（レンダー中に呼ばれるため、fetch等の非同期処理やDOM操作は別途`useEffect`に書く）。`value`自体の導出ロジック（前回値への依存を含む複雑な分岐等）はこのhookの対象外とし、呼び出し側に委ねる。
+
+### `shared/hooks/useAutoRefresh.js`
+
+`useAutoRefresh(callback, { intervalMs })`は、画面の再表示時と、表示中の一定間隔で`callback`を呼ぶ。複数人が同じデータを操作するPWAで、他の人の変更を反映するために使う。
+
+- `visibilitychange`で再表示されたときに、`callback`を呼ぶ。非表示の間は、タイマーを止める
+- `intervalMs`を省略すると、再表示時だけ呼ぶ
+- アンマウント時に、リスナーとタイマーを解除する。`document.visibilityState`が無い環境でも例外を投げない
+- データの取得と反映は呼び出し側に残す。方式の規約は[`frontend-ui-conventions.md`](frontend-ui-conventions.md)の「データ更新方式」を参照する
 
 ### `shared/hooks/useWakeLock.js`
 
