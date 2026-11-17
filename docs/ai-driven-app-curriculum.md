@@ -167,6 +167,7 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | ドキュメントのmermaid図対応 | ドキュメント中のmermaid図が`enable_mermaid_render`・`mermaid_doc_paths`で画像化され、PR差分ビューでも図として確認できる（mermaid図を使う場合のみ） | [`documentation-format-conventions.md`](documentation-format-conventions.md) |
 | E2Eスクリーンショットのスマートフォン表示対応 | Playwright E2Eが撮影したスクリーンショットが、Job Summary・PRコメントへ画像として直接埋め込まれる（採用する場合。スマートフォンではPlaywright HTMLレポート自体は閲覧しづらいため） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | E2Eテスト結果のPR表示 | `enable_e2e_test`によりPlaywright E2Eの成否・カバレッジがPRコメント・Job Summaryへ投稿される（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| アクセシビリティ | `eslint-plugin-jsx-a11y`のルールが有効で、エラー0件になっている（React（JSX/TSX）を持つ場合） | [`code-quality-conventions.md`](code-quality-conventions.md)「lint」 |
 | 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md) |
 | GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md) |
 | 依存更新の自動化（Renovate） | リポジトリルートに`renovate.json`があり、`git-submodules`マネージャーが明示的に有効化されている（Renovateのデフォルトでは無効）。GitHub Appのインストール先はOrganization（個人アカウントだと効かない）。Mendダッシュボードの動作モードが「自動化されたPR」になっており、依存更新PRが自動的に作成される | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「dev-standards submoduleの自動更新（Renovate）について」 |
