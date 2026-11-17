@@ -3,6 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 
+const { buildFileBreakdown, compareTotals, describeComparison, findUnexpectedPaths } = require("./coverage-anomaly.js");
+
 const METRICS = ["lines", "statements", "functions", "branches"];
 
 // summaryJson: coverage-summary.jsonのパース済み内容（{ total: {...}, <filePath>: {...}, ... }）。
@@ -97,12 +99,37 @@ function main() {
     checkPerFile,
   });
 
+  // issue #1366: 計測対象（分母）の急変と、想定外のパスの混入を検知する
+  const allowedPrefixes = (process.env.ALLOWED_PATH_PREFIXES || "src/").split(",").map((p) => p.trim()).filter(Boolean);
+  const unexpected = findUnexpectedPaths(summaryJson, { cwd: process.cwd(), allowedPrefixes });
+  let anomaly = buildFileBreakdown(summaryJson, label);
+  if (unexpected.length > 0) {
+    const sample = unexpected.slice(0, 10).map((u) => `- ${u.file}（${u.reason}）`).join("\n");
+    anomaly += `\n### 想定外のパスが集計対象に含まれています（${label}）: ${unexpected.length}件\n\n${sample}\n`;
+    console.log(`::warning::カバレッジの集計対象に、想定外のパス（node_modules、または${allowedPrefixes.join("・")}以外）が${unexpected.length}件含まれています（${label}）。`);
+  }
+  let totalsFailed = false;
+  const baselineFile = process.env.BASELINE_TOTAL_FILE;
+  if (baselineFile && fs.existsSync(baselineFile)) {
+    const results = compareTotals(summaryJson.total, JSON.parse(fs.readFileSync(baselineFile, "utf-8")), {
+      warnRatio: Number(process.env.TOTAL_WARN_RATIO || "2"),
+      failRatio: Number(process.env.TOTAL_FAIL_RATIO || "5"),
+    });
+    anomaly += describeComparison(results);
+    totalsFailed = results.some((r) => r.level === "fail");
+    if (results.some((r) => r.level === "warn")) console.log(`::warning::カバレッジの計測対象（分母）が、ベースラインから大きく変わっています（${label}）。`);
+  }
+
   if (stepSummaryPath) {
-    fs.appendFileSync(stepSummaryPath, table + fileTable);
+    fs.appendFileSync(stepSummaryPath, table + fileTable + anomaly);
   }
   console.log(table);
   if (fileTable) {
     console.log(fileTable);
+  }
+  if (totalsFailed) {
+    console.error(`カバレッジの計測対象（分母）が、ベースラインの${process.env.TOTAL_FAIL_RATIO || "5"}倍超または${process.env.TOTAL_FAIL_RATIO || "5"}分の1未満に変わっています（${label}）。他アプリのコードの混入等を確認してください。`);
+    process.exit(1);
   }
 
   if (threshold <= 0) {
