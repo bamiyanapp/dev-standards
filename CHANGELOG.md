@@ -1,3 +1,10 @@
+# [2.133.0](https://github.com/bamiyanapp/dev-standards/compare/v2.132.0...v2.133.0) (2026-11-17)
+
+
+### Features
+
+* Playwright設定の土台とCookie認証ヘルパーをshared/e2eで配布する ([#1440](https://github.com/bamiyanapp/dev-standards/issues/1440)) ([1a926a9](https://github.com/bamiyanapp/dev-standards/commit/1a926a954974d5df165f9273ff9a5d22a8abe62b)), closes [#1377](https://github.com/bamiyanapp/dev-standards/issues/1377)
+
 # [2.132.0](https://github.com/bamiyanapp/dev-standards/compare/v2.131.0...v2.132.0) (2026-11-17)
 
 
