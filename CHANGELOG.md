@@ -1,3 +1,10 @@
+# [2.128.0](https://github.com/bamiyanapp/dev-standards/compare/v2.127.0...v2.128.0) (2026-11-17)
+
+
+### Features
+
+* 確認ダイアログとトースト通知のコンポーネントをshared/uiへ追加する ([#1433](https://github.com/bamiyanapp/dev-standards/issues/1433)) ([cf21af7](https://github.com/bamiyanapp/dev-standards/commit/cf21af7848cadd76453cdebafad270d1b875ef55)), closes [#1414](https://github.com/bamiyanapp/dev-standards/issues/1414) [#1409](https://github.com/bamiyanapp/dev-standards/issues/1409)
+
 # [2.127.0](https://github.com/bamiyanapp/dev-standards/compare/v2.126.0...v2.127.0) (2026-11-17)
 
 
