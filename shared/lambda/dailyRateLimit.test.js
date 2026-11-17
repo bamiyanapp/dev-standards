@@ -150,3 +150,53 @@ test("sets expiresAt roughly ttlSeconds from now for TTL-based cleanup", async (
 
   assert.ok(capturedExpiresAt >= before + 3600 && capturedExpiresAt <= after + 3600);
 });
+
+const { rateLimitIdentifier, checkRateLimitFailOpen } = require("./dailyRateLimit.js");
+const { tooManyRequests } = require("./httpResponse.js");
+
+test("rateLimitIdentifier: REST API（v1）・HTTP API（v2）のsourceIpから識別子を作る", () => {
+  assert.equal(rateLimitIdentifier({ requestContext: { identity: { sourceIp: "1.2.3.4" } } }, "report"), "report#1.2.3.4");
+  assert.equal(rateLimitIdentifier({ requestContext: { http: { sourceIp: "5.6.7.8" } } }, "report"), "report#5.6.7.8");
+});
+
+test("rateLimitIdentifier: sourceIpが無くても例外を投げず、固定の識別子になる", () => {
+  for (const event of [undefined, {}, { requestContext: {} }, { requestContext: { identity: {} } }]) {
+    assert.equal(rateLimitIdentifier(event, "report"), "report#unknown");
+  }
+});
+
+test("IP単位で別々に数え、固定の識別子なら全体の総量の上限になる", async () => {
+  const ddb = makeFakeDdb();
+  const base = { ddb, UpdateItemCommand, tableName: "t", keyAttribute: "k", limit: 1 };
+  const ev = (ip) => ({ requestContext: { http: { sourceIp: ip } } });
+  assert.equal(await checkRateLimitFailOpen({ ...base, identifier: rateLimitIdentifier(ev("1.1.1.1"), "r") }), true);
+  assert.equal(await checkRateLimitFailOpen({ ...base, identifier: rateLimitIdentifier(ev("1.1.1.1"), "r") }), false);
+  assert.equal(await checkRateLimitFailOpen({ ...base, identifier: rateLimitIdentifier(ev("2.2.2.2"), "r") }), true);
+  // 全体の総量: 識別子を固定文字列にする
+  assert.equal(await checkRateLimitFailOpen({ ...base, identifier: "r#all" }), true);
+  assert.equal(await checkRateLimitFailOpen({ ...base, identifier: "r#all" }), false);
+});
+
+test("checkRateLimitFailOpen: テーブルへのアクセスが失敗したときは、onErrorで記録してtrueを返す（fail-open）", async () => {
+  const errors = [];
+  const ddb = { send: async () => { throw Object.assign(new Error("throttled"), { name: "ProvisionedThroughputExceededException" }); } };
+  const allowed = await checkRateLimitFailOpen({ ddb, UpdateItemCommand, tableName: "t", keyAttribute: "k", identifier: "x", limit: 1, onError: (...a) => errors.push(a) });
+  assert.equal(allowed, true);
+  assert.equal(errors.length, 1);
+});
+
+test("checkRateLimitFailOpen: 上限に達したとき（ConditionalCheckFailed）はfalse。onErrorは呼ばない", async () => {
+  const errors = [];
+  const ddb = makeFakeDdb();
+  const options = { ddb, UpdateItemCommand, tableName: "t", keyAttribute: "k", identifier: "x", limit: 1, onError: (...a) => errors.push(a) };
+  await checkRateLimitFailOpen(options);
+  assert.equal(await checkRateLimitFailOpen(options), false);
+  assert.equal(errors.length, 0);
+});
+
+test("tooManyRequests: 429とCORSヘッダー、messageを返す", () => {
+  const r = tooManyRequests("https://example.com", "しばらくしてからお試しください");
+  assert.equal(r.statusCode, 429);
+  assert.equal(r.headers["Access-Control-Allow-Origin"], "https://example.com");
+  assert.deepEqual(JSON.parse(r.body), { message: "しばらくしてからお試しください" });
+});
