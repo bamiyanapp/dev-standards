@@ -1,3 +1,10 @@
+# [2.126.0](https://github.com/bamiyanapp/dev-standards/compare/v2.125.0...v2.126.0) (2026-11-17)
+
+
+### Features
+
+* PR差分に直書きされたメールアドレスを検知するenable_email_scanを追加する ([#1429](https://github.com/bamiyanapp/dev-standards/issues/1429)) ([d56ae49](https://github.com/bamiyanapp/dev-standards/commit/d56ae494337c548a1df205d4ad2008beefa608a6)), closes [#1364](https://github.com/bamiyanapp/dev-standards/issues/1364)
+
 # [2.125.0](https://github.com/bamiyanapp/dev-standards/compare/v2.124.1...v2.125.0) (2026-11-17)
 
 
