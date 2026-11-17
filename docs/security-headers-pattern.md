@@ -2,7 +2,7 @@
 
 標準構成（S3 + CloudFront、[`standard-tech-stack.md`](standard-tech-stack.md)）で配信する参照側は、セキュリティヘッダーを付ける。他の文書には、`Content-Security-Policy`・`ResponseHeadersPolicy`・`Strict-Transport-Security`の記載が無かった。issue #1407で追加した。
 
-本書は段階1（文書化）である。CSP違反のE2E検知（段階2）と、設定漏れのCI検知（段階3）は、別の作業で扱う。
+本書は、段階1（文書化）と、段階2（CSP違反のE2E検知）を扱う。設定漏れのCI検知（段階3）は、別の作業で扱う。
 
 ## 付与するヘッダーの標準セット
 
@@ -83,6 +83,29 @@ Resources:
 ## previewサーバーにも同じCSPを付ける
 
 E2Eが、本番と同じ制約で動くようにするため、`vite preview`にも同じCSPを付ける。CSPの文字列は、インフラ（`ResponseHeadersPolicy`）とpreviewサーバーで、1か所に定義して共有する。例えば、`csp.js`に文字列を置き、`serverless.yml`（`${file(./csp.js)}`）と`vite.config.js`の`preview.headers`が、同じ値を読む。
+
+## CSP違反のE2E検知（`shared/e2e/cspFixture.js`）
+
+開発環境がスマートフォンのみで、ブラウザの開発者ツールで違反を目視できない。そのため、CSP違反を自動で検知する。`cspFixture.js`は、各テストの実行中に`securitypolicyviolation`イベントを監視する。違反が1件でもあれば、テストを失敗させる（issue #1407 段階2）。
+
+```js
+import { test, expect } from './cspFixture.js'; // symlink先
+```
+
+`coverageFixture.js`と併用する場合は、`mergeTests`で合わせる。
+
+```js
+import { mergeTests } from '@playwright/test';
+import { test as csp } from './cspFixture.js';
+import { test as coverage, expect } from './coverageFixture.js';
+export const test = mergeTests(csp, coverage);
+```
+
+- previewサーバーに、本番と同じCSPを付ける（上の節）。付けていないと、E2Eでは違反が出ない
+- 失敗メッセージに、違反した指令・遮断先・場所を出す。CSPを緩める前に、そのスクリプトや通信先が必要かを確認する
+- Report-Onlyの違反も集める。本番へ強制する前に、違反を見つけられる
+- 違反を許す正当な理由があるテストは、`test.use({ allowCspViolations: true })`で無効にできる
+- 違反を集める部品（`cspWatcher.js`）は、`@playwright/test`に依存しない。単体テストがある
 
 ## 参照側の現状
 
