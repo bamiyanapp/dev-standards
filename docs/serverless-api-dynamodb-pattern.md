@@ -55,7 +55,7 @@ backend/src/
 ```
 
 - `handler.js`は`event`（API Gateway HTTP API, payload format 2.0）を受け取り`router.js`へ委譲する純粋な変換層。`router.handleRequest({ method, path, headers, body, query })`が実処理を行う
-- `router.js`は、マッチしたルートの`handler`を呼ぶ前に必ず`authenticate(headers)`（セッショントークン検証）を実行する。失敗時は401を返す（認証をルーティングより手前で一元化）。`route.skipAuth: true`のルート（`POST /auth/session`のみ）はこれをスキップし、ハンドラへ生の`headers`を渡す。`services/*`が投げるエラーには`ValidationError`/`NotFoundError`/`UnauthorizedError`/`ForbiddenError`がある。これらはいずれも`statusCode`プロパティを持つ。これを、ここでHTTPレスポンスへ変換する
+- `router.js`は、マッチしたルートの`handler`を呼ぶ前に必ず`authenticate(headers)`（セッショントークン検証）を実行する。失敗時は401を返す（認証をルーティングより手前で一元化）。`route.skipAuth: true`のルート（`POST /auth/session`のみ）はこれをスキップし、ハンドラへ生の`headers`を渡す。`services/*`が投げるエラーには`ValidationError`/`NotFoundError`/`UnauthorizedError`/`ForbiddenError`がある。これらはいずれも`statusCode`プロパティを持つ。これを、ここでHTTPレスポンスへ変換する。想定外の例外は、ログへ出力し、応答には固定文言を返す（`message`を応答へ載せない）
 - `services/*`・`repositories/*`はコンストラクタ関数（`createXxxService(repository)`）でDIする設計にする。単体テストでは`repositories`をin-memory実装に差し替える（下記「テストパターン」参照）
 
 ### CORSとOPTIONSプリフライト
@@ -115,7 +115,7 @@ Googleログインは、Googleアカウントを持つ誰でも通れる。管�
 
 ## DynamoDBアクセスパターン
 
-- `repositories/*.js`はDynamoDB Document Client（`@aws-sdk/lib-dynamodb`）の薄いラッパーである。`get`/`put`/`list`/`delete`程度のシンプルなインターフェースを持つ
+- `repositories/*.js`はDynamoDB Document Client（`@aws-sdk/lib-dynamodb`）の薄いラッパーである。`get`/`put`/`list`/`delete`に加え、属性単位の更新（`updateAttributes`）とキー条件による取得（`listByXxx`）を持つ。全体を`put`し直す更新や、全件`list`への依存は、同時更新での上書きと利用者数に比例した遅延を生む（[`serverless-api-integrity-checklist.md`](serverless-api-integrity-checklist.md)参照）
 - `services/*.js`はrepositoryのインターフェースにのみ依存し、AWS SDKを直接importしない。これにより単体テストでは`test/helpers/inMemoryRepositories.js`（`Map`ベースの同じインターフェース実装）に差し替える。実DynamoDBへ一切アクセスせずにビジネスロジックを検証できる
 - SAMテンプレート側は`DynamoDBCrudPolicy`（AWS SAM組み込みポリシーテンプレート）でLambda実行ロールへ必要最小限のCRUD権限のみを付与する
 

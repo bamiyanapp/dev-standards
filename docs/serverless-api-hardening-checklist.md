@@ -97,6 +97,10 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 
 workflowや設定ファイルで、変数が未設定のときのフォールバックに実在の値（メールアドレス等）を書いていないか確認する。詳細は[`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md)を参照する。
 
+## 続き
+
+データの整合性（認可・同時更新・親子削除・GSI等）、エラー応答、IAM・デプロイの観点は[`serverless-api-integrity-checklist.md`](serverless-api-integrity-checklist.md)にまとめる。
+
 ## 実例
 
 - examination（`bamiyanapp/examination`）の棚卸し（2026-11、issue #694〜#709）。1〜6のすべてが該当した
