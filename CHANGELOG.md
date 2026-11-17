@@ -1,3 +1,10 @@
+# [2.140.0](https://github.com/bamiyanapp/dev-standards/compare/v2.139.0...v2.140.0) (2026-11-17)
+
+
+### Features
+
+* CloudFrontのResponseHeadersPolicyIdの関連付け漏れを検知するenable_security_headers_checkを追加する（段階3） ([#1448](https://github.com/bamiyanapp/dev-standards/issues/1448)) ([aa79e67](https://github.com/bamiyanapp/dev-standards/commit/aa79e679bc5ea25affeb0d5b7ad910e5f7be9d25)), closes [#1407](https://github.com/bamiyanapp/dev-standards/issues/1407)
+
 # [2.139.0](https://github.com/bamiyanapp/dev-standards/compare/v2.138.0...v2.139.0) (2026-11-17)
 
 
