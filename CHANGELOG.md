@@ -1,3 +1,10 @@
+# [2.142.0](https://github.com/bamiyanapp/dev-standards/compare/v2.141.2...v2.142.0) (2026-11-17)
+
+
+### Features
+
+* ルート以外にlockfileを持つ構成で、依存更新のRisk Summaryを動かす（段階1） ([#1471](https://github.com/bamiyanapp/dev-standards/issues/1471)) ([ff2286e](https://github.com/bamiyanapp/dev-standards/commit/ff2286eee9553c600994e3184e0a67ef52b5e7d0)), closes [#1368](https://github.com/bamiyanapp/dev-standards/issues/1368)
+
 ## [2.141.2](https://github.com/bamiyanapp/dev-standards/compare/v2.141.1...v2.141.2) (2026-11-17)
 
 
