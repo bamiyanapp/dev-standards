@@ -36,6 +36,25 @@ ADMIN_NOTIFY_EMAIL: ${{ vars.ADMIN_NOTIFY_EMAIL || '<実在のメールアドレ
 
 「設定値の既定」に見えるため、個人情報だと気づきにくい。未設定のときは既定値で動かさず、明示的に失敗させる。
 
+未設定のときに明示的に失敗させるには、次のように書く。
+
+```yaml
+- name: 通知先を確認する
+  run: test -n "$ADMIN_NOTIFY_EMAIL" || { echo "ADMIN_NOTIFY_EMAILが未設定です" >&2; exit 1; }
+  env:
+    ADMIN_NOTIFY_EMAIL: ${{ vars.ADMIN_NOTIFY_EMAIL }}
+```
+
+### CIでの検知
+
+`enable_email_scan: true`（`enable_secret_scan`と`self_ref`も必要）で、PR差分の追加行に含まれるメールアドレスらしき文字列を検知できる。詳細は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。
+
+検知導入後に、既存の箇所が見つかった場合の是正手順は次のとおりである。
+
+1. 値をRepository Variable（通知先）またはSecretへ移す
+2. コードは`vars.X`・`secrets.X`の参照だけにし、未設定時は失敗させる
+3. 履歴には値が残る。公開リポジトリでは消せない前提で、他の個人情報と同じく扱う（上記の原則を参照）
+
 既存のコードにこの書き方がある場合、同じ形で書き足さない。既にコミット済みの値であっても、記載箇所を増やせば後の是正が難しくなる。気づいた時点でissueにして是正する。
 
 ## コミット前チェックリスト
