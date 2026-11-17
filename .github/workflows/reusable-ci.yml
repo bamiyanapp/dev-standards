@@ -298,6 +298,28 @@ on:
           （issue #1337、詳細はdocs/hardcoded-credential-detection-pattern.md参照）。
         type: boolean
         default: false
+      enable_dynamodb_protection_check:
+        description: >-
+          serverless.yml・SAMテンプレートのDynamoDBテーブルに、データ保護の設定
+          （ポイントインタイムリカバリ・削除保護・DeletionPolicy・UpdateReplacePolicy）が
+          あるかを検査する`dynamodb-protection-check` jobを実行するかどうか
+          （bamiyanapp/dev-standards#1402）。`self_ref`の指定も必要である。
+          TTLが有効なテーブルは対象外。保護が不要なテーブルは、リソースの
+          Metadata.DevStandardsProtectionExemptへ理由を書くと除外できる。
+        type: boolean
+        default: false
+      dynamodb_protection_files:
+        description: >-
+          `enable_dynamodb_protection_check`の検査対象ファイル。カンマまたは改行区切りで
+          複数指定できる（例: `serverless.yml,infra/template.yaml`）。
+        type: string
+        default: "serverless.yml"
+      dynamodb_protection_mode:
+        description: >-
+          `warn`は違反があっても失敗にせず警告だけを出す。`fail`は違反があれば失敗にする。
+          導入時は既存のテーブルが違反になるため、`warn`で始め、是正後に`fail`へ切り替える。
+        type: string
+        default: "warn"
       enable_email_scan:
         description: >-
           PR差分の追加行に、実在のメールアドレスらしき文字列が含まれていないかを
@@ -2220,6 +2242,45 @@ jobs:
           SCRIPT_EOF
           node /tmp/check-doc-reachability.js
 
+  dynamodb-protection-check:
+    name: "DynamoDB保護設定の検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_dynamodb_protection_check &&
+      inputs.self_ref != '' &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+      - name: dev-standardsをチェックアウトする
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      # スクリプトが使うjs-yamlだけを、作業ツリーの外へ入れる（参照側のpackage.jsonには触れない）
+      - name: js-yamlをインストールする
+        run: npm install --no-save --prefix /tmp/yaml-tools js-yaml@4
+      - name: DynamoDBの保護設定を検査する
+        env:
+          NODE_PATH: /tmp/yaml-tools/node_modules
+          FILES: ${{ inputs.dynamodb_protection_files }}
+          MODE: ${{ inputs.dynamodb_protection_mode }}
+        run: |
+          set -eu
+          files=$(printf '%s' "$FILES" | tr ',' ' ')
+          status=0
+          node .dev-standards-actions/scripts/check-dynamodb-protection.js "$MODE" $files > /tmp/dynamodb-protection.txt || status=$?
+          cat /tmp/dynamodb-protection.txt
+          { echo "## DynamoDB保護設定の検査"; echo; sed '/^::warning/d' /tmp/dynamodb-protection.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
   secret-scan:
     name: "シークレットスキャン"
     needs: commitlint
@@ -2982,7 +3043,7 @@ jobs:
     # lighthouse-ci等の完了前に「自動マージの対象です」という判定を投稿してしまう
     # ことがあった。merge job（このファイル内）のneedsからdependency-risk-summary
     # 自身を除いた全件と一致させ、CI全体の完了後にのみ投稿されるようにする
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
     if: |
       always() &&
       inputs.enable_dependency_risk_summary &&
@@ -3754,7 +3815,7 @@ jobs:
 
   merge:
     name: "自動マージ"
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -3778,6 +3839,10 @@ jobs:
     # risk_levelが空文字列（package-lock.jsonを変更していないPR等でjob自体が実行されな
     # かった場合）やlow/mediumの場合は左辺がfalseになるため、このor条件全体はtrueになり
     # 他の条件のみで判定される
+    # 注意: 下のif式で、needsの結果を確認する条件を括弧でまとめている。&&を一列に
+    # 並べると、条件が増えたときにactionlint（wasm版）が「memory access out of bounds」で
+    # 異常終了し、エラー内容も出なくなる（issue #1402の作業中に、1条件の追加で発生した）。
+    # 条件を足す場合は括弧の中へ足す
     if: |
       always() &&
       inputs.enable_auto_merge &&
@@ -3787,19 +3852,22 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.backend-test.result) &&
       (inputs.packages == '' || fromJSON(inputs.packages)[0] == null || needs.package-test.result == 'success') &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-e2e-test.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.doc-duplication-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.workflow-duplication-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.doc-reachability-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
-      !contains(fromJSON('["failure", "cancelled"]'), needs.lighthouse-ci.result) &&
+      (
+        !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.doc-duplication-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.workflow-duplication-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.doc-reachability-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.dynamodb-protection-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.lighthouse-ci.result)
+      ) &&
       (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
     runs-on: ubuntu-latest
     permissions:
