@@ -63,6 +63,7 @@
 - [`llm-dual-format-response-pattern.md`](docs/llm-dual-format-response-pattern.md): LLM APIのdual-format JSON応答・パース救済
 - [`deterministic-seed-id-pattern.md`](docs/deterministic-seed-id-pattern.md): 静的コンテンツのDynamoDB冪等同期（決定的ID）
 - [`dynamodb-safe-backfill-pattern.md`](docs/dynamodb-safe-backfill-pattern.md): DynamoDBの安全なバックフィル・移行スクリプトパターン
+- [`shared-api-client.md`](docs/shared-api-client.md): フロントエンド共通のAPIクライアント（`ApiError`・リトライ方針・クエリ組み立て）
 - [`serverless-api-hardening-checklist.md`](docs/serverless-api-hardening-checklist.md): サーバーレスAPIの堅牢化チェックリスト（データ保護・ページネーション・公開APIの防御・監視等）
 - [`serverless-api-integrity-checklist.md`](docs/serverless-api-integrity-checklist.md): サーバーレスAPIのデータ整合性・運用チェックリスト（認可・同時更新・親子削除・GSI・IAM等）
 - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
