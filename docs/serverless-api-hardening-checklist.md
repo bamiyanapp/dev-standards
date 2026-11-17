@@ -47,7 +47,7 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 
 設定方法はAPIの種別（REST API・HTTP API）とデプロイツールにより異なる。設定後、生成されたCloudFormationテンプレートに反映されていることを確認する。
 
-利用者単位で回数を制限したい場合は[`daily-rate-limit-pattern.md`](daily-rate-limit-pattern.md)を使う。
+利用者単位で回数を制限したい場合は[`daily-rate-limit-pattern.md`](daily-rate-limit-pattern.md)を使う。認証なしの公開APIを、送信元IP単位で制限する方法と、API Gatewayのスロットリングとの使い分けも、同じ文書にある。
 
 ### CORS
 

@@ -71,4 +71,35 @@ async function incrementAndCheckDailyLimit({
   }
 }
 
-module.exports = { incrementAndCheckDailyLimit };
+// ---- 認証なしの公開APIを、送信元IP単位で制限するための薄いラッパー（dev-standards#1406） ----
+// 既存のincrementAndCheckDailyLimitのシグネチャは変えない。
+
+/**
+ * 送信元IPから、レート制限の識別子（`<name>#<送信元IP>`）を作る。
+ * REST API（v1: event.requestContext.identity.sourceIp）と、HTTP API（v2: event.requestContext.http.sourceIp）の
+ * 両方に対応する。IPを取れない場合は、固定の識別子（`<name>#unknown`）にする（例外を投げない）。
+ * 識別子を固定文字列（例: `${name}#all`）にすれば、全体の総量の上限（IPを変えながら送られても、
+ * 外部通知の送信数を使い切らないようにする）になる
+ */
+function rateLimitIdentifier(event, name) {
+  const ctx = event?.requestContext;
+  const ip = ctx?.http?.sourceIp ?? ctx?.identity?.sourceIp ?? "unknown";
+  return `${name}#${ip}`;
+}
+
+/**
+ * incrementAndCheckDailyLimitを呼ぶ。ただし、テーブルへのアクセス自体が失敗したときは、
+ * onError（既定はconsole.error）で記録して、trueを返す（fail-open）。
+ * レート制限の障害で、本来の機能を止めないためである。上限に達した場合（ConditionalCheckFailed）は、
+ * 既存どおりfalseを返す。
+ */
+async function checkRateLimitFailOpen({ onError = console.error, ...options }) {
+  try {
+    return await incrementAndCheckDailyLimit(options);
+  } catch (error) {
+    onError("レート制限の確認に失敗したため、通します（fail-open）:", error);
+    return true;
+  }
+}
+
+module.exports = { incrementAndCheckDailyLimit, rateLimitIdentifier, checkRateLimitFailOpen };

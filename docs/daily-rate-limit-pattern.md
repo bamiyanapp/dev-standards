@@ -56,3 +56,40 @@ MyAppAiApiIssuanceTable:
 - `ddb`（DynamoDBClientインスタンス）・`UpdateItemCommand`は呼び出し側で生成・requireして渡す（region等はプロダクト側の都合に委ねる）。このため共有側は`@aws-sdk/client-dynamodb`を含め一切の外部依存を持たない（上記のsymlink+Node.js requireの制約を参照）
 - キーは`${identifier}#YYYY-MM-DD`（UTC日付）で構成する。日付が変わるたびに新しいカウンタになる
 - `ttlSeconds`の既定値（25時間）は、単純な24時間ではなく1時間の余裕を持たせている。TTLによる削除はDynamoDB側でベストエフォート（数分〜数時間の遅延がある）のため、日付境界をまたいだタイミングでのカウンタ削除漏れによる誤判定を避けるため
+
+## 認証なしの公開APIをIP単位で制限する
+
+認証の無いエンドポイントは、識別子を送信元IPにして制限できる（dev-standards#1406）。`dailyRateLimit.js`の薄いラッパーを使う。`incrementAndCheckDailyLimit`のシグネチャは変わらない。
+
+```js
+const { rateLimitIdentifier, checkRateLimitFailOpen } = require("./dailyRateLimit.js"); // symlink先
+const { tooManyRequests } = require("./httpResponse.js");
+
+const allowed = await checkRateLimitFailOpen({
+  ddb, UpdateItemCommand, tableName, keyAttribute: "key",
+  identifier: rateLimitIdentifier(event, "send-notice"),
+  limit: 20, // 通常の利用で到達しない水準にする。根拠をコメントに残す
+});
+if (!allowed) return tooManyRequests(origin, "しばらくしてからお試しください");
+```
+
+- `rateLimitIdentifier(event, name)`は、`<name>#<送信元IP>`を返す。REST API（v1）と、HTTP API（v2）の両方に対応する。IPを取れないときは、`<name>#unknown`にする（例外を投げない）
+- `checkRateLimitFailOpen`は、テーブルへのアクセス自体が失敗したとき、`onError`（既定は`console.error`）で記録して`true`を返す。レート制限の障害で、本来の機能を止めないためである。上限に達したときは、従来どおり`false`を返す
+- 全体の総量の上限（IPを変えながら送られても、外部通知の送信数を使い切らないようにする）は、識別子を固定文字列（例: `send-notice#all`）にすれば作れる
+
+### 上限値の選び方
+
+- 学校・イベント会場等では、多数の端末が同じIPを共有する。上限値は、通常の利用で到達しない水準にする
+- キャッシュヒットは数えない。キャッシュミス（課金が発生した場合）だけを数える
+
+### API Gatewayのスロットリングとの使い分け
+
+| 目的 | 手段 |
+|---|---|
+| 費用の上限を掛けたい（誰からの呼び出しでも合計で制限する） | API Gatewayのスロットリング |
+| 利用者・送信元ごとに公平に制限したい（1人が上限を使い切っても、他の人は使える） | `dailyRateLimit` |
+
+- スロットリングは、Lambdaの起動前に429で落ちる。Lambdaとログの費用が発生しない。一方、API全体で共有されるため、攻撃を受けている間は、正規の利用者も429になる
+- `dailyRateLimit`は、リクエストごとに`UpdateItem`の課金が発生し、専用テーブルも要る。一方、1人が上限を使い切っても、他の人は使える
+- WAFは、固定費がある。「1日の総量」も抑えられない。REST APIのステージ単位のスロットリングは、osls標準では設定できない
+- API Gatewayのスロットリングの設定例は、[`serverless-api-hardening-checklist.md`](serverless-api-hardening-checklist.md)を参照する

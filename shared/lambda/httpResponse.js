@@ -37,6 +37,11 @@ function notFound(origin, message) {
   return jsonResponse(origin, 404, { message });
 }
 
+// レート制限に達したときの429応答（dev-standards#1406）。再試行を促す文言は呼び出し側が決める
+function tooManyRequests(origin, message) {
+  return jsonResponse(origin, 429, { message });
+}
+
 function serverError(origin, error, { includeMessage = false } = {}) {
   console.error(error);
   const body = includeMessage
@@ -45,4 +50,4 @@ function serverError(origin, error, { includeMessage = false } = {}) {
   return jsonResponse(origin, 500, body);
 }
 
-module.exports = { jsonResponse, plainJsonResponse, badRequest, notFound, serverError };
+module.exports = { jsonResponse, plainJsonResponse, badRequest, notFound, tooManyRequests, serverError };
