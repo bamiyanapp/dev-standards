@@ -1,3 +1,10 @@
+# [2.135.0](https://github.com/bamiyanapp/dev-standards/compare/v2.134.0...v2.135.0) (2026-11-17)
+
+
+### Features
+
+* カバレッジの計測対象の急変と、想定外のパスの混入を検知する ([#1442](https://github.com/bamiyanapp/dev-standards/issues/1442)) ([fdf9514](https://github.com/bamiyanapp/dev-standards/commit/fdf9514d0047a4c6e011c89a295039ddd1b56281)), closes [#1366](https://github.com/bamiyanapp/dev-standards/issues/1366)
+
 # [2.134.0](https://github.com/bamiyanapp/dev-standards/compare/v2.133.0...v2.134.0) (2026-11-17)
 
 
