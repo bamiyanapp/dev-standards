@@ -119,4 +119,12 @@ export const test = mergeTests(csp, coverage);
 
 ## 参照側の現状
 
-参照側ごとの実際のヘッダー設定状況は、未確認である。各参照側の`serverless.yml`を確認し、`ResponseHeadersPolicyId`の関連付けの有無を、issue #1407へコメントする。標準構成で配信する参照側は、同じ状態の可能性が高い。
+各参照側の`serverless.yml`等で、`ResponseHeadersPolicyId`の関連付けの有無を確認した結果である（issue #1407）。標準構成で配信する参照側は、同じ状態の可能性が高い。
+
+| リポジトリ | 状況 | 追跡 |
+|---|---|---|
+| bamiyanapp/karuta | 未適用（`infra/serverless.yml`のディストリビューションに関連付け無し） | karuta#2189 |
+| bamiyanapp/examination | 未適用（`infra/site-stack/serverless.yml`の全ビヘイビアに関連付け無し） | examination#719 |
+| 上記以外の[`consumer-repositories.md`](consumer-repositories.md)記載のリポジトリ | 未確認（このセッションからアクセスできない） | 無し |
+
+未確認のリポジトリは、アクセスできるセッションが`enable_security_headers_check`を`warn`で有効にして確認する。GitHub Pages配信（CloudFrontを使わない構成）は、本書の対象外である。
