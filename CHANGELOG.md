@@ -1,3 +1,10 @@
+# [2.130.0](https://github.com/bamiyanapp/dev-standards/compare/v2.129.0...v2.130.0) (2026-11-17)
+
+
+### Features
+
+* 再表示時・一定間隔の再取得を促すuseAutoRefreshをshared/hooksへ追加する ([#1435](https://github.com/bamiyanapp/dev-standards/issues/1435)) ([c20cd6d](https://github.com/bamiyanapp/dev-standards/commit/c20cd6dd5c90038d0c3697913db6f24935648b89)), closes [#1415](https://github.com/bamiyanapp/dev-standards/issues/1415)
+
 # [2.129.0](https://github.com/bamiyanapp/dev-standards/compare/v2.128.0...v2.129.0) (2026-11-17)
 
 
