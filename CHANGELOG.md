@@ -1,3 +1,10 @@
+## [2.141.1](https://github.com/bamiyanapp/dev-standards/compare/v2.141.0...v2.141.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* js-yaml v5へ追従し、buildSchemaをv4・v5の両方で動くようにする ([#1469](https://github.com/bamiyanapp/dev-standards/issues/1469)) ([01d0189](https://github.com/bamiyanapp/dev-standards/commit/01d01890db9b9d9aa802c8152ef8a950bb98fb79))
+
 # [2.141.0](https://github.com/bamiyanapp/dev-standards/compare/v2.140.0...v2.141.0) (2026-11-17)
 
 
