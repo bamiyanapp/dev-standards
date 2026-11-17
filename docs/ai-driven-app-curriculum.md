@@ -180,43 +180,13 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 
 ## フェーズ5: 品質課題の棚卸しとリファクタリング
 
-フェーズ4の観点は、lint・カバレッジ等の機械的な基準である。これらを満たしても、プロダクト固有の課題は残る。例えば、認証なしAPIの濫用による課金、DynamoDBのページング漏れによるデータ欠落、エラー時に画面へ何も表示されない挙動等である。本フェーズでは、こうした外部品質（セキュリティ・性能・信頼性・使いやすさ）と内部品質（保守性・テスト容易性）の課題を棚卸しし、issueにして改善する。
-
-### モデルの使い分け
-
-課題の洗い出しと設計判断は、上位モデル（Fable等）に任せる。実装は安価なモデルで進める。
-
-安価なモデルは、指示が明確なら実装は十分にこなせる。一方、設計判断（方式の比較、展開順序、iOS Safari等の環境固有の制約への配慮）を任せると誤りやすい。そこで、上位モデルに設計判断までをissue本文へ書き込ませる。安価なモデルはそれに従って実装するだけで済む状態にする。
-
-Claude Code on the webでは、`/model`コマンドでセッションのモデルを切り替えられる。
-
-### 進め方
-
-1. 上位モデルへ切り替え、後述のプロンプトで課題の棚卸しを依頼する
-2. 起票されたissueを確認する。ユーザーの判断が必要な点（例: 検索エンジンへのインデックスの可否）があれば回答する
-3. 安価なモデルへ切り替え、issueを1件ずつ実装させる。issueに記載された着手順序の依存に従う
-4. 実装中に、issueに書かれていない設計判断が必要になった場合を考える。安価なモデルに判断させず、issueへコメントさせて止める。その判断だけ上位モデルで行う
-
-大きな機能追加の後など、プロダクトが一段育った区切りで繰り返し実施する。
-
-Lambda + API Gateway + DynamoDB構成のプロダクトでは、複数のプロダクトで繰り返し見つかった項目を[`serverless-api-hardening-checklist.md`](serverless-api-hardening-checklist.md)にまとめている。棚卸しの依頼時に、このチェックリストとの照合もあわせて指示する。
-
-### プロンプトの例
-
-```
-プロダクト側の外部品質、内部品質の課題を挙げ、イシューにして
-各イシューについて、安価なモデルで開発を進めるが、上位モデルでないと
-設計が難しい点があればイシューを詳細化し、追加して
-```
-
-このプロンプトの要点は、設計判断を要するissueに「設計（確定事項）」の節を書かせることである。判断の内容だけでなく理由も書かせる。理由が無いと、安価なモデルが実装中に「より良さそうな別案」へ勝手に変えてしまうためである。複数issueの着手順序の依存も明記させる。
-
-実例として、karuta#2178〜#2192（15件、うち設計を確定させたもの6件）がある。
+フェーズ4の観点を満たしても、プロダクト固有の課題は残る。上位モデルで課題を棚卸しし、issueにして、安価なモデルで実装する。手順・プロンプト例・注意点は[`ai-driven-app-inventory-phase.md`](ai-driven-app-inventory-phase.md)を参照する。
 
 ## 関連ドキュメント
 
 - [`standard-tech-stack.md`](standard-tech-stack.md): 技術構成の索引・新規プロジェクトの立ち上げ手順
 - [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): CI/CDパイプラインの詳細仕様
 - [`code-quality-conventions.md`](code-quality-conventions.md): lintルールの推奨値
+- [`ai-driven-app-inventory-phase.md`](ai-driven-app-inventory-phase.md): フェーズ5（品質課題の棚卸し）の詳細
 - [`serverless-api-hardening-checklist.md`](serverless-api-hardening-checklist.md): サーバーレスAPIの堅牢化チェックリスト（フェーズ5の棚卸しの観点）
 - [`serverless-api-integrity-checklist.md`](serverless-api-integrity-checklist.md): サーバーレスAPIのデータ整合性・運用チェックリスト（フェーズ5の棚卸しの観点）
