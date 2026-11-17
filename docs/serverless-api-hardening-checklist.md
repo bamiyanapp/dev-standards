@@ -71,7 +71,19 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 - 利用回数を数えている場合、リトライでは回数を増やさない
 - 最終的に失敗した場合、利用者へ返す文面を決めておく。外部APIのエラー本文をそのまま返さない
 
+これらは`shared/lambda/deadlineRequest.js`の`requestWithDeadline`で実現できる。
+- HTTP送信は持たない。呼び出し側が`send(signal)`を渡す
+- 残り時間が足りなければ送信せずに失敗させる
+- 失敗時のエラーは、最後の`statusCode`と試行回数を持つ。本文は`message`に含めない
+
 レスポンスの文字化け対策は[`https-response-buffer-encoding-pattern.md`](https-response-buffer-encoding-pattern.md)を参照する。API Gatewayのタイムアウトを超える処理は[`async-job-polling-pattern.md`](async-job-polling-pattern.md)を使う。
+
+### リクエストボディの入力検証
+
+`shared/lambda/validation.js`の小さな検証関数で、ボディの型・必須・文字数上限を確認する。
+- `requireObject`・`requireString`・`optionalString`・`requireBoolean`・`optionalDate`・`requireExactlyOneOf`を提供する
+- 失敗時は`statusCode: 400`・`code: "VALIDATION"`の例外を投げる。エラー文言に入力値は含めない
+- 上限値の目安は、名前100文字、メモ1000文字である
 
 ## 5. 監視が実際に失敗を検知できるか
 
