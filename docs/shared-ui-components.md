@@ -388,7 +388,7 @@ const { isSupported, start } = useSpeechRecognition({
 - `error`は`role="alert"`、それ以外は`role="status"`である
 - 見た目は`containerClassName`・`itemClassName`・`closeLabel`で上書きできる
 - 画面の主要な内容が取得できなかった場合は、トーストではなく、画面内のエラー表示と再試行ボタンを出す
-- `ApiError`の種別から固定の文言を選ぶ関数は、共通のAPIクライアント（#1408）の後に追加する
+- `ApiError`の種別から固定の文言を選ぶ`messageForApiError`は、[`shared-api-client.md`](shared-api-client.md)にある
 
 ### 共有コンポーネントのテスト規約
 
