@@ -36,6 +36,35 @@ ESLint設定は、参照側が個別に持つ。規約へルールを足して�
 
 `oxlint`を使うプロダクトでは、対応するルールの有無を確認する。共有設定の整備は#1376で扱う。
 
+### ESLint導入時に遭遇する問題
+
+shock-labのoxlintからの移行（約3,000行、エラー9件）で当たった問題である。他のプロダクトでも同じ問題に当たる。
+
+**TypeScript 7では`typescript-eslint`が起動しない（issue #1464）**
+
+- `typescript`が7系だと、`eslint`の実行が`typescript-eslint does not support TS 7.0.`の例外で止まる。npmのpeer依存の警告とは別の、ライブラリ自身の非対応チェックである。`--legacy-peer-deps`で`npm install`を通しても解決しない
+- 2026-11時点で未対応である（[typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)で追跡）
+- `typescript`を6系に固定する。Renovateのメジャー更新PRは、対応版が出るまでマージしない
+- 参照側の`renovate.json`の`packageRules`へ、次のルールを置く。共有プリセット（#1370）ができたら、そちらへ移す
+- 固定を解く条件は、typescript-eslintがTS 7に対応することである。外し忘れを防ぐため、解除用のissueを参照側で起票しておく（shock-lab#412が例）
+
+```json
+{ "matchPackageNames": ["typescript"], "matchUpdateTypes": ["major"], "enabled": false }
+```
+
+**sonarjs `recommended`で既存コードに出やすい指摘**
+
+| 指摘 | 対処 |
+|---|---|
+| `sonarjs/pseudo-random` | 見た目の演出等、セキュリティと無関係な`Math.random()`は、`// eslint-disable-next-line sonarjs/pseudo-random`と理由コメントで許可する。式が複数行にまたがるときは、`Math.random()`がある行の直前へ置く。行がずれると、元の指摘と「未使用のdisable」警告が両方出る。`--max-warnings 0`では失敗する |
+| `sonarjs/no-fixed-wait-in-tests` | Playwrightの`page.waitForTimeout`を使わない。`expect.poll`・`toBeVisible`等の、観測できる条件を待つ。canvasの描画が進んだことは、`canvas.toDataURL()`が初期フレームから変わるまで`expect.poll`で待てる |
+| `max-lines`（300行） | 500行級のコンポーネントは、純粋な描画関数・スタイル定義・状態判定を別モジュールへ切り出す。同じPRでは挙動を変えない（純粋なコード移動に限る） |
+
+**その他**
+
+- `tsconfig`が`erasableSyntaxOnly: true`のとき、`constructor(private readonly x: T)`はビルドエラー（`TS1294`）になる。フィールドを明示的に宣言し、コンストラクタ本体で代入する
+- `react-refresh/only-export-components`は、コンポーネントのファイルからコンポーネントでない関数・定数をexportすると警告になる。`--max-warnings 0`では失敗するため、純粋な関数は別の`.ts`へ移す
+
 **経緯**: 以前は新規TypeScriptフロントエンドプロジェクトに`oxlint`を案内していた。その後、フロントエンドのlintもESLintへ統一する方針に変更した。詳細は[bamiyanapp/dev-standards#483](https://github.com/bamiyanapp/dev-standards/issues/483)を参照。既に`oxlint`を導入済みのプロダクトは、移行の要否・時期をプロダクト側で判断してよい。
 
 ## stylelint
