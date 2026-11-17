@@ -1,3 +1,10 @@
+# [2.131.0](https://github.com/bamiyanapp/dev-standards/compare/v2.130.0...v2.131.0) (2026-11-17)
+
+
+### Features
+
+* DynamoDBコマンドに対応するIAM Actionの不足を検査するenable_iam_actions_checkを追加する ([#1437](https://github.com/bamiyanapp/dev-standards/issues/1437)) ([c24b443](https://github.com/bamiyanapp/dev-standards/commit/c24b443d1fad7bf5d7cb84af75072fbb5c5428c6)), closes [#1419](https://github.com/bamiyanapp/dev-standards/issues/1419)
+
 # [2.130.0](https://github.com/bamiyanapp/dev-standards/compare/v2.129.0...v2.130.0) (2026-11-17)
 
 
