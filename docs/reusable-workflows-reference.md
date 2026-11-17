@@ -160,6 +160,9 @@ with:
 | `enable_dead_link_check` | Markdown間の相対リンク切れを検証する（`dead-link-check` job） | `false` |
 | `dead_link_check_paths` | 検証対象Markdownのglobパターン | `""` |
 | `enable_secret_scan` | PR差分に誤ってコミットされた認証情報を検知する（`secret-scan` job） | `false` |
+| `enable_dynamodb_protection_check` | DynamoDBテーブルのデータ保護設定を検査する（`dynamodb-protection-check` job。`self_ref`も必要） | `false` |
+| `dynamodb_protection_files` | 上記の検査対象ファイル（カンマ区切り。SAMなら`infra/template.yaml`等） | `serverless.yml` |
+| `dynamodb_protection_mode` | `warn`は警告のみ、`fail`は違反で失敗にする | `warn` |
 | `enable_email_scan` | PR差分の追加行に実在のメールアドレスらしき文字列が無いかを検知する（`secret-scan` job内。`enable_secret_scan`と`self_ref`も必要） | `false` |
 
 - `enable_mermaid_render`: 対象はGitHubのPR差分ビュー・API経由でのファイル取得等である。これらの場面ではmermaidがネイティブレンダリングされない（[bamiyanapp/karuta#824](https://github.com/bamiyanapp/karuta/issues/824)）。Markdown側のmermaidソース自体は書き換えない。`push`イベントのたびに`docs-diagrams`ブランチの`latest/`へ上書き公開される。そのため、対象Markdownファイルの```` ```mermaid ```` ブロック直後に画像リンクを一度だけ手動で埋め込んでおく。画像リンクの形式は`![...](https://raw.githubusercontent.com/<repo>/docs-diagrams/latest/<ファイル名>)`である。すると、ドキュメント本体からも常に最新のレンダリング結果を確認できる（詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「1. CIワークフロー」参照）
@@ -167,6 +170,7 @@ with:
 - `enable_dead_link_check`: ドキュメントのリファクタリング・ファイル移動・リネームでリンク切れが発生することがある。この種のリンク切れは`text-lint`・`doc-duplication-check`では検知できないため、別ジョブとして提供する（[bamiyanapp/dev-standards#603](https://github.com/bamiyanapp/dev-standards/issues/603)）。外部URL（`http`/`https`）は一時的な障害でCIが不安定になることを避けるため検証対象から除外し、相対パスのリンクのみを検証する
 - `enable_secret_scan`: CodeQL（SAST）はコードの脆弱性パターンを検知するものである。これは誤ってコミットされた具体的な秘密情報（APIキー・トークン等）の検出とは別物のため、別ジョブとして提供する（[bamiyanapp/dev-standards#892](https://github.com/bamiyanapp/dev-standards/issues/892)）。gitleaks CLI本体（MIT）をバイナリ直接取得で使い、PRのbase_branchとの差分のみを対象にスキャンする。当初は`gitleaks/gitleaks-action`を使っていた。しかしv3から商用ライセンスが必要になり、組織（Organization）のリポジトリで使えなくなったため、CLI直接実行へ移行した（[bamiyanapp/dev-standards#1268](https://github.com/bamiyanapp/dev-standards/issues/1268)）。誤検知を許可する場合は、参照側リポジトリのルートに`.gitleaks.toml`を置いてallowlistを設定する。検知0件の場合も、スキャン対象コミット数をJob Summaryへ出力する（issue #1307）。リポジトリ全体の履歴まで遡及してスキャンする場合は、別ワークフロー（`reusable-secret-full-scan.yml`、後述）を併用する
 - `enable_email_scan`: gitleaksはメールアドレス（個人情報）を検知しない。追加行だけを`scripts/detect-hardcoded-email.js`で確認し、見つかればファイル名・行番号・伏せ字だけをJob Summaryへ出して失敗する（値はログへ出さない）。`example.com`・`noreply`・`users.noreply.github.com`等は除外する。意図的に残すアドレスは、参照側リポジトリのルートの`.email-allowlist`へ書く（1行に1つ。完全一致のアドレスまたは`@ドメイン`）。詳細は[`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md)を参照する（[bamiyanapp/dev-standards#1364](https://github.com/bamiyanapp/dev-standards/issues/1364)）
+- `enable_dynamodb_protection_check`: DynamoDBテーブルのデータ保護設定を検査する。実装は`scripts/check-dynamodb-protection.js`である。検査項目は4つである。ポイントインタイムリカバリ、削除保護、`DeletionPolicy: Retain`、`UpdateReplacePolicy: Retain`を確認する。TTLが有効なテーブルは対象外とする。それ以外の除外は、リソースの`Metadata.DevStandardsProtectionExempt`へ理由を書く。理由の無い除外は違反になる。`AWS::Serverless::SimpleTable`は保護設定を指定できない。そのため未検査として一覧に出す。導入時は、既存のテーブルが違反になる。そのため`warn`で始める。是正後に`fail`へ切り替える（[#1402](https://github.com/bamiyanapp/dev-standards/issues/1402)）
 
 ### CI実行回数削減
 
