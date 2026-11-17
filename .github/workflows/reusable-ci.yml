@@ -320,6 +320,31 @@ on:
           導入時は既存のテーブルが違反になるため、`warn`で始め、是正後に`fail`へ切り替える。
         type: string
         default: "warn"
+      enable_iam_actions_check:
+        description: >-
+          バックエンドのソースが使うDynamoDBのコマンド（`new XxxCommand(`）に対応するIAM Actionが、
+          serverless.ymlのIAMステートメントにあるかを検査する`iam-actions-check` jobを
+          実行するかどうか（bamiyanapp/dev-standards#1419）。`self_ref`の指定も必要である。
+          単体テストはDynamoDBをモックするため、権限の不足を検知できない。
+          IAMステートメントが見つからない構成、関数ごとにロールを持つ構成、SAMテンプレートは対象外。
+        type: boolean
+        default: false
+      iam_actions_serverless_file:
+        description: "`enable_iam_actions_check`が読むserverless.ymlのパス。"
+        type: string
+        default: "serverless.yml"
+      iam_actions_source_dirs:
+        description: >-
+          `enable_iam_actions_check`が走査するバックエンドのソースのディレクトリ。
+          カンマまたは改行区切りで複数指定できる。テストファイルは読まない。
+        type: string
+        default: "backend/src"
+      iam_actions_mode:
+        description: >-
+          `warn`は不足があっても失敗にせず警告だけを出す。`fail`は不足があれば失敗にする。
+          導入時は既存の参照側が違反になりうるため、`warn`で始める。
+        type: string
+        default: "warn"
       enable_email_scan:
         description: >-
           PR差分の追加行に、実在のメールアドレスらしき文字列が含まれていないかを
@@ -2281,6 +2306,45 @@ jobs:
           { echo "## DynamoDB保護設定の検査"; echo; sed '/^::warning/d' /tmp/dynamodb-protection.txt; } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
+  iam-actions-check:
+    name: "IAM Actionの不足の検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_iam_actions_check &&
+      inputs.self_ref != '' &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+      - name: dev-standardsをチェックアウトする
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: js-yamlをインストールする
+        run: npm install --no-save --prefix /tmp/yaml-tools js-yaml@4
+      - name: IAM Actionの不足を検査する
+        env:
+          NODE_PATH: /tmp/yaml-tools/node_modules
+          SERVERLESS_FILE: ${{ inputs.iam_actions_serverless_file }}
+          SOURCE_DIRS: ${{ inputs.iam_actions_source_dirs }}
+          MODE: ${{ inputs.iam_actions_mode }}
+        run: |
+          set -eu
+          dirs=$(printf '%s' "$SOURCE_DIRS" | tr ',' ' ')
+          status=0
+          node .dev-standards-actions/scripts/check-iam-actions.js "$MODE" "$SERVERLESS_FILE" $dirs > /tmp/iam-actions.txt || status=$?
+          cat /tmp/iam-actions.txt
+          { echo "## IAM Actionの不足の検査"; echo; sed '/^::warning/d' /tmp/iam-actions.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
   secret-scan:
     name: "シークレットスキャン"
     needs: commitlint
@@ -3043,7 +3107,7 @@ jobs:
     # lighthouse-ci等の完了前に「自動マージの対象です」という判定を投稿してしまう
     # ことがあった。merge job（このファイル内）のneedsからdependency-risk-summary
     # 自身を除いた全件と一致させ、CI全体の完了後にのみ投稿されるようにする
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
     if: |
       always() &&
       inputs.enable_dependency_risk_summary &&
@@ -3815,7 +3879,7 @@ jobs:
 
   merge:
     name: "自動マージ"
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -3863,6 +3927,7 @@ jobs:
         !contains(fromJSON('["failure", "cancelled"]'), needs.doc-reachability-check.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.dynamodb-protection-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.iam-actions-check.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
