@@ -13,7 +13,7 @@
     "lint:text": "textlint --rulesdir textlint-rules --config textlint.config.cjs \"docs/*.md\" README.md CLAUDE.md \".claude/skills/**/*.md\"",
     "generate:apps": "node site/scripts/generate.js",
     "pretest": "npm --prefix .github/actions/compare-e2e-screenshots ci",
-    "test": "node scripts/validate.js && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css"
+    "test": "node scripts/validate.js && vitest run && node --test *.test.js scripts/*.test.js .github/actions/*/*.test.js shared/*/*.test.js && npm run lint:workflows && npm run lint:css"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1146.0",
@@ -26,10 +26,12 @@
     "@semantic-release/github": "^12.0.0",
     "@semantic-release/npm": "^13.1.3",
     "@semantic-release/release-notes-generator": "^14.0.1",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "actionlint": "^2.0.6",
     "ae-cvss-calculator": "^1.0.13",
     "jsdom": "^31.0.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "semantic-release": "^25.0.2",
@@ -37,6 +39,7 @@
     "stylelint": "^18.0.0",
     "stylelint-config-standard": "^41.0.0",
     "textlint": "^15.8.0",
-    "textlint-rule-preset-ja-technical-writing": "^12.0.2"
+    "textlint-rule-preset-ja-technical-writing": "^12.0.2",
+    "vitest": "^4.1.12"
   }
 }
