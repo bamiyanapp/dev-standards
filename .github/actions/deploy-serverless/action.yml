@@ -30,6 +30,23 @@ inputs:
     description: "デプロイコマンド実行前にファイルディスクリプタのソフトリミットをハードリミットまで引き上げるかどうか"
     required: false
     default: "true"
+  check-broken-symlinks:
+    description: >-
+      デプロイ前に、working-directory配下のリンク切れのsymlinkを検知し、あれば失敗させるかどうか
+      （bamiyanapp/dev-standards#1386）。shared/lambdaをsymlinkで使う構成で、チェックアウトに
+      `submodules: true`が無いと、symlinkの実体が無く、serverless packageは成功するがzipに
+      ファイルが含まれず、デプロイ後に全関数がCannot find moduleで起動に失敗する。
+      リンク切れのままデプロイして正常に動く構成は考えにくいため、既定で有効にする
+    required: false
+    default: "true"
+  smoke-test-url:
+    description: >-
+      デプロイ後に疎通確認するURL（任意）。指定すると、GETして200以外なら失敗させる
+      （起動直後の失敗に備え、最大3回、5秒おきに再試行する）。副作用の無いGETで確認できる
+      エンドポイントを指定すること。E2EがAPIをモックしている構成では、デプロイされた
+      バックエンドの異常を、これ以外に検知する手段が無い
+    required: false
+    default: ""
   aws-access-key-id:
     description: "AWSアクセスキーID"
     required: true
@@ -46,6 +63,17 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: "npm"
         cache-dependency-path: ${{ inputs.workspaces == 'true' && 'package-lock.json' || format('{0}/package-lock.json', inputs.working-directory) }}
+    - name: リンク切れのsymlinkを検知する
+      if: inputs.check-broken-symlinks == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        broken=$(find . -xtype l -not -path '*/node_modules/*' || true)
+        if [ -n "$broken" ]; then
+          echo "::error::リンク切れのsymlinkがあります。デプロイすると、パッケージにファイルが含まれず、全関数が起動に失敗します。チェックアウトに submodules: true を指定してください。"
+          echo "$broken"
+          exit 1
+        fi
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.workspaces == 'true' && '.' || inputs.working-directory }}
@@ -63,3 +91,17 @@ runs:
       env:
         AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+    - name: デプロイ後に疎通確認する
+      if: inputs.smoke-test-url != ''
+      shell: bash
+      env:
+        SMOKE_TEST_URL: ${{ inputs.smoke-test-url }}
+      run: |
+        for attempt in 1 2 3; do
+          status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$SMOKE_TEST_URL" || echo "000")
+          echo "疎通確認 $attempt 回目: HTTP $status"
+          if [ "$status" = "200" ]; then exit 0; fi
+          sleep 5
+        done
+        echo "::error::デプロイ後の疎通確認に失敗しました（最後のHTTPステータス: $status）。デプロイされたバックエンドが正常に動いていない可能性があります。"
+        exit 1

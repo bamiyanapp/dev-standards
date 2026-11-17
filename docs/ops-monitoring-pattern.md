@@ -95,6 +95,71 @@ functions:
           arn: !Ref OpsAlertTopic
 ```
 
+## 導入時の確認事項（デプロイ側）
+
+`shared/lambda/*.js`をsymlinkで使う場合、デプロイ側で次を確認する。2つのプロダクトで、本番APIが約10日間止まった（#1386）。
+
+- **デプロイジョブのチェックアウトに、`submodules: true`を指定する**。無いと、symlinkの実体が存在しない。`serverless package`は成功するが、zipにファイルが含まれない。デプロイ後、全関数が`Cannot find module`で起動に失敗する。CIは`submodules`ありで動くため、検知できない
+- `deploy-serverless`複合actionは、デプロイ前にリンク切れのsymlinkを検知し、あれば失敗させる（`check-broken-symlinks`、既定で有効）
+- **通知用Secretsを、デプロイステップの`env`へ渡す**。`serverless.yml`の`${env:OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN}`は、デプロイ時の環境変数から解決される。渡していないと、通知が常にスキップされる
+- 生成したパッケージを展開し、ハンドラを読み込めることを、CIで検証する
+- デプロイ後に、実際のAPIへ疎通確認する。`deploy-serverless`の`smoke-test-url`で、GETして200以外なら失敗させる。E2EがAPIをモックしている構成では、デプロイされたバックエンドの異常を、これ以外に検知できない
+
+## Lambdaのエラーを検知するアラーム
+
+### Errorsアラームの限界
+
+`AWS/Lambda`の`Errors`は、ハンドラが例外を外へ投げたときにしか増えない。API用のLambdaは、例外を捕捉して500や502を返す実装が一般的である。その場合、`Errors`は増えない。**`Errors`アラームだけでは、利用者に見えている失敗を検知できない**。次の5xxアラームと併用する。
+
+### API Gatewayの5XXErrorアラーム
+
+```yaml
+    ApiGateway5xxAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: ${self:service}-${sls:stage}-api-5xx
+        Namespace: AWS/ApiGateway
+        MetricName: 5XXError   # HTTP APIは5xx（名前が異なる）。実際のメトリクス名を確認する
+        Dimensions:
+          - Name: ApiName
+            Value: ${self:service}-${sls:stage}
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        AlarmActions:
+          - !Ref OpsAlertTopic
+```
+
+API種別（REST API・HTTP API）で、メトリクス名とディメンションが異なる。生成されたテンプレートと、CloudWatchのメトリクス一覧で確認する。
+
+### 関数ごとの重複定義を避ける
+
+関数ごとにほぼ同じ`AWS::CloudWatch::Alarm`を手書きすると、重複が増える。関数を追加するときに、追加を忘れることもある。`shared/lambda/errorAlarms.js`の`buildErrorAlarms()`で、`functions`のキー一覧から生成する。関数を足したとき、アラームも自動で増える。
+
+```js
+// alarms.js（serverless.ymlの `resources: ${file(./alarms.js)}` から読み込む）
+const { buildErrorAlarms } = require("./errorAlarms.js"); // symlink先
+module.exports = (serverless) =>
+  buildErrorAlarms({ functionNames: Object.keys(serverless.service.functions), alarmActionTopic: "OpsAlertTopic", exclude: ["opsAlert"] });
+```
+
+- 追加の依存は無い。Serverless Frameworkのプラグインは、サプライチェーンの面で採用しない
+- `TreatMissingData: notBreaching`である。呼び出しが無い間はエラーも無い。「呼び出しが無いこと」の検知（上の`Invocations`と`breaching`）とは、使い分ける
+
+## 通知先
+
+- LINE公式アカウントを用意できるまでの暫定として、SNSのEmail購読を使える。**確認メールのリンクを開くまで、購読は有効にならない**。デプロイが成功しても、通知が届くことは意味しない
+- 本番の通知先は、運用監視専用のLINE Botである（次の節）
+
+## Lambda@Edgeの監視（未確認）
+
+Lambda@Edgeは、実行リージョンごとに関数のレプリカが作られる。`AWS/Lambda`のメトリクスは、リージョンごとに分かれる。全リージョンにアラームを張るのは現実的でない。
+
+第一候補は、`AWS/CloudFront`名前空間のメトリクスである。ディストリビューション単位で、`us-east-1`に集約して出る（`DistributionId`と`Region=Global`）。ただし、**メトリクスの正確な名前と、追加料金の要否は、未確認である**。実装前に、一時workflowで`aws cloudwatch list-metrics`を実行して確認する（[`sandbox-unreachable-investigation`](../.claude/skills/sandbox-unreachable-investigation/SKILL.md)Skill参照）。
+
 ## 運用監視専用LINE Botについて
 
 各プロダクトが持つユーザー向け通知用のLINE公式アカウントとは別に、**運用監視専用のLINE公式アカウントを全プロダクト共通で1つ新規開設**する。LINE Developersコンソール（スマートフォンのブラウザから操作可能）から作成し、チャンネルアクセストークンと通知先のユーザーIDを取得する。
