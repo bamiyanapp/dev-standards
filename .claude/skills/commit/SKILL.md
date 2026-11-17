@@ -14,6 +14,14 @@ description: コミットを作成する際の前提条件と必須項目を確�
 
 bodyには必ず`設計:`・`影響:`・`テスト:`を含める。
 
+コミット後、件名の長さを確認する。
+
+```bash
+git log -1 --format=%s | awk '{print length($0)}'
+```
+
+100以下であればよい。超えていたら、push前なら`git commit --amend`で直す。`npx commitlint --from HEAD~1`でも確認できる。
+
 ## 参照ドキュメント
 
 - [`docs/public-repo-no-pii-pattern.md`](https://github.com/bamiyanapp/dev-standards/blob/main/docs/public-repo-no-pii-pattern.md): 公開リポジトリに個人情報を持ち込まないパターン
