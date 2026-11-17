@@ -380,7 +380,7 @@ flowchart TD
 </details>
 <!-- jscpd:ignore-end -->
 
-![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
+![useWakeLockの状態遷移 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/shared-ui-components.png?beb71737bdbeb49528789ad5abe978120c826f13)
 
 ### `shared/hooks/useSpeechRecognition.js`
 
