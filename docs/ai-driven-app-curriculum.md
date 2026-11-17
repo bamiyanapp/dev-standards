@@ -219,3 +219,4 @@ Lambda + API Gateway + DynamoDB構成のプロダクトでは、複数のプロ�
 - [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): CI/CDパイプラインの詳細仕様
 - [`code-quality-conventions.md`](code-quality-conventions.md): lintルールの推奨値
 - [`serverless-api-hardening-checklist.md`](serverless-api-hardening-checklist.md): サーバーレスAPIの堅牢化チェックリスト（フェーズ5の棚卸しの観点）
+- [`serverless-api-integrity-checklist.md`](serverless-api-integrity-checklist.md): サーバーレスAPIのデータ整合性・運用チェックリスト（フェーズ5の棚卸しの観点）
