@@ -26,6 +26,7 @@
 
 - [`claude-workflow-philosophy.md`](docs/claude-workflow-philosophy.md): Claudeはこのリポジトリ群で「残したいものは全てIssue化し、変更は必ずPRとして出す」という方針で動く。本書はその理由を初学者向けに俯瞰する入口である
 - [`ai-driven-app-curriculum.md`](docs/ai-driven-app-curriculum.md): アイデア→アプリ化→dev-standards準拠のモダナイズというAI駆動開発の進め方（カリキュラム）
+- [`ai-driven-app-inventory-phase.md`](docs/ai-driven-app-inventory-phase.md): カリキュラムのフェーズ5（品質課題の棚卸し）の手順・プロンプト例・失敗パターン
 - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス
 - [`repository-contents.md`](docs/repository-contents.md): このリポジトリに含まれるファイル・ディレクトリの一覧
