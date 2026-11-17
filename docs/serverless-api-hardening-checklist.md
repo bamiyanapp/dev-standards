@@ -29,6 +29,12 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 
 確認方法は、`QueryCommand`・`ScanCommand`の呼び出し箇所を検索し、`LastEvaluatedKey`を処理しているかを見ることである。
 
+全件取得には`shared/lambda/dynamoPagination.js`の`queryAll`・`scanAll`を使う。
+- 件数の上限（`maxItems`、既定10000）を超えたら、黙って打ち切らず例外を投げる
+- 取得しながら処理する用途（全削除等）は、1ページずつ返す`queryPages`・`scanPages`を使う
+- `Limit`付きの`Query`は「先頭N件が欲しい」意図のことがある。置き換えは呼び出し箇所ごとに意図を確認する
+- 多数の項目の書き込み・取得は`shared/lambda/dynamoBatch.js`の`batchWriteAll`・`batchGetAll`を使う。25件・100件への分割と、未処理分を再試行する
+
 影響が大きいのは、全件を対象にする処理である。退会時のデータ全削除、一括更新、件数の集計等が該当する。一部だけ処理して成功を返すと、失敗に気づけない。安全な一括処理の書き方は[`dynamodb-safe-backfill-pattern.md`](dynamodb-safe-backfill-pattern.md)を参照する。
 
 ## 3. 公開エンドポイントの防御
@@ -65,7 +71,19 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 - 利用回数を数えている場合、リトライでは回数を増やさない
 - 最終的に失敗した場合、利用者へ返す文面を決めておく。外部APIのエラー本文をそのまま返さない
 
+これらは`shared/lambda/deadlineRequest.js`の`requestWithDeadline`で実現できる。
+- HTTP送信は持たない。呼び出し側が`send(signal)`を渡す
+- 残り時間が足りなければ送信せずに失敗させる
+- 失敗時のエラーは、最後の`statusCode`と試行回数を持つ。本文は`message`に含めない
+
 レスポンスの文字化け対策は[`https-response-buffer-encoding-pattern.md`](https-response-buffer-encoding-pattern.md)を参照する。API Gatewayのタイムアウトを超える処理は[`async-job-polling-pattern.md`](async-job-polling-pattern.md)を使う。
+
+### リクエストボディの入力検証
+
+`shared/lambda/validation.js`の小さな検証関数で、ボディの型・必須・文字数上限を確認する。
+- `requireObject`・`requireString`・`optionalString`・`requireBoolean`・`optionalDate`・`requireExactlyOneOf`を提供する
+- 失敗時は`statusCode: 400`・`code: "VALIDATION"`の例外を投げる。エラー文言に入力値は含めない
+- 上限値の目安は、名前100文字、メモ1000文字である
 
 ## 5. 監視が実際に失敗を検知できるか
 
