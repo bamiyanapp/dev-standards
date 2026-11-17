@@ -33,7 +33,7 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 - 件数の上限（`maxItems`、既定10000）を超えたら、黙って打ち切らず例外を投げる
 - 取得しながら処理する用途（全削除等）は、1ページずつ返す`queryPages`・`scanPages`を使う
 - `Limit`付きの`Query`は「先頭N件が欲しい」意図のことがある。置き換えは呼び出し箇所ごとに意図を確認する
-- 多数の項目の書き込み・取得は`shared/lambda/dynamoBatch.js`の`batchWriteAll`・`batchGetAll`を使う。25件・100件への分割と、未処理分の再試行を行う
+- 多数の項目の書き込み・取得は`shared/lambda/dynamoBatch.js`の`batchWriteAll`・`batchGetAll`を使う。25件・100件への分割と、未処理分を再試行する
 
 影響が大きいのは、全件を対象にする処理である。退会時のデータ全削除、一括更新、件数の集計等が該当する。一部だけ処理して成功を返すと、失敗に気づけない。安全な一括処理の書き方は[`dynamodb-safe-backfill-pattern.md`](dynamodb-safe-backfill-pattern.md)を参照する。
 
