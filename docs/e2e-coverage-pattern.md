@@ -18,53 +18,37 @@ npm install --save-dev monocart-reporter
 
 ## 2. `playwright.config.js`
 
+設定そのものを、`shared/e2e/playwright.config.base.js`の`buildPlaywrightConfig()`として配布している。`coverageFixture.js`と対で正しく動く設定を、書き写させないためである。書き写しの過程で`entryFilter`が緩くなり、他アプリのコードがカバレッジへ混入する不具合が起きた（[bamiyanapp/dev-standards#1360](https://github.com/bamiyanapp/dev-standards/issues/1360)）。
+
 ```js
 import { defineConfig, devices } from '@playwright/test';
+import { buildPlaywrightConfig } from './playwright.config.base.js'; // symlink先
 
-export default defineConfig({
-  testDir: './e2e',
-  reporter: [
-    ['html'],
-    // 失敗したテストの理由を、Job SummaryとPRコメントへ出すために必要（下記「失敗の概要」参照）
-    ['json', { outputFile: 'playwright-report/results.json' }],
-    ['monocart-reporter', {
-      name: 'アプリ名 E2E Report',
-      outputFile: './monocart-report/index.html',
-      coverage: {
-        // frontend-testと同じパスに出力する（check-coverage-threshold複合actionの既定）
-        outputDir: './coverage',
-        reports: [
-          ['json-summary'],
-          ['console-summary'],
-        ],
-        // ビルド成果物（自プロダクトのオリジン配下のみ）を対象にする。CDNやAPIへの
-        // リクエスト等、対象外のエントリまでレポートに含めないようentryFilterで絞る。
-        // includes()ではなくpathnameの先頭一致（startsWith）を使うこと。例えば
-        // base: '/'のアプリでentry.url.includes('/assets/')のような短い文字列判定に
-        // すると、同一オリジン上の別アプリの絶対パス（/other-app/assets/foo.js等）を
-        // 部分文字列としてマッチしてしまう。1リポジトリに複数の独立したSPAを持つ構成
-        // （下記「複数アプリ構成の場合」参照）で実際に発生した
-        entryFilter: (entry) => new URL(entry.url).pathname.startsWith('/<リポジトリ名>/'),
-        // node_modules（依存パッケージのソース）を除外し、自プロダクトのsrc/配下のみを
-        // 対象にする。省略するとnode_modules配下の大量のファイルがレポートに混入する
-        sourceFilter: {
-          '**/node_modules/**': false,
-          'src/**': true,
-        },
-      },
-    }],
-  ],
-  use: {
-    baseURL: 'http://localhost:4173/<base-path>/',
-  },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-  ],
-  webServer: {
-    command: 'npm run preview',
-    url: 'http://localhost:4173/<base-path>/',
-    reuseExistingServer: !process.env.CI,
-  },
+export default buildPlaywrightConfig({
+  defineConfig,
+  devices,
+  reportName: 'アプリ名 E2E Report',
+  basePath: '/サブパス/', // vite.config.jsのbaseと同じ値（必須）
+});
+```
+
+- `defineConfig`・`devices`は、参照側のnode_modulesから解決させるため、引数で渡す
+- `basePath`は必須である。未指定や、`/`で始まり`/`で終わる形でない場合は、例外を投げる
+- `entryFilter`は、`new URL(entry.url).pathname.startsWith(`${basePath}assets/`)`である。`includes()`は使わない。`basePath: '/'`のとき、`includes('/assets/')`では別アプリにも一致してしまう。例えば`/other/assets/x.js`である
+- 別オリジンのURLや、`data:`・`blob:`でも、例外を投げずに対象外にする
+- jsonレポーター（下記「失敗の概要」）を含む
+- `monocart-reporter`の`coverage`設定も含む。`outputDir: './coverage'`・`json-summary`・`sourceFilter`である
+
+### 実行形態
+
+- 本番環境に対して実行する場合は、環境変数`E2E_BASE_URL`を`baseURL`にする
+- ローカルの`vite preview`に対して実行する場合は、`webServer`を渡す。`baseURL`は`webServer.url`になる
+
+```js
+export default buildPlaywrightConfig({
+  defineConfig, devices, reportName: 'アプリ名 E2E Report', basePath: '/',
+  webServer: { command: 'npm run preview', url: 'http://localhost:4173' },
+  overrides: { retries: 2 }, // 任意。トップレベルを浅く上書きする
 });
 ```
 
@@ -74,7 +58,7 @@ export default defineConfig({
 
 スマホオンリー環境では、HTMLレポート（zip）を閲覧できない。`reusable-ci.yml`の`frontend-e2e-test` jobは、失敗したテストの題名・エラーメッセージ・該当行を、Job SummaryとPRコメントへ出す（issue #1365）。
 
-- 上の設定の`['json', { outputFile: 'playwright-report/results.json' }]`が必要である
+- `buildPlaywrightConfig()`は、jsonレポーター（`outputFile: 'playwright-report/results.json'`）を含む。自前の設定を使う場合は、同じレポーターを足す
 - reporterは、設定ファイルの`reporter`配列へ足す。CLIの`--reporter`で足してはいけない。`--reporter`は設定ファイルの配列を丸ごと置き換えるため、`monocart-reporter`が外れて、E2Eカバレッジが出なくなる
 - `results.json`が無いときは、警告を出してスキップする。失敗にはしない
 - 再試行で成功したテスト（flaky）は、失敗に含めず、件数だけを出す
@@ -135,29 +119,7 @@ cat coverage/coverage-summary.json   # totalと各src/*.jsxファイルのpctが
 
 examinationのように、1リポジトリに複数の独立したVite SPAを持つ構成がある。全アプリが同一の本番ドメイン上で動く場合、`entryFilter`を「リポジトリ名」単位ではなく**アプリごとの`base`パス**単位で絞る必要がある。
 
-```js
-import { defineConfig, devices } from '@playwright/test';
-
-export function buildPlaywrightConfig({ defineConfig, devices, reportName, basePath }) {
-  return defineConfig({
-    // ...
-    reporter: [
-      ['html'],
-      ['monocart-reporter', {
-        name: reportName,
-        coverage: {
-          outputDir: './coverage',
-          reports: [['json-summary'], ['console-summary']],
-          // 自アプリの`vite.config.js`の`build.base`と同じ値をbasePathとして渡す
-          entryFilter: (entry) => new URL(entry.url).pathname.startsWith(`${basePath}assets/`),
-          sourceFilter: { '**/node_modules/**': false, 'src/**': true },
-        },
-      }],
-    ],
-    // ...
-  });
-}
-```
+`buildPlaywrightConfig()`は、`basePath`を必須にして、アプリごとの`base`パスで絞る。
 
 各アプリの呼び出し側（`playwright.config.js`）で、自身の`vite.config.js`と同じ`base`値を渡す。
 
@@ -171,6 +133,21 @@ export default buildPlaywrightConfig({
 ```
 
 `basePath`を渡さず全アプリで同じ`entryFilter`（例: `/assets/`のみでの判定）を使うとどうなるか。あるアプリのE2Eテスト実行中に、別アプリのJSが何らかの理由（Service Workerの先読み、ブラウザコンテキストの再利用等）で実行された場合、そのカバレッジまで巻き込まれてしまう。この結果、カバレッジの集計対象（`Total`）が通常時の数十倍に跳ね上がる異常が実際に発生した。examinationで2回再現している（bamiyanapp/examination#687、dev-standards#1360）。
+
+## 認証済みの状態を作る（`shared/e2e/auth.js`）
+
+Cognito + Lambda@Edgeの認証パターン（[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)）を採るプロダクトでは、`loginWithCookies()`で、対話的なログインを自動操作せずに、認証済みの状態を作れる。事前に取得したrefresh token等を、Cookieとして注入する。
+
+```js
+import { loginWithCookies } from './auth.js'; // symlink先
+
+test.beforeEach(async ({ context }) => {
+  await loginWithCookies(context, { baseURL: process.env.E2E_BASE_URL, cookies: { refresh_token: process.env.E2E_REFRESH_TOKEN } });
+});
+```
+
+- Cookie名は引数である。値を環境変数から直接読まない。どのSecretを使うかは、参照側が決める
+- 値が空のCookieは注入しない。すべて空なら、例外を投げる。Secretが未設定であることに気づける
 
 ## 実例
 
