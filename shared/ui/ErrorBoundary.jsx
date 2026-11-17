@@ -23,14 +23,21 @@ import { Component } from "react";
 // 別バリアントへ明示的に退避させたいケースを想定している。本コンポーネント自体は
 // どのバリアント機構にも依存せず、遷移先URLの文字列を受け取るだけの汎用的な
 // インターフェースとする。未指定時は従来通り`window.location.reload()`のみを行う
+//
+// `renderFallback`（任意）を指定すると、フォールバック画面の表示を差し替えられる
+// （issue #1420）。Bootstrap以外のCSSフレームワーク（Tailwind等）の参照側が、ロジック
+// （例外の捕捉・報告・遷移）を書き写さずに、symlinkで使えるようにするためである。
+// `renderFallback({ reload, error })`を呼び、戻り値を表示する。`reload`は、再読み込みの
+// 操作（`fallbackUrl`があればそこへの遷移、無ければ`window.location.reload()`）で、
+// 参照側が同じ分岐を書かずに済む。未指定時は、従来のBootstrapの表示になる
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -60,8 +67,20 @@ class ErrorBoundary extends Component {
     }
   }
 
+  // 再読み込みの操作。fallbackUrlがあればそこへ遷移し、無ければ再読み込みする
+  reload = () => {
+    if (this.props.fallbackUrl) {
+      window.location.href = this.props.fallbackUrl;
+    } else {
+      window.location.reload();
+    }
+  };
+
   render() {
     if (this.state.hasError) {
+      if (this.props.renderFallback) {
+        return this.props.renderFallback({ reload: this.reload, error: this.state.error });
+      }
       return (
         <div className="d-flex flex-column justify-content-center align-items-center text-center vh-100 p-4">
           <p className="fw-bold mb-3">エラーが発生しました</p>
@@ -71,13 +90,7 @@ class ErrorBoundary extends Component {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => {
-              if (this.props.fallbackUrl) {
-                window.location.href = this.props.fallbackUrl;
-              } else {
-                window.location.reload();
-              }
-            }}
+            onClick={this.reload}
           >
             再読み込み
           </button>

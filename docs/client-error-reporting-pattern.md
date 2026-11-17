@@ -18,7 +18,7 @@ createRoot(document.getElementById("root")).render(
 ```
 
 - `reportUrl`（任意）: 指定すると、捕捉した例外情報（`message`・`stack`・`componentStack`・発生ページの`url`）をこのURLへPOSTする。送信はfire-and-forgetで行う（送信失敗は握りつぶす。フォールバック画面の表示を妨げないため）。未指定時は`console.error`とフォールバック画面表示のみ行う
-- フォールバック画面のマークアップはBootstrap 5.3のユーティリティクラス前提（[`standard-tech-stack.md`](standard-tech-stack.md)の標準構成）
+- フォールバック画面のマークアップは、既定ではBootstrap 5.3のユーティリティクラス前提である（[`standard-tech-stack.md`](standard-tech-stack.md)の標準構成）。Tailwind等の参照側は、`renderFallback`で表示を差し替える。ロジックを書き写さずに、symlinkで使える（[`shared-ui-components.md`](shared-ui-components.md)の「Bootstrap以外のCSSフレームワークの場合」参照）
 - プレイ内容・入力内容等の個人情報・利用状況の詳細は収集しない（収集するのはJavaScriptの例外情報のみ）
 
 ## `shared/lambda/clientErrorReporting.js`
