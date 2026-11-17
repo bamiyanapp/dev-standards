@@ -1,3 +1,10 @@
+# [2.129.0](https://github.com/bamiyanapp/dev-standards/compare/v2.128.0...v2.129.0) (2026-11-17)
+
+
+### Features
+
+* フロントエンド共通のAPIクライアントをshared/apiへ追加する ([#1434](https://github.com/bamiyanapp/dev-standards/issues/1434)) ([ff76959](https://github.com/bamiyanapp/dev-standards/commit/ff76959ac021d40bbd72f4891d440d02a50663c0)), closes [#1408](https://github.com/bamiyanapp/dev-standards/issues/1408) [#1409](https://github.com/bamiyanapp/dev-standards/issues/1409)
+
 # [2.128.0](https://github.com/bamiyanapp/dev-standards/compare/v2.127.0...v2.128.0) (2026-11-17)
 
 
