@@ -1,7 +1,7 @@
 {
   "name": "dev-standards",
   "private": true,
-  "version": "2.133.0",
+  "version": "2.134.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/bamiyanapp/dev-standards.git"

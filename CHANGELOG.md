@@ -1,3 +1,10 @@
+# [2.134.0](https://github.com/bamiyanapp/dev-standards/compare/v2.133.0...v2.134.0) (2026-11-17)
+
+
+### Features
+
+* リンク切れsymlinkの検知・疎通確認・Errorsアラームの生成と、監視の導入時の確認事項を追加する ([#1441](https://github.com/bamiyanapp/dev-standards/issues/1441)) ([e9e9cf5](https://github.com/bamiyanapp/dev-standards/commit/e9e9cf5269f559dabac1d47a0e7fb536cc9043fc)), closes [#1386](https://github.com/bamiyanapp/dev-standards/issues/1386) [#1367](https://github.com/bamiyanapp/dev-standards/issues/1367)
+
 # [2.133.0](https://github.com/bamiyanapp/dev-standards/compare/v2.132.0...v2.133.0) (2026-11-17)
 
 
