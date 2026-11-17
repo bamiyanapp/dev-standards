@@ -248,6 +248,31 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 </ErrorBoundary>
 ```
 
+#### Bootstrap以外のCSSフレームワークの場合（`renderFallback`）
+
+フォールバック画面のマークアップは、既定ではBootstrap 5.3のクラスを前提にしている。Tailwind CSS等の参照側は、`renderFallback`を渡すと、ロジック（例外の捕捉・報告・遷移）を書き写さずに、symlinkで使える（issue #1420）。
+
+```jsx
+<ErrorBoundary
+  reportUrl={`${API_BASE_URL}/report-client-error`}
+  renderFallback={({ reload, error }) => (
+    <div className="flex h-screen flex-col items-center justify-center gap-4">
+      <p className="font-bold">エラーが発生しました</p>
+      <button type="button" className="rounded bg-blue-600 px-4 py-2 text-white" onClick={reload}>
+        再読み込み
+      </button>
+    </div>
+  )}
+>
+  <App />
+</ErrorBoundary>
+```
+
+- `reload`は、再読み込みの操作である。`fallbackUrl`があればそこへ遷移し、無ければ`window.location.reload()`を呼ぶ。参照側が同じ分岐を書かずに済む
+- `error`は、捕捉した例外である。画面に表示する場合は、利用者へ内部情報を見せないよう注意する
+- 未指定のときは、従来のBootstrapの表示になる。既存の参照側には影響しない
+- 同じ制約（CSSフレームワークの固定）は、`ShareButton.jsx`等にもある。同じ方式を広げるかは、まだ決めていない
+
 ### 手動切り替えリンクパターン（ブルーグリーン/カナリアデプロイ）
 
 ErrorBoundaryが検知できない軽微な不具合（クラッシュに至らない表示崩れ等）向けに、ユーザー自身が安定版（stable）へ切り替えられる導線のパターンを考える。karuta（issue #1329）での実装を元にした。dev-standards#733（ブルーグリーンデプロイ方式の開発共通化）の検討対象の1つとして、独立した共有コンポーネントではなくパターンとして文書化する。CloudFront Functions側のCookie制御・stage別ビルド構成等、プロダクト固有のインフラ実装に依存する部分が大きいためである。
