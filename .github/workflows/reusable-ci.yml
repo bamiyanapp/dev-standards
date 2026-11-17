@@ -1579,6 +1579,13 @@ jobs:
       - name: dev-standardsのsymlink・.gitignoreドリフトを確認する（自動修復可能なドリフトは無し）
         if: steps.drift.outputs.changed == 'false'
         run: node dev-standards/scripts/bootstrap.js --check
+      # issue #1403。調査用の一時workflow（tmp-*）が、14日を超えて残っていないかを警告する
+      # （警告のみ。失敗にしない）。追加された日をgitの履歴から求めるため、履歴を取得する
+      - name: 残っている一時workflow（tmp-*）を警告する
+        continue-on-error: true
+        run: |
+          git fetch --unshallow --quiet 2>/dev/null || true
+          node dev-standards/scripts/check-tmp-workflows.js
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
       # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
       # 失敗として扱う（人間・Renovateの再実行に委ねる）。BOT_TOKENが設定されて
