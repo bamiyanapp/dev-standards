@@ -298,6 +298,19 @@ on:
           （issue #1337、詳細はdocs/hardcoded-credential-detection-pattern.md参照）。
         type: boolean
         default: false
+      enable_email_scan:
+        description: >-
+          PR差分の追加行に、実在のメールアドレスらしき文字列が含まれていないかを
+          検知するかどうか（bamiyanapp/dev-standards#1364）。`secret-scan` job内の
+          ステップとして実行するため、`enable_secret_scan: true`も必要である。
+          `self_ref`の指定も必要である（スクリプトをdev-standardsから取得するため）。
+          gitleaksはメールアドレス（個人情報）を検知しない。
+          Repository Variable未設定時のフォールバックへの実アドレスの直書きを防ぐ。
+          example.com・noreply等は除外される。意図的に残す場合は、参照側リポジトリの
+          ルートに`.email-allowlist`（1行に1つ、完全一致のアドレスまたは`@ドメイン`）
+          を置く。詳細はdocs/public-repo-no-pii-pattern.mdを参照。
+        type: boolean
+        default: false
       enable_bundle_size_check:
         description: >-
           trueの場合、frontendのビルド後JSバンドルサイズを`size-limit`で計測し、
@@ -2263,6 +2276,30 @@ jobs:
           echo "scanned_commit_count=$(git rev-list --no-merges --first-parent --count "$COMMIT_RANGE")" >> "$GITHUB_OUTPUT"
           gitleaks detect --redact -v --exit-code=1 \
             --log-opts="--no-merges --first-parent $COMMIT_RANGE"
+
+      # issue #1364。gitleaksはメールアドレスを検知しないため、PR差分の追加行だけを
+      # 別のスクリプトで確認する。値はログへ出さない（ファイル名・行・伏せ字のみ）
+      - name: self_ref未指定によりメールアドレス検知をスキップすることを警告する
+        if: inputs.enable_email_scan && inputs.self_ref == ''
+        run: echo "::warning::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+      - name: dev-standardsをチェックアウトする（メールアドレス検知用）
+        if: inputs.enable_email_scan && inputs.self_ref != ''
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+      - name: メールアドレスの直書きを検知する
+        if: inputs.enable_email_scan && inputs.self_ref != ''
+        run: |
+          set -eu
+          git diff --unified=0 "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" \
+            -- . ':(exclude).dev-standards-actions' ':(exclude)package-lock.json' > /tmp/pr.diff
+          status=0
+          node .dev-standards-actions/scripts/detect-hardcoded-email.js .email-allowlist < /tmp/pr.diff > /tmp/email-scan.txt || status=$?
+          cat /tmp/email-scan.txt
+          { echo "## メールアドレスの直書き検知"; echo; cat /tmp/email-scan.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
       # issue #1307。検知0件の場合、スキャン自体が実行されたのか・何件を対象に
       # 確認したのかがJob Summary・ジョブログのどちらにも出ておらず、スマホ
