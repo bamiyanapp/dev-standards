@@ -35,6 +35,16 @@ Firebase Authenticationはセッション状態をIndexedDBへ永続化する。
 
 `FIREBASE_SERVICE_ACCOUNT`環境変数にサービスアカウントキーのJSON文字列を設定し、Lambda実行環境で`firebase-admin`を初期化する。
 
+テストモード（`x-user-id: test-user`）は**読み取り専用にする**。書き込みまで許すと、URLを知る誰もが共有領域を書き換えられ、書き込み量にも上限が無くなる。書き込み系のハンドラーの先頭で、解決したユーザーIDがテストユーザーなら403を返す。ローカル開発（2・3の環境変数が有効な場合）は除く。
+
+## フロントエンドでのID Tokenの扱い
+
+**ID Tokenをstate等へ保持せず、APIを呼ぶたびに`getIdToken()`で取得する**。有効期限は約1時間で、`onAuthStateChanged`はトークンの更新では発火しない。ログイン時に取得した値を使い続けると、アプリを開いたまま1時間が経った後、またはバックグラウンドから復帰した後に、全APIが401になる。画面には「データが無い」ように見え、ログインが切れたと誤認しやすい（uchi-stock、[#716](https://github.com/bamiyanapp/uchi-stock/issues/716)）。
+
+- `getIdToken()`は、失効が近いトークンをSDKが自動で更新して返す。呼び出しのコストは小さい
+- 401を受けたら、`getIdToken(true)`で強制更新し、**1回だけ**再試行する。再試行後も401なら、ログインし直しを促す
+- `UserContext`へ`idToken`を持たせるのではなく、`getIdToken`関数だけを渡す。コンポーネントが`idToken`を直接参照すると、この誤りを再び入れやすい
+
 <details>
 <summary>ユーザー識別ロジックのフロー（mermaid図）</summary>
 
