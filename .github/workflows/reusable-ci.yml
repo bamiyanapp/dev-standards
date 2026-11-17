@@ -2263,7 +2263,7 @@ jobs:
           path: .dev-standards-actions
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "26"
       # スクリプトが使うjs-yamlだけを、作業ツリーの外へ入れる（参照側のpackage.jsonには触れない）
       - name: js-yamlをインストールする
         run: npm install --no-save --prefix /tmp/yaml-tools js-yaml@4
