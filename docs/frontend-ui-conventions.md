@@ -41,6 +41,18 @@ export default defineConfig({
 - API失敗時に、固定値・モックデータを実データのように表示しない。フォールバック表示をする場合は、未接続であることを画面に必ず示す。架空のデータを`localStorage`等へ書き込まない（モックが残り、本番API停止に約11日間気づけなかった事例がある）
 - `fetch`には中断（タイムアウト）の指定を付ける。無いと、応答が返らないときに画面が固まる。共通APIクライアント（#1408）で扱う
 
+## 破壊的操作の確認
+
+- 元に戻せない操作（削除、共有リンクの無効化、メンバーの除外等）は、実行前に確認を挟む。`shared/ui/ConfirmDialog.jsx`を使う
+- 確認の文言には、何が消えるかと、元に戻せないことを書く
+- 実行ボタンの文言は動詞にする（「OK」ではなく「削除する」）
+- `window.confirm`は使わない
+
+## エラー通知
+
+- `alert()`は使わない。JavaScriptの実行を止め、PWAでは見た目も馴染まない。`shared/ui/NotificationProvider.jsx`のトーストを使う
+- 画面の主要な内容が取得できなかった場合は、トーストではなく、画面内のエラー表示と再試行ボタンを出す
+
 ## 各プロダクトへの適用
 
 このドキュメントはdev-standards側での規約を明文化するものである。共通フォント（`shared/ui/common-theme.css`等）は共有コードとして提供している。トップページのバージョン/更新日時表示ヘルパー（`shared/ui/getAppVersionDefine.js`・`formatBuildTime.js`）も共有コードとして提供している。提供元は[`shared-ui-components.md`](shared-ui-components.md)側である。各プロダクトへの実際の適用（symlinkの追加、マークアップへの組み込み）はプロダクト側で個別に対応する。

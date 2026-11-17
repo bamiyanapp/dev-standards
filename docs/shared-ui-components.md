@@ -370,6 +370,26 @@ const { isSupported, start } = useSpeechRecognition({
 
 音声合成（`SpeechSynthesis`）側は標準のDOM型定義に含まれるため、本hookの対象外とする（プロダクト固有の声選択ロジック等は利用側に委ねる）。
 
+### `shared/ui/ConfirmDialog.jsx`
+
+元に戻せない操作（削除・共有リンクの無効化・メンバーの除外等）の実行前に挟む確認ダイアログである。ネイティブの`<dialog>`を使う。フォーカスの閉じ込めとEscキーでのキャンセルは、ブラウザに任せる。
+
+- props: `open`・`title`・`message`・`confirmLabel`・`onConfirm`・`onCancel`
+- 初期フォーカスは、キャンセル側に置く。`onConfirm`がPromiseを返す間は、実行ボタンを無効にする
+- 見た目は`className`・`confirmClassName`・`cancelClassName`で上書きできる。既定はBootstrap 5.3のクラスである。Tailwind等の参照側は、クラス名を渡す
+- `window.confirm`は使わない（ボタン文言を変えられず、何が起きるかを伝えにくい）
+
+### `shared/ui/NotificationProvider.jsx`
+
+`alert()`の代わりに使うトースト通知である。`NotificationProvider`でアプリを包み、`useNotify()`で`notify({ type, message })`を呼ぶ。
+
+- `type`は`error`・`success`・`info`。`success`・`info`は4秒で消える。`error`は利用者が閉じるまで残す
+- 同じ文言は重ねて出さない。同時に表示するのは最大3件で、超えたら古いものから消す
+- `error`は`role="alert"`、それ以外は`role="status"`である
+- 見た目は`containerClassName`・`itemClassName`・`closeLabel`で上書きできる
+- 画面の主要な内容が取得できなかった場合は、トーストではなく、画面内のエラー表示と再試行ボタンを出す
+- `ApiError`の種別から固定の文言を選ぶ関数は、共通のAPIクライアント（#1408）の後に追加する
+
 ### 共有コンポーネントのテスト規約
 
 共有コンポーネントを追加・変更するときは、テストを伴う。
