@@ -1,3 +1,10 @@
+# [2.127.0](https://github.com/bamiyanapp/dev-standards/compare/v2.126.0...v2.127.0) (2026-11-17)
+
+
+### Features
+
+* DynamoDBテーブルのデータ保護設定を検査するenable_dynamodb_protection_checkを追加する ([#1430](https://github.com/bamiyanapp/dev-standards/issues/1430)) ([b536a60](https://github.com/bamiyanapp/dev-standards/commit/b536a601af430eb701eab1d546ef3ad96fa6e5de)), closes [#1402](https://github.com/bamiyanapp/dev-standards/issues/1402)
+
 # [2.126.0](https://github.com/bamiyanapp/dev-standards/compare/v2.125.0...v2.126.0) (2026-11-17)
 
 

@@ -1583,5 +1583,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.127.0",
+    "date": "2026-11-17T10:31:15.531Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "medium",
+    "staleRiskReasons": [
+      "現行バージョンにCritical/High severityのCVEが残っています"
+    ]
   }
 ]
