@@ -345,6 +345,25 @@ on:
           導入時は既存の参照側が違反になりうるため、`warn`で始める。
         type: string
         default: "warn"
+      enable_security_headers_check:
+        description: >-
+          serverless.yml・SAMテンプレートのCloudFrontディストリビューションに、セキュリティヘッダーを付ける
+          ResponseHeadersPolicyIdが関連付けられているかを検査する`security-headers-check` jobを
+          実行するかどうか（bamiyanapp/dev-standards#1407）。`self_ref`の指定も必要である。
+          DefaultCacheBehaviorと、CacheBehaviorsの各要素が対象。除外する場合は、リソースの
+          Metadata.DevStandardsSecurityHeadersExemptへ理由を書く。
+        type: boolean
+        default: false
+      security_headers_files:
+        description: "`enable_security_headers_check`の検査対象ファイル。カンマまたは改行区切りで複数指定できる。"
+        type: string
+        default: "serverless.yml"
+      security_headers_mode:
+        description: >-
+          `warn`は、関連付けが無くても失敗にせず、警告だけを出す。`fail`は、無ければ失敗にする。
+          導入時は既存の参照側が違反になりうるため、`warn`で始める。
+        type: string
+        default: "warn"
       enable_email_scan:
         description: >-
           PR差分の追加行に、実在のメールアドレスらしき文字列が含まれていないかを
@@ -2385,6 +2404,44 @@ jobs:
           { echo "## IAM Actionの不足の検査"; echo; sed '/^::warning/d' /tmp/iam-actions.txt; } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
+  security-headers-check:
+    name: "セキュリティヘッダーの関連付けの検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_security_headers_check &&
+      inputs.self_ref != '' &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+      - name: dev-standardsをチェックアウトする
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - name: js-yamlをインストールする
+        run: npm install --no-save --prefix /tmp/yaml-tools js-yaml@4
+      - name: セキュリティヘッダーの関連付けを検査する
+        env:
+          NODE_PATH: /tmp/yaml-tools/node_modules
+          FILES: ${{ inputs.security_headers_files }}
+          MODE: ${{ inputs.security_headers_mode }}
+        run: |
+          set -eu
+          files=$(printf '%s' "$FILES" | tr ',' ' ')
+          status=0
+          node .dev-standards-actions/scripts/check-security-headers.js "$MODE" $files > /tmp/security-headers.txt || status=$?
+          cat /tmp/security-headers.txt
+          { echo "## セキュリティヘッダーの関連付けの検査"; echo; sed '/^::warning/d' /tmp/security-headers.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
   secret-scan:
     name: "シークレットスキャン"
     needs: commitlint
@@ -3147,7 +3204,7 @@ jobs:
     # lighthouse-ci等の完了前に「自動マージの対象です」という判定を投稿してしまう
     # ことがあった。merge job（このファイル内）のneedsからdependency-risk-summary
     # 自身を除いた全件と一致させ、CI全体の完了後にのみ投稿されるようにする
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
     if: |
       always() &&
       inputs.enable_dependency_risk_summary &&
@@ -3919,7 +3976,7 @@ jobs:
 
   merge:
     name: "自動マージ"
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -3968,6 +4025,7 @@ jobs:
         !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.dynamodb-protection-check.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.iam-actions-check.result) &&
+        !contains(fromJSON('["failure", "cancelled"]'), needs.security-headers-check.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
         !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
