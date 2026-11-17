@@ -2,7 +2,7 @@
 
 標準構成（S3 + CloudFront、[`standard-tech-stack.md`](standard-tech-stack.md)）で配信する参照側は、セキュリティヘッダーを付ける。他の文書には、`Content-Security-Policy`・`ResponseHeadersPolicy`・`Strict-Transport-Security`の記載が無かった。issue #1407で追加した。
 
-本書は、段階1（文書化）と、段階2（CSP違反のE2E検知）を扱う。設定漏れのCI検知（段階3）は、別の作業で扱う。
+本書は、段階1（文書化）、段階2（CSP違反のE2E検知）、段階3（設定漏れのCI検知）を扱う。
 
 ## 付与するヘッダーの標準セット
 
@@ -106,6 +106,16 @@ export const test = mergeTests(csp, coverage);
 - Report-Onlyの違反も集める。本番へ強制する前に、違反を見つけられる
 - 違反を許す正当な理由があるテストは、`test.use({ allowCspViolations: true })`で無効にできる
 - 違反を集める部品（`cspWatcher.js`）は、`@playwright/test`に依存しない。単体テストがある
+
+## 設定漏れのCI検知（`enable_security_headers_check`）
+
+`ResponseHeadersPolicyId`の関連付けが無いCloudFrontディストリビューションを、CIで警告する（issue #1407 段階3）。同じ方式の静的検査として、`enable_dynamodb_protection_check`がある（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)参照）。
+
+- `DefaultCacheBehavior`と、`CacheBehaviors`の各要素が対象である。一部のパスだけ関連付けが無い場合は、そのパスを示す
+- 入力は、`enable_security_headers_check`・`security_headers_files`・`security_headers_mode`である。`self_ref`も必要である
+- 導入時は、既存の参照側が違反になりうる。`security_headers_mode`の既定は`warn`である。是正後に`fail`へ切り替える
+- 除外するときは、リソースの`Metadata.DevStandardsSecurityHeadersExempt`へ理由を書く。理由の無い除外は、違反になる
+- `!Ref`などのタグと、Serverless Frameworkの変数は、解決しない。構造だけを読む
 
 ## 参照側の現状
 
