@@ -1,3 +1,10 @@
+# [2.138.0](https://github.com/bamiyanapp/dev-standards/compare/v2.137.0...v2.138.0) (2026-11-17)
+
+
+### Features
+
+* 認証なしの公開API向けに、IP単位のレート制限ヘルパーと429応答を追加する ([#1445](https://github.com/bamiyanapp/dev-standards/issues/1445)) ([1c25b8d](https://github.com/bamiyanapp/dev-standards/commit/1c25b8d6078144cf0aa4c038172cbb8452c7a5e3)), closes [#1406](https://github.com/bamiyanapp/dev-standards/issues/1406)
+
 # [2.137.0](https://github.com/bamiyanapp/dev-standards/compare/v2.136.0...v2.137.0) (2026-11-17)
 
 
