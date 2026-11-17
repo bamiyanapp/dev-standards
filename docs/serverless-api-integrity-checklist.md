@@ -41,7 +41,7 @@
 
 | 観点 | 内容と確認方法 |
 |---|---|
-| IAM権限と実際に使うAPIの不一致 | コードが使う`*Command`に対応するActionが実行ロールに無い状態。テストはDynamoDBをモックするため検知できない。`*Command`の使用箇所とIAMステートメントを突き合わせる |
+| IAM権限と実際に使うAPIの不一致 | コードが使う`*Command`に対応するActionが実行ロールに無い状態。テストはDynamoDBをモックするため検知できない。`*Command`の使用箇所とIAMステートメントを突き合わせる。CIでは`enable_iam_actions_check`で検知できる（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)参照） |
 | デプロイパッケージの中身 | `package.patterns`未設定で、テストファイル・設定ファイルがzipに入っていないか。zipの中身を一覧する |
 | CD内の補助スクリプトの失敗 | シード投入等が、失敗を握りつぶして終了コード0で終わっていないか。Lambda上で自動設定される`AWS_REGION`等が、CDのステップには無い点にも注意する |
 
