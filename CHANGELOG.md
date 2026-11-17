@@ -1,3 +1,10 @@
+# [2.136.0](https://github.com/bamiyanapp/dev-standards/compare/v2.135.0...v2.136.0) (2026-11-17)
+
+
+### Features
+
+* ErrorBoundaryにフォールバック表示を差し替えるrenderFallbackを追加する ([#1443](https://github.com/bamiyanapp/dev-standards/issues/1443)) ([6fdc602](https://github.com/bamiyanapp/dev-standards/commit/6fdc602116d23fb9a2fbc80e6909c52c3976b119)), closes [#1420](https://github.com/bamiyanapp/dev-standards/issues/1420)
+
 # [2.135.0](https://github.com/bamiyanapp/dev-standards/compare/v2.134.0...v2.135.0) (2026-11-17)
 
 
