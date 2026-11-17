@@ -25,6 +25,8 @@ export default defineConfig({
   testDir: './e2e',
   reporter: [
     ['html'],
+    // 失敗したテストの理由を、Job SummaryとPRコメントへ出すために必要（下記「失敗の概要」参照）
+    ['json', { outputFile: 'playwright-report/results.json' }],
     ['monocart-reporter', {
       name: 'アプリ名 E2E Report',
       outputFile: './monocart-report/index.html',
@@ -67,6 +69,16 @@ export default defineConfig({
 ```
 
 `coverage.outputDir`は`check-coverage-threshold`複合actionの`working-directory`からの相対パスで解決される。この`working-directory`は`frontend_dir`である。そのため、`./coverage`のままでよい（`reusable-ci.yml`側の変更は不要）。
+
+### 失敗の概要（Job Summary・PRコメント）
+
+スマホオンリー環境では、HTMLレポート（zip）を閲覧できない。`reusable-ci.yml`の`frontend-e2e-test` jobは、失敗したテストの題名・エラーメッセージ・該当行を、Job SummaryとPRコメントへ出す（issue #1365）。
+
+- 上の設定の`['json', { outputFile: 'playwright-report/results.json' }]`が必要である
+- reporterは、設定ファイルの`reporter`配列へ足す。CLIの`--reporter`で足してはいけない。`--reporter`は設定ファイルの配列を丸ごと置き換えるため、`monocart-reporter`が外れて、E2Eカバレッジが出なくなる
+- `results.json`が無いときは、警告を出してスキップする。失敗にはしない
+- 再試行で成功したテスト（flaky）は、失敗に含めず、件数だけを出す
+- エラーメッセージのANSIエスケープシーケンスは除去する。`E2E_SECRETS_JSON`の値がメッセージに含まれていたら、伏せ字にする
 
 ## 3. `vite.config.js`にソースマップを追加
 

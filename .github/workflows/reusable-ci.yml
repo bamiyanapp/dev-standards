@@ -1217,6 +1217,39 @@ jobs:
           threshold: ${{ inputs.e2e_coverage_threshold }}
           metrics: ${{ inputs.e2e_coverage_metrics }}
           label: frontend-e2e
+      # issue #1365。失敗したテストの題名・エラーメッセージ・該当行を、Job SummaryとPRコメントへ出す
+      # （スマホオンリー環境では、HTMLレポート（zip）を閲覧できないため）。Playwrightの設定ファイルに
+      # jsonレポーター（outputFile: 'playwright-report/results.json'）が要る。CLIの--reporterでは足さない
+      # （設定ファイルのreporterを丸ごと置き換えてしまい、monocart-reporterが外れる）。
+      # results.jsonが無いときは、警告を出してスキップする（失敗にはしない）
+      - name: E2Eの失敗の概要を組み立てる
+        id: e2e-failures
+        if: always() && inputs.self_ref != ''
+        continue-on-error: true
+        working-directory: ${{ inputs.frontend_dir }}
+        env:
+          E2E_SECRETS_JSON: ${{ secrets.E2E_SECRETS_JSON }}
+        run: |
+          node "$GITHUB_WORKSPACE/.dev-standards-actions/scripts/playwright-failure-summary.js" playwright-report/results.json e2e-failures.md
+          if [ -s e2e-failures.md ]; then
+            cat e2e-failures.md >> "$GITHUB_STEP_SUMMARY"
+            echo "has_failures=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: E2Eの失敗の概要をプルリクエストへコメントする
+        if: always() && steps.e2e-failures.outputs.has_failures == 'true' && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const body = fs.readFileSync(path.join('${{ inputs.frontend_dir }}', 'e2e-failures.md'), 'utf-8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
       - uses: actions/upload-artifact@v7
         if: always()
         with:
