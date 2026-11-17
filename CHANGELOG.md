@@ -1,3 +1,10 @@
+## [2.141.2](https://github.com/bamiyanapp/dev-standards/compare/v2.141.1...v2.141.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* apiClientを参照側のsonarjsの規則に収める ([#1472](https://github.com/bamiyanapp/dev-standards/issues/1472)) ([176ed15](https://github.com/bamiyanapp/dev-standards/commit/176ed15ee198884ad085d32688c81496b3b0fa09))
+
 ## [2.141.1](https://github.com/bamiyanapp/dev-standards/compare/v2.141.0...v2.141.1) (2026-11-17)
 
 
