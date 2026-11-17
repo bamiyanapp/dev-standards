@@ -1,0 +1,9 @@
+{
+  "_comment": "docs/code-quality-conventions.md「lint」の必須ルール。規約へルールを足したら、ここへも足す（issue #1421）。anyOfのいずれか1つが、severity 2（error）で有効なら満たす。prefixは、そのプレフィックスで始まるルールが1つでもerrorで有効なら満たす",
+  "rules": [
+    { "id": "complexity", "anyOf": ["complexity"], "doc": "循環的複雑度（しきい値15）" },
+    { "id": "max-lines", "anyOf": ["max-lines"], "doc": "ファイルサイズ（issue #530）" },
+    { "id": "no-unused-vars", "anyOf": ["no-unused-vars", "@typescript-eslint/no-unused-vars"], "doc": "未使用変数" },
+    { "id": "sonarjs", "prefix": "sonarjs/", "doc": "eslint-plugin-sonarjsのrecommended（認知的複雑度等）" }
+  ]
+}

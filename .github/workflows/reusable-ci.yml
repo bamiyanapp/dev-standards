@@ -364,6 +364,23 @@ on:
           導入時は既存の参照側が違反になりうるため、`warn`で始める。
         type: string
         default: "warn"
+      enable_eslint_rules_check:
+        description: >-
+          参照側のESLint設定が、docs/code-quality-conventions.mdの必須ルール（complexity・max-lines・
+          no-unused-vars・eslint-plugin-sonarjs）をerror重要度で有効にしているかを検査する
+          `eslint-rules-check` jobを実行するかどうか（bamiyanapp/dev-standards#1421）。
+          `self_ref`の指定も必要である。`npx eslint --print-config`の出力を見るため、設定ファイルの
+          書き方に依存しない。検査には、`frontend_dir`の依存インストール（npm ci）が要る。
+          必須ルールの一覧は、scripts/eslint-required-rules.jsonで管理している。
+        type: boolean
+        default: false
+      eslint_rules_check_mode:
+        description: >-
+          `warn`は、必須ルールが足りなくても失敗にせず、警告だけを出す。`fail`は、足りなければ失敗にする。
+          既に規約値を超えるファイルがある参照側は、有効化した時点でlintが失敗する。
+          導入時は`warn`で始め、現状値を上限にして段階的に下げてから、`fail`へ切り替える。
+        type: string
+        default: "warn"
       enable_email_scan:
         description: >-
           PR差分の追加行に、実在のメールアドレスらしき文字列が含まれていないかを
@@ -2442,6 +2459,43 @@ jobs:
           { echo "## セキュリティヘッダーの関連付けの検査"; echo; sed '/^::warning/d' /tmp/security-headers.txt; } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
+  eslint-rules-check:
+    name: "ESLint必須ルールの検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_eslint_rules_check &&
+      inputs.self_ref != '' &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+      - name: dev-standardsをチェックアウトする
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - name: 依存パッケージをインストールする
+        working-directory: ${{ inputs.frontend_dir }}
+        run: npm ci
+      - name: ESLintの必須ルールを検査する
+        env:
+          MODE: ${{ inputs.eslint_rules_check_mode }}
+          FRONTEND_DIR: ${{ inputs.frontend_dir }}
+        run: |
+          set -eu
+          status=0
+          node "$GITHUB_WORKSPACE/.dev-standards-actions/scripts/check-eslint-rules.js" "$MODE" "$FRONTEND_DIR" > /tmp/eslint-rules.txt || status=$?
+          cat /tmp/eslint-rules.txt
+          { echo "## ESLint必須ルールの検査"; echo; sed '/^::warning/d' /tmp/eslint-rules.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
   secret-scan:
     name: "シークレットスキャン"
     needs: commitlint
@@ -3204,7 +3258,7 @@ jobs:
     # lighthouse-ci等の完了前に「自動マージの対象です」という判定を投稿してしまう
     # ことがあった。merge job（このファイル内）のneedsからdependency-risk-summary
     # 自身を除いた全件と一致させ、CI全体の完了後にのみ投稿されるようにする
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, eslint-rules-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
     if: |
       always() &&
       inputs.enable_dependency_risk_summary &&
@@ -3974,9 +4028,31 @@ jobs:
               state: 'closed',
             });
 
+  # mergeのif式から、各チェックの失敗・キャンセルの確認を切り出して集約する。条件式に項目を足すたびに、
+  # actionlint（wasm版）が、エラー内容も出さずに異常終了する限界へ近づいていたため
+  # （issue #1402・#1421の作業中に、1項目の追加で2回発生した）。チェックを足すときは、
+  # このjobのneedsへ足す（mergeのif式へ足さない）。意味は、従来の
+  # `!contains(['failure', 'cancelled'], needs.<job>.result)`の並びと同じである
+  checks-gate:
+    name: "チェックの集約"
+    needs: [standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, eslint-rules-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
+    if: always() && inputs.enable_auto_merge && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 失敗・キャンセルしたチェックが無いか確認する
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          failed=$(printf '%s' "$NEEDS" | jq -r 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key')
+          if [ -n "$failed" ]; then
+            echo "::error::失敗またはキャンセルしたチェックがあります: $(echo $failed | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "失敗・キャンセルしたチェックはありません。"
+
   merge:
     name: "自動マージ"
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, eslint-rules-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci, checks-gate]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
@@ -4013,24 +4089,7 @@ jobs:
       !contains(fromJSON('["failure", "cancelled"]'), needs.backend-test.result) &&
       (inputs.packages == '' || fromJSON(inputs.packages)[0] == null || needs.package-test.result == 'success') &&
       !contains(fromJSON('["failure", "cancelled"]'), needs.frontend-e2e-test.result) &&
-      (
-        !contains(fromJSON('["failure", "cancelled"]'), needs.standards-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.duplication-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.doc-duplication-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.workflow-duplication-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.architecture-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.text-lint.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.dead-link-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.doc-reachability-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.secret-scan.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.dynamodb-protection-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.iam-actions-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.security-headers-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.render-mermaid-diagrams.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.dependency-risk-summary.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.bundle-size-check.result) &&
-        !contains(fromJSON('["failure", "cancelled"]'), needs.lighthouse-ci.result)
-      ) &&
+      needs.checks-gate.result == 'success' &&
       (!inputs.enable_dependency_risk_gating || needs.dependency-risk-summary.outputs.risk_level != 'high' || (needs.dependency-risk-summary.outputs.vulnerability_only_high == 'true' && needs.dependency-risk-summary.outputs.stale_risk_level == 'high'))
     runs-on: ubuntu-latest
     permissions:

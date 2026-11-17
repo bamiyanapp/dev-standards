@@ -17,6 +17,15 @@ ESLintを標準とする（新規TypeScriptプロジェクトを含む全プロ�
 - **ファイルサイズ**: ESLint組み込みの`max-lines`ルールを`error`重要度で有効化する（issue #530）。複雑度（`complexity`・cognitive complexity）は1関数の複雑さを検知するルールである。小さな関数・コンポーネントが大量に詰め込まれ肥大化した1ファイル自体は検知できない。そのため、分割を促す別軸の観点として追加する。他プロダクトでの実測値に基づくラチェット値がまだ無い。そのためしきい値はESLint公式の既定値を出発点とする。`{ max: 300, skipBlankLines: true, skipComments: true }`（コメント・空行を除いた実効300行）である
 - **lintスクリプト自体は`--max-warnings 0`で実行する**。`warn`重要度のルールを設定しても、この設定がなければ実質的に無視されてしまうため、警告を許容しない運用にはこの指定が必須
 
+### 必須ルールの検知（`enable_eslint_rules_check`）
+
+ESLint設定は、参照側が個別に持つ。規約へルールを足しても、参照側の設定は変わらない。`enable_eslint_rules_check`で、参照側の設定が必須ルールを満たしているかを検知できる（issue #1421）。
+
+- `npx eslint --print-config <代表ファイル>`の出力を見る。設定ファイルの書き方に依存しない
+- 必須ルールは、`complexity`・`max-lines`・`no-unused-vars`（TypeScript版でもよい）・`sonarjs/*`である。いずれも、`error`重要度で有効であることを確認する
+- 必須ルールの一覧は、`scripts/eslint-required-rules.json`の1か所で管理する。上の規約へルールを足したら、ここへも足す
+- 既定は警告のみ（`eslint_rules_check_mode: warn`）である。既に規約値を超えるファイルがある参照側は、有効化した時点でlintが失敗する。現状値を上限にして、段階的に下げてから、`fail`へ切り替える
+
 ### a11yルールの段階的な導入
 
 既存のプロダクトでは、導入時に違反が多数出ることがある。次の順で進める。
