@@ -137,6 +137,8 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 1. 以下の観点リストを順に確認し、完了条件を満たすまで進める
 2. 各観点は独立しており、プロダクトの性質に応じて不要な観点はスキップしてよい（例: バックエンドが無いならDB関連の観点は対象外）
 3. 観点ごとにissueを起票してから進める。一度に全部満たす必要はなく、段階的に進めてよい
+4. 既に達成済みと確認できた観点は、個別にissueを起票しない。1件の索引issueへ、観点と根拠（見たファイル・ステップ）を表で記録する。未達の観点だけ個別にissueにする。shock-labでは達成済みの観点で、起票してすぐ閉じるissueが6件できた。自動判定の仕組みは#1463で扱う
+5. 達成条件は、設定値の有無ではなく、CIで該当ステップが実際に実行されたことで確認する。ジョブが緑でも、ステップがskippedなら判定されていない。例: `coverage_threshold`は、`self_ref`が未指定だとステップがskippedになり、閾値は判定されない（#1460）
 
 ### プロンプトの例
 
@@ -149,6 +151,8 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
   1つの観点が完了条件を満たしたら、次の観点へ進んでほしい
 - 各観点の達成条件（完了条件）を満たしたことを、実際にCIを実行して
   確認してほしい
+- 確認は、設定ファイルだけでなくCIの実行ログまで見てほしい。該当ステップが
+  skippedになっていないかも確認すること
 ```
 
 ### モダナイズ観点リストと達成条件
@@ -156,7 +160,8 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | 観点 | 達成条件 | 参照ドキュメント |
 |---|---|---|
 | CD有効化 | `.github/workflows/cd.yml`が`reusable-cd.yml`を呼び出し、semantic-releaseでバージョン管理されている（採用する場合）。releaseを起動させるには、`BOT_TOKEN`シークレットの登録と、`ci.yml`/`cd.yml`での明示的な`secrets:`転送が必要（`GITHUB_TOKEN`によるpushはCDの新規workflow実行をトリガーしないため。詳細は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)「共通の環境変数」を参照） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
-| フロントエンド単体テスト | vitest + Testing Libraryで主要画面・フックにテストがあり、CIでカバレッジ閾値が設定されている | [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md) |
+| フロントエンド単体テスト | vitest + Testing Libraryで主要画面・フックにテストがあり、CIでカバレッジ閾値が設定されている。CIの「カバレッジ閾値を確認する」ステップがskippedでなく実行されている | [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md) |
+| カバレッジの計測対象 | カバレッジレポートに`src`配下の全ソースファイルが現れる。テストの無いファイルも0%として計測される（Vitestは既定で、テストから読み込まれたファイルしか数えない） | [`client-only-vite-spa-pattern.md`](client-only-vite-spa-pattern.md) |
 | バックエンドAPIを持つ場合のテスト | バックエンドにも単体テストがあり、CIのカバレッジ閾値が設定されている（バックエンドが無い場合は対象外） | [`nextjs-static-lambda-pattern.md`](nextjs-static-lambda-pattern.md) |
 | E2Eテスト | Playwrightで主要な利用フローが検証されている（採用する場合） | [`e2e-coverage-pattern.md`](e2e-coverage-pattern.md) |
 | lintルール整備 | 複雑度・sonarjs等のlintルールが有効化され、エラー0件 | [`code-quality-conventions.md`](code-quality-conventions.md) |
@@ -167,6 +172,9 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | ドキュメントのmermaid図対応 | ドキュメント中のmermaid図が`enable_mermaid_render`・`mermaid_doc_paths`で画像化され、PR差分ビューでも図として確認できる（mermaid図を使う場合のみ） | [`documentation-format-conventions.md`](documentation-format-conventions.md) |
 | E2Eスクリーンショットのスマートフォン表示対応 | Playwright E2Eが撮影したスクリーンショットが、Job Summary・PRコメントへ画像として直接埋め込まれる（採用する場合。スマートフォンではPlaywright HTMLレポート自体は閲覧しづらいため） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
 | E2Eテスト結果のPR表示 | `enable_e2e_test`によりPlaywright E2Eの成否・カバレッジがPRコメント・Job Summaryへ投稿される（採用する場合） | [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md) |
+| スマートフォン表示 | 検証端末相当のviewport（iPhone 13相当）で、横スクロールが発生せず、主要画面をE2Eのスクリーンショットで確認できる | [`e2e-coverage-pattern.md`](e2e-coverage-pattern.md) |
+| オフライン動作 | スタイル・スクリプトをCDNから読み込まない（Bootstrap等はnpm依存としてバンドルする）。オフラインでもレイアウトが崩れない（PWAの場合） | [`render-blocking-resources-pattern.md`](render-blocking-resources-pattern.md) |
+| プロダクトのドキュメント | `docs/`に、仕様（画面・パラメータ・振る舞い）と構成（ディレクトリの責務・依存の向き）の文書がある | [`documentation-format-conventions.md`](documentation-format-conventions.md) |
 | アクセシビリティ | `eslint-plugin-jsx-a11y`のルールが有効で、エラー0件になっている（React（JSX/TSX）を持つ場合） | [`code-quality-conventions.md`](code-quality-conventions.md)「lint」 |
 | 個人情報の扱い | 実在の個人データを扱う場合、コード・コミットに個人情報を持ち込まない設計になっている | [`public-repo-no-pii-pattern.md`](public-repo-no-pii-pattern.md) |
 | GitHub Actions内の秘密情報の露出防止 | ログ・Job Summaryに秘密情報を出力しない設計になっている | [`public-repo-secrets-in-actions-pattern.md`](public-repo-secrets-in-actions-pattern.md) |
@@ -178,6 +186,16 @@ dev-standardsの取り込み（`git submodule add`・`bootstrap.js`実行・`CLA
 | ブルーグリーン（canary）デプロイ | 利用者が増え、本番への変更を段階的に検証したい場合、stable/canaryの重み付けルーティング・自動昇格を導入している（必要になった場合のみ採用。小規模なうちは不要） | [`blue-green-stage-pattern.md`](blue-green-stage-pattern.md) |
 
 すべての観点を一度に満たす必要はない。基本的な単体テストから始め、プロダクトが育つにつれて残りの観点を段階的に適用していく進め方でよい。
+
+### 観点リストの外側の診断
+
+観点リストが見るのは、構成とCIの品質である。プロダクトの中核機能が正しく動くかは、別に確認する。モダナイズの終わりに、次を行う。
+
+- 検証端末相当のviewportで実際に開き、スクリーンショットで崩れを見る
+- 中核のロジックをブラウザなしで走らせ、数値を期待と比べる。確認するのは、ゴールへ到達するか、範囲外の値で壊れないか、NaNが出ないか、である。UIとロジックが密結合でそれができない場合は、それ自体を課題にする
+- 見つかった問題は、再現手順と計測値を本文に書いてissueにする
+
+shock-labでは、この診断で製品の目的に関わる不具合が見つかった。「底付きが一度も検知されない」「平坦路でもランクCになる」といったものである。観点リストの全項目が達成済みでも、見つからなかった。
 
 ## フェーズ5: 品質課題の棚卸しとリファクタリング
 
