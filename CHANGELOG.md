@@ -1,3 +1,10 @@
+# [2.139.0](https://github.com/bamiyanapp/dev-standards/compare/v2.138.0...v2.139.0) (2026-11-17)
+
+
+### Features
+
+* E2E中のCSP違反を検知してテストを失敗させるfixtureをshared/e2eへ追加する（段階2） ([#1447](https://github.com/bamiyanapp/dev-standards/issues/1447)) ([9a79d0a](https://github.com/bamiyanapp/dev-standards/commit/9a79d0a99816e8ac16c13ffa3dd7999ffe4bb280)), closes [#1407](https://github.com/bamiyanapp/dev-standards/issues/1407)
+
 # [2.138.0](https://github.com/bamiyanapp/dev-standards/compare/v2.137.0...v2.138.0) (2026-11-17)
 
 
