@@ -14,13 +14,10 @@ description: コミットを作成する際の前提条件と必須項目を確�
 
 bodyには必ず`設計:`・`影響:`・`テスト:`を含める。
 
-コミット後、件名の長さを確認する。
+コミット後、`npx commitlint --from HEAD~1`で件名の長さ等を確認する。
 
-```bash
-git log -1 --format=%s | awk '{print length($0)}'
-```
-
-100以下であればよい。超えていたら、push前なら`git commit --amend`で直す。`npx commitlint --from HEAD~1`でも確認できる。
+件名は100文字以下にする。超えていたら、push前なら`git commit --amend`で直す。
+`awk`の`length`は環境により文字数ではなくバイト数を数える。日本語の件名では使わない。
 
 ## 参照ドキュメント
 
