@@ -1,3 +1,10 @@
+# [2.125.0](https://github.com/bamiyanapp/dev-standards/compare/v2.124.1...v2.125.0) (2026-11-17)
+
+
+### Features
+
+* shared/lambdaへDynamoDB・入力検証・期限付き外部API呼び出しのヘルパーを追加する ([#1425](https://github.com/bamiyanapp/dev-standards/issues/1425)) ([9dc5b66](https://github.com/bamiyanapp/dev-standards/commit/9dc5b666594efebb77dba6af209ed1882d969088)), closes [#1375](https://github.com/bamiyanapp/dev-standards/issues/1375) [#1400](https://github.com/bamiyanapp/dev-standards/issues/1400) [#1412](https://github.com/bamiyanapp/dev-standards/issues/1412) [#1413](https://github.com/bamiyanapp/dev-standards/issues/1413) [#1401](https://github.com/bamiyanapp/dev-standards/issues/1401)
+
 ## [2.124.1](https://github.com/bamiyanapp/dev-standards/compare/v2.124.0...v2.124.1) (2026-11-16)
 
 

@@ -1559,5 +1559,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.125.0",
+    "date": "2026-11-17T10:11:06.292Z",
+    "riskLevel": "high",
+    "riskReasons": [
+      "新規にinstall scriptを持つようになったパッケージがあります: fsevents"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]
