@@ -1,3 +1,10 @@
+# [2.141.0](https://github.com/bamiyanapp/dev-standards/compare/v2.140.0...v2.141.0) (2026-11-17)
+
+
+### Features
+
+* 参照側のESLint設定が規約の必須ルールを満たすかを検知する（案A）。mergeの条件式を集約jobへ切り出す ([#1449](https://github.com/bamiyanapp/dev-standards/issues/1449)) ([025c3d2](https://github.com/bamiyanapp/dev-standards/commit/025c3d24fb944082563f23939f32c3f3ae1565b3)), closes [#1421](https://github.com/bamiyanapp/dev-standards/issues/1421)
+
 # [2.140.0](https://github.com/bamiyanapp/dev-standards/compare/v2.139.0...v2.140.0) (2026-11-17)
 
 
