@@ -40,6 +40,6 @@
     "stylelint-config-standard": "^41.0.0",
     "textlint": "^15.8.0",
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
-    "vitest": "^4.1.12"
+    "vitest": "^5.0.0"
   }
 }
