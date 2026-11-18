@@ -53,25 +53,6 @@ export function isRetryable(error) {
 
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 1回分の通信。失敗はApiError（中断はAbortErrorのまま）で投げる。
-// request関数の複雑度を、参照側のsonarjs（cognitive-complexity、上限15）に収めるため分けている（#1470）
-async function fetchOnce(fetchImpl, url, init) {
-  let response;
-  try {
-    response = await fetchImpl(url, init);
-  } catch (cause) {
-    if (cause?.name === "AbortError") throw cause;
-    throw new ApiError("network", "通信に失敗しました", { cause });
-  }
-  if (!response.ok) throw new ApiError("http", `HTTP ${response.status}`, { status: response.status });
-  if (response.status === 204) return null;
-  try {
-    return await response.json();
-  } catch (cause) {
-    throw new ApiError("parse", "応答がJSONではありません", { cause });
-  }
-}
-
 // 空本文（204、content-lengthが0、本文が空文字列）はnullを返す。DELETE等が200で空本文を返す構成に対応する
 async function readJson(response) {
   if (response.status === 204 || response.headers?.get?.("content-length") === "0") return null;
@@ -93,34 +74,51 @@ async function buildHeaders(getHeaders, hasBody, forceRefresh) {
   return headers;
 }
 
-async function request(ctx, method, url, { body, signal, retry } = {}) {
-  const { fetchImpl, sleep, getHeaders, shouldRefreshOn401 } = ctx;
-  const { count = 0, baseDelayMs = 300, maxDelayMs = 3000 } = retry || {};
+// 1回分の通信。失敗はApiError（中断はAbortErrorのまま）で投げる。
+// request関数の複雑度を、参照側のsonarjs（cognitive-complexity、上限15）に収めるため分けている（#1470・#1486）
+async function fetchOnce(fetchImpl, url, init) {
+  let response;
+  try {
+    response = await fetchImpl(url, init);
+  } catch (cause) {
+    if (cause?.name === "AbortError") throw cause;
+    throw new ApiError("network", "通信に失敗しました", { cause });
+  }
+  if (!response.ok) throw new ApiError("http", `HTTP ${response.status}`, { status: response.status });
+  return readJson(response);
+}
+
+async function buildInit(ctx, method, { body, signal }, forceRefresh) {
+  const headers = await buildHeaders(ctx.getHeaders, body !== undefined, forceRefresh);
+  return {
+    method,
+    signal,
+    ...(Object.keys(headers).length ? { headers } : {}),
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  };
+}
+
+// 401は、リトライ回数とは別に最大1回だけ、トークンを強制更新して再試行する
+function isRefreshable401(error, ctx, refreshed) {
+  return error instanceof ApiError && error.kind === "http" && error.status === 401 && !refreshed && Boolean(ctx.shouldRefreshOn401?.());
+}
+
+async function request(ctx, method, url, options = {}) {
+  const { count = 0, baseDelayMs = 300, maxDelayMs = 3000 } = options.retry || {};
   let refreshed = false;
   let forceRefresh = false;
   for (let attempt = 0; ; attempt++) {
     try {
-      const headers = await buildHeaders(getHeaders, body !== undefined, forceRefresh);
-      const init = { method, signal, ...(Object.keys(headers).length ? { headers } : {}), ...(body !== undefined ? { body: JSON.stringify(body) } : {}) };
-      let response;
-      try {
-        response = await fetchImpl(url, init);
-      } catch (cause) {
-        if (cause?.name === "AbortError") throw cause;
-        throw new ApiError("network", "通信に失敗しました", { cause });
-      }
-      if (!response.ok) throw new ApiError("http", `HTTP ${response.status}`, { status: response.status });
-      return await readJson(response);
+      return await fetchOnce(ctx.fetchImpl, url, await buildInit(ctx, method, options, forceRefresh));
     } catch (error) {
-      // 401は、リトライ回数とは別に最大1回だけ、トークンを強制更新して再試行する
-      if (error instanceof ApiError && error.kind === "http" && error.status === 401 && !refreshed && shouldRefreshOn401?.()) {
+      if (isRefreshable401(error, ctx, refreshed)) {
         refreshed = true;
         forceRefresh = true;
         attempt--;
         continue;
       }
       if (attempt >= count || !isRetryable(error)) throw error;
-      await sleep(Math.min(maxDelayMs, baseDelayMs * 2 ** attempt));
+      await ctx.sleep(Math.min(maxDelayMs, baseDelayMs * 2 ** attempt));
     }
   }
 }
