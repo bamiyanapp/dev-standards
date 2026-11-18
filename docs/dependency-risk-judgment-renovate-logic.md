@@ -72,7 +72,7 @@ examinationのように、npm workspacesを使わず、`app/*/`・`infra/*/`・�
 - **ブラスト半径とSBOMの判定は、複数のlockfileを変更したPRではスキップする**。`dependency-cruiser`の判定は`frontend_dir`・`backend_dir`を前提にするためである。スキップした旨を、コメントへ出す。別のissueで扱う
 - このPRで新しく追加されたlockfileは、base側に無いため、空のlockfileと比べる
 
-定期スキャン（`lockfile_path`の複数指定）は、まだ対応していない。
+定期スキャンの複数指定は、[`dependency-risk-judgment-periodic-scans.md`](dependency-risk-judgment-periodic-scans.md)の「複数lockfileの指定」を参照する。
 
 ## Supply Chainチェック（[#648](https://github.com/bamiyanapp/dev-standards/issues/648) Phase 3）
 
