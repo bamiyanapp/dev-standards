@@ -1,3 +1,10 @@
+## [2.150.1](https://github.com/bamiyanapp/dev-standards/compare/v2.150.0...v2.150.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **scripts:** メール検知がuses:のバージョン指定を誤検知しないようにする ([#1491](https://github.com/bamiyanapp/dev-standards/issues/1491)) ([#1492](https://github.com/bamiyanapp/dev-standards/issues/1492)) ([0a86d97](https://github.com/bamiyanapp/dev-standards/commit/0a86d9738985d6db7caf2339da5c53d64fa17997))
+
 # [2.150.0](https://github.com/bamiyanapp/dev-standards/compare/v2.149.1...v2.150.0) (2026-11-18)
 
 
