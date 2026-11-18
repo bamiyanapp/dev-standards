@@ -1,3 +1,10 @@
+# [2.143.0](https://github.com/bamiyanapp/dev-standards/compare/v2.142.0...v2.143.0) (2026-11-18)
+
+
+### Features
+
+* **scan:** 定期スキャンのlockfile_pathを複数行・glob指定に対応する ([#1474](https://github.com/bamiyanapp/dev-standards/issues/1474)) ([0ad26e9](https://github.com/bamiyanapp/dev-standards/commit/0ad26e9b8b49749b9e4bfdbe3023c233319d5f0f)), closes [#1368](https://github.com/bamiyanapp/dev-standards/issues/1368)
+
 # [2.142.0](https://github.com/bamiyanapp/dev-standards/compare/v2.141.2...v2.142.0) (2026-11-17)
 
 
