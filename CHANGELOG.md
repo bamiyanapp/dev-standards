@@ -1,3 +1,10 @@
+# [2.144.0](https://github.com/bamiyanapp/dev-standards/compare/v2.143.0...v2.144.0) (2026-11-18)
+
+
+### Features
+
+* **e2e:** 共有Playwright設定へモバイルprojectとブラウザ実行パス指定を追加する ([#1475](https://github.com/bamiyanapp/dev-standards/issues/1475)) ([9980663](https://github.com/bamiyanapp/dev-standards/commit/9980663eb9c1135b5e995b47e15063beb1d8cd4d)), closes [#1462](https://github.com/bamiyanapp/dev-standards/issues/1462)
+
 # [2.143.0](https://github.com/bamiyanapp/dev-standards/compare/v2.142.0...v2.143.0) (2026-11-18)
 
 
