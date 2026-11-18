@@ -2454,6 +2454,9 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          # dev-standardsへのsymlink（共有コード）が壊れず、共有コードが使うコマンドも検査できるようにする（#1493）
+          submodules: true
       - name: dev-standardsをチェックアウトする
         uses: actions/checkout@v7
         with:
