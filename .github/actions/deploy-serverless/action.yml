@@ -47,6 +47,18 @@ inputs:
       バックエンドの異常を、これ以外に検知する手段が無い
     required: false
     default: ""
+  verify-package:
+    description: >-
+      デプロイ前に、`serverless package`で生成したzipを展開し、serverless.ymlの全ハンドラを
+      読み込めることを検証するかどうか（issue #1452）。symlink先の欠落や`package.patterns`の誤りで、
+      zipからファイルが抜けていても、serverless packageは成功する。既定は無効（`false`）。
+      ハンドラ読み込み時に必要な環境変数は、呼び出し側の`env`で渡すこと
+    required: false
+    default: "false"
+  verify-package-forbid:
+    description: "verify-packageで、zipに含まれていてはならないファイルのglob（空白区切り。例: `*.test.js seed*.js`）。"
+    required: false
+    default: ""
   aws-access-key-id:
     description: "AWSアクセスキーID"
     required: true
@@ -78,6 +90,19 @@ runs:
       shell: bash
       working-directory: ${{ inputs.workspaces == 'true' && '.' || inputs.working-directory }}
       run: npm ci
+    - name: デプロイパッケージを検証する
+      if: inputs.verify-package == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        FORBID: ${{ inputs.verify-package-forbid }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        npx serverless package --stage verify-package
+        forbid_args=()
+        for g in $FORBID; do forbid_args+=(--forbid "$g"); done
+        zip=$(ls .serverless/*.zip | head -n 1)
+        node "$ACTION_PATH/../../../scripts/verify-lambda-package.js" --zip "$zip" --service-file serverless.yml "${forbid_args[@]}"
     - name: Deploy
       shell: bash
       working-directory: ${{ inputs.working-directory }}

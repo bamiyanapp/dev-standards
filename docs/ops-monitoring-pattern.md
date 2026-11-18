@@ -102,7 +102,8 @@ functions:
 - **デプロイジョブのチェックアウトに、`submodules: true`を指定する**。無いと、symlinkの実体が存在しない。`serverless package`は成功するが、zipにファイルが含まれない。デプロイ後、全関数が`Cannot find module`で起動に失敗する。CIは`submodules`ありで動くため、検知できない
 - `deploy-serverless`複合actionは、デプロイ前にリンク切れのsymlinkを検知し、あれば失敗させる（`check-broken-symlinks`、既定で有効）
 - **通知用Secretsを、デプロイステップの`env`へ渡す**。`serverless.yml`の`${env:OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN}`は、デプロイ時の環境変数から解決される。渡していないと、通知が常にスキップされる
-- 生成したパッケージを展開し、ハンドラを読み込めることを、CIで検証する
+- 生成したパッケージを展開し、ハンドラを読み込めることを検証する。`deploy-serverless`の`verify-package: true`で、デプロイ前に実行できる（`scripts/verify-lambda-package.js`）。`verify-package-forbid`でテストファイル等の混入も検出できる
+- CDの失敗を通知する。CDの最後に、`if: failure()`のjobで`notify-cd-failure`複合actionを呼ぶ。固定タイトルのissueへコメント（無ければ起票）し、LINEのトークンがあればLINEにも送る。スマートフォンのGitHubアプリへ通知が届く
 - デプロイ後に、実際のAPIへ疎通確認する。`deploy-serverless`の`smoke-test-url`で、GETして200以外なら失敗させる。E2EがAPIをモックしている構成では、デプロイされたバックエンドの異常を、これ以外に検知できない
 
 ## Lambdaのエラーを検知するアラーム
