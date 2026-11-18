@@ -72,28 +72,67 @@ async function fetchOnce(fetchImpl, url, init) {
   }
 }
 
-async function request(fetchImpl, url, init, retry, sleep) {
+// 空本文（204、content-lengthが0、本文が空文字列）はnullを返す。DELETE等が200で空本文を返す構成に対応する
+async function readJson(response) {
+  if (response.status === 204 || response.headers?.get?.("content-length") === "0") return null;
+  try {
+    if (typeof response.text !== "function") return await response.json();
+    const text = await response.text();
+    return text === "" ? null : JSON.parse(text);
+  } catch (cause) {
+    throw new ApiError("parse", "応答がJSONではありません", { cause });
+  }
+}
+
+// getHeadersの値を、undefined・nullを除いて取り込む。例外はApiErrorにせずそのまま投げる（認証SDKの失敗を通信失敗と区別する）
+async function buildHeaders(getHeaders, hasBody, forceRefresh) {
+  const headers = hasBody ? { "Content-Type": "application/json" } : {};
+  for (const [key, value] of Object.entries((await getHeaders?.({ forceRefresh })) || {})) {
+    if (value !== undefined && value !== null) headers[key] = value;
+  }
+  return headers;
+}
+
+async function request(ctx, method, url, { body, signal, retry } = {}) {
+  const { fetchImpl, sleep, getHeaders, shouldRefreshOn401 } = ctx;
   const { count = 0, baseDelayMs = 300, maxDelayMs = 3000 } = retry || {};
+  let refreshed = false;
+  let forceRefresh = false;
   for (let attempt = 0; ; attempt++) {
     try {
-      return await fetchOnce(fetchImpl, url, init);
+      const headers = await buildHeaders(getHeaders, body !== undefined, forceRefresh);
+      const init = { method, signal, ...(Object.keys(headers).length ? { headers } : {}), ...(body !== undefined ? { body: JSON.stringify(body) } : {}) };
+      let response;
+      try {
+        response = await fetchImpl(url, init);
+      } catch (cause) {
+        if (cause?.name === "AbortError") throw cause;
+        throw new ApiError("network", "通信に失敗しました", { cause });
+      }
+      if (!response.ok) throw new ApiError("http", `HTTP ${response.status}`, { status: response.status });
+      return await readJson(response);
     } catch (error) {
+      // 401は、リトライ回数とは別に最大1回だけ、トークンを強制更新して再試行する
+      if (error instanceof ApiError && error.kind === "http" && error.status === 401 && !refreshed && shouldRefreshOn401?.()) {
+        refreshed = true;
+        forceRefresh = true;
+        attempt--;
+        continue;
+      }
       if (attempt >= count || !isRetryable(error)) throw error;
       await sleep(Math.min(maxDelayMs, baseDelayMs * 2 ** attempt));
     }
   }
 }
 
-export function createApiClient({ baseUrl, fetch: fetchImpl = globalThis.fetch, sleep = defaultSleep }) {
+export function createApiClient({ baseUrl, fetch: fetchImpl = globalThis.fetch, sleep = defaultSleep, getHeaders, shouldRefreshOn401 }) {
   if (!baseUrl) throw new Error("baseUrlは必須です");
+  const ctx = { fetchImpl, sleep, getHeaders, shouldRefreshOn401 };
   return {
-    get(path, { params, signal, retry } = {}) {
-      return request(fetchImpl, buildUrl(baseUrl, path, params), { method: "GET", signal }, retry, sleep);
-    },
-    post(path, { body, signal, retry } = {}) {
-      const init = { method: "POST", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) };
-      return request(fetchImpl, buildUrl(baseUrl, path), init, retry, sleep);
-    },
+    get: (path, { params, signal, retry } = {}) => request(ctx, "GET", buildUrl(baseUrl, path, params), { signal, retry }),
+    delete: (path, { params, signal, retry } = {}) => request(ctx, "DELETE", buildUrl(baseUrl, path, params), { signal, retry }),
+    post: (path, { body, signal, retry } = {}) => request(ctx, "POST", buildUrl(baseUrl, path), { body: body ?? {}, signal, retry }),
+    put: (path, { body, signal, retry } = {}) => request(ctx, "PUT", buildUrl(baseUrl, path), { body: body ?? {}, signal, retry }),
   };
 }
 
