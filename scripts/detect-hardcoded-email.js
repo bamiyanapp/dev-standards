@@ -12,7 +12,9 @@
 
 const fs = require("node:fs");
 
-const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g;
+// 最後のラベル（TLD）は英字2文字以上にする。`reusable-ci.yml@v2.149.1`のような
+// workflowのバージョン指定（最後のラベルが数字）を、メールアドレスと誤検知しないため（#1491）
+const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?![A-Za-z0-9-])/g;
 
 // 文書用・bot用など、実在の個人を指さないアドレス・ドメイン
 const BUILTIN_ALLOWED_DOMAINS = [

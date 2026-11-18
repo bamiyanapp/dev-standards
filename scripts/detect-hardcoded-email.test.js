@@ -39,3 +39,18 @@ test("許可リスト（完全一致・@ドメイン）で除外できる", () =
 test("1行に複数あれば、それぞれ検知する", () => {
   assert.equal(detect(diff(["a@gmail.com, b@gmail.com"])).length, 2);
 });
+
+test("uses:のバージョン指定（@v2.149.1等）は、メールアドレスとして検知しない（#1491）", () => {
+  const lines = [
+    "uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v2.149.1",
+    "uses: actions/checkout@v6",
+    "uses: some/action@v1.2.3",
+    "self_ref: v2.149.1",
+  ];
+  assert.deepEqual(detect(diff(lines)), []);
+});
+
+test("バージョン指定の誤検知を除いても、通常のアドレスは従来どおり検知する（#1491）", () => {
+  const found = detect(diff(["a: taro@gmail.com", "b: hanako@mail.example.co.jp.", "c: x@corp.io"]));
+  assert.deepEqual(found.map((f) => f.masked), ["t***@gmail.com", "h***@mail.example.co.jp", "x***@corp.io"]);
+});
