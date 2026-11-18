@@ -1,3 +1,10 @@
+## [2.148.2](https://github.com/bamiyanapp/dev-standards/compare/v2.148.1...v2.148.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deploy:** Pagesのartifact名へrun_attemptを含め、失敗ジョブの再実行で復旧できるようにする ([#1481](https://github.com/bamiyanapp/dev-standards/issues/1481)) ([22dca5f](https://github.com/bamiyanapp/dev-standards/commit/22dca5f18aee55349d752b4c63ec667912aa3954)), closes [#1458](https://github.com/bamiyanapp/dev-standards/issues/1458)
+
 ## [2.148.1](https://github.com/bamiyanapp/dev-standards/compare/v2.148.0...v2.148.1) (2026-11-18)
 
 
