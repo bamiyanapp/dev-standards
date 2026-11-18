@@ -44,14 +44,21 @@ export function makeEntryFilter(basePath) {
  *   basePath: 必須。vite.config.jsのbaseと同じ値（'/'で始まり'/'で終わる）
  *   webServer: 任意。ローカルのpreviewサーバーに対して実行する構成用（{ command, url, ... }）。
  *     baseURLはwebServer.url。無ければ、環境変数E2E_BASE_URL（本番環境に対して実行する構成）
+ *   mobile: 任意（既定false）。trueなら、iPhone 13相当のproject（mobile-iphone）を足す。
+ *     ブラウザはdevices定義のWebKitではなくchromiumにする（CIのブラウザインストールをchromiumだけにするため）。
+ *     名前はchromiumと別にする。カバレッジは、従来どおりchromiumだけで収集する
  *   overrides: 任意。retries等の上書き（トップレベルを浅く上書きする。useやreporterを渡すと置き換わる）
+ *
+ * 環境変数PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH（任意）: 空でなければ、全projectの
+ * use.launchOptions.executablePathへ反映する。ブラウザをダウンロードできない環境（Claude Codeの
+ * サンドボックス等）で、参照側のコードを変えずに、事前インストール済みのchromiumで実行するための手段
  */
-export function buildPlaywrightConfig({ defineConfig, devices, reportName, basePath, webServer, overrides = {} }) {
+export function buildPlaywrightConfig({ defineConfig, devices, reportName, basePath, webServer, mobile = false, overrides = {} }) {
   validateBasePath(basePath);
   if (typeof defineConfig !== 'function' || !devices) {
     throw new Error('defineConfigとdevicesは、参照側の@playwright/testのものを渡してください。');
   }
-  return defineConfig({
+  const config = {
     testDir: './e2e',
     retries: process.env.CI ? 1 : 0,
     reporter: [
@@ -72,8 +79,25 @@ export function buildPlaywrightConfig({ defineConfig, devices, reportName, baseP
     ],
     use: { baseURL: webServer ? webServer.url : process.env.E2E_BASE_URL },
     // coverageFixture.jsは、projectNameが'chromium'のときだけカバレッジを収集する
-    projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+    projects: [
+      { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+      ...(mobile ? [{ name: 'mobile-iphone', use: { ...devices['iPhone 13'], browserName: 'chromium' } }] : []),
+    ],
     ...(webServer ? { webServer: { reuseExistingServer: !process.env.CI, ...webServer } } : {}),
     ...overrides,
-  });
+  };
+  return defineConfig(applyExecutablePath(config));
+}
+
+/** 環境変数PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATHが空でなければ、全projectのlaunchOptions.executablePathへ反映する */
+function applyExecutablePath(config) {
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  if (!executablePath || !Array.isArray(config.projects)) return config;
+  return {
+    ...config,
+    projects: config.projects.map((project) => ({
+      ...project,
+      use: { ...project.use, launchOptions: { ...project.use?.launchOptions, executablePath } },
+    })),
+  };
 }

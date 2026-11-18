@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { buildPlaywrightConfig, makeEntryFilter, validateBasePath } from './playwright.config.base.js';
 
 const defineConfig = (c) => c;
-const devices = { 'Desktop Chrome': { viewport: { width: 1280, height: 720 } } };
+const devices = {
+  'Desktop Chrome': { viewport: { width: 1280, height: 720 } },
+  'iPhone 13': { viewport: { width: 390, height: 664 }, isMobile: true, defaultBrowserType: 'webkit' },
+};
 const entry = (url) => ({ url });
 
 test('basePathが未指定・不正な形なら、例外を投げる（黙って既定値を使わない）', () => {
@@ -57,4 +60,45 @@ test('webServerを渡すと、baseURLはそのURLになり、既定でreuseExist
 
 test('defineConfig・devicesが無ければ、例外を投げる', () => {
   assert.throws(() => buildPlaywrightConfig({ reportName: 'R', basePath: '/' }), /defineConfig/);
+});
+
+test('mobile: 既定ではchromiumだけ。trueならmobile-iphoneが加わり、chromiumは必ず残る', () => {
+  const base = { defineConfig, devices, reportName: 'R', basePath: '/' };
+  assert.deepEqual(buildPlaywrightConfig(base).projects.map((p) => p.name), ['chromium']);
+  const mobile = buildPlaywrightConfig({ ...base, mobile: true });
+  assert.deepEqual(mobile.projects.map((p) => p.name), ['chromium', 'mobile-iphone']);
+  // iPhone 13のdevices定義はWebKitを指すが、ブラウザはchromiumへ上書きする
+  const iphone = mobile.projects[1].use;
+  assert.equal(iphone.browserName, 'chromium');
+  assert.equal(iphone.isMobile, true);
+  assert.deepEqual(iphone.viewport, { width: 390, height: 664 });
+});
+
+test('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: 設定されていれば全projectへ反映し、未設定・空文字なら何も足さない', () => {
+  const opts = { defineConfig, devices, reportName: 'R', basePath: '/', mobile: true };
+  try {
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = '/opt/pw-browsers/chromium';
+    for (const project of buildPlaywrightConfig(opts).projects) {
+      assert.equal(project.use.launchOptions.executablePath, '/opt/pw-browsers/chromium', project.name);
+    }
+    for (const empty of ['', undefined]) {
+      if (empty === undefined) delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+      else process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = empty;
+      for (const project of buildPlaywrightConfig(opts).projects) {
+        assert.equal(project.use.launchOptions, undefined, `${project.name} (${JSON.stringify(empty)})`);
+      }
+    }
+  } finally {
+    delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  }
+});
+
+test('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: overridesで渡したprojectsにも反映する', () => {
+  try {
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = '/x/chromium';
+    const c = buildPlaywrightConfig({ defineConfig, devices, reportName: 'R', basePath: '/', overrides: { projects: [{ name: 'custom', use: {} }] } });
+    assert.equal(c.projects[0].use.launchOptions.executablePath, '/x/chromium');
+  } finally {
+    delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  }
 });
