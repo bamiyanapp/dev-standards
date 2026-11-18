@@ -864,7 +864,16 @@ jobs:
       # 付きでスキップする
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1019,7 +1028,16 @@ jobs:
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1135,7 +1153,16 @@ jobs:
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1252,7 +1279,16 @@ jobs:
       # E2Eテスト自体の成否判定には影響しない
       - name: self_ref未指定によりE2Eカバレッジ表示等をスキップすることを警告する
         if: always() && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -2580,7 +2616,16 @@ jobs:
       # 別のスクリプトで確認する。値はログへ出さない（ファイル名・行・伏せ字のみ）
       - name: self_ref未指定によりメールアドレス検知をスキップすることを警告する
         if: inputs.enable_email_scan && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（メールアドレス検知用）
         if: inputs.enable_email_scan && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -3195,7 +3240,16 @@ jobs:
       # には影響しない
       - name: self_ref未指定によりLighthouseサマリー整形をスキップすることを警告する
         if: always() && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+        run: |
+          echo "::warning::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
