@@ -59,6 +59,21 @@ flowchart TD
 - **update type**: 新旧バージョンのsemver（major.minor.patch）を比較し、`major`/`minor`/`patch`のいずれかに分類する。プレリリース等でバージョン比較ができない場合・バージョンが不変の場合・ダウングレードの場合は`other`として扱う。`other`はRisk判定側で保守的にHigh相当として扱う
 - **直接/間接判定**: `package-lock.json`のルートエントリ（`packages[""]`）が宣言する依存であれば直接依存とする。npm workspaces構成（`packages[""].workspaces`）の場合は、各ワークスペースメンバー自身の`package.json`が宣言する依存も合算する。karutaの実環境では、この合算が漏れており全依存が常に「間接」と誤分類されていたことが発覚し修正した（[#720](https://github.com/bamiyanapp/dev-standards/issues/720)参照）。業務影響度（ブラスト半径）判定は、直接依存のみを対象にする
 
+## ルート以外にlockfileを持つ構成（[#1368](https://github.com/bamiyanapp/dev-standards/issues/1368)）
+
+examinationのように、npm workspacesを使わず、`app/*/`・`infra/*/`・ルートに複数の`package-lock.json`を持つ構成がある。以前は、変更判定がルートの`package-lock.json`の完全一致だけで、`app/top/package-lock.json`等の変更は、どの判定も受けなかった。examination#673（viteの更新、9アプリのlockfileを変更）は、CVE・install script・メンテナ変化の判定を受けずにマージされた。
+
+- 変更判定は、任意の階層の`package-lock.json`（`node_modules`配下は除く）を対象にする。パスの一覧は、`package_lock_paths`として出す
+- ルートの`package-lock.json`だけを変更したPRは、従来と同じ処理になる。出力は変わらない
+- 複数のlockfile（またはルート以外）を変更したPRは、`scripts/dependency-lockfiles.js`で、パスごとにbase側と比べ、結果を集約する。既存のスクリプトの引数仕様は変えていない
+- 同じパッケージの同じ更新が複数のlockfileに現れる（vite更新が9アプリ同時）。`name@旧→新`で重複排除し、「影響するlockfile」の列に、パスを並べる。重複排除しないと、コメントが9倍になる
+- `direct`・`production`は、いずれかのlockfileで真なら真とする。1箇所でも本番到達経路があれば対象にする、という既存の考え方をlockfile間に広げている
+- リスク分類は、重複排除後の集合に対して、1回だけ行う
+- **ブラスト半径とSBOMの判定は、複数のlockfileを変更したPRではスキップする**。`dependency-cruiser`の判定は`frontend_dir`・`backend_dir`を前提にするためである。スキップした旨を、コメントへ出す。別のissueで扱う
+- このPRで新しく追加されたlockfileは、base側に無いため、空のlockfileと比べる
+
+定期スキャンの複数指定は、[`dependency-risk-judgment-periodic-scans.md`](dependency-risk-judgment-periodic-scans.md)の「複数lockfileの指定」を参照する。
+
 ## Supply Chainチェック（[#648](https://github.com/bamiyanapp/dev-standards/issues/648) Phase 3）
 
 CVE/CVSS/KEVチェック（上記）は「既知の脆弱性があるかどうか」を見る。Supply Chainチェックはこれとは別の観点で、OSSパッケージそのものに不自然な変化が無いかを見る。CVEが0件でも、install script追加や公開者変更等の別のリスクシグナルが存在し得るため、両方を独立に見る。

@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const { packageNameFromKey, extractDirectDependencyNames } = require("./dependency-update-info.js");
 const { fetchVulnerabilityInfo } = require("./dependency-vulnerability-info.js");
+const { expandLockfileSpec, mergeScanResults } = require("./lib/lockfile-spec.js");
 
 // issue #1095。既存のdependency-risk-summary job（PRのpackage-lock.json差分に
 // 対してのみ動作する）は、Renovateが更新PRを出さない限り一度も実行されない。
@@ -108,16 +109,28 @@ function findRelatedPullRequest(packageName, openPullRequests) {
   return match ? { number: match.number, title: match.title } : null;
 }
 
+// issue #1368: 第1引数は改行区切り・glob可の複数指定（単一パスは従来どおり）。
+// 複数lockfileの場合、name@versionで統合し、各結果へlockfiles（検知元）を付与する
+async function scanLockfiles(spec) {
+  const paths = expandLockfileSpec(spec);
+  if (paths.length === 0) throw new Error(`lockfile not found: ${spec}`);
+  const perLockfile = [];
+  for (const lockfile of paths) {
+    const lockJson = JSON.parse(fs.readFileSync(lockfile, "utf-8"));
+    perLockfile.push({ lockfile, results: await scanLockFileForVulnerabilities(lockJson) });
+  }
+  return mergeScanResults(perLockfile);
+}
+
 function main() {
   const [, , lockPath] = process.argv;
   if (!lockPath) {
-    console.error("Usage: node dependency-full-scan.js <package-lock.json>");
+    console.error("Usage: node dependency-full-scan.js <package-lock.json（改行区切り・glob可）>");
     process.exitCode = 1;
     return;
   }
 
-  const lockJson = JSON.parse(fs.readFileSync(lockPath, "utf-8"));
-  scanLockFileForVulnerabilities(lockJson)
+  scanLockfiles(lockPath)
     .then((result) => {
       console.log(JSON.stringify(result, null, 2));
       if (process.env.GITHUB_OUTPUT) {
@@ -137,5 +150,6 @@ if (require.main === module) {
 module.exports = {
   extractAllPackages,
   scanLockFileForVulnerabilities,
+  scanLockfiles,
   findRelatedPullRequest,
 };

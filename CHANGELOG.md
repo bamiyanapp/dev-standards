@@ -1,3 +1,94 @@
+## [2.149.1](https://github.com/bamiyanapp/dev-standards/compare/v2.149.0...v2.149.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **shared:** apiClientのrequestを分割し参照側のlintに収める ([#1486](https://github.com/bamiyanapp/dev-standards/issues/1486)) ([#1487](https://github.com/bamiyanapp/dev-standards/issues/1487)) ([5929f1e](https://github.com/bamiyanapp/dev-standards/commit/5929f1e8d7d170bed3f480056b017d01099a543b))
+
+# [2.149.0](https://github.com/bamiyanapp/dev-standards/compare/v2.148.2...v2.149.0) (2026-11-18)
+
+
+### Features
+
+* **scripts:** モダナイズ観点の達成状況を判定する監査スクリプトを追加する ([#1484](https://github.com/bamiyanapp/dev-standards/issues/1484)) ([cc411a3](https://github.com/bamiyanapp/dev-standards/commit/cc411a39d3c61d1fde33ace50bda20eec0307a04)), closes [#1463](https://github.com/bamiyanapp/dev-standards/issues/1463)
+
+## [2.148.2](https://github.com/bamiyanapp/dev-standards/compare/v2.148.1...v2.148.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deploy:** Pagesのartifact名へrun_attemptを含め、失敗ジョブの再実行で復旧できるようにする ([#1481](https://github.com/bamiyanapp/dev-standards/issues/1481)) ([22dca5f](https://github.com/bamiyanapp/dev-standards/commit/22dca5f18aee55349d752b4c63ec667912aa3954)), closes [#1458](https://github.com/bamiyanapp/dev-standards/issues/1458)
+
+## [2.148.1](https://github.com/bamiyanapp/dev-standards/compare/v2.148.0...v2.148.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ci:** self_ref未指定でスキップされた機能の警告を、Job Summaryにも出す ([#1480](https://github.com/bamiyanapp/dev-standards/issues/1480)) ([46aeb78](https://github.com/bamiyanapp/dev-standards/commit/46aeb787441b4974b63e355bf9112eb4d5b94b88)), closes [#1460](https://github.com/bamiyanapp/dev-standards/issues/1460)
+
+# [2.148.0](https://github.com/bamiyanapp/dev-standards/compare/v2.147.0...v2.148.0) (2026-11-18)
+
+
+### Features
+
+* **ci:** CD失敗の通知actionとLambdaパッケージの起動可否検証を追加する ([#1479](https://github.com/bamiyanapp/dev-standards/issues/1479)) ([3fa1130](https://github.com/bamiyanapp/dev-standards/commit/3fa1130d829c3584dbd71756529836d95535a5ae)), closes [#1452](https://github.com/bamiyanapp/dev-standards/issues/1452)
+
+# [2.147.0](https://github.com/bamiyanapp/dev-standards/compare/v2.146.0...v2.147.0) (2026-11-18)
+
+
+### Features
+
+* **ci:** uses:とself_refのバージョン不一致をstandards-checkで検知する ([#1478](https://github.com/bamiyanapp/dev-standards/issues/1478)) ([e126fe3](https://github.com/bamiyanapp/dev-standards/commit/e126fe340041ef4408c0a6c0881c49577009b3a6)), closes [#1459](https://github.com/bamiyanapp/dev-standards/issues/1459)
+
+# [2.146.0](https://github.com/bamiyanapp/dev-standards/compare/v2.145.0...v2.146.0) (2026-11-18)
+
+
+### Features
+
+* **coverage:** カバレッジに含まれていないソースファイルを検知する ([#1477](https://github.com/bamiyanapp/dev-standards/issues/1477)) ([ab8abc5](https://github.com/bamiyanapp/dev-standards/commit/ab8abc515158fb2c91c98dadd7b262df0b492464)), closes [#1461](https://github.com/bamiyanapp/dev-standards/issues/1461)
+
+# [2.145.0](https://github.com/bamiyanapp/dev-standards/compare/v2.144.0...v2.145.0) (2026-11-18)
+
+
+### Features
+
+* **shared:** apiClientに認証ヘッダーの都度取得・401再試行・PUT/DELETEを追加する ([#1476](https://github.com/bamiyanapp/dev-standards/issues/1476)) ([d3ddef2](https://github.com/bamiyanapp/dev-standards/commit/d3ddef2a1cd9b0940cb8ceb6211a7273e480d473)), closes [#1451](https://github.com/bamiyanapp/dev-standards/issues/1451)
+
+# [2.144.0](https://github.com/bamiyanapp/dev-standards/compare/v2.143.0...v2.144.0) (2026-11-18)
+
+
+### Features
+
+* **e2e:** 共有Playwright設定へモバイルprojectとブラウザ実行パス指定を追加する ([#1475](https://github.com/bamiyanapp/dev-standards/issues/1475)) ([9980663](https://github.com/bamiyanapp/dev-standards/commit/9980663eb9c1135b5e995b47e15063beb1d8cd4d)), closes [#1462](https://github.com/bamiyanapp/dev-standards/issues/1462)
+
+# [2.143.0](https://github.com/bamiyanapp/dev-standards/compare/v2.142.0...v2.143.0) (2026-11-18)
+
+
+### Features
+
+* **scan:** 定期スキャンのlockfile_pathを複数行・glob指定に対応する ([#1474](https://github.com/bamiyanapp/dev-standards/issues/1474)) ([0ad26e9](https://github.com/bamiyanapp/dev-standards/commit/0ad26e9b8b49749b9e4bfdbe3023c233319d5f0f)), closes [#1368](https://github.com/bamiyanapp/dev-standards/issues/1368)
+
+# [2.142.0](https://github.com/bamiyanapp/dev-standards/compare/v2.141.2...v2.142.0) (2026-11-17)
+
+
+### Features
+
+* ルート以外にlockfileを持つ構成で、依存更新のRisk Summaryを動かす（段階1） ([#1471](https://github.com/bamiyanapp/dev-standards/issues/1471)) ([ff2286e](https://github.com/bamiyanapp/dev-standards/commit/ff2286eee9553c600994e3184e0a67ef52b5e7d0)), closes [#1368](https://github.com/bamiyanapp/dev-standards/issues/1368)
+
+## [2.141.2](https://github.com/bamiyanapp/dev-standards/compare/v2.141.1...v2.141.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* apiClientを参照側のsonarjsの規則に収める ([#1472](https://github.com/bamiyanapp/dev-standards/issues/1472)) ([176ed15](https://github.com/bamiyanapp/dev-standards/commit/176ed15ee198884ad085d32688c81496b3b0fa09))
+
+## [2.141.1](https://github.com/bamiyanapp/dev-standards/compare/v2.141.0...v2.141.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* js-yaml v5へ追従し、buildSchemaをv4・v5の両方で動くようにする ([#1469](https://github.com/bamiyanapp/dev-standards/issues/1469)) ([01d0189](https://github.com/bamiyanapp/dev-standards/commit/01d01890db9b9d9aa802c8152ef8a950bb98fb79))
+
 # [2.141.0](https://github.com/bamiyanapp/dev-standards/compare/v2.140.0...v2.141.0) (2026-11-17)
 
 

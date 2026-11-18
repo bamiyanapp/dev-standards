@@ -1763,5 +1763,161 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.141.1",
+    "date": "2026-11-17T22:32:48.348Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "major update、またはバージョン比較不能な更新（ダウングレード等）が含まれていますが、全てdevDependency（本番コードに含まれない）のため自動マージを止めていません"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.141.2",
+    "date": "2026-11-17T22:59:39.811Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.142.0",
+    "date": "2026-11-17T23:07:24.157Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.143.0",
+    "date": "2026-11-18T00:20:39.770Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.144.0",
+    "date": "2026-11-18T03:13:13.002Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.145.0",
+    "date": "2026-11-18T03:15:54.227Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.146.0",
+    "date": "2026-11-18T03:16:50.739Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.147.0",
+    "date": "2026-11-18T03:20:05.069Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.148.0",
+    "date": "2026-11-18T03:21:09.377Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.148.1",
+    "date": "2026-11-18T03:23:07.253Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.148.2",
+    "date": "2026-11-18T03:27:01.811Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.149.0",
+    "date": "2026-11-18T14:00:41.556Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
+  },
+  {
+    "version": "2.149.1",
+    "date": "2026-11-18T14:29:39.538Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]

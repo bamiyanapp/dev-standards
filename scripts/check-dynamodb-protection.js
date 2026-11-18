@@ -26,14 +26,49 @@ const CFN_TAGS = [
   "ToJsonString", "ForEach",
 ];
 
+// js-yamlは呼び出し側が用意するため、v4とv5の両方で動くようにする（issue #1468）。
+// v4は`yaml.Type`と`DEFAULT_SCHEMA.extend`、v5は`defineScalarTag`等のタグ定義APIと
+// `Schema.withTags`でカスタムタグを追加する（v5で`Type`が削除された）。
+// どちらも、`!Ref`等のタグを`{ "!Ref": 値 }`の形で読めるスキーマを返す
 function buildSchema(yaml) {
-  const types = [];
-  for (const tag of CFN_TAGS) {
-    for (const kind of ["scalar", "sequence", "mapping"]) {
-      types.push(new yaml.Type(`!${tag}`, { kind, construct: (data) => ({ [`!${tag}`]: data }) }));
+  if (typeof yaml.Type === "function") {
+    const types = [];
+    for (const tag of CFN_TAGS) {
+      for (const kind of ["scalar", "sequence", "mapping"]) {
+        types.push(new yaml.Type(`!${tag}`, { kind, construct: (data) => ({ [`!${tag}`]: data }) }));
+      }
     }
+    return yaml.DEFAULT_SCHEMA.extend(types);
   }
-  return yaml.DEFAULT_SCHEMA.extend(types);
+  const tags = [];
+  for (const tag of CFN_TAGS) {
+    const name = `!${tag}`;
+    // 読み込み専用のため、identifyは常にfalse（dumpには使わない）
+    tags.push(
+      yaml.defineScalarTag(name, { resolve: (source) => ({ [name]: source }), identify: () => false }),
+      yaml.defineSequenceTag(name, {
+        create: () => [],
+        addItem: (carrier, item) => {
+          carrier.push(item);
+        },
+        finalize: (carrier) => ({ [name]: carrier }),
+        identify: () => false,
+      }),
+      yaml.defineMappingTag(name, {
+        create: () => new Map(),
+        addPair: (carrier, key, value) => {
+          carrier.set(key, value);
+          return "";
+        },
+        has: (carrier, key) => carrier.has(key),
+        keys: (result) => Object.keys(result[name]),
+        get: (result, key) => result[name][key],
+        finalize: (carrier) => ({ [name]: Object.fromEntries(carrier) }),
+        identify: () => false,
+      }),
+    );
+  }
+  return yaml.CORE_SCHEMA.withTags(tags);
 }
 
 const isTrue = (v) => v === true || v === "true";

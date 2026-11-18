@@ -14,9 +14,31 @@ const items = await api.get("/items", { params: { q: "鳥", page: undefined } })
 await api.post("/items", { body: { name: "x" } });
 ```
 
-- `get(path, { params, signal, retry })`・`post(path, { body, signal, retry })`を持つ
+- `get`・`delete`は`(path, { params, signal, retry })`を取る
+- `post`・`put`は`(path, { body, signal, retry })`を取る
 - `fetch`は`createApiClient({ fetch })`で差し替えられる（テスト・SSR用）
-- 応答が204ならnullを返す
+- 応答が204、または本文が空（`content-length: 0`・空文字列）ならnullを返す
+
+## 認証ヘッダー（`getHeaders`）
+
+トークン等のヘッダーは、`getHeaders`で注入する。リクエストのたびに呼ばれ、値が`undefined`・`null`のキーは付けない。
+
+```js
+import { getAuth } from "firebase/auth";
+
+export const api = createApiClient({
+  baseUrl: import.meta.env.VITE_API_URL,
+  getHeaders: async ({ forceRefresh }) => {
+    const user = getAuth().currentUser;
+    return user ? { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}` } : {};
+  },
+  shouldRefreshOn401: () => !!getAuth().currentUser,
+});
+```
+
+- **トークンをstateへ保持せず、都度取得する**。IDトークンの有効期限は約1時間である。起動時の値を使い続けると、1時間後に全APIが401になる（[`lambda-api-firebase-auth-pattern.md`](lambda-api-firebase-auth-pattern.md)参照）。SDKは、失効が近いトークンを自動で更新して返す
+- `shouldRefreshOn401`がtrueを返すとき、401を受けたら`getHeaders({ forceRefresh: true })`で取得し直し、**1回だけ**再試行する。リトライ回数（後述）とは別に数える。再試行後も401なら、`ApiError`を投げる。既定は再試行しない
+- `getHeaders`が例外を投げたときは、`ApiError`に変換せず、そのまま投げる。認証SDKの失敗を、通信失敗と区別するためである
 
 ## エラー（`ApiError`）
 

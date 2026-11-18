@@ -18,7 +18,7 @@ on:
   workflow_call:
     inputs:
       lockfile_path:
-        description: "スキャン対象のpackage-lock.jsonのパス（リポジトリルート相対）。"
+        description: "スキャン対象のpackage-lock.jsonのパス（リポジトリルート相対）。改行区切りで複数指定でき、各行に`**`・`*`のglobも使える（node_modules配下は除外、issue #1368）。複数の場合は結果をname+versionで統合し、検知元lockfileを列に表示する。"
         type: string
         default: "package-lock.json"
       direct_only:
@@ -109,16 +109,17 @@ jobs:
           script: |
             const fs = require("fs");
             const deprecated = JSON.parse(fs.readFileSync("/tmp/deprecation-scan.json", "utf-8"));
+            const multi = new Set(deprecated.flatMap((d) => d.lockfiles)).size > 1;
             const rows = deprecated
-              .map((d) => `| ${d.name} | ${d.version} | ${d.direct ? "直接" : "間接"} | ${d.deprecated} |`)
+              .map((d) => `| ${d.name} | ${d.version} | ${d.direct ? "直接" : "間接"} | ${d.deprecated} |${multi ? ` ${d.lockfiles.join(", ")} |` : ""}`)
               .join("\n");
             const hasIndirect = deprecated.some((d) => !d.direct);
             const body = [
               "npm registry上でdeprecated（非推奨）と判定されている依存パッケージが見つかりました。",
               "後継バージョンが存在しない（Renovate等が更新PRを作らない）ため、通常のRisk Summaryでは検知できません。",
               "",
-              "| パッケージ | バージョン | 直接/間接 | deprecatedメッセージ |",
-              "|---|---|---|---|",
+              multi ? "| パッケージ | バージョン | 直接/間接 | deprecatedメッセージ | lockfile |" : "| パッケージ | バージョン | 直接/間接 | deprecatedメッセージ |",
+              multi ? "|---|---|---|---|---|" : "|---|---|---|---|",
               rows,
               "",
               "対応候補（直接依存）: 後継パッケージへの移行、または許容できるリスクとして明示的にクローズする。",

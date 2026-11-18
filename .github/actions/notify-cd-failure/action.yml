@@ -1,0 +1,75 @@
+name: "Notify CD failure"
+description: >-
+  CDの失敗を、スマートフォンで気づける形で通知する複合action（issue #1452）。
+  固定タイトルの未解決issueがあれば、失敗したrunの情報をコメントし、無ければ起票する
+  （実行毎に新規issueを積み重ねない）。LINEのチャンネルアクセストークンと通知先ユーザーIDが
+  両方指定されていれば、LINEにも送る。片方でも欠ければ、LINE通知だけをスキップする（失敗させない）。
+  CDの最後に、`if: failure()`と`needs`（CDの全ジョブ）を指定したjobで呼ぶ。`issues: write`が要る
+
+inputs:
+  github-token:
+    description: "issues: writeを持つGitHub token。"
+    required: true
+  title:
+    description: "通知issueのタイトル。同名のopen issueがあればコメントを追加し、無ければ起票する。"
+    required: false
+    default: "CD失敗"
+  labels:
+    description: "issue起票時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを付ける。"
+    required: false
+    default: '["bug", "priority: high"]'
+  line-channel-access-token:
+    description: "運用監視専用LINE Botのチャンネルアクセストークン（任意）。"
+    required: false
+    default: ""
+  line-user-id:
+    description: "LINEの通知先ユーザーID（任意）。"
+    required: false
+    default: ""
+
+outputs:
+  issue-number:
+    description: "コメントまたは起票したissue番号。"
+    value: ${{ steps.issue.outputs.issue_number }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 通知issueへ反映する
+      id: issue
+      uses: actions/github-script@v9
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const title = ${{ toJSON(inputs.title) }};
+          const labels = JSON.parse(${{ toJSON(inputs.labels) }});
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const sha = context.sha.slice(0, 7);
+          const body = `CDが失敗しました。\n\n- run: ${runUrl}\n- コミット: ${sha}\n- ブランチ: ${context.ref}\n\n失敗したジョブのログを確認してください。`;
+
+          const open = await github.paginate(github.rest.issues.listForRepo, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: "open",
+          });
+          const existing = open.find((i) => !i.pull_request && i.title === title);
+          if (existing) {
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
+            core.setOutput("issue_number", String(existing.number));
+          } else {
+            const created = await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels });
+            core.setOutput("issue_number", String(created.data.number));
+          }
+    - name: LINEへ通知する
+      if: inputs.line-channel-access-token != '' && inputs.line-user-id != ''
+      shell: bash
+      env:
+        LINE_TOKEN: ${{ inputs.line-channel-access-token }}
+        LINE_USER_ID: ${{ inputs.line-user-id }}
+        MESSAGE: "[${{ github.repository }}] CDが失敗しました: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      run: |
+        payload=$(node -e 'console.log(JSON.stringify({ to: process.env.LINE_USER_ID, messages: [{ type: "text", text: process.env.MESSAGE }] }))')
+        status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST https://api.line.me/v2/bot/message/push \
+          -H "Authorization: Bearer $LINE_TOKEN" -H "Content-Type: application/json" -d "$payload" || echo 000)
+        # 通知の失敗でCDの失敗報告自体を止めない
+        if [ "$status" != "200" ]; then echo "::warning::LINE通知に失敗しました（HTTP $status）"; fi

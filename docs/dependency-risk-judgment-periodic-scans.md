@@ -62,3 +62,23 @@ dev-standards自体の依存更新を考える。Renovate等によるPRがmain�
 - このスクリプトはどのような内部エラーが起きても必ず正常終了する。`changelogPrepareCmd`の失敗は`@semantic-release/git`によるコミット自体を止めてしまうため、安全側に倒す
 - ファイルの形式: `{ version, date, riskLevel, riskReasons, staleRiskLevel, staleRiskReasons }`の配列。同一`version`への再追記は上書きする（リトライ時の重複防止）
 - 初回リリース等、比較対象となる前回タグが存在しない場合は追記自体をスキップする
+
+## 複数lockfileの指定
+
+[#1368](https://github.com/bamiyanapp/dev-standards/issues/1368)で、`full-scan`と`deprecation-scan`の`lockfile_path`入力を複数指定に対応させた。
+
+- 改行区切りで複数行を指定できる。各行には`**`・`*`のglobも使える。`node_modules`配下は除外する
+- 単一パスの指定は従来どおり動く（後方互換）
+- 結果は`name+version`単位で統合する。トラッキングissueの表に「lockfile」列を加え、検知元を示す
+- 直接依存の判定は、いずれかのlockfileで直接依存ならその扱いとする
+- `devDependencies`のみの経路は、lockfileごとにスキャン対象から外す。他のlockfileで本番到達経路があれば検知対象になる
+- MTTR台帳のキーは`name@version`のままで、lockfileのパスを含めない。複数lockfileで同じ検知が出ても1件として扱う
+
+指定例は次のとおり。
+
+```yaml
+with:
+  lockfile_path: |
+    package-lock.json
+    packages/*/package-lock.json
+```

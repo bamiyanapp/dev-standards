@@ -65,11 +65,35 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 
 `uses:`行（`github-actions`マネージャー）と`self_ref:`行（上記customManager）は別々のPRとして提案されうる。同じバージョンへ揃えて1PRでまとめたい場合は、`packageRules`で両方の`depName`（`bamiyanapp/dev-standards`）を`groupName`で束ねる。
 
+このグループ化は、ずれを防ぐ予防策である。ずれたときは、`enable_standards_check: true`のstandards-checkジョブが検知して失敗する（issue #1459）。
+
+- 検証対象は、呼び出し元の`.github/workflows/`全体である。
+- `uses:`の`reusable-*.yml@<ref>`と`self_ref:`が、1種類のバージョンに揃っているかを見る。
+- コメント行の記述は無視する。
+- 失敗時のメッセージには、ファイル名・種別（`uses`・`self_ref`）・各バージョンが出る。
+- 実行するスクリプトは`dev-standards/scripts/check-dev-standards-refs.js`である。標準モジュールだけで動くため、参照側にactionlintの依存は要らない。
+
 ## `reusable-ci.yml`
 
 参照側の `.github/workflows/ci.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。
 
 **`self_ref`は任意入力である**（`required: false`、デフォルト`""`。issue #1261）。指定する場合は`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。`github.workflow_ref`等の動的解決では代替できない（詳細は[「reusable workflowへ破壊的変更を加える際の手順」](#reusable-workflowへ破壊的変更を加える際の手順)参照）。
+
+**`self_ref`を指定しないと、有効化した機能が実行されずにスキップされる。** 次の機能が対象である。
+
+- `coverage_threshold`（ユニットテストのカバレッジ閾値の判定）
+- E2Eカバレッジの表示と、スクリーンショットのベースライン比較
+- `enable_mermaid_render`・`enable_lighthouse_ci`・`enable_dependency_risk_summary`
+- メールアドレスの直書き検知
+
+スキップしても、ジョブ全体は成功のままになる。次の2つで気づける（issue #1460）。
+
+- Job Summaryに警告ボックス（`self_refが指定されていないため、…をスキップしました`）が出る。
+- 実際のジョブのステップが`skipped`になる。
+
+「閾値を設定した」だけで「ゲートされている」と判断しない。CIのジョブで、該当ステップが**実行された**（`skipped`でない）ことを確認する。
+
+`self_ref`が空で機能が有効なときに、失敗させるかどうかは検討中である。参照側リポジトリの`self_ref`の指定状況を調べてから決める（issue #1460の案A）。
 
 当初（issue #1220）は`required: true`としていた。しかしRenovate経由のバージョン更新PRは`uses:`行のタグ文字列のみを書き換え、`with:`ブロックへは追従できない。この前提を見落としていた。新規必須入力の追加を跨いでマージされた参照側リポジトリでは、CIが`startup_failure`で無警告・全停止する実害が複数リポジトリで発生した（issue #1231・#1232）。
 

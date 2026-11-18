@@ -80,6 +80,16 @@ on:
           coverage_per_file_metricsで上書きできる。
         type: string
         default: ""
+      coverage_unmeasured_mode:
+        description: >-
+          カバレッジに含まれていないソースファイル（テストが無く、Vitestの既定では集計から消える
+          ファイル）がある場合の扱い。off（検知しない）、warn（警告注釈とJob Summary。既定）、fail（失敗）。
+          frontendとpackagesのユニットテストのカバレッジに適用する。backendとE2Eカバレッジには適用しない
+          （E2Eは、実行されたコードだけが集計されるため）。Vitestのcoverage.includeに
+          `src/**/*.{ts,tsx}`を指定すると解消する（issue #1461）。failの既定化は、参照側の影響を
+          調べた後に別途行う
+        type: string
+        default: "warn"
       e2e_coverage_threshold:
         description: >-
           frontend-e2e-testジョブのE2EテストJSカバレッジ閾値（%、0以下でゲート無効）。
@@ -532,8 +542,9 @@ on:
           GitHub Actionsには存在しないため（一度`github.workflow_ref`で動的解決を試みたが、
           実機で誤動作し revert した。PR #1119/#1123参照）、呼び出し元に明示的な入力として
           渡してもらう方式にした。呼び出し元の`uses:`行のrefとこの入力の値が一致している
-          ことの検証は呼び出し元リポジトリ側の責務とする（例: dev-standards自身の
-          `node scripts/check-workflows.js`に相当するチェックを参照側に追加する等）。
+          ことは、`enable_standards_check: true`のstandards-checkジョブが自動で検証する
+          （issue #1459。対象は呼び出し元の`.github/workflows/`全体で、`uses:`と`self_ref:`が
+          1種類のバージョンに揃っていなければ失敗する）。
           issue #1261: 当初`required: true`としていたが、Renovate経由のバージョン更新PR
           （`uses:`タグ文字列の書き換えのみで`with:`ブロックへは追従できない）が
           新規必須入力の追加を跨いでマージされた場合、参照側リポジトリのCIが
@@ -853,7 +864,16 @@ jobs:
       # 付きでスキップする
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -871,6 +891,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
+          unmeasured-mode: ${{ inputs.coverage_unmeasured_mode }}
       - name: ビルドする
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run build
@@ -1007,7 +1028,16 @@ jobs:
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1034,6 +1064,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
+          unmeasured-mode: "off"
       - name: カバレッジ閾値の再確認前にbackendテストを再実行する
         if: inputs.coverage_threshold > 0 && inputs.self_ref != '' && steps.coverage-check-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
@@ -1048,6 +1079,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
+          unmeasured-mode: "off"
 
   package-test:
     name: "パッケージテスト"
@@ -1121,7 +1153,16 @@ jobs:
       # 詳細はfrontend-testジョブの同名ステップのコメントを参照（bamiyanapp/karuta#583）
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1139,6 +1180,7 @@ jobs:
           metrics: ${{ matrix.package.coverage_metrics || inputs.coverage_metrics }}
           per-file-metrics: ${{ matrix.package.coverage_per_file_metrics || inputs.coverage_per_file_metrics }}
           check-per-file: ${{ matrix.package.coverage_check_per_file || inputs.coverage_check_per_file }}
+          unmeasured-mode: ${{ inputs.coverage_unmeasured_mode }}
       - name: ビルドする
         if: matrix.package.build == true
         working-directory: ${{ matrix.package.dir }}
@@ -1237,7 +1279,16 @@ jobs:
       # E2Eテスト自体の成否判定には影響しない
       - name: self_ref未指定によりE2Eカバレッジ表示等をスキップすることを警告する
         if: always() && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1253,6 +1304,7 @@ jobs:
           threshold: ${{ inputs.e2e_coverage_threshold }}
           metrics: ${{ inputs.e2e_coverage_metrics }}
           label: frontend-e2e
+          unmeasured-mode: "off"
       # issue #1365。失敗したテストの題名・エラーメッセージ・該当行を、Job SummaryとPRコメントへ出す
       # （スマホオンリー環境では、HTMLレポート（zip）を閲覧できないため）。Playwrightの設定ファイルに
       # jsonレポーター（outputFile: 'playwright-report/results.json'）が要る。CLIの--reporterでは足さない
@@ -1615,6 +1667,13 @@ jobs:
       - name: dev-standardsのsymlink・.gitignoreドリフトを確認する（自動修復可能なドリフトは無し）
         if: steps.drift.outputs.changed == 'false'
         run: node dev-standards/scripts/bootstrap.js --check
+      # issue #1459。`uses:`のタグと`self_ref:`が、呼び出し元の.github/workflows/全体で
+      # 揃っているかを検証する。Renovateが`uses:`行と`self_ref:`行を別々のPRで提案すると、片方だけ
+      # 先にマージされてずれる（shock-lab#451）。標準モジュールだけで動くスクリプトのため、
+      # 参照側にactionlintの依存が無くても実行できる
+      - name: dev-standardsへの参照バージョン（uses:とself_ref:）が揃っているか確認する
+        if: steps.drift.outputs.changed == 'false'
+        run: node dev-standards/scripts/check-dev-standards-refs.js
       # issue #1403。調査用の一時workflow（tmp-*）が、14日を超えて残っていないかを警告する
       # （警告のみ。失敗にしない）。追加された日をgitの履歴から求めるため、履歴を取得する
       - name: 残っている一時workflow（tmp-*）を警告する
@@ -2557,7 +2616,16 @@ jobs:
       # 別のスクリプトで確認する。値はログへ出さない（ファイル名・行・伏せ字のみ）
       - name: self_ref未指定によりメールアドレス検知をスキップすることを警告する
         if: inputs.enable_email_scan && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+        run: |
+          echo "::warning::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（メールアドレス検知用）
         if: inputs.enable_email_scan && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -3172,7 +3240,16 @@ jobs:
       # には影響しない
       - name: self_ref未指定によりLighthouseサマリー整形をスキップすることを警告する
         if: always() && inputs.self_ref == ''
-        run: echo "::warning::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+        run: |
+          echo "::warning::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+          # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
+          {
+            echo "> [!WARNING]"
+            echo "> self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+            echo '> 有効化した機能が実行されていません。`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定してください。'
+            echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -3322,7 +3399,13 @@ jobs:
                 pull_number: context.payload.pull_request.number,
                 per_page: 100,
               });
-              const packageLockChanged = files.some((f) => f.filename === 'package-lock.json');
+              // issue #1368: 任意の階層のpackage-lock.json（node_modules配下は除く）を対象にする。
+              // 以前は、ルートのpackage-lock.jsonの完全一致だけで、app/*/等の変更は判定を受けなかった
+              const lockPaths = [...new Set(files.map((f) => f.filename).filter((f) => /(^|\/)package-lock\.json$/.test(f) && !f.split('/').includes('node_modules')))].sort();
+              const packageLockChanged = lockPaths.length > 0;
+              core.setOutput('package_lock_paths', JSON.stringify(lockPaths));
+              // ルートのlockfileだけの場合は、従来と同じ処理（1組のlockfileを比べる）にする
+              core.setOutput('multi_lockfile', String(lockPaths.length > 0 && !(lockPaths.length === 1 && lockPaths[0] === 'package-lock.json')));
               const actionFiles = files
                 .map((f) => f.filename)
                 .filter((f) => /^\.github\/workflows\/.*\.ya?ml$/.test(f) || /^\.github\/actions\/[^/]+\/action\.ya?ml$/.test(f));
@@ -3345,9 +3428,22 @@ jobs:
         id: fetch-base
         if: steps.gate.outputs.package_lock_changed == 'true'
         continue-on-error: true
+        env:
+          LOCK_PATHS: ${{ steps.gate.outputs.package_lock_paths }}
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
         run: |
           git fetch --depth 1 origin ${{ github.event.pull_request.base.sha }}
-          git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            # issue #1368: パスごとに、base側のlockfileを取得する。このPRで新しく追加されたlockfileは、
+            # base側に無いため、取得できなくてもよい（空のlockfileとして扱う）
+            printf '%s' "$LOCK_PATHS" > /tmp/lockfile-paths.json
+            mkdir -p /tmp/base-locks
+            for p in $(jq -r '.[]' /tmp/lockfile-paths.json); do
+              git show "${{ github.event.pull_request.base.sha }}:$p" > "/tmp/base-locks/${p//\//__}" 2>/dev/null || rm -f "/tmp/base-locks/${p//\//__}"
+            done
+          else
+            git show ${{ github.event.pull_request.base.sha }}:package-lock.json > /tmp/base-package-lock.json
+          fi
 
       # GitHub Actions/reusable workflow参照の変更分（action_files）について、
       # base側の内容だけを別途取得する。head側はこのjobのデフォルトcheckoutに
@@ -3409,7 +3505,14 @@ jobs:
         id: dependency-info
         if: steps.fetch-base.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+        env:
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
+        run: |
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            node .dev-standards-actions/scripts/dependency-lockfiles.js update-info /tmp/base-locks /tmp/lockfile-paths.json > /tmp/dependency-update-info.json
+          else
+            node .dev-standards-actions/scripts/dependency-update-info.js /tmp/base-package-lock.json package-lock.json > /tmp/dependency-update-info.json
+          fi
 
       # GitHub Actions/reusable workflow参照のバージョン更新情報（issue #666）。
       # fetch-actions-baseが取得したbase側のファイル内容と、head側（デフォルトcheckoutの
@@ -3438,7 +3541,14 @@ jobs:
         id: package-anomaly
         if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
-        run: node .dev-standards-actions/scripts/dependency-package-anomaly-info.js /tmp/base-package-lock.json package-lock.json > /tmp/package-anomaly-info.json
+        env:
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
+        run: |
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            node .dev-standards-actions/scripts/dependency-lockfiles.js anomaly-info /tmp/base-locks /tmp/lockfile-paths.json > /tmp/package-anomaly-info.json
+          else
+            node .dev-standards-actions/scripts/dependency-package-anomaly-info.js /tmp/base-package-lock.json package-lock.json > /tmp/package-anomaly-info.json
+          fi
 
       # issue #648（Phase 3）メンテナ/所有権異常の検知。npm registryへの問い合わせを
       # 伴う（osv.dev等と同様、このサンドボックスでは疎通確認済みだが、実際の
@@ -3498,7 +3608,7 @@ jobs:
       # ツール（jscpd・dependency-cruiser等）と同じくメジャーバージョン固定で呼ぶ
       - name: SBOMを生成する
         id: sbom
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
         continue-on-error: true
         run: npx --yes @cyclonedx/cyclonedx-npm@6 --package-lock-only --output-file /tmp/sbom.json
 
@@ -3565,18 +3675,18 @@ jobs:
       # 結果を参照するようになったため、このステップはそれより前に実行する必要がある
       - name: ブラスト半径判定用にNode.jsをセットアップする（1回目/2回）
         id: setup-node-blast-radius-1
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
       - name: ブラスト半径判定用Node.jsセットアップの再試行前に待機する
-        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true' && steps.setup-node-blast-radius-1.outcome == 'failure'
         shell: bash
         run: sleep 10
       - name: ブラスト半径判定用にNode.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         id: setup-node-blast-radius-2
-        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true' && steps.setup-node-blast-radius-1.outcome == 'failure'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
@@ -3596,7 +3706,7 @@ jobs:
           fi
       - name: ブラスト半径判定用にdependency-cruiserを実行する
         id: blast-radius-cruise
-        if: steps.dependency-info.outcome == 'success'
+        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
         continue-on-error: true
         run: |
           targets=()
@@ -3843,10 +3953,15 @@ jobs:
                 body += `| ${updateTypeLabel[type]} | ${count} |\n`;
               }
               body += '\n<details><summary>変更されたパッケージ一覧</summary>\n\n';
-              body += '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
+              // issue #1368: 複数のlockfileを変更したPRでは、同じ更新を1件にまとめ、影響するlockfileを出す
+              const multiLock = changes.some((c) => Array.isArray(c.lockfiles));
+              body += multiLock
+                ? '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 | 影響するlockfile |\n|---|---|---|---|---|---|\n'
+                : '| パッケージ | 旧バージョン | 新バージョン | update type | 直接/間接 |\n|---|---|---|---|---|\n';
               for (const c of changes) {
-                body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |\n`;
+                body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |${multiLock ? ` ${(c.lockfiles || []).join('<br>')} |` : ''}\n`;
               }
+              if (multiLock) body += '\n複数のlockfileを変更したPRのため、ブラスト半径とSBOMの判定は、スキップしました。\n';
               body += '\n</details>\n\n';
             }
 

@@ -62,6 +62,24 @@ inputs:
     required: false
     default: "src/"
 
+  source-globs:
+    description: >-
+      カバレッジに計測されているべきソースファイルのglob（working-directoryからの相対、カンマ区切り。
+      `{ts,tsx}`の波括弧展開に対応）。サマリーにキーが無い一致ファイルを「未計測ファイル」として検知する
+      （issue #1461）。テストの無いファイルは、Vitestの既定ではレポートから消えてしまう
+    required: false
+    default: "src/**/*.{ts,tsx,js,jsx}"
+  source-ignore-globs:
+    description: "計測不要なファイルのglob（カンマ区切り）。テスト・型定義・エントリポイント・セットアップ等"
+    required: false
+    default: "**/*.test.*,**/*.spec.*,**/*.d.ts,src/main.*,src/setupTests.*,src/vite-env.d.ts"
+  unmeasured-mode:
+    description: >-
+      未計測ファイルがあるときの扱い。off（検知しない）、warn（警告注釈とJob Summary。既定）、
+      fail（失敗にする）。failの既定化は、参照側の影響を調べた後に別途行う
+    required: false
+    default: "warn"
+
 runs:
   using: "composite"
   steps:
@@ -77,4 +95,7 @@ runs:
         TOTAL_WARN_RATIO: ${{ inputs.total-warn-ratio }}
         TOTAL_FAIL_RATIO: ${{ inputs.total-fail-ratio }}
         ALLOWED_PATH_PREFIXES: ${{ inputs.allowed-path-prefixes }}
+        SOURCE_GLOBS: ${{ inputs.source-globs }}
+        SOURCE_IGNORE_GLOBS: ${{ inputs.source-ignore-globs }}
+        UNMEASURED_MODE: ${{ inputs.unmeasured-mode }}
       run: node "${{ github.action_path }}/check-coverage.js"
