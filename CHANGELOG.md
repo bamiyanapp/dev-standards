@@ -1,3 +1,10 @@
+# [2.147.0](https://github.com/bamiyanapp/dev-standards/compare/v2.146.0...v2.147.0) (2026-11-18)
+
+
+### Features
+
+* **ci:** uses:とself_refのバージョン不一致をstandards-checkで検知する ([#1478](https://github.com/bamiyanapp/dev-standards/issues/1478)) ([e126fe3](https://github.com/bamiyanapp/dev-standards/commit/e126fe340041ef4408c0a6c0881c49577009b3a6)), closes [#1459](https://github.com/bamiyanapp/dev-standards/issues/1459)
+
 # [2.146.0](https://github.com/bamiyanapp/dev-standards/compare/v2.145.0...v2.146.0) (2026-11-18)
 
 
