@@ -1,3 +1,10 @@
+## [2.149.1](https://github.com/bamiyanapp/dev-standards/compare/v2.149.0...v2.149.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **shared:** apiClientのrequestを分割し参照側のlintに収める ([#1486](https://github.com/bamiyanapp/dev-standards/issues/1486)) ([#1487](https://github.com/bamiyanapp/dev-standards/issues/1487)) ([5929f1e](https://github.com/bamiyanapp/dev-standards/commit/5929f1e8d7d170bed3f480056b017d01099a543b))
+
 # [2.149.0](https://github.com/bamiyanapp/dev-standards/compare/v2.148.2...v2.149.0) (2026-11-18)
 
 
