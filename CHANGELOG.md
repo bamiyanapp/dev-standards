@@ -1,3 +1,10 @@
+## [2.148.1](https://github.com/bamiyanapp/dev-standards/compare/v2.148.0...v2.148.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ci:** self_ref未指定でスキップされた機能の警告を、Job Summaryにも出す ([#1480](https://github.com/bamiyanapp/dev-standards/issues/1480)) ([46aeb78](https://github.com/bamiyanapp/dev-standards/commit/46aeb787441b4974b63e355bf9112eb4d5b94b88)), closes [#1460](https://github.com/bamiyanapp/dev-standards/issues/1460)
+
 # [2.148.0](https://github.com/bamiyanapp/dev-standards/compare/v2.147.0...v2.148.0) (2026-11-18)
 
 
