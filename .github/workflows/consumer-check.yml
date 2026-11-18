@@ -1,0 +1,32 @@
+name: Consumer Check
+
+# issue #1473: 共有物を変更するPRで、代表の参照側（karuta）のlint・test・buildを実行する。
+# 情報提供で運用し、誤検知が無いことを確認してから必須化する（blocking: true）。
+
+on:
+  pull_request:
+    paths:
+      - "shared/**"
+      - "scripts/**"
+      - ".github/actions/**"
+      - "package.json"
+      - ".github/workflows/reusable-consumer-check.yml"
+      - ".github/workflows/consumer-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  karuta:
+    name: "参照側検証 (karuta)"
+    uses: ./.github/workflows/reusable-consumer-check.yml
+    with:
+      consumer_repo: bamiyanapp/karuta
+      dev_standards_sha: ${{ github.event.pull_request.head.sha }}
+      blocking: false
+      commands: |
+        frontend::npm run lint
+        frontend::npm test -- --run
+        frontend::npm run build
+        backend::npm run lint
+        backend::npm test -- --run

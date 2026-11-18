@@ -1,0 +1,116 @@
+name: Reusable Consumer Check
+
+# issue #1473: 共有物（shared/・scripts/・composite action）の変更を、マージ前に、
+# 代表の参照側のlint・test・buildで検証する。
+# dev-standards自身のCIは合成データの単体テストだけで、参照側のコードに当てた検証は
+# リリース後のRenovate PRで初めて行われていた（#1470・#1486の実例）。
+#
+# 参照側のmainを、dev-standardsのsubmoduleだけ「呼び出し元PRのhead SHA」へ
+# 差し替えてcheckoutし、指定のコマンドを実行する。
+# 他の参照側は、呼び出し側のworkflowを増やすだけで足せる。
+
+on:
+  workflow_call:
+    inputs:
+      consumer_repo:
+        description: "検証する参照側のリポジトリ（owner/name）。publicであること。privateは未対応"
+        required: true
+        type: string
+      dev_standards_sha:
+        description: "参照側のdev-standards submoduleへ差し替えるコミットSHA"
+        required: true
+        type: string
+      node_version:
+        required: false
+        type: string
+        default: "22"
+      commands:
+        description: "実行するコマンド（1行1つ）。`dir::command`形式で、dirは参照側のルートからの相対パス"
+        required: true
+        type: string
+      blocking:
+        description: "trueなら失敗時にjobを失敗させる。既定は情報提供（失敗してもjobは成功）"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-check:
+    name: "参照側検証 (${{ inputs.consumer_repo }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 参照側のmainをcheckoutする
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.consumer_repo }}
+          ref: main
+          submodules: false
+          persist-credentials: false
+
+      - name: dev-standardsをこのPRのSHAへ差し替える
+        env:
+          DEV_STANDARDS_SHA: ${{ inputs.dev_standards_sha }}
+          DEV_STANDARDS_REPO: ${{ github.repository }}
+        run: |
+          rm -rf dev-standards
+          git clone --quiet "https://github.com/${DEV_STANDARDS_REPO}.git" dev-standards
+          git -C dev-standards fetch --quiet origin "${DEV_STANDARDS_SHA}" \
+            || git -C dev-standards fetch --quiet origin "+refs/pull/*/head:refs/remotes/origin/pr/*"
+          git -C dev-standards checkout --quiet "${DEV_STANDARDS_SHA}"
+          echo "dev-standards: $(git -C dev-standards rev-parse --short HEAD)"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
+      - name: 依存をインストールする
+        id: install
+        continue-on-error: true
+        run: npm ci
+
+      - name: 参照側のコマンドを実行する
+        env:
+          COMMANDS: ${{ inputs.commands }}
+          CONSUMER_REPO: ${{ inputs.consumer_repo }}
+          BLOCKING: ${{ inputs.blocking }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+        run: |
+          failed=0
+          {
+            echo "## 参照側検証: ${CONSUMER_REPO}"
+            echo ""
+            echo "dev-standards: \`$(git -C dev-standards rev-parse --short HEAD)\`（このPRのSHA）"
+            echo ""
+            echo "| コマンド | 結果 |"
+            echo "|---|---|"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$INSTALL_OUTCOME" != "success" ]; then
+            echo "| npm ci | ❌ 失敗 |" | tee -a "$GITHUB_STEP_SUMMARY"
+            failed=1
+          else
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              dir="${line%%::*}"
+              cmd="${line#*::}"
+              if (cd "$dir" && eval "$cmd") > "/tmp/out.log" 2>&1; then
+                echo "| \`${dir}\`: \`${cmd}\` | ✅ 成功 |" | tee -a "$GITHUB_STEP_SUMMARY"
+              else
+                echo "| \`${dir}\`: \`${cmd}\` | ❌ 失敗 |" | tee -a "$GITHUB_STEP_SUMMARY"
+                echo "::group::失敗: ${dir} ${cmd}"
+                tail -n 60 /tmp/out.log
+                echo "::endgroup::"
+                failed=1
+              fi
+            done <<< "$COMMANDS"
+          fi
+          if [ "$failed" = "1" ]; then
+            echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "参照側のmain自体が壊れている場合も失敗する。mainのCIが成功していることを確認すること" | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ "$BLOCKING" = "true" ]; then exit 1; fi
+            echo "::warning::参照側検証が失敗した（情報提供のためjobは成功扱い）"
+          fi
