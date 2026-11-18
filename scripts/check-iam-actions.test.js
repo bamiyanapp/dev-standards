@@ -7,7 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const yaml = require("js-yaml");
 const { buildSchema } = require("./check-dynamodb-protection.js");
-const { findCommands, allowedActions, check, listSources } = require("./check-iam-actions.js");
+const { findCommands, allowedActions, check, listSources, readSource } = require("./check-iam-actions.js");
 
 const load = (text) => yaml.load(text, { schema: buildSchema(yaml) });
 const names = (...n) => new Set(n);
@@ -57,4 +57,26 @@ test("ソースからコマンド名を抽出し、テスト・node_modulesは�
   fs.mkdirSync(path.join(dir, "node_modules"));
   fs.writeFileSync(path.join(dir, "node_modules", "b.js"), "new DeleteCommand({})");
   assert.deepEqual(listSources(dir).map((f) => path.basename(f)), ["a.js"]);
+});
+
+test("壊れたsymlinkなど、読めないファイルは、例外を投げずnullを返す（#1493）", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "iam-"));
+  const link = path.join(dir, "shared.js");
+  fs.symlinkSync(path.join(dir, "missing-submodule", "shared.js"), link);
+  const originalLog = console.log;
+  const logged = [];
+  console.log = (line) => logged.push(line);
+  try {
+    assert.equal(readSource(link), null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.match(logged[0], /::warning file=.*shared\.js::読めないため/);
+});
+
+test("読めるファイルは、内容を返す（#1493）", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "iam-"));
+  const file = path.join(dir, "a.js");
+  fs.writeFileSync(file, "new PutCommand({})");
+  assert.equal(readSource(file), "new PutCommand({})");
 });

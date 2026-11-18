@@ -99,6 +99,16 @@ function check(allowed, commands) {
   return { missing, transact: [...commands].some((c) => TRANSACT.has(c)) };
 }
 
+// 読めないファイル（submoduleが無く壊れたsymlink等）は、警告を出して読み飛ばす。異常終了させない（#1493）
+function readSource(file) {
+  try {
+    return fs.readFileSync(file, "utf8");
+  } catch (error) {
+    console.log(`::warning file=${file}::読めないため、検査から外しました（${error.code || "読み込みエラー"}）`);
+    return null;
+  }
+}
+
 function main() {
   const [mode, serverlessFile, ...dirs] = process.argv.slice(2);
   if (!["warn", "fail"].includes(mode) || !serverlessFile || dirs.length === 0) {
@@ -116,7 +126,13 @@ function main() {
     return;
   }
   const commands = new Set();
-  for (const dir of dirs) for (const file of listSources(dir)) for (const c of findCommands(fs.readFileSync(file, "utf8"))) commands.add(c);
+  for (const dir of dirs) {
+    for (const file of listSources(dir)) {
+      const source = readSource(file);
+      if (source === null) continue;
+      for (const c of findCommands(source)) commands.add(c);
+    }
+  }
   const { missing, transact } = check(allowed, commands);
   console.log(`使われているDynamoDBコマンド: ${[...commands].filter((c) => DYNAMODB_ACTIONS[c]).sort().join("、") || "なし"}`);
   if (transact) console.log("TransactWrite・TransactGetが使われています。内包する操作のActionもIAMへ必要です。確認してください。");
@@ -134,4 +150,5 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { findCommands, allowedActions, check, isAllowed, listSources };
+module.exports = {
+  readSource, findCommands, allowedActions, check, isAllowed, listSources };
