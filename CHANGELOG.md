@@ -1,3 +1,10 @@
+# [2.150.0](https://github.com/bamiyanapp/dev-standards/compare/v2.149.1...v2.150.0) (2026-11-18)
+
+
+### Features
+
+* **ci:** 共有物の変更をkarutaのlint・test・buildでマージ前に検証する ([#1473](https://github.com/bamiyanapp/dev-standards/issues/1473)) ([#1488](https://github.com/bamiyanapp/dev-standards/issues/1488)) ([5e4e61b](https://github.com/bamiyanapp/dev-standards/commit/5e4e61bc2b154466d95b5808e1a7a63e6639ccb7))
+
 ## [2.149.1](https://github.com/bamiyanapp/dev-standards/compare/v2.149.0...v2.149.1) (2026-11-18)
 
 
