@@ -80,6 +80,16 @@ on:
           coverage_per_file_metricsで上書きできる。
         type: string
         default: ""
+      coverage_unmeasured_mode:
+        description: >-
+          カバレッジに含まれていないソースファイル（テストが無く、Vitestの既定では集計から消える
+          ファイル）がある場合の扱い。off（検知しない）、warn（警告注釈とJob Summary。既定）、fail（失敗）。
+          frontendとpackagesのユニットテストのカバレッジに適用する。backendとE2Eカバレッジには適用しない
+          （E2Eは、実行されたコードだけが集計されるため）。Vitestのcoverage.includeに
+          `src/**/*.{ts,tsx}`を指定すると解消する（issue #1461）。failの既定化は、参照側の影響を
+          調べた後に別途行う
+        type: string
+        default: "warn"
       e2e_coverage_threshold:
         description: >-
           frontend-e2e-testジョブのE2EテストJSカバレッジ閾値（%、0以下でゲート無効）。
@@ -871,6 +881,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
+          unmeasured-mode: ${{ inputs.coverage_unmeasured_mode }}
       - name: ビルドする
         working-directory: ${{ inputs.frontend_dir }}
         run: npm run build
@@ -1034,6 +1045,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
+          unmeasured-mode: "off"
       - name: カバレッジ閾値の再確認前にbackendテストを再実行する
         if: inputs.coverage_threshold > 0 && inputs.self_ref != '' && steps.coverage-check-1.outcome == 'failure'
         working-directory: ${{ inputs.backend_dir }}
@@ -1048,6 +1060,7 @@ jobs:
           metrics: ${{ inputs.coverage_metrics }}
           per-file-metrics: ${{ inputs.coverage_per_file_metrics }}
           check-per-file: ${{ inputs.coverage_check_per_file }}
+          unmeasured-mode: "off"
 
   package-test:
     name: "パッケージテスト"
@@ -1139,6 +1152,7 @@ jobs:
           metrics: ${{ matrix.package.coverage_metrics || inputs.coverage_metrics }}
           per-file-metrics: ${{ matrix.package.coverage_per_file_metrics || inputs.coverage_per_file_metrics }}
           check-per-file: ${{ matrix.package.coverage_check_per_file || inputs.coverage_check_per_file }}
+          unmeasured-mode: ${{ inputs.coverage_unmeasured_mode }}
       - name: ビルドする
         if: matrix.package.build == true
         working-directory: ${{ matrix.package.dir }}
@@ -1253,6 +1267,7 @@ jobs:
           threshold: ${{ inputs.e2e_coverage_threshold }}
           metrics: ${{ inputs.e2e_coverage_metrics }}
           label: frontend-e2e
+          unmeasured-mode: "off"
       # issue #1365。失敗したテストの題名・エラーメッセージ・該当行を、Job SummaryとPRコメントへ出す
       # （スマホオンリー環境では、HTMLレポート（zip）を閲覧できないため）。Playwrightの設定ファイルに
       # jsonレポーター（outputFile: 'playwright-report/results.json'）が要る。CLIの--reporterでは足さない
