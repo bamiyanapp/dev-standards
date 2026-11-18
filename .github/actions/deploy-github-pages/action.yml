@@ -48,10 +48,18 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: ${{ inputs.build-command }}
+    # artifact名にrun_attemptを含める。既定の名前（github-pages）のままだと、「失敗したジョブを再実行」で
+    # ビルドからやり直したときに、同じrunへ同名のartifactが2つできる。deploy-pagesが
+    # 「Multiple artifacts named "github-pages" were unexpectedly found」で失敗し、以降そのrunは
+    # 再実行しても復旧できない（issue #1458）。upload-pages-artifactのnameとdeploy-pagesの
+    # artifact_nameへ、同じ値を渡す
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v5
       with:
+        name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
         path: ${{ inputs.artifact-path }}
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v5
+      with:
+        artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
