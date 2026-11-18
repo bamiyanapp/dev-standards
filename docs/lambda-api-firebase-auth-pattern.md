@@ -66,7 +66,7 @@ flowchart TD
 
 </details>
 
-![ユーザー識別ロジックのフロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/lambda-api-firebase-auth-pattern.png?0cf4baf3e38effa5df8b69f22b39214878b65011)
+![ユーザー識別ロジックのフロー (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/lambda-api-firebase-auth-pattern.png?beb71737bdbeb49528789ad5abe978120c826f13)
 
 ## OSLS（Open Serverless）の採用
 
