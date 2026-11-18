@@ -1,3 +1,10 @@
+## [2.150.2](https://github.com/bamiyanapp/dev-standards/compare/v2.150.1...v2.150.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ci:** iam-actions-checkがsymlinkのある参照側で異常終了しないようにする ([#1493](https://github.com/bamiyanapp/dev-standards/issues/1493)) ([#1494](https://github.com/bamiyanapp/dev-standards/issues/1494)) ([6642aec](https://github.com/bamiyanapp/dev-standards/commit/6642aec0b6377ef333be876cd49cfa23bb4ebc9c))
+
 ## [2.150.1](https://github.com/bamiyanapp/dev-standards/compare/v2.150.0...v2.150.1) (2026-11-18)
 
 
