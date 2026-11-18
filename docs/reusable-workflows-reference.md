@@ -65,6 +65,14 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 
 `uses:`行（`github-actions`マネージャー）と`self_ref:`行（上記customManager）は別々のPRとして提案されうる。同じバージョンへ揃えて1PRでまとめたい場合は、`packageRules`で両方の`depName`（`bamiyanapp/dev-standards`）を`groupName`で束ねる。
 
+このグループ化は、ずれを防ぐ予防策である。ずれたときは、`enable_standards_check: true`のstandards-checkジョブが検知して失敗する（issue #1459）。
+
+- 検証対象は、呼び出し元の`.github/workflows/`全体である。
+- `uses:`の`reusable-*.yml@<ref>`と`self_ref:`が、1種類のバージョンに揃っているかを見る。
+- コメント行の記述は無視する。
+- 失敗時のメッセージには、ファイル名・種別（`uses`・`self_ref`）・各バージョンが出る。
+- 実行するスクリプトは`dev-standards/scripts/check-dev-standards-refs.js`である。標準モジュールだけで動くため、参照側にactionlintの依存は要らない。
+
 ## `reusable-ci.yml`
 
 参照側の `.github/workflows/ci.yml` から呼び出す。`uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0` ＋ `with:` で値を指定する。`@main`のような未固定のブランチ参照は避け、タグで固定すること。

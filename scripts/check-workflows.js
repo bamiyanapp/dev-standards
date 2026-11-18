@@ -4,6 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const { createLinter } = require("actionlint");
+const { checkVersionConsistency } = require("./check-dev-standards-refs.js");
 
 // 参照側リポジトリ（karuta等）はdev-standardsをsubmodule経由で取り込み、
 // `node dev-standards/scripts/check-workflows.js`として本スクリプトを実行する
@@ -16,44 +17,8 @@ const { createLinter } = require("actionlint");
 const repoRoot = path.resolve(process.argv[2] || process.cwd());
 const workflowsDir = path.join(repoRoot, ".github", "workflows");
 
-// dev-standards#1144: `uses: bamiyanapp/dev-standards/.github/workflows/reusable-X.yml@<ref>`と
-// `self_ref: <ref>`（issue #1071で導入したself_refパターン）が、参照側リポジトリ内で
-// 食い違っていないかを検証する。例えば一部のjobだけバージョンを上げ忘れる、
-// self_refのみ更新を忘れる、といったズレを検知する。dev-standards自身の
-// リリース作業由来の記述（CHANGELOG等）は対象外（.github/workflows/配下のみを見る）
-const USES_REF_PATTERN = /dev-standards\/\.github\/workflows\/reusable-[\w.-]+\.ya?ml@([\w./-]+)/g;
-const SELF_REF_PATTERN = /self_ref:\s*["']?([\w./-]+)["']?/g;
-
-function checkVersionConsistency(files, workflowsDir, repoRoot) {
-  const refs = []; // { ref, file, kind }
-
-  for (const file of files) {
-    const filePath = path.join(workflowsDir, file);
-    const relativePath = path.relative(repoRoot, filePath);
-    const content = fs.readFileSync(filePath, "utf8");
-
-    for (const match of content.matchAll(USES_REF_PATTERN)) {
-      refs.push({ ref: match[1], file: relativePath, kind: "uses" });
-    }
-    for (const match of content.matchAll(SELF_REF_PATTERN)) {
-      refs.push({ ref: match[1], file: relativePath, kind: "self_ref" });
-    }
-  }
-
-  if (refs.length === 0) {
-    return [];
-  }
-
-  const distinctRefs = [...new Set(refs.map((r) => r.ref))];
-  if (distinctRefs.length <= 1) {
-    return [];
-  }
-
-  const details = refs.map((r) => `  - ${r.file}: ${r.kind} = ${r.ref}`).join("\n");
-  return [
-    `dev-standardsへの参照バージョンが揃っていません（${distinctRefs.length}種類: ${distinctRefs.join(", ")}）。\n${details}`,
-  ];
-}
+// dev-standards#1144・#1459: uses:とself_ref:のバージョン一致の検証は、actionlintに依存しない
+// check-dev-standards-refs.jsへ切り出した（reusable-ci.ymlのstandards-checkが参照側で実行する）。
 
 async function main() {
   if (!fs.existsSync(workflowsDir)) {

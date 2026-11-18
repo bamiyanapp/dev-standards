@@ -542,8 +542,9 @@ on:
           GitHub Actionsには存在しないため（一度`github.workflow_ref`で動的解決を試みたが、
           実機で誤動作し revert した。PR #1119/#1123参照）、呼び出し元に明示的な入力として
           渡してもらう方式にした。呼び出し元の`uses:`行のrefとこの入力の値が一致している
-          ことの検証は呼び出し元リポジトリ側の責務とする（例: dev-standards自身の
-          `node scripts/check-workflows.js`に相当するチェックを参照側に追加する等）。
+          ことは、`enable_standards_check: true`のstandards-checkジョブが自動で検証する
+          （issue #1459。対象は呼び出し元の`.github/workflows/`全体で、`uses:`と`self_ref:`が
+          1種類のバージョンに揃っていなければ失敗する）。
           issue #1261: 当初`required: true`としていたが、Renovate経由のバージョン更新PR
           （`uses:`タグ文字列の書き換えのみで`with:`ブロックへは追従できない）が
           新規必須入力の追加を跨いでマージされた場合、参照側リポジトリのCIが
@@ -1630,6 +1631,13 @@ jobs:
       - name: dev-standardsのsymlink・.gitignoreドリフトを確認する（自動修復可能なドリフトは無し）
         if: steps.drift.outputs.changed == 'false'
         run: node dev-standards/scripts/bootstrap.js --check
+      # issue #1459。`uses:`のタグと`self_ref:`が、呼び出し元の.github/workflows/全体で
+      # 揃っているかを検証する。Renovateが`uses:`行と`self_ref:`行を別々のPRで提案すると、片方だけ
+      # 先にマージされてずれる（shock-lab#451）。標準モジュールだけで動くスクリプトのため、
+      # 参照側にactionlintの依存が無くても実行できる
+      - name: dev-standardsへの参照バージョン（uses:とself_ref:）が揃っているか確認する
+        if: steps.drift.outputs.changed == 'false'
+        run: node dev-standards/scripts/check-dev-standards-refs.js
       # issue #1403。調査用の一時workflow（tmp-*）が、14日を超えて残っていないかを警告する
       # （警告のみ。失敗にしない）。追加された日をgitの履歴から求めるため、履歴を取得する
       - name: 残っている一時workflow（tmp-*）を警告する
