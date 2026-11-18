@@ -145,6 +145,35 @@ export default buildPlaywrightConfig({
 
 `basePath`を渡さず全アプリで同じ`entryFilter`（例: `/assets/`のみでの判定）を使うとどうなるか。あるアプリのE2Eテスト実行中に、別アプリのJSが何らかの理由（Service Workerの先読み、ブラウザコンテキストの再利用等）で実行された場合、そのカバレッジまで巻き込まれてしまう。この結果、カバレッジの集計対象（`Total`）が通常時の数十倍に跳ね上がる異常が実際に発生した。examinationで2回再現している（bamiyanapp/examination#687、dev-standards#1360）。
 
+## モバイルviewportでの実行
+
+検証端末がスマートフォンのプロダクトでは、デスクトップ向けのE2Eだけでは見えない不具合がある。実例は、縦持ちでの横スクロールと、回転表示したcanvasによるタップの奪い合いである（shock-lab#444・#452）。
+
+`buildPlaywrightConfig()`へ`mobile: true`を渡すと、iPhone 13相当のproject（`mobile-iphone`）を足せる。
+
+```js
+export default buildPlaywrightConfig({ defineConfig, devices, reportName: 'アプリ名 E2E Report', basePath: '/', mobile: true });
+```
+
+- ブラウザはWebKitではなくchromiumにする。CIのブラウザインストールをchromiumだけにするためである。
+- `mobile-iphone`ではカバレッジを収集しない。収集は従来どおり`chromium`だけで行う。
+- 画面の確認は`captureScreenshot`で記録し、PRコメントで確認する。スクリーンショット名にはproject名を付ける。デスクトップとモバイルで同名のファイルが上書きされるためである。
+- モバイル専用のspecは、`testIgnore`でデスクトップのprojectから外す。
+
+## Claude Codeサンドボックスでのローカル実行
+
+サンドボックスでは、`npx playwright install`が`cdn.playwright.dev`への403で失敗する。egressプロキシの許可リスト外のためである。このコマンドは実行しない。
+
+ブラウザは`/opt/pw-browsers/chromium`へ事前に入っている。環境変数で実行パスを指定すると、参照側のコードを変えずに実行できる。
+
+```sh
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium npx playwright test --trace off
+```
+
+- 環境変数は、全projectの`use.launchOptions.executablePath`へ反映される。
+- 未設定または空文字なら、何も変わらない。CIには影響しない。
+- サンドボックスのchromiumでは、`--no-sandbox`が必要になる場合がある。その場合は、参照側の一時的な設定ファイルで`launchOptions.args`を足す。コミットはしない。
+
 ## 認証済みの状態を作る（`shared/e2e/auth.js`）
 
 Cognito + Lambda@Edgeの認証パターン（[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)）を採るプロダクトでは、`loginWithCookies()`で、対話的なログインを自動操作せずに、認証済みの状態を作れる。事前に取得したrefresh token等を、Cookieとして注入する。
