@@ -1,3 +1,10 @@
+# [2.146.0](https://github.com/bamiyanapp/dev-standards/compare/v2.145.0...v2.146.0) (2026-11-18)
+
+
+### Features
+
+* **coverage:** カバレッジに含まれていないソースファイルを検知する ([#1477](https://github.com/bamiyanapp/dev-standards/issues/1477)) ([ab8abc5](https://github.com/bamiyanapp/dev-standards/commit/ab8abc515158fb2c91c98dadd7b262df0b492464)), closes [#1461](https://github.com/bamiyanapp/dev-standards/issues/1461)
+
 # [2.145.0](https://github.com/bamiyanapp/dev-standards/compare/v2.144.0...v2.145.0) (2026-11-18)
 
 
