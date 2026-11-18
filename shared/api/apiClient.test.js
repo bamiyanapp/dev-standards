@@ -88,3 +88,69 @@ test("messageForApiError: 種別ごとの固定文言。内部メッセージは
   assert.ok(!messageForApiError(new ApiError("network", "internal-detail")).includes("internal"));
   assert.equal(messageForApiError(new ApiError("http", "x", { status: 404 }), { "http:404": "カスタム" }), "カスタム");
 });
+
+test("getHeaders: 値が付与され、リクエストごとに呼ばれる。undefined・nullは付けない", async () => {
+  const seen = [];
+  let n = 0;
+  const client = createApiClient({
+    baseUrl: "https://api.test",
+    fetch: async (u, i) => (seen.push(i.headers), ok({})),
+    getHeaders: async () => ({ Authorization: `Bearer t${++n}`, "x-skip": undefined, "x-null": null }),
+  });
+  await client.get("/a");
+  await client.post("/a", { body: { x: 1 } });
+  assert.deepEqual(seen[0], { Authorization: "Bearer t1" });
+  assert.deepEqual(seen[1], { "Content-Type": "application/json", Authorization: "Bearer t2" });
+});
+
+test("getHeadersが例外を投げたら、ApiErrorにせずそのまま投げる", async () => {
+  const client = createApiClient({ baseUrl: "https://api.test", fetch: async () => ok({}), getHeaders: async () => { throw new Error("auth down"); } });
+  await assert.rejects(client.get("/a"), (e) => !(e instanceof ApiError) && e.message === "auth down");
+});
+
+test("401: shouldRefreshOn401がtrueなら、forceRefresh付きで1回だけ再試行する", async () => {
+  const flags = [];
+  let n = 0;
+  const client = createApiClient({
+    baseUrl: "https://api.test",
+    fetch: async () => (++n === 1 ? ok({}, 401) : ok({ done: true })),
+    getHeaders: async ({ forceRefresh }) => (flags.push(forceRefresh), {}),
+    shouldRefreshOn401: () => true,
+  });
+  assert.deepEqual(await client.get("/a"), { done: true });
+  assert.deepEqual(flags, [false, true]);
+});
+
+test("401: 再試行後も401ならエラー。2回目以降は再試行しない", async () => {
+  let n = 0;
+  const client = createApiClient({ baseUrl: "https://api.test", fetch: async () => (n++, ok({}, 401)), shouldRefreshOn401: () => true });
+  await assert.rejects(client.get("/a"), (e) => e.kind === "http" && e.status === 401);
+  assert.equal(n, 2);
+});
+
+test("401: shouldRefreshOn401が未指定・falseなら再試行しない", async () => {
+  let n = 0;
+  const client = createApiClient({ baseUrl: "https://api.test", fetch: async () => (n++, ok({}, 401)), shouldRefreshOn401: () => false });
+  await assert.rejects(client.get("/a"));
+  assert.equal(n, 1);
+});
+
+test("put・delete: 正しいメソッド・本文・クエリで送信する", async () => {
+  const calls = [];
+  const client = createApiClient({ baseUrl: "https://api.test", fetch: async (u, i) => (calls.push([u, i]), ok({ ok: 1 })) });
+  await client.put("/items/1", { body: { name: "x" } });
+  await client.delete("/items/1", { params: { userId: "u" } });
+  assert.equal(calls[0][1].method, "PUT");
+  assert.equal(calls[0][1].body, '{"name":"x"}');
+  assert.equal(calls[1][0], "https://api.test/items/1?userId=u");
+  assert.equal(calls[1][1].method, "DELETE");
+  assert.equal(calls[1][1].body, undefined);
+});
+
+test("空本文の応答はnullを返す（content-length 0・本文が空文字列）", async () => {
+  const empty = (extra) => ({ ok: true, status: 200, headers: { get: () => extra.length }, text: async () => extra.text, json: async () => { throw new SyntaxError("x"); } });
+  const c1 = createApiClient({ baseUrl: "https://api.test", fetch: async () => empty({ length: "0", text: "" }) });
+  const c2 = createApiClient({ baseUrl: "https://api.test", fetch: async () => empty({ length: null, text: "" }) });
+  assert.equal(await c1.delete("/a"), null);
+  assert.equal(await c2.delete("/a"), null);
+});
