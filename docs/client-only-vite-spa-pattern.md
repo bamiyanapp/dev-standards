@@ -105,6 +105,27 @@ Canvas内部のロジック自体（物理演算の計算式、座標変換等�
 
 閾値は実測値（`npm test`実行時の各指標）のうち最も低いものに、多少の余裕を持たせた値から始める。
 
+Vitestの既定では、**テストから読み込まれたファイルだけ**が集計対象になる。テストの無いファイルは0%としても数えられず、レポートの一覧からも消える。その結果、閾値を満たしているように見えても、中核のコードが計測外のままになる。実例は、約330行のコンポーネントが計測外のまま、Statements 92%と表示されたことである（shock-lab#450）。
+
+`vite.config.ts`の`test`へ`coverage.include`を指定して、`src`配下の全ファイルを対象にする。
+
+```ts
+test: {
+  coverage: {
+    include: ['src/**/*.{ts,tsx,jsx,js}'],
+    exclude: ['src/**/*.test.*', 'src/setupTests.ts', 'src/vite-env.d.ts', 'src/main.tsx'],
+  },
+},
+```
+
+`check-coverage-threshold`は、サマリーに現れない`src`配下のソースファイルを検知する。`reusable-ci.yml`の`coverage_unmeasured_mode`で、動作を選べる。
+
+- `warn`（既定）: 警告注釈とJob Summaryの一覧を出す。
+- `fail`: 失敗にする。
+- `off`: 検知しない。
+
+E2Eカバレッジ（monocart-reporter）には適用しない。実行されたコードだけが集計されるためである。
+
 ### `userEvent`のClipboardスタブに関する落とし穴
 
 クリップボードコピー機能をテストする際、`navigator.clipboard`を`Object.defineProperty`で手動モックしても効果が無いことがある。`@testing-library/user-event`の`userEvent.setup()`が独自のClipboard実装（EventTargetベースの疑似実装）を後から設定する。そのため、手動モックが上書きされて呼ばれない。

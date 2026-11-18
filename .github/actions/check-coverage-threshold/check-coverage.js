@@ -3,9 +3,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const { findUnmeasuredFiles, describeUnmeasured } = require("./unmeasured-files.js");
 const { buildFileBreakdown, compareTotals, describeComparison, findUnexpectedPaths } = require("./coverage-anomaly.js");
 
 const METRICS = ["lines", "statements", "functions", "branches"];
+const DEFAULT_SOURCE_GLOBS = "src/**/*.{ts,tsx,js,jsx}";
+const DEFAULT_SOURCE_IGNORE_GLOBS = "**/*.test.*,**/*.spec.*,**/*.d.ts,src/main.*,src/setupTests.*,src/vite-env.d.ts";
 
 // summaryJson: coverage-summary.jsonのパース済み内容（{ total: {...}, <filePath>: {...}, ... }）。
 // 副作用（fs/process.exit）を持たない純粋関数として、判定ロジックのみをテスト可能にする。
@@ -108,6 +111,22 @@ function main() {
     anomaly += `\n### 想定外のパスが集計対象に含まれています（${label}）: ${unexpected.length}件\n\n${sample}\n`;
     console.log(`::warning::カバレッジの集計対象に、想定外のパス（node_modules、または${allowedPrefixes.join("・")}以外）が${unexpected.length}件含まれています（${label}）。`);
   }
+  // issue #1461: カバレッジに含まれていないソースファイル（テストが無く、集計から消えたファイル）を検知する
+  const unmeasuredMode = process.env.UNMEASURED_MODE || "warn";
+  let unmeasuredFailed = false;
+  if (unmeasuredMode !== "off") {
+    const unmeasured = findUnmeasuredFiles(summaryJson, {
+      cwd: process.cwd(),
+      sourceGlobs: process.env.SOURCE_GLOBS || DEFAULT_SOURCE_GLOBS,
+      ignoreGlobs: process.env.SOURCE_IGNORE_GLOBS ?? DEFAULT_SOURCE_IGNORE_GLOBS,
+    });
+    anomaly += describeUnmeasured(unmeasured, label);
+    if (unmeasured.length > 0) {
+      const message = `カバレッジに含まれていないソースファイルが${unmeasured.length}件あります（${label}）: ${unmeasured.slice(0, 5).join("、")}${unmeasured.length > 5 ? " ほか" : ""}。Vitestのcoverage.includeにsrc/**/*.{ts,tsx}を指定してください。`;
+      console.log(unmeasuredMode === "fail" ? message : `::warning::${message}`);
+      unmeasuredFailed = unmeasuredMode === "fail";
+    }
+  }
   let totalsFailed = false;
   const baselineFile = process.env.BASELINE_TOTAL_FILE;
   if (baselineFile && fs.existsSync(baselineFile)) {
@@ -126,6 +145,10 @@ function main() {
   console.log(table);
   if (fileTable) {
     console.log(fileTable);
+  }
+  if (unmeasuredFailed) {
+    console.error(`カバレッジに含まれていないソースファイルがあるため失敗します（${label}）。詳細はJob Summaryを確認してください。`);
+    process.exit(1);
   }
   if (totalsFailed) {
     console.error(`カバレッジの計測対象（分母）が、ベースラインの${process.env.TOTAL_FAIL_RATIO || "5"}倍超または${process.env.TOTAL_FAIL_RATIO || "5"}分の1未満に変わっています（${label}）。他アプリのコードの混入等を確認してください。`);
