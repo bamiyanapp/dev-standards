@@ -1,3 +1,10 @@
+# [2.148.0](https://github.com/bamiyanapp/dev-standards/compare/v2.147.0...v2.148.0) (2026-11-18)
+
+
+### Features
+
+* **ci:** CD失敗の通知actionとLambdaパッケージの起動可否検証を追加する ([#1479](https://github.com/bamiyanapp/dev-standards/issues/1479)) ([3fa1130](https://github.com/bamiyanapp/dev-standards/commit/3fa1130d829c3584dbd71756529836d95535a5ae)), closes [#1452](https://github.com/bamiyanapp/dev-standards/issues/1452)
+
 # [2.147.0](https://github.com/bamiyanapp/dev-standards/compare/v2.146.0...v2.147.0) (2026-11-18)
 
 
