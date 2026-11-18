@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const { createFetchJson, NPM_REGISTRY_BASE } = require("./lib/http-fetch.js");
 const { extractDirectDependencyNames, packageNameFromKey } = require("./dependency-update-info.js");
 const { detectDeprecation } = require("./dependency-deprecation-info.js");
+const { expandLockfileSpec, mergeScanResults } = require("./lib/lockfile-spec.js");
 
 // issue #969。issue #945で追加したdeprecated検知（dependency-deprecation-info.js）は、
 // 「更新前バージョン」と「更新後バージョン」を比較するdependency-risk-summary job
@@ -59,18 +60,29 @@ async function scanForDeprecated(lockJson, { directOnly = true, fetchJsonImpl = 
   return results;
 }
 
+// issue #1368: lockfilePathは改行区切り・glob可の複数指定（単一パスは従来どおり）
+async function scanLockfiles(spec, options) {
+  const paths = expandLockfileSpec(spec);
+  if (paths.length === 0) throw new Error(`lockfile not found: ${spec}`);
+  const perLockfile = [];
+  for (const lockfile of paths) {
+    const lockJson = JSON.parse(fs.readFileSync(lockfile, "utf-8"));
+    perLockfile.push({ lockfile, results: await scanForDeprecated(lockJson, options) });
+  }
+  return mergeScanResults(perLockfile);
+}
+
 function main() {
   const [, , lockfilePath, directOnlyArg] = process.argv;
   if (!lockfilePath) {
-    console.error("Usage: node dependency-deprecation-scan.js <package-lock.json> [direct-only(true|false)]");
+    console.error("Usage: node dependency-deprecation-scan.js <package-lock.json（改行区切り・glob可）> [direct-only(true|false)]");
     process.exitCode = 1;
     return;
   }
 
-  const lockJson = JSON.parse(fs.readFileSync(lockfilePath, "utf-8"));
   const directOnly = directOnlyArg !== "false";
 
-  scanForDeprecated(lockJson, { directOnly })
+  scanLockfiles(lockfilePath, { directOnly })
     .then((result) => {
       console.log(JSON.stringify(result, null, 2));
       if (process.env.GITHUB_OUTPUT) {
@@ -89,4 +101,5 @@ if (require.main === module) {
 
 module.exports = {
   scanForDeprecated,
+  scanLockfiles,
 };

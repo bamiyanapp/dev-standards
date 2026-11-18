@@ -20,7 +20,7 @@ on:
   workflow_call:
     inputs:
       lockfile_path:
-        description: "スキャン対象のpackage-lock.jsonのパス（リポジトリルート相対）。"
+        description: "スキャン対象のpackage-lock.jsonのパス（リポジトリルート相対）。改行区切りで複数指定でき、各行に`**`・`*`のglobも使える（node_modules配下は除外、issue #1368）。複数の場合は結果をname+versionで統合し、検知元lockfileを列に表示する。"
         type: string
         default: "package-lock.json"
       tracking_issue_title:
@@ -122,19 +122,21 @@ jobs:
           script: |
             const fs = require("fs");
             const findings = JSON.parse(fs.readFileSync("/tmp/full-scan-result-with-pr.json", "utf-8"));
+            const multi = findings.some((f) => f.lockfiles.length > 1) || new Set(findings.flatMap((f) => f.lockfiles)).size > 1;
             const rows = findings.map((f) => {
               const ids = f.vulnerabilities.map((v) => v.id).join(", ");
               const severity = f.vulnerabilities.map((v) => v.severityRating).filter(Boolean).join(", ") || "不明";
               const relatedPr = f.relatedPr ? `#${f.relatedPr.number}` : "（無し）";
-              return `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} | ${relatedPr} |`;
+              const lf = multi ? ` ${f.lockfiles.join(", ")} |` : "";
+              return `| ${f.name} | ${f.version} | ${f.direct ? "直接" : "間接"} | ${ids} | ${severity} | ${relatedPr} |${lf}`;
             }).join("\n");
             const body = [
               "対象リポジトリの`package-lock.json`を対象にした定期スキャンで、既知の脆弱性が見つかりました。",
               "",
               "「対応PR」列は、パッケージ名をタイトルに含むopenなPRが既に存在する場合のみ記載する。該当PRが既にRenovate等による対応中であることを示す目安であり、自動検知のため誤検出もあり得る。",
               "",
-              "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity | 対応PR |",
-              "|---|---|---|---|---|---|",
+              multi ? "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity | 対応PR | lockfile |" : "| パッケージ | バージョン | 直接/間接 | 脆弱性ID | Severity | 対応PR |",
+              multi ? "|---|---|---|---|---|---|---|" : "|---|---|---|---|---|---|",
               rows,
               "",
               "### 対応候補",
