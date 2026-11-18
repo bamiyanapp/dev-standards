@@ -1,3 +1,10 @@
+# [2.149.0](https://github.com/bamiyanapp/dev-standards/compare/v2.148.2...v2.149.0) (2026-11-18)
+
+
+### Features
+
+* **scripts:** モダナイズ観点の達成状況を判定する監査スクリプトを追加する ([#1484](https://github.com/bamiyanapp/dev-standards/issues/1484)) ([cc411a3](https://github.com/bamiyanapp/dev-standards/commit/cc411a39d3c61d1fde33ace50bda20eec0307a04)), closes [#1463](https://github.com/bamiyanapp/dev-standards/issues/1463)
+
 ## [2.148.2](https://github.com/bamiyanapp/dev-standards/compare/v2.148.1...v2.148.2) (2026-11-18)
 
 
