@@ -1,3 +1,10 @@
+# [2.145.0](https://github.com/bamiyanapp/dev-standards/compare/v2.144.0...v2.145.0) (2026-11-18)
+
+
+### Features
+
+* **shared:** apiClientに認証ヘッダーの都度取得・401再試行・PUT/DELETEを追加する ([#1476](https://github.com/bamiyanapp/dev-standards/issues/1476)) ([d3ddef2](https://github.com/bamiyanapp/dev-standards/commit/d3ddef2a1cd9b0940cb8ceb6211a7273e480d473)), closes [#1451](https://github.com/bamiyanapp/dev-standards/issues/1451)
+
 # [2.144.0](https://github.com/bamiyanapp/dev-standards/compare/v2.143.0...v2.144.0) (2026-11-18)
 
 
