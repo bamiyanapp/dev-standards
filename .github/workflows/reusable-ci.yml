@@ -1695,8 +1695,20 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # issue #1395: コミットの作者・コミッターを、BOT_TOKENの持ち主（人のアカウント）にする。
+          # 作者がgithub-actions[bot]のままだと、pushした主体が人でも、pull_requestのCIの
+          # 実行者（actor）がbot扱いになり、承認待ち（action_required）で止まった（実機で確認）。
+          # 取得に失敗したときは、従来どおりgithub-actions[bot]にする
+          user_json=$(curl -fsS -H "Authorization: Bearer ${BOT_TOKEN}" https://api.github.com/user || true)
+          login=$(printf '%s' "$user_json" | jq -r '.login // empty' 2>/dev/null || true)
+          uid=$(printf '%s' "$user_json" | jq -r '.id // empty' 2>/dev/null || true)
+          if [ -n "$login" ] && [ -n "$uid" ]; then
+            git config user.name "$login"
+            git config user.email "${uid}+${login}@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+          fi
           git add -A
           git commit -m "fix(ci): dev-standardsのsymlink/copyドリフトを自動修復する" -m "reusable-ci.ymlのstandards-checkジョブによる自動コミットです（issue #606）。"
           git push "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:$HEAD_REF"
@@ -2938,7 +2950,9 @@ jobs:
       # 毎回の承認操作が負担になるため、BOT_TOKEN（人のアカウントのトークン）が設定されて
       # いれば、それでpushする。人のアカウントがpushした扱いになり、CIは承認なしで実行される
       # （同じ理由で、symlinkドリフトの自動修復（上のstandards-checkジョブ）もBOT_TOKENでpushしている）。
-      # コミットの作者名はgithub-actions[bot]のままにする（自動コミットだと分かるように）。
+      # コミットの作者・コミッターは、BOT_TOKENの持ち主（人のアカウント）にする。作者がbotのままだと、
+      # push自体は人でも、CIの実行者（actor）がbot扱いになり、承認待ちが残った（実機で確認）。
+      # 自動コミットであることは、コミットメッセージで示す。
       # BOT_TOKEN未設定の場合は、従来どおりGITHUB_TOKENでpushする（その場合は承認が必要になりうる）
       - name: バスティングした変更をこのPRブランチへ直接pushする
         if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'pull_request'
@@ -2953,8 +2967,25 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           set -eu
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "${BOT_TOKEN:-}" ]; then
+            # issue #1395: コミットの作者・コミッターを、BOT_TOKENの持ち主（人のアカウント）にする。
+            # 作者がgithub-actions[bot]のままだと、pushした主体が人でも、pull_requestのCIの
+            # 実行者（actor）がbot扱いになり、承認待ち（action_required）で止まった（実機で確認）。
+            # 取得に失敗したときは、従来どおりgithub-actions[bot]にする
+            user_json=$(curl -fsS -H "Authorization: Bearer ${BOT_TOKEN}" https://api.github.com/user || true)
+            login=$(printf '%s' "$user_json" | jq -r '.login // empty' 2>/dev/null || true)
+            uid=$(printf '%s' "$user_json" | jq -r '.id // empty' 2>/dev/null || true)
+            if [ -n "$login" ] && [ -n "$uid" ]; then
+              git config user.name "$login"
+              git config user.email "${uid}+${login}@users.noreply.github.com"
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+          fi
           git add -- $FILES
           git commit -m "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する" -m "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723、#1194、#1395）。"
           if [ -n "${BOT_TOKEN:-}" ]; then
