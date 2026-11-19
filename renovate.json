@@ -14,6 +14,12 @@
       "groupName": "stylelint",
       "matchPackageNames": ["stylelint", "stylelint-config-standard"],
       "separateMajorMinor": false
+    },
+    {
+      "matchPackageNames": ["semantic-release"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false,
+      "description": "semantic-release v26はNode v26.13.0以上が必須だが、AWSがLambda実行環境としてNode 26をまだ提供しておらず、参照側のNodeは22系で統一している。Renovateもロックファイルを再生成できずCIが失敗するため、v26以降は保留する。解除条件: LambdaがNode 26を提供し、参照側のNodeを上げた後に、このルールを削除する（dev-standards#1506）"
     }
   ],
   "customManagers": [
