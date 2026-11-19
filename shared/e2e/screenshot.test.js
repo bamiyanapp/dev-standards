@@ -22,9 +22,13 @@ async function withTempCwd(run) {
   }
 }
 
-function fakePage(pngBytes = Buffer.from("fake-png")) {
+function fakePage(pngBytes = Buffer.from("fake-png"), calls = []) {
   return {
+    async evaluate() {
+      calls.push("evaluate");
+    },
     async screenshot() {
+      calls.push("screenshot");
       return pngBytes;
     },
   };
@@ -85,6 +89,7 @@ test("passes fullPage through to page.screenshot()", async () => {
   await withTempCwd(async ({ captureScreenshot }) => {
     const calls = [];
     const page = {
+      async evaluate() {},
       async screenshot(options) {
         calls.push(options);
         return Buffer.from("fake-png");
@@ -95,5 +100,13 @@ test("passes fullPage through to page.screenshot()", async () => {
     await captureScreenshot(page, fakeTestInfo(), "viewport-only", undefined, { fullPage: false });
 
     assert.deepEqual(calls, [{ fullPage: true }, { fullPage: false }]);
+  });
+});
+
+test("waits for web fonts before taking the screenshot", async () => {
+  await withTempCwd(async ({ captureScreenshot }) => {
+    const calls = [];
+    await captureScreenshot(fakePage(undefined, calls), fakeTestInfo(), "fonts");
+    assert.deepEqual(calls, ["evaluate", "screenshot"]);
   });
 });
