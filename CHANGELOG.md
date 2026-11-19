@@ -1,3 +1,11 @@
+## [2.150.4](https://github.com/bamiyanapp/dev-standards/compare/v2.150.3...v2.150.4) (2026-11-19)
+
+
+### Bug Fixes
+
+* **ci:** 自動コミットの作者をBOT_TOKENの持ち主にし、CIの承認待ちを避ける ([#1509](https://github.com/bamiyanapp/dev-standards/issues/1509)) ([f0e699e](https://github.com/bamiyanapp/dev-standards/commit/f0e699e0f421386b20c790d530da8c20b1713d63)), closes [#1395](https://github.com/bamiyanapp/dev-standards/issues/1395)
+* **e2e:** スクリーンショット撮影前にWebフォントの読み込みを待つ ([#1510](https://github.com/bamiyanapp/dev-standards/issues/1510)) ([ac223e5](https://github.com/bamiyanapp/dev-standards/commit/ac223e549b6a5e167fefa8c90736f0acd87c5f17)), closes [#1508](https://github.com/bamiyanapp/dev-standards/issues/1508)
+
 ## [2.150.3](https://github.com/bamiyanapp/dev-standards/compare/v2.150.2...v2.150.3) (2026-11-19)
 
 
