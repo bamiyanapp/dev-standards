@@ -1,3 +1,10 @@
+## [2.150.3](https://github.com/bamiyanapp/dev-standards/compare/v2.150.2...v2.150.3) (2026-11-19)
+
+
+### Bug Fixes
+
+* **ci:** 定期スキャン2種の毎日の失敗（権限不足・出力の区切り）を直す ([#1496](https://github.com/bamiyanapp/dev-standards/issues/1496), [#1497](https://github.com/bamiyanapp/dev-standards/issues/1497)) ([#1498](https://github.com/bamiyanapp/dev-standards/issues/1498)) ([af7ed8c](https://github.com/bamiyanapp/dev-standards/commit/af7ed8ca4c99ee0b7f72cd6bf20c8b31d1632181))
+
 ## [2.150.2](https://github.com/bamiyanapp/dev-standards/compare/v2.150.1...v2.150.2) (2026-11-18)
 
 
