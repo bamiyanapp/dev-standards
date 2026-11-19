@@ -2877,7 +2877,7 @@ jobs:
         id: cache-bust
         if: |
           steps.diagrams.outputs.found == 'true' &&
-          (github.event_name == 'pull_request' || steps.publish-latest.outcome == 'success')
+          github.event_name == 'push' && steps.publish-latest.outcome == 'success'
         continue-on-error: true
         uses: actions/github-script@v9
         with:
@@ -2931,74 +2931,16 @@ jobs:
             core.setOutput('changed', changedFiles.length > 0 ? 'true' : 'false');
             core.setOutput('files', changedFiles.join(' '));
 
-      # issue #1194。従来はpushイベント（base_branchへのマージ後）でのみバスティング
-      # しており、反映にはcommit-via-pr経由の追従コミット（新ブランチ→PR作成→
-      # squash merge）が必要だった。この追従PRが、本来の変更とは別のエントリとして
-      # PR一覧・Actions実行履歴に残り続け見通しを悪くする、という指摘があった
-      # （参照側リポジトリでの実運用で判明）。
+      # issue #1395・#1512。PRのブランチへ、botがバスティングのコミットをpushしない。
+      # 過去（issue #1194）は、pull_requestイベントで、PR自身のブランチへ直接pushしていた。
+      # しかし、そのpushに対するCIは、BOT_TOKEN（人のアカウント）でpushし、作者を人にしても、
+      # 実行者（actor）がgithub-actions[bot]として扱われ、承認待ち（action_required）で
+      # 止まった（bird-finderのPR #187、dev-standards自身のPR #1513で実機確認）。
+      # 承認の操作が毎回必要になり、自動マージの仕組みと相容れないため、PR時のpushをやめた。
+      # 図のリンクの更新は、base_branchへのマージ後（pushイベント）に、追従PR
+      # （commit-via-pr）で行う。追従PRにはCIが走り、自動マージされる（issue #1512）
       #
-      # pull_requestイベントでは、そのPR自身のhead branchへ直接pushすることで、
-      # 追従PRを発生させずバスティングをそのPRの変更に含める。GITHUB_TOKENに
-      # よるpushはActionsの新規workflow実行を誘発しない仕様（無限ループ対策として
-      # 組み込まれている既定動作）のため[skip ci]は不要。対象はPR自身のブランチ
-      # （mainのような「変更は必ずPR経由」のRulesets保護対象ではない）のため、
-      # BOT_TOKENでのbypassは不要（push自体はGITHUB_TOKEN（contents: write）で足りる）。
-      # ただし、CIを承認なしで実行させるには、BOT_TOKENでpushするのがよい（下のissue #1395の説明を参照）
-      # issue #1395: GITHUB_TOKENでpushしたコミット（作者・pushした主体がgithub-actions[bot]）に
-      # 対するpull_requestのCIは、GitHubの仕様で「action_required」（人が「Approve and run
-      # workflows」を押すまで実行されない）になり、自動マージが止まる。スマホオンリーの運用では
-      # 毎回の承認操作が負担になるため、BOT_TOKEN（人のアカウントのトークン）が設定されて
-      # いれば、それでpushする。人のアカウントがpushした扱いになり、CIは承認なしで実行される
-      # （同じ理由で、symlinkドリフトの自動修復（上のstandards-checkジョブ）もBOT_TOKENでpushしている）。
-      # コミットの作者・コミッターは、BOT_TOKENの持ち主（人のアカウント）にする。作者がbotのままだと、
-      # push自体は人でも、CIの実行者（actor）がbot扱いになり、承認待ちが残った（実機で確認）。
-      # 自動コミットであることは、コミットメッセージで示す。
-      # BOT_TOKEN未設定の場合は、従来どおりGITHUB_TOKENでpushする（その場合は承認が必要になりうる）
-      - name: バスティングした変更をこのPRブランチへ直接pushする
-        if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'pull_request'
-        continue-on-error: true
-        env:
-          # github.head_refは外部から操作可能な値であり、inline scriptへ直接
-          # 埋め込むとshell injectionの余地が生まれるため、環境変数経由で渡す
-          # （actionlintの警告、GitHub Actions Security Hardening推奨事項）
-          HEAD_REF: ${{ github.head_ref }}
-          FILES: ${{ steps.cache-bust.outputs.files }}
-          REPO: ${{ github.repository }}
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: |
-          set -eu
-          if [ -n "${BOT_TOKEN:-}" ]; then
-            # issue #1395: コミットの作者・コミッターを、BOT_TOKENの持ち主（人のアカウント）にする。
-            # 作者がgithub-actions[bot]のままだと、pushした主体が人でも、pull_requestのCIの
-            # 実行者（actor）がbot扱いになり、承認待ち（action_required）で止まった（実機で確認）。
-            # 取得に失敗したときは、従来どおりgithub-actions[bot]にする
-            user_json=$(curl -fsS -H "Authorization: Bearer ${BOT_TOKEN}" https://api.github.com/user || true)
-            login=$(printf '%s' "$user_json" | jq -r '.login // empty' 2>/dev/null || true)
-            uid=$(printf '%s' "$user_json" | jq -r '.id // empty' 2>/dev/null || true)
-            if [ -n "$login" ] && [ -n "$uid" ]; then
-              git config user.name "$login"
-              git config user.email "${uid}+${login}@users.noreply.github.com"
-            else
-              git config user.name "github-actions[bot]"
-              git config user.email "github-actions[bot]@users.noreply.github.com"
-            fi
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-          fi
-          git add -- $FILES
-          git commit -m "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する" -m "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723、#1194、#1395）。"
-          if [ -n "${BOT_TOKEN:-}" ]; then
-            git push "https://x-access-token:${BOT_TOKEN}@github.com/${REPO}.git" "HEAD:${HEAD_REF}"
-          else
-            echo "::notice::BOT_TOKENが未設定のため、GITHUB_TOKENでpushします。このコミットのCIは、承認（Approve and run workflows）が必要になることがあります"
-            git push origin "HEAD:${HEAD_REF}"
-          fi
-
-      # 以下はpushイベント（base_branchへの直接マージ等、PRを経由しない例外的な
-      # ケース）向けのフォールバック。通常のPRフローでは上記のPRブランチへの
-      # 直接pushで既に反映済みのため、ここに到達するのは「PRブランチへの直接push
-      # 権限が無かった」等の例外的なケースのみを想定する
+      # 以下が、図のリンク更新の通常の経路（pushイベント）。
       #
       # base_branchが「変更は必ずPR経由」のリポジトリルール（Rulesets）で保護されている
       # 場合、この直接pushはGH013エラーで拒否される（issue #723）。karuta実機検証で、
