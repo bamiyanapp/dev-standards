@@ -1,3 +1,10 @@
+## [2.150.5](https://github.com/bamiyanapp/dev-standards/compare/v2.150.4...v2.150.5) (2026-11-19)
+
+
+### Bug Fixes
+
+* **ci:** 依存フル脆弱性スキャンのMTTR台帳コミットへgithub-tokenを渡す ([#1515](https://github.com/bamiyanapp/dev-standards/issues/1515)) ([dbf50be](https://github.com/bamiyanapp/dev-standards/commit/dbf50be8d6a641195e219d62653cfe12918629d6)), closes [#1514](https://github.com/bamiyanapp/dev-standards/issues/1514)
+
 ## [2.150.4](https://github.com/bamiyanapp/dev-standards/compare/v2.150.3...v2.150.4) (2026-11-19)
 
 
