@@ -41,25 +41,14 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const title = ${{ toJSON(inputs.title) }};
-          const labels = JSON.parse(${{ toJSON(inputs.labels) }});
-          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-          const sha = context.sha.slice(0, 7);
-          const body = `CDが失敗しました。\n\n- run: ${runUrl}\n- コミット: ${sha}\n- ブランチ: ${context.ref}\n\n失敗したジョブのログを確認してください。`;
-
-          const open = await github.paginate(github.rest.issues.listForRepo, {
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            state: "open",
+          const { syncIssue } = require(${{ toJSON(format('{0}/notify.js', github.action_path)) }});
+          await syncIssue({
+            github,
+            context,
+            core,
+            title: ${{ toJSON(inputs.title) }},
+            labels: JSON.parse(${{ toJSON(inputs.labels) }}),
           });
-          const existing = open.find((i) => !i.pull_request && i.title === title);
-          if (existing) {
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
-            core.setOutput("issue_number", String(existing.number));
-          } else {
-            const created = await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels });
-            core.setOutput("issue_number", String(created.data.number));
-          }
     - name: LINEへ通知する
       if: inputs.line-channel-access-token != '' && inputs.line-user-id != ''
       shell: bash

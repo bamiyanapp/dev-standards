@@ -544,6 +544,46 @@ backend/frontendのバージョンが不一致の場合（デプロイの部分�
 
 生成される`index.html`内の`__NEW_URL__`は呼び出し元で実際のURLへ置換する（上記例では`deploy-github-pages`の`build-command`で`sed`置換している）。
 
+## `.github/actions/notify-cd-failure`（複合action）
+
+CDの失敗を、スマートフォンで気づける形で通知する（issue #1452）。固定タイトルの未解決issueがあればコメントし、無ければ起票する。実行のたびに新規issueを積み重ねない。同名のPRは、issueとして扱わない。
+
+CDの最後に、`if: failure()`のjobで呼ぶ。`needs`には、CDの全jobを指定する。`issues: write`が要る。
+
+```yaml
+notify-failure:
+  if: failure()
+  needs: [deploy-backend, deploy-frontend, smoke-test]
+  runs-on: ubuntu-latest
+  permissions: { issues: write }
+  steps:
+    - uses: bamiyanapp/dev-standards/.github/actions/notify-cd-failure@vX.Y.Z
+      with: { github-token: "${{ secrets.GITHUB_TOKEN }}" }
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `github-token` | `issues: write`を持つGitHub token | （必須） |
+| `title` | 通知issueのタイトル。同名のopen issueがあればコメントを追加し、無ければ起票する | `CD失敗` |
+| `labels` | 起票時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを付ける | `["bug", "priority: high"]` |
+| `line-channel-access-token` | 運用監視専用LINE Botのチャンネルアクセストークン（任意） | （空） |
+| `line-user-id` | LINEの通知先ユーザーID（任意） | （空） |
+
+出力は`issue-number`（コメントまたは起票したissue番号）である。LINEの2つの入力は、両方が指定されたときだけ送る。片方でも欠ければ、LINE通知だけをスキップする（CDの失敗報告自体は止めない）。
+
+処理の本体は`notify.js`にあり、`notify.test.js`でghをスタブして検証している（起票・コメント・PRの除外）。
+
+## `deploy-serverless`のデプロイパッケージ検証（`verify-package`）
+
+`serverless package`で作ったzipを展開し、`serverless.yml`の全ハンドラを読み込めることを、デプロイ前に検証する（issue #1452）。symlink先の欠落や`package.patterns`の誤りで、zipからファイルが抜けても、`serverless package`は成功する。デプロイ後に、全関数が`Cannot find module`で起動に失敗する。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `verify-package` | `true`のとき、デプロイ前に検証する | `false` |
+| `verify-package-forbid` | zipに含まれていてはならないファイルのglob（空白区切り。例: `*.test.js seed*.js`） | （空） |
+
+ハンドラの読み込み時に必要な環境変数は、呼び出し側の`env`で渡す。検証の本体は`scripts/verify-lambda-package.js`である。`package.individually: true`の構成は対象外である。
+
 ## `.github/actions/commit-via-pr`（複合action）
 
 作業ツリー上の変更は、可能なら対象ブランチへ直接pushしてコミットする。Rulesets等で拒否された場合は「新ブランチへpush→PR作成→API経由でsquash merge」へ自動フォールバックする（issue #830）。`reusable-ci.yml`の`render-mermaid-diagrams`ジョブ（自動生成ファイルのコミット）で使用している。ジョブ実行中に他のPRが対象ブランチへマージされていてもコンフリクトしたまま放置されないよう、ブランチを切る前に最新の対象ブランチへ`git rebase -X ours`する処理を内蔵している。
