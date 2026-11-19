@@ -55,8 +55,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      # MTTR台帳のコミット（commit-via-pr）が、新しいブランチのpush（contents）と
+      # PRの作成・マージ（pull-requests）を行うために必要（#1497）
+      contents: write
       issues: write
-      pull-requests: read
+      pull-requests: write
     outputs:
       has_vulnerabilities: ${{ steps.scan.outputs.has_vulnerabilities }}
     steps:
