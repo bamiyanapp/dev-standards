@@ -205,6 +205,7 @@ jobs:
           paths: docs/generated/dependency-vulnerability-mttr-ledger.json docs/generated/dependency-vulnerability-mttr-history.json
           commit-subject: "chore(security): 依存パッケージ脆弱性のMTTR台帳を更新する [skip ci]"
           branch-prefix: chore/dependency-mttr
+          github-token: ${{ github.token }}
 
       # dev-standards#1149: 検知結果の詳細（パッケージ名・バージョン・直接/間接・
       # 脆弱性ID・Severity）は従来トラッキングissueの本文にのみ書き込んでおり、
