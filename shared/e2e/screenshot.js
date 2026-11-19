@@ -16,6 +16,22 @@ import path from 'node:path';
 // process.cwd()基準であればsymlink越しでも正しく解決できる。
 export const SCREENSHOT_DIR = path.resolve(process.cwd(), 'e2e-screenshots');
 
+// Webフォントの読み込み完了を待つ（bamiyanapp/dev-standards#1508）。日本語フォントは
+// unicode-rangeで細かく分割され、その文字が描画されて初めて読み込みが始まる
+// （font-display: swap）。APIの応答後に表示される文字は、撮影の時点で読み込み前の
+// 代替フォントになりうる。フレームを1つ進めて描画させ（読み込みを開始させ）、
+// document.fonts.readyで読み込み完了を待つ。後から描画される文字の読み込みも
+// 拾うため2回行う
+export async function waitForWebFonts(page) {
+  await page.evaluate(async () => {
+    const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    for (let i = 0; i < 2; i++) {
+      await nextFrame();
+      await document.fonts.ready;
+    }
+  });
+}
+
 // ページのスクリーンショットを撮影し、(1) 既存のPlaywright HTMLレポートへの
 // 添付、(2) CI側が公開できるようSCREENSHOT_DIRへのファイル書き出し、の両方を行う。
 // nameはファイル名（URLの一部になるためASCII安全な識別子を渡すこと）、
@@ -25,6 +41,7 @@ export const SCREENSHOT_DIR = path.resolve(process.cwd(), 'e2e-screenshots');
 // 画面（更新履歴画面等）でビューポート内（画面上部）だけを撮影できる
 // （bamiyanapp/karuta#795）。
 export async function captureScreenshot(page, testInfo, name, caption, { fullPage = true } = {}) {
+  await waitForWebFonts(page);
   const body = await page.screenshot({ fullPage });
   await testInfo.attach(name, { body, contentType: 'image/png' });
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
