@@ -3032,8 +3032,12 @@ jobs:
         uses: ./.dev-standards-actions-commit-via-pr/.github/actions/commit-via-pr
         with:
           paths: ${{ steps.cache-bust.outputs.files }}
-          commit-subject: "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する [skip ci]"
-          commit-body: "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723）。"
+          # issue #1512: 件名に[skip ci]を付けない。付けると、追従PRにCIが走らず、必須ステータス
+          # チェックを求めるリポジトリ（Rulesets）では、チェックが0件のままマージできず残る。
+          # CIを走らせ、通常のbot PRと同じく、自動マージに任せる。追従コミットはmermaidブロックの
+          # 本文を変えないため、再度のバスティングは発生しない（issue #1259の本文比較）
+          commit-subject: "chore(ci): mermaid図のキャッシュバスティング用クエリ文字列を更新する"
+          commit-body: "reusable-ci.ymlのrender-mermaid-diagramsジョブによる自動コミットです（issue #723、#1512）。"
           branch-prefix: "chore/mermaid-cache-bust"
           push-token: ${{ secrets.BOT_TOKEN }}
           github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
