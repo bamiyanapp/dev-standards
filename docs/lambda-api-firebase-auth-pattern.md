@@ -100,7 +100,7 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 
 CIでは見つからない。CIのNode.js（22.12以上）は、`require(esm)`が有効で、テストが通る。`serverless package`も成功する。「CIのNode.jsとLambdaランタイムのバージョンを揃える」指針でも防げない。バージョンが同じでも、`require(esm)`の既定値が違うためである。
 
-検知には、`deploy-serverless`の`verify-package`を使う。`scripts/verify-lambda-package.js`は、CommonJSのハンドラを、子プロセスで読み込む。このとき、Lambdaと同じ規則（`--no-experimental-require-module`）にする。`serverless.yml`に`NODE_OPTIONS`の指定があれば、Lambdaの実行環境と同じく、そのフラグを付ける（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)）。
+検知には、`deploy-serverless`の`verify-package`を使う。`scripts/verify-lambda-package.js`は、CommonJSのハンドラを、子プロセスで読み込む。このとき、Lambdaと同じ規則（`--no-experimental-require-module`）にする。`serverless.yml`に`NODE_OPTIONS`の指定があれば、Lambdaと同じく、そのフラグを付ける（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)）。
 
 ## デプロイ運用（`reusable-cd.yml`を使わない場合）
 
