@@ -1,3 +1,10 @@
+# [2.151.0](https://github.com/bamiyanapp/dev-standards/compare/v2.150.7...v2.151.0) (2026-11-20)
+
+
+### Features
+
+* **ci:** Google FontsのCDN読み込みを検知する共通チェックを追加する ([#1518](https://github.com/bamiyanapp/dev-standards/issues/1518)) ([0cbb252](https://github.com/bamiyanapp/dev-standards/commit/0cbb252d24477979fdffe5a8026ab1c70402b6ed)), closes [#1511](https://github.com/bamiyanapp/dev-standards/issues/1511) [#1403](https://github.com/bamiyanapp/dev-standards/issues/1403)
+
 ## [2.150.7](https://github.com/bamiyanapp/dev-standards/compare/v2.150.6...v2.150.7) (2026-11-20)
 
 
