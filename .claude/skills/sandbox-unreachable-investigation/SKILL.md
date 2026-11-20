@@ -20,13 +20,14 @@ CLAUDE.mdの「開発環境の制約（スマホオンリー）」原則は、�
 
 ## 一時workflowの作り方
 
-1. 新規ブランチへ一時workflowファイルを追加する。ファイル名は、固定の接頭辞`tmp-`で始める（例: `.github/workflows/tmp-diagnose-<topic>.yml`）。ファイルの冒頭に、目的・対応するissue番号・作成日をコメントで書く。トリガーは`workflow_dispatch: {}`のみとする
+1. 新規ブランチへ一時workflowファイルを追加する。ファイル名は、固定の接頭辞`tmp-`で始める（例: `.github/workflows/tmp-diagnose-<topic>.yml`）。ファイルの冒頭に、目的・対応するissue番号・作成日をコメントで書く。トリガーは`workflow_dispatch: {}`を基本とする（作業ブランチのpushで起動する場合は、手順4を参照）
 2. 必要な調査コマンド（`curl`でのレスポンス確認、AWS CLIでの実リソース確認等）を実行し、結果を`$GITHUB_STEP_SUMMARY`へ出力する
 3. **`$GITHUB_STEP_SUMMARY`の内容はGitHub REST APIから取得する手段が無い**（`get_job_logs`等のツールでは見えない）。このため、出力は`>>`ではなく`| tee -a "$GITHUB_STEP_SUMMARY"`を使う。ジョブログ（`get_job_logs`で取得可能）にも同じ内容を出すこと。これを最初から行っておけば、ユーザーにJob Summary画面を開いて内容を転記してもらう手間が不要になる
 4. `workflow_dispatch`は**デフォルトブランチにマージされていないworkflowファイルに対しては実行できない**（GitHub仕様）。このため、一時workflowを使った調査は必ず「ブランチへpush→PR作成→ユーザーにマージを依頼→`workflow_dispatch`で実行」という最低1往復のPRマージが必要になる。ユーザーへの往復を最小化するため、以下を徹底する
    - 最初のPRで必要な調査項目を一度に揃える（後から「もう1点確認したい」と追加PRを出す往復を避ける）
    - ログ出力は最初から`tee`方式にする（本Skill作成の経緯となった実際の作業では、これを後から直すPRを追加で出す往復が発生した）
    - 調査の結果、修正が必要と判明した場合は、同じ一時workflowに修正ステップ（例: KVSの値を正しい状態へ書き込む等）を追加し、調査と修正を同じPRマージで完結させることを検討する
+   - 一時workflowを置いたブランチのpushだけで起動したいときは、`workflow_dispatch`ではなく、`push`トリガーを使う。`on: push: branches: [<作業ブランチ>]`と`paths: [<そのworkflowファイル>]`で、ブランチとファイルを限定する。pushしたブランチ上のworkflowが、そのまま動くため、デフォルトブランチへのマージが要らない。調査が1回のPushで終わり、往復が減る（bird-finderで確認）。ログは、`get_job_logs`か、GitHub REST APIのジョブログで読める
 5. 調査・修正が完了したら、一時workflowファイルは削除するPRを別途出す（本線のworkflow群に調査専用の使い捨てファイルを残さない）。削除を忘れても、`standards-check`が、`tmp-`で始まるworkflowが14日を超えて残っていると警告する（警告のみで、CIは失敗しない）。恒常的に使う手動実行workflowには、`tmp-`を付けない
 
 ## 関連ドキュメント
