@@ -1,3 +1,10 @@
+## [2.150.6](https://github.com/bamiyanapp/dev-standards/compare/v2.150.5...v2.150.6) (2026-11-20)
+
+
+### Bug Fixes
+
+* **ci:** mermaidの追従PRにCIスキップ指定を付けず、必須チェックを走らせてマージできるようにする ([#1513](https://github.com/bamiyanapp/dev-standards/issues/1513)) ([869880c](https://github.com/bamiyanapp/dev-standards/commit/869880c64526441633f0ceb2b098fc09d8bb6411)), closes [#1512](https://github.com/bamiyanapp/dev-standards/issues/1512) [#1395](https://github.com/bamiyanapp/dev-standards/issues/1395) [#1512](https://github.com/bamiyanapp/dev-standards/issues/1512)
+
 ## [2.150.5](https://github.com/bamiyanapp/dev-standards/compare/v2.150.4...v2.150.5) (2026-11-19)
 
 

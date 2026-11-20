@@ -1991,5 +1991,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.150.6",
+    "date": "2026-11-20T00:02:12.559Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "patch/minor updateで、既知の脆弱性・CI失敗・ファンアウトのいずれも検出されませんでした"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]
