@@ -1,3 +1,10 @@
+# [2.155.0](https://github.com/bamiyanapp/dev-standards/compare/v2.154.0...v2.155.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** vite.configの共通部分を返すcreateViteConfigを追加する ([#1540](https://github.com/bamiyanapp/dev-standards/issues/1540)) ([ac9ed89](https://github.com/bamiyanapp/dev-standards/commit/ac9ed89933384458c7da89d3911a97e7599adc4a)), closes [#1534](https://github.com/bamiyanapp/dev-standards/issues/1534)
+
 # [2.154.0](https://github.com/bamiyanapp/dev-standards/compare/v2.153.1...v2.154.0) (2026-11-20)
 
 
