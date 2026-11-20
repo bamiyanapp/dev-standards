@@ -1,3 +1,10 @@
+# [2.163.0](https://github.com/bamiyanapp/dev-standards/compare/v2.162.3...v2.163.0) (2026-11-20)
+
+
+### Features
+
+* **config:** ESLintの共有ルール（alert禁止・fetch直接呼び出し禁止・肥大化検知）を配布する ([#1557](https://github.com/bamiyanapp/dev-standards/issues/1557)) ([958fa42](https://github.com/bamiyanapp/dev-standards/commit/958fa421cae063a95e5873c9ff15bfd435c3bc50)), closes [#1537](https://github.com/bamiyanapp/dev-standards/issues/1537)
+
 ## [2.162.3](https://github.com/bamiyanapp/dev-standards/compare/v2.162.2...v2.162.3) (2026-11-20)
 
 
