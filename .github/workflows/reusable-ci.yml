@@ -1727,6 +1727,11 @@ jobs:
       - name: HTMLのCDN経由のライブラリ読み込みを警告する
         continue-on-error: true
         run: node dev-standards/scripts/check-cdn-libs.js
+      # issue #1370。renovate.jsonが、dev-standardsの共有プリセットを継承しているかを警告する
+      # （警告のみ。失敗にしない）。継承しない場合は、.github/renovate-preset-opt-out.jsonに理由を書く
+      - name: Renovateの共有プリセットの継承を警告する
+        continue-on-error: true
+        run: node dev-standards/scripts/check-renovate-preset.js
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
       # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
       # 失敗として扱う（人間・Renovateの再実行に委ねる）。BOT_TOKENが設定されて

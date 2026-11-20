@@ -353,6 +353,8 @@ Secretsの有無・鍵の有効性・権限を確認したい場合も、ユー�
 - **変更は即時かつ全体に及ぶ**: プリセットは、dev-standardsの既定ブランチの最新を読む。submoduleや`uses:`のタグ固定と違い、mainへマージした瞬間に、継承している全参照側の挙動が変わる
 - **固定しない運用を推奨する**: `github>bamiyanapp/dev-standards#vX.Y.Z`と書けば固定できる。ただし、その値の更新が別途必要になる
 - **`config:recommended`は、プリセット側で継承する**: 参照側の`extends`には、書かない
+- **継承は、`standards-check`が警告する**: `renovate.json`の`extends`に、プリセットが無いと、警告になる（[#1370](https://github.com/bamiyanapp/dev-standards/issues/1370)）。CIは失敗しない
+- **継承しない場合は、理由を書く**: `.github/renovate-preset-opt-out.json`に、`{ "reason": "理由" }`を書く。理由が空なら、無効として警告する
 
 プリセットを使わず、設定を直接書く場合は、次の内容と同等にする。
 
