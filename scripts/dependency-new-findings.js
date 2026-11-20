@@ -38,18 +38,59 @@ function selectNewFindings(added, commentBodies) {
   return added.filter((f) => !announced.has(`${f.name}@${f.version}`));
 }
 
-function describeFinding(f) {
-  const ids = (f.vulnerabilities || []).map((v) => v.id).filter(Boolean).join(", ");
-  const kind = f.direct === undefined ? "" : f.direct ? "直接" : "間接";
-  return `- ${f.name}@${f.version}${kind ? `（${kind}）` : ""}${ids ? `: ${ids}` : ""}`;
+// 重大度の区別（dev-standards#1373）。悪用が確認されている（CISA KEV）ものと、Criticalを、目立たせる。
+// 対応期限の目安（docs/dependency-risk-judgment-periodic-scans.md）: KEV 7日・Critical 14日・High 30日
+const DEADLINE_DAYS = Object.freeze({ kev: 7, critical: 14, high: 30 });
+
+// kevCveIds: KEVカタログに載っているCVE IDのSet（照会に失敗した時は、空のSet）
+function classifyFinding(finding, kevCveIds = new Set()) {
+  const vulns = finding.vulnerabilities || [];
+  if (vulns.some((v) => (v.cveIds || []).some((id) => kevCveIds.has(id)))) return "kev";
+  const ratings = vulns.map((v) => String(v.severityRating || "").toUpperCase());
+  if (ratings.includes("CRITICAL")) return "critical";
+  if (ratings.includes("HIGH")) return "high";
+  return "other";
 }
 
-function buildNewFindingsComment(findings, runUrl) {
-  const lines = [`## 新規に検知された脆弱性: ${findings.length}件`, "", ...findings.map(describeFinding), ""];
+// issueを、priority: highへ上げる対象か（KEVまたはCriticalが、1件でもある）
+function needsHighPriority(findings, kevCveIds = new Set()) {
+  return findings.some((f) => ["kev", "critical"].includes(classifyFinding(f, kevCveIds)));
+}
+
+const LEVEL_LABEL = { kev: "KEV（悪用が確認済み）", critical: "Critical", high: "High", other: "" };
+
+function describeFinding(f, kevCveIds = new Set()) {
+  const ids = (f.vulnerabilities || []).map((v) => v.id).filter(Boolean).join(", ");
+  const kind = f.direct === undefined ? "" : f.direct ? "直接" : "間接";
+  const level = LEVEL_LABEL[classifyFinding(f, kevCveIds)];
+  return `- ${level ? `**[${level}]** ` : ""}${f.name}@${f.version}${kind ? `（${kind}）` : ""}${ids ? `: ${ids}` : ""}`;
+}
+
+function buildNewFindingsComment(findings, runUrl, kevCveIds = new Set()) {
+  const order = { kev: 0, critical: 1, high: 2, other: 3 };
+  const sorted = [...findings].sort((a, b) => order[classifyFinding(a, kevCveIds)] - order[classifyFinding(b, kevCveIds)]);
+  const lines = [`## 新規に検知された脆弱性: ${findings.length}件`, ""];
+  const urgent = sorted.filter((f) => ["kev", "critical"].includes(classifyFinding(f, kevCveIds)));
+  if (urgent.length > 0) {
+    lines.push(
+      `> 悪用が確認済み（KEV）またはCriticalのものが${urgent.length}件ある。対応の目安は、KEVが${DEADLINE_DAYS.kev}日、Criticalが${DEADLINE_DAYS.critical}日、Highが${DEADLINE_DAYS.high}日。`,
+      ""
+    );
+  }
+  lines.push(...sorted.map((f) => describeFinding(f, kevCveIds)), "");
   if (runUrl) lines.push(`検知したrun: ${runUrl}`, "");
   lines.push("対応の状況は、このissueの本文（最新の検知結果）を参照する。", "");
   lines.push(...findings.map(marker));
   return lines.join("\n");
 }
 
-module.exports = { marker, extractAnnounced, selectNewFindings, describeFinding, buildNewFindingsComment };
+module.exports = {
+  marker,
+  extractAnnounced,
+  selectNewFindings,
+  describeFinding,
+  buildNewFindingsComment,
+  classifyFinding,
+  needsHighPriority,
+  DEADLINE_DAYS,
+};

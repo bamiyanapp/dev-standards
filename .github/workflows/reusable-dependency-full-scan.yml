@@ -214,7 +214,8 @@ jobs:
         with:
           script: |
             const fs = require("fs");
-            const { selectNewFindings, buildNewFindingsComment } = require("./.dev-standards-actions/scripts/dependency-new-findings.js");
+            const { selectNewFindings, buildNewFindingsComment, needsHighPriority } = require("./.dev-standards-actions/scripts/dependency-new-findings.js");
+            const { fetchExploitInfo } = require("./.dev-standards-actions/scripts/dependency-exploit-info.js");
             const added = JSON.parse(fs.readFileSync("/tmp/mttr-added.json", "utf-8"));
             if (added.length === 0) return;
             const issue_number = Number(process.env.TRACKING_ISSUE_NUMBER);
@@ -222,7 +223,25 @@ jobs:
             const fresh = selectNewFindings(added, comments.map((c) => c.body || ""));
             if (fresh.length === 0) return;
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number, body: buildNewFindingsComment(fresh, runUrl) });
+            // KEV（悪用が確認済み）の照会。失敗しても、通知は止めない（KEVの区別だけが、効かなくなる）
+            let kevCveIds = new Set();
+            try {
+              const cveIds = fresh.flatMap((f) => (f.vulnerabilities || []).flatMap((v) => v.cveIds || []));
+              const info = await fetchExploitInfo(cveIds);
+              kevCveIds = new Set(info.filter((i) => i.kev).map((i) => i.cveId));
+            } catch (error) {
+              console.log(`::warning::KEVの照会に失敗しました（${error.message}）。KEVの区別なしで通知します`);
+            }
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number, body: buildNewFindingsComment(fresh, runUrl, kevCveIds) });
+            // KEVまたはCriticalがあれば、トラッキングissueを priority: high へ上げる（priority: medium は外す）
+            if (needsHighPriority(fresh, kevCveIds)) {
+              await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number, labels: ["priority: high"] });
+              try {
+                await github.rest.issues.removeLabel({ owner: context.repo.owner, repo: context.repo.repo, issue_number, name: "priority: medium" });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
             console.log(`新規検知${fresh.length}件を、issue #${issue_number} へコメントしました`);
 
       - name: MTTR台帳・履歴をcommit-via-pr経由でコミットする
