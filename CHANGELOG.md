@@ -1,3 +1,10 @@
+# [2.169.0](https://github.com/bamiyanapp/dev-standards/compare/v2.168.0...v2.169.0) (2026-11-20)
+
+
+### Features
+
+* **scan:** 新規検知のコメントで、KEV・Criticalを区別し、priority: highへ上げる ([#1568](https://github.com/bamiyanapp/dev-standards/issues/1568)) ([b971083](https://github.com/bamiyanapp/dev-standards/commit/b97108348f3bb51cc8acac0f0e2cc8ea8e6c54ec)), closes [#1373](https://github.com/bamiyanapp/dev-standards/issues/1373)
+
 # [2.168.0](https://github.com/bamiyanapp/dev-standards/compare/v2.167.0...v2.168.0) (2026-11-20)
 
 
