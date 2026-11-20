@@ -1,3 +1,10 @@
+# [2.159.0](https://github.com/bamiyanapp/dev-standards/compare/v2.158.0...v2.159.0) (2026-11-20)
+
+
+### Features
+
+* **scripts:** verify-packageで、ハンドラをLambdaと同じrequire(esm)の規則で読み込む ([#1548](https://github.com/bamiyanapp/dev-standards/issues/1548)) ([e399bae](https://github.com/bamiyanapp/dev-standards/commit/e399bae7393e4b4e78de78d168012b5ac8117c38)), closes [#1485](https://github.com/bamiyanapp/dev-standards/issues/1485)
+
 # [2.158.0](https://github.com/bamiyanapp/dev-standards/compare/v2.157.0...v2.158.0) (2026-11-20)
 
 
