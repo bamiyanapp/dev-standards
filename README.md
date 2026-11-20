@@ -36,7 +36,7 @@
 ### フロントエンド
 
 - [`client-only-vite-spa-pattern.md`](docs/client-only-vite-spa-pattern.md): 単一パッケージReactアプリ（Vite + TypeScript + Bootstrap）構成
-- [`vite-spa-shared-presets.md`](docs/vite-spa-shared-presets.md): Vite + React + TypeScriptアプリの共有プリセット（tsconfigのベース・`createViteConfig`・oxlint）
+- [`vite-spa-shared-presets.md`](docs/vite-spa-shared-presets.md): Vite + Reactアプリの共有プリセット（tsconfig・`createViteConfig`・oxlint）
 - [`shared-ui-components.md`](docs/shared-ui-components.md): 横断的UIコンポーネントのsymlink共有（`shared/ui/`・`shared/pwa/`・`shared/sfx/`）
 - [`frontend-ui-conventions.md`](docs/frontend-ui-conventions.md): 共通フォント・トップページの必須の表示項目等のUI規約
 - [`pwa-initial-loading-indicator.md`](docs/pwa-initial-loading-indicator.md): PWA起動時の白画面対策
