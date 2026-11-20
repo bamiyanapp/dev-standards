@@ -1,3 +1,10 @@
+# [2.152.0](https://github.com/bamiyanapp/dev-standards/compare/v2.151.0...v2.152.0) (2026-11-20)
+
+
+### Features
+
+* **ci:** 機能を有効化したのにself_refが空のときは、該当のstep・jobを失敗にする ([#1520](https://github.com/bamiyanapp/dev-standards/issues/1520)) ([791b714](https://github.com/bamiyanapp/dev-standards/commit/791b714399a14fed035fb08aeb20875966298d5e)), closes [#1460](https://github.com/bamiyanapp/dev-standards/issues/1460)
+
 # [2.151.0](https://github.com/bamiyanapp/dev-standards/compare/v2.150.7...v2.151.0) (2026-11-20)
 
 
