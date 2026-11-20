@@ -1,0 +1,23 @@
+{
+  // Vite + React + TypeScriptアプリの、oxlintの共有プリセット（dev-standards#1376・#1535）。
+  // 参照側の.oxlintrc.jsonから、extendsで継承する。ルールの上書き・追加は、参照側の.oxlintrc.jsonに書く。
+  //
+  // 使い方（参照側の.oxlintrc.json）:
+  //   { "extends": ["../../dev-standards/shared/config/oxlintrc.base.json"] }
+  //
+  // oxlintのextendsが、相対パスの別ファイルを解決することを確認済み（oxlint 1.94.0）。
+  // 参照側のoxlintのバージョンが古いと解決できない場合がある。その場合は、バージョンを上げる。
+  "plugins": ["react", "typescript", "oxc", "jsx-a11y"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+
+    // labelと入力欄の関連付けを検査する（examination#696）。htmlForの指定と、入力欄を<label>で
+    // 内包する書き方（暗黙の関連付け）は、違反にならない。
+    // 既存コードに違反が出るため、warnで始める。是正してから、参照側でerrorへ上げる
+    // （docs/code-quality-conventions.mdの段階的な導入方針）。
+    // 注意: jsx-a11yプラグインを有効にすると、他のjsx-a11yの既定の規則（click-events-have-key-events等）も、
+    // warnとして出る
+    "jsx-a11y/label-has-associated-control": "warn"
+  }
+}
