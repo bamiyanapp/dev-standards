@@ -31,7 +31,15 @@ Vite + React + TypeScriptアプリの設定ファイルは、全アプリで内�
 
 ## vite.config
 
-`createViteConfig`は、共有物を使うために必須の設定を返す。内容は、`resolve.preserveSymlinks`・`build.sourcemap`・vitestの`environment`・`setupFiles`・`exclude`（`e2e/**`）である。アプリ側は、`base`などの固有の値だけを渡す。
+`createViteConfig`は、共有物を使うために必須の設定を返す。
+
+返す設定は、次のとおりである。
+
+- `resolve.preserveSymlinks`
+- `build.sourcemap`
+- vitestの`environment`・`setupFiles`・`exclude`（`e2e/**`）
+
+アプリ側は、`base`などの固有の値だけを渡す。
 
 ```ts
 // vite.config.ts
