@@ -109,3 +109,14 @@ with:
 - 同じ脆弱性を2度通知しない。コメントの隠しマーカー（`new-finding:名前@バージョン`）で、通知済みを判定する
 - 台帳が未作成の初回実行は、検知がすべて新規になる。そのため初回は、既存の検知がまとめて通知される
 - 重大度による分類と、`priority: high`ラベルの切り替えは、別の段階で行う
+
+## 導入漏れの検知（[#1369](https://github.com/bamiyanapp/dev-standards/issues/1369)）
+
+`standards-check`が、定期スキャン系の4つのreusable workflowを、scheduleつきのworkflowが呼んでいるかを確認する。
+呼んでいないものは、警告になる。警告のみで、CIは失敗しない。
+
+- 導入しない場合は、`.github/periodic-scans-opt-out.json`に、スキャン名と理由を書く
+- 例: `{ "runtime-version-scan": "Lambdaが無いため、検査するエンドポイントが無い" }`
+- 理由が空の場合は、無効として警告する
+- 判定は、workflowのテキストで行う。別の仕組みで定期実行している場合は、誤って警告するため、opt-outで明示する
+- 全参照側の導入状況の一覧は作らない。各プロダクトが、警告と`dev-standards-adoption` Skillで確認する
