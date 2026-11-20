@@ -596,6 +596,8 @@ notify-failure:
 | `verify-package` | `true`のとき、デプロイ前に検証する | `false` |
 | `verify-package-forbid` | zipに含まれていてはならないファイルのglob（空白区切り。例: `*.test.js seed*.js`） | （空） |
 
+CommonJSのハンドラは、Lambdaと同じ規則（`require(esm)`が無効）の子プロセスで読み込む（[#1485](https://github.com/bamiyanapp/dev-standards/issues/1485)）。`serverless.yml`の`provider.environment.NODE_OPTIONS`に`--experimental-require-module`があれば、そのフラグを付ける。ESMのハンドラ（`.mjs`、`type: module`）は、Lambdaも`import()`で読み込むため、対象外である。この再現を止めるには、スクリプトへ`--allow-require-esm`を渡す。
+
 ハンドラの読み込み時に必要な環境変数は、呼び出し側の`env`で渡す。検証の本体は`scripts/verify-lambda-package.js`である。`package.individually: true`の構成は対象外である。
 
 ## `.github/actions/commit-via-pr`（複合action）

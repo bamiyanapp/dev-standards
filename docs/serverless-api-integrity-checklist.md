@@ -50,6 +50,7 @@
 | 観点 | 内容と確認方法 |
 |---|---|
 | IAM権限と実際に使うAPIの不一致 | コードが使う`*Command`に対応するActionが実行ロールに無い状態。テストはDynamoDBをモックするため検知できない。`*Command`の使用箇所とIAMステートメントを突き合わせる。CIでは`enable_iam_actions_check`で検知できる（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)参照） |
+| 依存更新後の起動可否 | CIとLambdaで、モジュールの読み込み規則が違いうる。例えば、Lambdaは`require(esm)`が既定で無効である。ESM専用の依存を持つ更新（`firebase-admin` 14等）は、CIで通り、全関数が起動に失敗する。`verify-package`で、Lambdaと同じ規則で読み込む（[`lambda-api-firebase-auth-pattern.md`](lambda-api-firebase-auth-pattern.md)） |
 | デプロイパッケージの中身 | `package.patterns`未設定で、テストファイル・設定ファイルがzipに入っていないか。zipの中身を一覧する |
 | CD内の補助スクリプトの失敗 | シード投入等が、失敗を握りつぶして終了コード0で終わっていないか。Lambda上で自動設定される`AWS_REGION`等が、CDのステップには無い点にも注意する |
 
