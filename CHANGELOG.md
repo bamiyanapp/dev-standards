@@ -1,3 +1,10 @@
+# [2.160.0](https://github.com/bamiyanapp/dev-standards/compare/v2.159.0...v2.160.0) (2026-11-20)
+
+
+### Features
+
+* **ci:** dev-standards自身にも、定期スキャンを適用する ([#1549](https://github.com/bamiyanapp/dev-standards/issues/1549)) ([f0d3e56](https://github.com/bamiyanapp/dev-standards/commit/f0d3e561491129bd79086db27226e15f293fed46)), closes [#1369](https://github.com/bamiyanapp/dev-standards/issues/1369)
+
 # [2.159.0](https://github.com/bamiyanapp/dev-standards/compare/v2.158.0...v2.159.0) (2026-11-20)
 
 
