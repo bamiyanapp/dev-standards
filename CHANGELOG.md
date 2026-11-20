@@ -1,3 +1,10 @@
+## [2.162.1](https://github.com/bamiyanapp/dev-standards/compare/v2.162.0...v2.162.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **ci:** 下書き（draft）のPRを、自動マージしない ([#1553](https://github.com/bamiyanapp/dev-standards/issues/1553)) ([7faa7e7](https://github.com/bamiyanapp/dev-standards/commit/7faa7e7191c5424fc5e0438d2a2a0adaf9aafce2)), closes [#1532](https://github.com/bamiyanapp/dev-standards/issues/1532)
+
 # [2.162.0](https://github.com/bamiyanapp/dev-standards/compare/v2.161.0...v2.162.0) (2026-11-20)
 
 
