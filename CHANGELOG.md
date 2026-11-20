@@ -1,3 +1,10 @@
+## [2.152.1](https://github.com/bamiyanapp/dev-standards/compare/v2.152.0...v2.152.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **renovate:** managerFilePatternsの正規表現を/で囲む ([#1523](https://github.com/bamiyanapp/dev-standards/issues/1523)) ([3cebbc5](https://github.com/bamiyanapp/dev-standards/commit/3cebbc5682fd4550e364f9a5275b0572046932b0)), closes [#1522](https://github.com/bamiyanapp/dev-standards/issues/1522)
+
 # [2.152.0](https://github.com/bamiyanapp/dev-standards/compare/v2.151.0...v2.152.0) (2026-11-20)
 
 
