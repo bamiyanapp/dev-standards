@@ -154,6 +154,7 @@ jobs:
             core.setOutput("body", body);
 
       - name: トラッキングissueを同期する
+        id: tracking-issue
         uses: ./.dev-standards-actions/.github/actions/tracking-issue-sync
         with:
           title: ${{ inputs.tracking_issue_title }}
@@ -187,17 +188,42 @@ jobs:
             const history = fs.existsSync(historyPath) ? JSON.parse(fs.readFileSync(historyPath, "utf-8")) : [];
 
             const now = new Date().toISOString();
-            const { ledger: nextLedger, resolved } = updateLedger(ledger, findings, now);
+            const { ledger: nextLedger, resolved, added } = updateLedger(ledger, findings, now);
             const nextHistory = [...history, ...resolved];
 
             fs.mkdirSync("docs/generated", { recursive: true });
             fs.writeFileSync(ledgerPath, `${JSON.stringify(nextLedger, null, 2)}\n`);
             fs.writeFileSync(historyPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
+            // dev-standards#1373: 今回初めて検知された項目。新規検知の通知（次のステップ）に使う
+            fs.writeFileSync("/tmp/mttr-added.json", JSON.stringify(added));
 
             const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
             const summary = summarizeMttr(nextHistory, thirtyDaysAgo);
             fs.writeFileSync("/tmp/mttr-summary.json", JSON.stringify(summary));
           '
+
+      # dev-standards#1373。トラッキングissueの本文更新は、GitHubの通知を発生させない。新規に検知された
+      # ものがあるときだけ、コメントを追加する（コメントは通知される）。台帳のコミットは、PR経由で、
+      # マージされるまでに時間がかかることがあり、その間は、同じ項目が毎回「新規」になる。
+      # コメントに目印を埋め込み、通知済みの項目を除いて、重複を防ぐ。
+      - name: 新規検知をトラッキングissueへコメントする
+        if: steps.tracking-issue.outputs.issue-number != ''
+        uses: actions/github-script@v9
+        env:
+          TRACKING_ISSUE_NUMBER: ${{ steps.tracking-issue.outputs.issue-number }}
+        with:
+          script: |
+            const fs = require("fs");
+            const { selectNewFindings, buildNewFindingsComment } = require("./.dev-standards-actions/scripts/dependency-new-findings.js");
+            const added = JSON.parse(fs.readFileSync("/tmp/mttr-added.json", "utf-8"));
+            if (added.length === 0) return;
+            const issue_number = Number(process.env.TRACKING_ISSUE_NUMBER);
+            const comments = await github.paginate(github.rest.issues.listComments, { owner: context.repo.owner, repo: context.repo.repo, issue_number, per_page: 100 });
+            const fresh = selectNewFindings(added, comments.map((c) => c.body || ""));
+            if (fresh.length === 0) return;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number, body: buildNewFindingsComment(fresh, runUrl) });
+            console.log(`新規検知${fresh.length}件を、issue #${issue_number} へコメントしました`);
 
       - name: MTTR台帳・履歴をcommit-via-pr経由でコミットする
         uses: ./.dev-standards-actions/.github/actions/commit-via-pr
