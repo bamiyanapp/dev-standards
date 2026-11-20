@@ -17,6 +17,8 @@ shock-lab（[bamiyanapp/shock-lab](https://github.com/bamiyanapp/shock-lab)）�
 
 ## TypeScript構成
 
+`tsconfig.app.json`・`tsconfig.node.json`・`vite.config.ts`・`.oxlintrc.json`の共通部分は、共有プリセットとして配布している（[`vite-spa-shared-presets.md`](vite-spa-shared-presets.md)）。tsconfigは、ベースを`extends`で継承する形を標準とする。
+
 `tsconfig.json`をproject referencesで分割する。`tsconfig.app.json`（アプリ本体）・`tsconfig.node.json`（`vite.config.ts`自体の型検査用）である。
 
 ```json
@@ -236,8 +238,8 @@ jobs:
 
 `shared/pwa/`（[`service-worker-update-pattern.md`](service-worker-update-pattern.md)）をTypeScriptプロジェクトへsymlink共有する場合を考える。`shared/ui/`（[`shared-ui-components.md`](shared-ui-components.md)）も同様である。いずれもプレーンなJSXのため以下の対応が必要になる。
 
-1. **`tsconfig.app.json`に`allowJs: true`を追加する**。symlinkされた`.jsx`ファイルをTypeScript側の型検査対象に含めなくても（`checkJs`は既定false）import解決自体はできるようにする必要がある
-2. **`vite.config.ts`に`resolve.preserveSymlinks: true`を追加する**。symlink共有されたコンポーネントが`react`等のnpmパッケージをimportする場合を考える。Viteは既定でsymlinkの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索してしまう。そのため、利用側にインストール済みのパッケージを解決できずビルドエラーになる
+1. **`tsconfig.app.json`に`allowJs: true`を追加する**（共有プリセットのベースに含まれる）。symlinkされた`.jsx`ファイルをTypeScript側の型検査対象に含めなくても（`checkJs`は既定false）import解決自体はできるようにする必要がある
+2. **`vite.config.ts`に`resolve.preserveSymlinks: true`を追加する**（`createViteConfig`が設定する）。symlink共有されたコンポーネントが`react`等のnpmパッケージをimportする場合を考える。Viteは既定でsymlinkの実体パス（`dev-standards/`配下）を起点に`node_modules`を探索してしまう。そのため、利用側にインストール済みのパッケージを解決できずビルドエラーになる
 3. **`ServiceWorkerRegistration.jsx`はサブパス配信では`symlink`のまま使えない**。`register("/sw.js")`が絶対パス固定のため、サイトルート以外のサブパス配下に配信している場合は実際に配信されるURLと一致しない。`import.meta.env.BASE_URL`を使うよう修正したコピー（`.tsx`化し、専用テストを付けると良い）を個別管理すること（サイトルート配信の場合は対応不要）
 4. **daisyUI固有のクラス名（`toast`/`modal`等）を使う共有コンポーネントを流用する場合、Bootstrap環境ではそのままでは無スタイルになりうる**。Bootstrap前提の場合は`shared/ui/bootstrap-theme.css`（[`shared-ui-components.md`](shared-ui-components.md)）を導入する。それでも足りない配色は`App.css`等へ対象クラス名のみを狭くスコープして追加で補う
 
@@ -255,7 +257,7 @@ jobs:
 ## 新規プロジェクトでの始め方
 
 1. [`standard-tech-stack.md`](standard-tech-stack.md)の手順1（dev-standards取り込み）を実施する
-2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行する。上記の`tsconfig`・`vite.config.ts`（`preserveSymlinks`は後で必要になったら追加）・`eslint.config.js`を整える。バックエンドと組み合わせる場合は上記「npm workspacesでバックエンドと組み合わせる場合」に沿ってworkspaces構成にする
+2. Viteで`npm create vite@latest frontend -- --template react-ts`を実行する。共有プリセット（[`vite-spa-shared-presets.md`](vite-spa-shared-presets.md)）で`tsconfig`・`vite.config.ts`・`.oxlintrc.json`を整える。ESLintを使う場合は、上記の`eslint.config.js`を整える。バックエンドと組み合わせる場合は上記「npm workspacesでバックエンドと組み合わせる場合」に沿ってworkspaces構成にする
 3. `vitest`・`@testing-library/react`・`@testing-library/jest-dom`を導入する。`@testing-library/user-event`・`@vitest/coverage-v8`・`jsdom`も導入する。上記のテスト戦略に沿ってセットアップする
 4. 状態管理が必要なら`zustand`を導入し、上記のstore設計パターンに沿う
 5. 上記の「CI/CDの構成例」に沿って`.github/workflows/ci.yml`・`cd.yml`を用意する。ホスティングは[`static-hosting-pattern.md`](static-hosting-pattern.md)に沿ってS3 + CloudFrontを構築する
