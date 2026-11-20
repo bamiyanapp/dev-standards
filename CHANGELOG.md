@@ -1,3 +1,10 @@
+# [2.154.0](https://github.com/bamiyanapp/dev-standards/compare/v2.153.1...v2.154.0) (2026-11-20)
+
+
+### Features
+
+* **config:** tsconfigのベース（app・node）をshared/configとして配布する ([#1539](https://github.com/bamiyanapp/dev-standards/issues/1539)) ([eb66a8e](https://github.com/bamiyanapp/dev-standards/commit/eb66a8eed53de372623f30109d311f2b5b55ca4a)), closes [#1533](https://github.com/bamiyanapp/dev-standards/issues/1533)
+
 ## [2.153.1](https://github.com/bamiyanapp/dev-standards/compare/v2.153.0...v2.153.1) (2026-11-20)
 
 
