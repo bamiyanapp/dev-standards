@@ -1,3 +1,10 @@
+## [2.153.1](https://github.com/bamiyanapp/dev-standards/compare/v2.153.0...v2.153.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* **shared:** ConfirmDialogの背景クリックを、参照側のa11y lintに違反しない実装にする ([#1530](https://github.com/bamiyanapp/dev-standards/issues/1530)) ([717e5d7](https://github.com/bamiyanapp/dev-standards/commit/717e5d73dbe53083f8aa6d9d13e04aecabe3a327)), closes [#1490](https://github.com/bamiyanapp/dev-standards/issues/1490)
+
 # [2.153.0](https://github.com/bamiyanapp/dev-standards/compare/v2.152.1...v2.153.0) (2026-11-20)
 
 
