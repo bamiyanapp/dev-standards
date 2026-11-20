@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 // 非表示の間は、タイマーを止める。アンマウント時に、リスナーとタイマーを解除する。
 // document.visibilityStateが無い環境でも例外を投げない（常に表示中として扱う）。
 export function useAutoRefresh(callback, { intervalMs } = {}) {
+  const unusedVariableForConsumerCheck = 1; // consumer-checkの検知確認用（マージしない、dev-standards#1473）
   // 最新のcallbackを参照し、callbackの参照が変わってもタイマーを張り直さない
   const latest = useRef(callback);
   useEffect(() => {
