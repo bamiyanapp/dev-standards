@@ -84,6 +84,24 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 - AWS Lambdaは定期的に古いランタイム（例: `nodejs18.x`）のサポートを終了する。依存パッケージ側が`engines.node`で新しいNode.jsバージョンを要求するようになった場合（`npm warn EBADENGINE`が出る）も含め、両者を同時に見直すタイミングの合図にする
 - 見直す際は、`ci.yml`の`node_version`と`serverless.yml`の`runtime`を同一PRで一緒に変更する。CIのfrontend-test/backend-testが新バージョンで成功することを確認してからマージする
 
+## Lambdaでは`require(esm)`が既定で無効である（`firebase-admin` 14以降）
+
+`firebase-admin` 14以降は、次の設定が必須である。`serverless.yml`の`provider.environment`へ、`NODE_OPTIONS: --experimental-require-module`を書く（[#1485](https://github.com/bamiyanapp/dev-standards/issues/1485)）。
+
+依存の連鎖は、`firebase-admin` 14 → `jwks-rsa` 4.x → `jose` 6（ESM専用）である。`jwks-rsa`は、CommonJSから`require("jose")`で読み込む。Node.js本体は、v22.12以降で`require(esm)`が既定で有効である。しかし、Lambdaのマネージドランタイムは、Node 22・24とも既定で無効である。ランタイムを上げても直らない。
+
+実際のLambdaで、デプロイ済みと同じzipを、使い捨ての関数に載せて検証した結果は、次のとおりである。
+
+| ランタイム | 環境変数 | 結果 |
+|---|---|---|
+| nodejs22.x | なし | `ERR_REQUIRE_ESM`で起動失敗 |
+| nodejs24.x | なし | `ERR_REQUIRE_ESM`で起動失敗 |
+| nodejs22.x | `NODE_OPTIONS=--experimental-require-module` | 正常に動作 |
+
+CIでは見つからない。CIのNode.js（22.12以上）は、`require(esm)`が有効で、テストが通る。`serverless package`も成功する。「CIのNode.jsとLambdaランタイムのバージョンを揃える」指針でも防げない。バージョンが同じでも、`require(esm)`の既定値が違うためである。
+
+検知には、`deploy-serverless`の`verify-package`を使う。`scripts/verify-lambda-package.js`は、CommonJSのハンドラを、子プロセスで読み込む。このとき、Lambdaと同じ規則（`--no-experimental-require-module`）にする。`serverless.yml`に`NODE_OPTIONS`の指定があれば、Lambdaと同じく、そのフラグを付ける（[`reusable-workflows-reference.md`](reusable-workflows-reference.md)）。
+
 ## デプロイ運用（`reusable-cd.yml`を使わない場合）
 
 `reusable-cd.yml`は「`base_branch`→`release_branch`の同期・`release_branch`上でのリリース」を前提とした構成である。semantic-releaseを`base_branch`（`main`）に対して直接実行する運用（`.releaserc.cjs`の`branches: ["main"]`）を選ぶプロダクトでは前提が一致しない。この場合`cd.yml`はプロダクト固有のワークフローとして自前で維持し、`reusable-ci.yml`のみを利用する。
