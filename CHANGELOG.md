@@ -1,3 +1,10 @@
+# [2.168.0](https://github.com/bamiyanapp/dev-standards/compare/v2.167.0...v2.168.0) (2026-11-20)
+
+
+### Features
+
+* **standards-check:** HTMLのCDN経由のライブラリ読み込みを警告する ([#1567](https://github.com/bamiyanapp/dev-standards/issues/1567)) ([f7cd9b2](https://github.com/bamiyanapp/dev-standards/commit/f7cd9b26d303439541a2fcef03d60f8b180278cf)), closes [#1372](https://github.com/bamiyanapp/dev-standards/issues/1372)
+
 # [2.167.0](https://github.com/bamiyanapp/dev-standards/compare/v2.166.0...v2.167.0) (2026-11-20)
 
 
