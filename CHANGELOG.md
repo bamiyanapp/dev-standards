@@ -1,3 +1,10 @@
+# [2.156.0](https://github.com/bamiyanapp/dev-standards/compare/v2.155.0...v2.156.0) (2026-11-20)
+
+
+### Features
+
+* **config:** oxlintの共有プリセットを、shared/configとして配布する ([#1542](https://github.com/bamiyanapp/dev-standards/issues/1542)) ([2cd957b](https://github.com/bamiyanapp/dev-standards/commit/2cd957b60bf76fc8100362866663a39f9df7899c)), closes [#1535](https://github.com/bamiyanapp/dev-standards/issues/1535)
+
 # [2.155.0](https://github.com/bamiyanapp/dev-standards/compare/v2.154.0...v2.155.0) (2026-11-20)
 
 
