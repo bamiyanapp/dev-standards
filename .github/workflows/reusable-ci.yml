@@ -1716,6 +1716,12 @@ jobs:
       - name: 定期スキャンの導入漏れを警告する
         continue-on-error: true
         run: node dev-standards/scripts/check-periodic-scans.js
+      # issue #1371。serverless*.ymlに宣言されたLambdaのランタイムが、サポート終了に近いか、過ぎていないかを
+      # 警告する（警告のみ。失敗にしない）。期限は、endoflife.dateのaws-lambda APIから取得する。
+      # 取得に失敗したときは、警告にとどめ、検査をスキップする
+      - name: Lambdaのランタイムのサポート終了を警告する
+        continue-on-error: true
+        run: node dev-standards/scripts/lambda-runtime-eol.js
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
       # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
       # 失敗として扱う（人間・Renovateの再実行に委ねる）。BOT_TOKENが設定されて

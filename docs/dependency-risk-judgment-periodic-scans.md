@@ -120,3 +120,15 @@ with:
 - 理由が空の場合は、無効として警告する
 - 判定は、workflowのテキストで行う。別の仕組みで定期実行している場合は、誤って警告するため、opt-outで明示する
 - 全参照側の導入状況の一覧は作らない。各プロダクトが、警告と`dev-standards-adoption` Skillで確認する
+
+## Lambdaのランタイムのサポート終了の検知（[#1371](https://github.com/bamiyanapp/dev-standards/issues/1371)）
+
+`standards-check`が、`serverless*.yml`に宣言されたLambdaのランタイムを読み、サポート終了に近いものを警告する。
+依存の脆弱性スキャンでは、ランタイム自体の期限は見えない。サポートが切れると、セキュリティパッチが止まる。
+
+- 期限は、[endoflife.date](https://endoflife.date/aws-lambda)のAPIから、実行時に取得する
+- 基準は、AWSの非推奨日（セキュリティパッチの停止）である。更新ができなくなる日を過ぎたものは、さらに強い警告にする
+- 既定では、非推奨日の90日前から警告する。環境変数`LAMBDA_EOL_WARN_DAYS`で変えられる
+- 警告のみで、CIは失敗しない。APIの取得に失敗したときも、警告にとどめて検査をスキップする
+- 対象は、Lambdaのランタイムだけである。`.nvmrc`・`engines`・workflowの`node-version`は、CIの設定のため対象外である
+- 変数（`${self:provider.runtime}`等）は読めない。リテラルで書かれた`runtime:`だけを見る
