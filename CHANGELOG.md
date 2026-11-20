@@ -1,3 +1,10 @@
+# [2.161.0](https://github.com/bamiyanapp/dev-standards/compare/v2.160.0...v2.161.0) (2026-11-20)
+
+
+### Features
+
+* **renovate:** 参照側へ共有するRenovate設定を、プリセット（default.json）にする ([#1550](https://github.com/bamiyanapp/dev-standards/issues/1550)) ([6b35b30](https://github.com/bamiyanapp/dev-standards/commit/6b35b30e3b12d06916e27a239a5b8533bf2586d5)), closes [#1370](https://github.com/bamiyanapp/dev-standards/issues/1370)
+
 # [2.160.0](https://github.com/bamiyanapp/dev-standards/compare/v2.159.0...v2.160.0) (2026-11-20)
 
 
