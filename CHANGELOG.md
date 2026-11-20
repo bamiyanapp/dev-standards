@@ -1,3 +1,10 @@
+# [2.162.0](https://github.com/bamiyanapp/dev-standards/compare/v2.161.0...v2.162.0) (2026-11-20)
+
+
+### Features
+
+* **scan:** 依存フル脆弱性スキャンの新規検知を、トラッキングissueへコメントで通知する ([#1552](https://github.com/bamiyanapp/dev-standards/issues/1552)) ([77753d2](https://github.com/bamiyanapp/dev-standards/commit/77753d2484f62ec4ca1ce0bb224bcbe75f0068bb)), closes [#1373](https://github.com/bamiyanapp/dev-standards/issues/1373)
+
 # [2.161.0](https://github.com/bamiyanapp/dev-standards/compare/v2.160.0...v2.161.0) (2026-11-20)
 
 
