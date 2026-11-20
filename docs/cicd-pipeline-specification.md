@@ -336,7 +336,22 @@ Secretsの有無・鍵の有効性・権限を確認したい場合も、ユー�
 
 ## 1. 参照側リポジトリへの設定ファイル追加
 
-参照側リポジトリのルートに `renovate.json` を追加する。
+参照側リポジトリのルートに `renovate.json` を追加する。dev-standardsの共有プリセット（`default.json`、[bamiyanapp/dev-standards#1370](https://github.com/bamiyanapp/dev-standards/issues/1370)）を継承する。
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>bamiyanapp/dev-standards"]
+}
+```
+
+プリセットには、次の設定が入っている。`minimumReleaseAge`（3日）・`lockFileMaintenance`・`rebaseWhen`・`git-submodules`の有効化・stylelintのグループ化である。参照側固有の設定（`packageRules`の上限固定など）は、`extends`の後に書く。後に書いた設定が優先される。
+
+- **変更は即時かつ全体に及ぶ**: プリセットは、dev-standardsの既定ブランチの最新を読む。submoduleや`uses:`のタグ固定と違い、mainへマージした瞬間に、継承している全参照側の挙動が変わる
+- **固定しない運用を推奨する**: `github>bamiyanapp/dev-standards#vX.Y.Z`と書けば固定できる。ただし、その値の更新が別途必要になる
+- **`config:recommended`は、プリセット側で継承する**: 参照側の`extends`には、書かない
+
+プリセットを使わず、設定を直接書く場合は、次の内容と同等にする。
 
 ```json
 {
