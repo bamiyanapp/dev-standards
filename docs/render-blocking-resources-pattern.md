@@ -26,3 +26,7 @@ karuta#1761では、この切り替えにより`render-blocking-resources`の推
 ## 既知の限界: ローカル検証環境とCI実行環境でスコアの改善幅が一致しないことがある
 
 karuta#1762で実機検証した。その結果、ローカル（サンドボックス環境）でのLighthouse実行ではPerformanceスコアが0.70→0.80に改善した。一方、実際のGitHub Actions CI環境での実行では顕著な改善が見られなかった。CPUスロットリング・ネットワーク条件（Lighthouseのシミュレート設定）が、ローカルとCI実行環境のマシンスペックによって変わるためと考えられる。render-blocking-resources自体の改善は環境に依存しない事実である。しかし**Performanceスコアという合成指標の絶対値は、測定環境に強く依存する**ことに注意する。閾値による自動マージ判定（`enable_lighthouse_ci_gating`、[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)参照）を導入する際は、必ずCI実行環境での実測値を基準に閾値を決めること。
+
+## 検知（`enable_cdn_fonts_check`）
+
+Google FontsのCDNの読み込みが残っていないかは、`reusable-ci.yml`の`enable_cdn_fonts_check`で検知できる。`fonts.googleapis.com`・`fonts.gstatic.com`を参照する行を、警告として出す。導入時は`cdn_fonts_mode: warn`で始める。移行が済んだら、`fail`へ切り替える。同梱であれば、CI・E2E・本番で同じフォントが使われ、スクリーンショットの見た目も、デプロイ後と一致する。
