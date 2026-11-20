@@ -1,0 +1,32 @@
+{
+  // Vite + React + TypeScriptアプリの、ビルド設定ファイル（vite.config.ts）用のtsconfigのベース（dev-standards#1376）。
+  // 使い方・参照側に残すものは、tsconfig.app.base.jsonの先頭コメントを参照する。
+  //
+  // 使い方（参照側のtsconfig.node.json）:
+  //   {
+  //     "extends": "../../dev-standards/shared/config/tsconfig.node.base.json",
+  //     "compilerOptions": { "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo" },
+  //     "include": ["vite.config.ts"]
+  //   }
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}

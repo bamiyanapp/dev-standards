@@ -1,0 +1,45 @@
+{
+  // Vite + React + TypeScriptアプリ（アプリ本体のコード）の、tsconfigのベース（dev-standards#1376）。
+  // 参照側のtsconfig.app.jsonから、extendsで継承する。symlinkでは配布しない。tsconfigをsymlinkにすると、
+  // 相対パスの解決基準が実体（dev-standards側）になり、壊れるため。
+  //
+  // 使い方（参照側のtsconfig.app.json）:
+  //   {
+  //     "extends": "../../dev-standards/shared/config/tsconfig.app.base.json",
+  //     "compilerOptions": { "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo" },
+  //     "include": ["src"]
+  //   }
+  //
+  // 次の3つは、継承元ファイルの場所を基準に解決されるため、ここには書かず、参照側に残す。
+  //   - include・files・exclude
+  //   - tsBuildInfoFile
+  //   - references（継承されない。tsconfig.jsonの3行は、各アプリに置く）
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    // dev-standardsからsymlink共有されるshared/ui/・shared/pwa/配下のプレーンJSXファイル
+    // （ShareButton.jsx・NavigationOverlay.jsx等）のimport解決に必要
+    // （docs/client-only-vite-spa-pattern.md「PWA・共有UIコンポーネント導入時の注意点」）
+    "allowJs": true
+  }
+}
