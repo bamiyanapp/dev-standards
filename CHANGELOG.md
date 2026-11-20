@@ -1,3 +1,10 @@
+# [2.166.0](https://github.com/bamiyanapp/dev-standards/compare/v2.165.0...v2.166.0) (2026-11-20)
+
+
+### Features
+
+* **standards-check:** 定期スキャンの導入漏れを警告する ([#1563](https://github.com/bamiyanapp/dev-standards/issues/1563)) ([6d89d48](https://github.com/bamiyanapp/dev-standards/commit/6d89d48d54f65035ee2a9991c8cd1e5fdbf033a6)), closes [#1369](https://github.com/bamiyanapp/dev-standards/issues/1369)
+
 # [2.165.0](https://github.com/bamiyanapp/dev-standards/compare/v2.164.0...v2.165.0) (2026-11-20)
 
 
