@@ -23,6 +23,7 @@
 | [`success.mp3`・`failure.mp3`](#sharedsfxsuccessmp3--sharedsfxfailuremp3) | 操作の成功・失敗を通知する汎用効果音 |
 | [`success-2.mp3`](#sharedsfxsuccess-2mp3) | `success.mp3`の別バリエーション |
 | [`ErrorBoundary.jsx`](#shareduierrorboundaryjsx) | 未捕捉例外時のError Boundary・クライアントエラー報告 |
+| [`renderApp.jsx`](#shareduirenderappjsx) | StrictModeとErrorBoundaryで包んでアプリを描画する |
 | [手動切り替えリンクパターン](#手動切り替えリンクパターンブルーグリーンカナリアデプロイ) | ブルーグリーン/カナリアでのstable切り替え導線（パターンのみ、コンポーネント非提供） |
 | [`useLocalStorageState.js`](#sharedhooksuselocalstoragestatejs) | `localStorage`とReact stateの双方向同期hook |
 | [`useSessionStorageState.js`](#sharedhooksusesessionstoragestatejs) | `sessionStorage`とReact stateの双方向同期hook（JSON対応） |
@@ -229,6 +230,22 @@ const playFailureSound = usePlaySound(failureSoundUrl)
 ### `shared/sfx/success-2.mp3`
 
 `success.mp3`の別バリエーション（issue #316）。Electric-Chair-Arenaの「セーフ」演出音から切り出したもの。役割は`success.mp3`と同じ「操作の成功を通知する汎用音」だが、音自体が別物のため、片方へ統合せず選べるバリエーションとして追加した。プロダクトの雰囲気に合わせて`success.mp3`・`success-2.mp3`のどちらかを選ぶ。`failure.mp3`との組み合わせは利用側の判断に委ねる（`success-2.mp3`用の専用`failure`バリエーションは無い）。
+
+### `shared/ui/renderApp.jsx`
+
+アプリを、`StrictMode`と`ErrorBoundary`で包んで描画する（[#1380](https://github.com/bamiyanapp/dev-standards/issues/1380)）。
+どのプロダクトの`main.jsx`も、同じ包み方をする。違うのは、報告先URL等の値だけである。
+
+```jsx
+import renderApp from "./renderApp.jsx"; // symlink
+renderApp(<><App /><PwaUpdatePrompt /></>, { reportUrl: `${API_BASE_URL}/report-client-error` });
+```
+
+- 第2引数は、`reportUrl`・`fallbackUrl`・`renderFallback`・`rootElement`である。前の3つは`ErrorBoundary`へ渡す
+- `rootElement`を省略すると、`id="root"`の要素へ描画する。無ければ、分かる文言のエラーにする
+- 戻り値は、`createRoot`が返すrootである
+
+`AppShell`（先読み・キャッシュの温め・更新通知の組み立て）の汎用化は、まだ行っていない。examinationの実装を参照できる状態で、別に進める。
 
 ### `shared/ui/ErrorBoundary.jsx`
 
