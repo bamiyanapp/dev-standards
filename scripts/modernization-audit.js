@@ -7,9 +7,14 @@
 // 達成済みの観点は索引issueの表へ根拠とともに記録し、未達の観点だけをissueにする運用を支える。
 //
 // 使い方: node dev-standards/scripts/modernization-audit.js [リポジトリのルート] [--format=markdown|text]
+//          [--run=<CIのrun_id> --repo=owner/name]
 // 判定のみで、参照側への変更はしない。標準モジュールだけで動く。
-// CIの実行結果（ステップがskippedでないか）の取得（--run）は、認証・レート制限の扱いを決めてから
-// 追加する（issue #1463）。そのため、実行結果の確認が必要な観点は「要確認」とし、確認方法を根拠に書く。
+// --runなしでは、実行結果の確認が必要な観点を「要確認」とし、確認方法を根拠に書く。
+// --run（issue #1503）を付けると、GitHub APIでCIのジョブのステップの結果を取得し、
+// 「要確認」の観点を「達成」または「未達」へ変える。
+//   認証: 環境変数GITHUB_TOKENで受ける。未指定なら、--runは使えない（エラーで終わる）。
+//   レート制限: 呼び出しは、ジョブ一覧の取得（1ページ100件、最大3ページ）だけである。
+//   トークンはログへ出さない。
 
 const fs = require("fs");
 const path = require("path");
@@ -217,6 +222,53 @@ function audit(root) {
   return results;
 }
 
+// --run（issue #1503）: CIのジョブのステップの結果で、「要確認」の観点を判定する。
+// jobsは、GitHub APIのジョブ一覧（{ name, steps: [{ name, conclusion }] }の配列）
+const RUN_CHECKS = [
+  { perspective: "フロントエンド単体テスト", jobName: "フロントエンドテスト", stepPrefix: "カバレッジ閾値を確認する" },
+  { perspective: "バックエンドAPIを持つ場合のテスト", jobName: "バックエンドテスト", stepPrefix: "カバレッジ閾値を確認する" },
+];
+
+function judgeStep(step, jobName) {
+  const seen = `${jobName}「${step.name}」: ${step.conclusion}`;
+  if (step.conclusion === "success") return { status: STATUS.ACHIEVED, evidence: `CIの実行結果で、閾値の判定が実行され成功した（${seen}）` };
+  if (step.conclusion === "skipped") return { status: STATUS.MISSING, evidence: `CIの実行結果で、閾値の判定がスキップされた（${seen}）` };
+  if (step.conclusion === "failure") return { status: STATUS.MISSING, evidence: `CIの実行結果で、閾値の判定が失敗した（${seen}）` };
+  return null;
+}
+
+function applyRunResults(results, jobs) {
+  return results.map((r) => {
+    const check = RUN_CHECKS.find((c) => c.perspective === r.perspective);
+    if (!check || r.status !== STATUS.CHECK) return r;
+    const job = jobs.find((j) => String(j.name).includes(check.jobName));
+    const step = job && (job.steps || []).find((st) => String(st.name).startsWith(check.stepPrefix));
+    if (!step) return { ...r, evidence: `${r.evidence}（指定したrunに、${check.jobName}の「${check.stepPrefix}」ステップが見つからない）` };
+    const judged = judgeStep(step, job.name);
+    return judged ? result(r.perspective, judged.status, judged.evidence) : r;
+  });
+}
+
+const MAX_JOB_PAGES = 3;
+
+async function fetchRunJobs({ repo, runId, token, fetchImpl = fetch }) {
+  const jobs = [];
+  for (let page = 1; page <= MAX_JOB_PAGES; page += 1) {
+    const url = `https://api.github.com/repos/${repo}/actions/runs/${runId}/jobs?per_page=100&page=${page}`;
+    const res = await fetchImpl(url, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+    });
+    if (!res.ok) {
+      const hint = res.status === 403 || res.status === 429 ? "（レート制限、または権限不足の可能性がある）" : "";
+      throw new Error(`GitHub APIの呼び出しに失敗した: HTTP ${res.status}${hint}`);
+    }
+    const body = await res.json();
+    jobs.push(...(body.jobs || []));
+    if ((body.jobs || []).length < 100) break;
+  }
+  return jobs;
+}
+
 const ESCAPE_PIPE = (text) => String(text).replace(/\|/g, "\\|");
 
 function formatMarkdown(results) {
@@ -230,16 +282,30 @@ function formatText(results) {
   return results.map((r) => `[${r.status}] ${r.perspective}: ${r.evidence}`).join("\n") + "\n";
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const format = (args.find((a) => a.startsWith("--format=")) || "--format=text").split("=")[1];
   const root = path.resolve(args.find((a) => !a.startsWith("--")) || process.cwd());
-  const results = audit(root);
+  let results = audit(root);
+  const runArg = args.find((a) => a.startsWith("--run="));
+  if (runArg) {
+    const repoArg = args.find((a) => a.startsWith("--repo="));
+    const token = process.env.GITHUB_TOKEN;
+    if (!repoArg || !token) {
+      process.stderr.write("--runには、--repo=owner/name と、環境変数GITHUB_TOKENが要る\n");
+      process.exit(1);
+    }
+    const jobs = await fetchRunJobs({ repo: repoArg.split("=")[1], runId: runArg.split("=")[1], token });
+    results = applyRunResults(results, jobs);
+  }
   process.stdout.write(format === "markdown" ? formatMarkdown(results) : formatText(results));
 }
 
-module.exports = { audit, formatMarkdown, formatText, STATUS };
+module.exports = { audit, formatMarkdown, formatText, STATUS, applyRunResults, fetchRunJobs };
 
 if (require.main === module) {
-  main();
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(1);
+  });
 }

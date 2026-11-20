@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { audit, formatMarkdown, formatText, STATUS } = require("./modernization-audit.js");
+const { audit, formatMarkdown, formatText, STATUS, applyRunResults, fetchRunJobs } = require("./modernization-audit.js");
 
 function withRepo(files, fn) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "audit-"));
@@ -151,4 +151,67 @@ test("formatMarkdown: 索引issueへ貼れる表と件数を出し、根拠の|�
 
 test("formatText: 1観点1行", () => {
   assert.equal(formatText([{ perspective: "A", status: STATUS.NA, evidence: "e" }]), "[対象外] A: e\n");
+});
+
+// --run（issue #1503）: GitHub APIの応答をスタブして、ステップの結果で「要確認」を判定する
+const checkResults = () => [
+  { perspective: "フロントエンド単体テスト", status: STATUS.CHECK, evidence: "元の根拠" },
+  { perspective: "バックエンドAPIを持つ場合のテスト", status: STATUS.CHECK, evidence: "元の根拠" },
+  { perspective: "カバレッジの計測対象", status: STATUS.MISSING, evidence: "変えない" },
+];
+const jobsWith = (frontendConclusion, backendConclusion) => [
+  { name: "ci / フロントエンドテスト", steps: [{ name: "Checkout", conclusion: "success" }, { name: "カバレッジ閾値を確認する", conclusion: frontendConclusion }] },
+  { name: "ci / バックエンドテスト", steps: [{ name: "カバレッジ閾値を確認する（1回目/2回）", conclusion: backendConclusion }] },
+  { name: "ci / フロントエンドE2Eテスト", steps: [{ name: "カバレッジ閾値を確認する", conclusion: "skipped" }] },
+];
+
+test("applyRunResults: skippedのステップは「未達」、successは「達成」と判定し、見たステップ名を根拠に書く", () => {
+  const out = applyRunResults(checkResults(), jobsWith("skipped", "success"));
+  const frontend = find(out, "フロントエンド単体テスト");
+  assert.equal(frontend.status, STATUS.MISSING);
+  assert.match(frontend.evidence, /スキップされた/);
+  assert.match(frontend.evidence, /カバレッジ閾値を確認する/);
+  const backend = find(out, "バックエンドAPIを持つ場合のテスト");
+  assert.equal(backend.status, STATUS.ACHIEVED);
+  assert.match(backend.evidence, /1回目\/2回/);
+});
+
+test("applyRunResults: E2Eのジョブを、フロントエンド単体テストと取り違えない", () => {
+  const jobs = [{ name: "ci / フロントエンドE2Eテスト", steps: [{ name: "カバレッジ閾値を確認する", conclusion: "skipped" }] }];
+  const out = applyRunResults(checkResults(), jobs);
+  assert.equal(find(out, "フロントエンド単体テスト").status, STATUS.CHECK);
+});
+
+test("applyRunResults: failureは「未達」、ステップが無い場合は「要確認」のまま、他の観点は変えない", () => {
+  const failed = applyRunResults(checkResults(), jobsWith("failure", "success"));
+  assert.equal(find(failed, "フロントエンド単体テスト").status, STATUS.MISSING);
+  assert.match(find(failed, "フロントエンド単体テスト").evidence, /失敗/);
+  const none = applyRunResults(checkResults(), []);
+  assert.equal(find(none, "フロントエンド単体テスト").status, STATUS.CHECK);
+  assert.match(find(none, "フロントエンド単体テスト").evidence, /見つからない/);
+  assert.equal(find(failed, "カバレッジの計測対象").evidence, "変えない");
+});
+
+test("fetchRunJobs: 認証ヘッダーを付けてジョブ一覧を取得し、100件ならつぎのページも取る", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, auth: init.headers.Authorization });
+    const jobs = calls.length === 1 ? Array.from({ length: 100 }, (_, i) => ({ name: `j${i}` })) : [{ name: "last" }];
+    return { ok: true, status: 200, json: async () => ({ jobs }) };
+  };
+  const jobs = await fetchRunJobs({ repo: "o/r", runId: "42", token: "TOKEN", fetchImpl });
+  assert.equal(jobs.length, 101);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].url, /repos\/o\/r\/actions\/runs\/42\/jobs\?per_page=100&page=1/);
+  assert.equal(calls[0].auth, "Bearer TOKEN");
+});
+
+test("fetchRunJobs: 失敗時は、トークンを含めずにエラーにする（403はレート制限・権限の可能性を示す）", async () => {
+  const fetchImpl = async () => ({ ok: false, status: 403, json: async () => ({}) });
+  await assert.rejects(fetchRunJobs({ repo: "o/r", runId: "1", token: "SECRET", fetchImpl }), (error) => {
+    assert.match(error.message, /HTTP 403/);
+    assert.match(error.message, /レート制限/);
+    assert.equal(error.message.includes("SECRET"), false);
+    return true;
+  });
 });

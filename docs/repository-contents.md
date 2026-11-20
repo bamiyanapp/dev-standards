@@ -23,7 +23,11 @@
 - `.github/actions/render-mermaid-diagrams/`: Markdown中の```` ```mermaid ```` ブロックを対象とする複合actionである。`@mermaid-js/mermaid-cli`でPNG画像へ事前レンダリングする。`reusable-ci.yml`の`render-mermaid-diagrams` job（`enable_mermaid_render`入力）から利用する。
 - `.github/actions/tracking-issue-sync/`: 「検知結果を固定タイトルの単一issueへ反映する」制御フローを共通化した複合action（issue #1172）である。タイトルで既存issueを検索し、検知有りなら作成/更新、検知無しならクローズする。3つの定期スキャン系reusable workflow（依存フルスキャン・deprecatedスキャン・ランタイムバージョンスキャン）が利用する。issue本文の組み立て（表の列・文言等）は呼び出し元の責務のまま残す。
 - `.github/actions/notify-cd-failure/`: CDの失敗を通知する複合action（issue #1452）。固定タイトルの未解決issueがあればコメントし、無ければ起票する。LINEのトークンとユーザーIDが両方あれば、LINEにも送る。CDの最後に、`if: failure()`のjobで呼ぶ。`issues: write`が要る。
-- `scripts/modernization-audit.js`: モダナイズ観点の達成状況を、リポジトリのファイルから判定して表にする（issue #1463）。観点リストは[`ai-driven-app-curriculum.md`](ai-driven-app-curriculum.md)にある。`node dev-standards/scripts/modernization-audit.js [ルート] [--format=markdown]`で実行する。判定は`達成`・`未達`・`対象外`・`要確認`である。CIの実行結果（ステップがskippedでないか）の取得は、認証とレート制限の扱いを決めてから追加する。
+- `scripts/modernization-audit.js`: モダナイズ観点の達成状況を、リポジトリのファイルから判定して表にする（issue #1463）。観点リストは[`ai-driven-app-curriculum.md`](ai-driven-app-curriculum.md)にある。`node dev-standards/scripts/modernization-audit.js [ルート] [--format=markdown]`で実行する。判定は`達成`・`未達`・`対象外`・`要確認`である。`--run=<CIのrun_id> --repo=owner/name`を付けると、CIのステップの結果で、`要確認`を`達成`または`未達`へ変える（issue #1503）。
+  - 対象は、「カバレッジ閾値を確認する」ステップが`skipped`でないかである。フロントエンドとバックエンドのテストを見る
+  - 認証は、環境変数`GITHUB_TOKEN`で受ける。未指定なら、`--run`はエラーで終わる。トークンは出力しない
+  - レート制限への配慮として、呼び出しはジョブ一覧の取得だけである。1ページ100件で、最大3ページにする
+  - `--run`なしの動作と出力は変わらない
 - `scripts/verify-lambda-package.js`: `serverless package`で作ったzipを展開し、全ハンドラを読み込めるかを検証する（issue #1452）。禁止ファイル（テスト等）の混入も検出する。`deploy-serverless`複合actionの`verify-package: true`で使う。`package.individually: true`の構成は対象外である。
 - `.github/actions/resolve-serverless-backend-url/`: backendのAPI Gateway URLを解決する複合action（issue #1173）。Serverless Frameworkの`osls info`を使う。ブルーグリーン（stable/canary）パターンでは、スタックの削除・再作成のたびにURLが変わる。このため毎回都度解決する必要がある。`stage`・`working-directory`を入力に取り、`backend-url`を出力する。依存パッケージのインストールは呼び出し元の責務である。
 - `.github/actions/generate-dev-standards-version-doc/`: 採用中バージョンをREADME等へ表示する複合action（issue #1197）。`.github/workflows/*.yml`内の`uses:`参照を走査する。対象Markdownファイル内のマーカー（`<!-- dev-standards-version:start -->`〜`<!-- dev-standards-version:end -->`）間へ書き込む。`markdown-path`（既定`README.md`）・`workflows-dir`（既定`.github/workflows`）を入力に取る。バージョンが複数混在する場合は不一致の旨を明示する。karuta issue #1898/#1899の実装を一般化したものである。
