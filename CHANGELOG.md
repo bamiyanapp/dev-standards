@@ -1,3 +1,10 @@
+## [2.150.7](https://github.com/bamiyanapp/dev-standards/compare/v2.150.6...v2.150.7) (2026-11-20)
+
+
+### Bug Fixes
+
+* **ci:** commit-via-prが、必須チェック待ちでマージできなくても、workflowを失敗にしない ([#1517](https://github.com/bamiyanapp/dev-standards/issues/1517)) ([d189098](https://github.com/bamiyanapp/dev-standards/commit/d189098104673a520ca8103014066b73e7e84245)), closes [#1500](https://github.com/bamiyanapp/dev-standards/issues/1500)
+
 ## [2.150.6](https://github.com/bamiyanapp/dev-standards/compare/v2.150.5...v2.150.6) (2026-11-20)
 
 
