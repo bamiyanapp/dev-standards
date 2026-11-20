@@ -36,6 +36,24 @@ ESLint設定は、参照側が個別に持つ。規約へルールを足して�
 
 `oxlint`を使うプロダクトでは、対応するルールの有無を確認する。共有設定の整備は#1376で扱う。
 
+### 共有ルール（`shared/config/eslint.shared-rules.js`）
+
+alert禁止・fetch直接呼び出し禁止・肥大化検知を、共有ルールとして配布する（[#1537](https://github.com/bamiyanapp/dev-standards/issues/1537)）。
+プラグインに依存しない。ESLint本体のルールだけなので、参照側にパッケージの追加は要らない。
+
+```js
+import { createSharedRules } from './eslint.shared-rules.js'; // symlink
+export default defineConfig([ /* ... */ createSharedRules() ]);
+```
+
+- 既定の重要度は`warn`である。違反のある参照側が、段階的に`error`へ上げられる
+- `createSharedRules({ level: 'error', maxLines: 300 })`のように、重要度と上限を上書きできる
+- 含むルールは5つである。`no-alert`・`no-restricted-globals`（`fetch`）・`max-lines`
+- 残りは、`max-lines-per-function`と`complexity`である
+- `fetch`を直接呼んでよいファイルは、別の設定オブジェクトで`no-restricted-globals`を`off`にする
+- 対象は、api層やdev-standards由来のsymlinkである。`ignores`で絞り、理由をコメントで残す
+- 参照側が同じルールを個別に持つ場合は、この共有ルールへ置き換える。後に書いた設定が優先される
+
 ### ESLint導入時に遭遇する問題
 
 shock-labのoxlintからの移行（約3,000行、エラー9件）で当たった問題である。他のプロダクトでも同じ問題に当たる。
