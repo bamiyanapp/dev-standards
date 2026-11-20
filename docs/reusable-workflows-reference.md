@@ -574,6 +574,8 @@ notify-failure:
 
 処理の本体は`notify.js`にあり、`notify.test.js`でghをスタブして検証している（起票・コメント・PRの除外）。
 
+`reusable-cd.yml`へは組み込まない。`issues: write`を持つjobを足すと、`if:`で止めても、GitHubが権限を静的に検査する。許可していない呼び出し元は、起動失敗になる（[#1334](https://github.com/bamiyanapp/dev-standards/issues/1334)）。呼び出し元の`cd.yml`に、上記のjobを書く。
+
 ## `deploy-serverless`のデプロイパッケージ検証（`verify-package`）
 
 `serverless package`で作ったzipを展開し、`serverless.yml`の全ハンドラを読み込めることを、デプロイ前に検証する（issue #1452）。symlink先の欠落や`package.patterns`の誤りで、zipからファイルが抜けても、`serverless package`は成功する。デプロイ後に、全関数が`Cannot find module`で起動に失敗する。
