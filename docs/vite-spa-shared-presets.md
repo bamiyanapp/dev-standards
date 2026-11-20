@@ -47,19 +47,22 @@ import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import createViteConfig from '../../dev-standards/shared/ui/createViteConfig.js'
+// import getSymlinkCoverageExcludes from '../../dev-standards/shared/ui/getSymlinkCoverageExcludes.js'
 
 export default defineConfig(
   createViteConfig({
     base: '/education/',
     plugins: [react()],
     vitestExclude: configDefaults.exclude,
+    // 共有コンポーネントをカバレッジから除外する場合（任意）
+    // coverageExclude: getSymlinkCoverageExcludes({ manifestPath: '../../sync-manifest.local.json', appDir: 'app/education-overview' }),
   }),
 )
 ```
 
 - **vite・vitestをヘルパー内でimportしない**: symlink共有では、参照側の`node_modules`を解決できない。そのため、`defineConfig`・プラグイン・`configDefaults`は、アプリ側で渡す
 - **型定義が必要**: `vite.config.ts`は`tsc -b`の型検査の対象である。型定義の無い`.js`をimportすると、`TS7016`で`npm run build`が失敗する。`createViteConfig.d.ts`が、同じ場所に同梱されている
-- **カバレッジの除外**: symlink共有のコンポーネントは、`preserveSymlinks`により、`src`配下のパスとして集計される。除外が必要なら、`coverageExclude`を渡す
+- **カバレッジの除外**: symlink共有のコンポーネントは、`preserveSymlinks`により、`src`配下のパスとして集計される。共有コンポーネントのテストは、dev-standards側にある。除外する場合は、`getSymlinkCoverageExcludes`の結果を、`coverageExclude`へ渡す。`sync-manifest.local.json`から、symlinkの配置先を読む
 - **上書き**: `overrides`で、設定を追加・上書きできる。オブジェクトは再帰的に合成し、配列は置き換える
 
 ## oxlint
