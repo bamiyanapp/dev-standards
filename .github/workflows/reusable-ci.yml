@@ -374,6 +374,25 @@ on:
           導入時は既存の参照側が違反になりうるため、`warn`で始める。
         type: string
         default: "warn"
+      enable_cdn_fonts_check:
+        description: >-
+          HTML・CSS・JS/TSに、Google FontsのCDN（fonts.googleapis.com・fonts.gstatic.com）の
+          読み込みが残っていないかを検査する`cdn-fonts-check` jobを実行するかどうか
+          （bamiyanapp/dev-standards#1511）。`self_ref`の指定も必要である。
+          npmの`@fontsource`での同梱を推奨する。除外する行には、`dev-standards-allow-cdn-fonts`
+          （理由を添える）と書く。テスト（*.test.*・*.spec.*）とe2eディレクトリは検査しない。
+        type: boolean
+        default: false
+      cdn_fonts_paths:
+        description: "`enable_cdn_fonts_check`の検査対象のパス（ファイルまたはディレクトリ）。カンマまたは改行区切りで複数指定できる。"
+        type: string
+        default: "."
+      cdn_fonts_mode:
+        description: >-
+          `warn`は、CDNの読み込みがあっても失敗にせず、警告だけを出す。`fail`は、あれば失敗にする。
+          導入時は既存の参照側が違反になりうるため、`warn`で始める。
+        type: string
+        default: "warn"
       enable_eslint_rules_check:
         description: >-
           参照側のESLint設定が、docs/code-quality-conventions.mdの必須ルール（complexity・max-lines・
@@ -2533,6 +2552,41 @@ jobs:
           { echo "## セキュリティヘッダーの関連付けの検査"; echo; sed '/^::warning/d' /tmp/security-headers.txt; } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
+  cdn-fonts-check:
+    name: "Google Fonts CDN読み込みの検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_cdn_fonts_check &&
+      inputs.self_ref != '' &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+      - name: dev-standardsをチェックアウトする
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - name: Google FontsのCDN読み込みを検査する
+        env:
+          PATHS: ${{ inputs.cdn_fonts_paths }}
+          MODE: ${{ inputs.cdn_fonts_mode }}
+        run: |
+          set -eu
+          targets=$(printf '%s' "$PATHS" | tr ',' ' ')
+          status=0
+          node .dev-standards-actions/scripts/check-cdn-fonts.js "$MODE" $targets > /tmp/cdn-fonts.txt || status=$?
+          cat /tmp/cdn-fonts.txt
+          { echo "## Google Fonts CDN読み込みの検査"; echo; sed '/^::warning/d' /tmp/cdn-fonts.txt; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
   eslint-rules-check:
     name: "ESLint必須ルールの検査"
     needs: commitlint
@@ -3315,7 +3369,7 @@ jobs:
     # lighthouse-ci等の完了前に「自動マージの対象です」という判定を投稿してしまう
     # ことがあった。merge job（このファイル内）のneedsからdependency-risk-summary
     # 自身を除いた全件と一致させ、CI全体の完了後にのみ投稿されるようにする
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, eslint-rules-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, cdn-fonts-check, eslint-rules-check, render-mermaid-diagrams, bundle-size-check, lighthouse-ci]
     if: |
       always() &&
       inputs.enable_dependency_risk_summary &&
@@ -4130,7 +4184,7 @@ jobs:
   # `!contains(['failure', 'cancelled'], needs.<job>.result)`の並びと同じである
   checks-gate:
     name: "チェックの集約"
-    needs: [standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, eslint-rules-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
+    needs: [standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, cdn-fonts-check, eslint-rules-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci]
     if: always() && inputs.enable_auto_merge && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -4147,7 +4201,7 @@ jobs:
 
   merge:
     name: "自動マージ"
-    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, eslint-rules-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci, checks-gate]
+    needs: [commitlint, frontend-test, backend-test, package-test, frontend-e2e-test, standards-check, duplication-check, doc-duplication-check, workflow-duplication-check, architecture-check, text-lint, dead-link-check, doc-reachability-check, secret-scan, dynamodb-protection-check, iam-actions-check, security-headers-check, cdn-fonts-check, eslint-rules-check, render-mermaid-diagrams, dependency-risk-summary, bundle-size-check, lighthouse-ci, checks-gate]
     # 前回の修正（!contains(...'failure','cancelled'..., needs.package-test.result)への
     # 変更）では実際には直らなかった（bamiyanapp/examination#8・#15で再現）。原因を
     # 実機の使い捨てワークフローで検証した結果、通常のif条件によるジョブskip（例:
