@@ -39,6 +39,21 @@ export default function ConfirmDialog({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  // 背景（::backdrop）のクリックは、dialog要素自身へのクリックとして届く。
+  // JSXのonClickで受けると、参照側のa11y lint（jsx-a11yのclick-events-have-key-events・
+  // no-noninteractive-element-interactions）が違反とする。キーボードの操作は、ネイティブの
+  // <dialog>のEscキー（onCancel）で足りる。プラグイン名が参照側で異なる（jsx-a11y・jsx-a11y-x）
+  // ため、eslint-disableではなく、addEventListenerで受ける（dev-standards#1490）
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return undefined;
+    const handleBackdropClick = (event) => {
+      if (event.target === dialog && !busy) onCancel?.();
+    };
+    dialog.addEventListener("click", handleBackdropClick);
+    return () => dialog.removeEventListener("click", handleBackdropClick);
+  }, [busy, onCancel]);
+
   async function handleConfirm() {
     setBusy(true);
     try {
@@ -57,10 +72,6 @@ export default function ConfirmDialog({
         // Escキーでブラウザが閉じる前に、呼び出し側の状態（open）へ反映させる
         event.preventDefault();
         if (!busy) onCancel?.();
-      }}
-      onClick={(event) => {
-        // ::backdropのクリックは、dialog要素自身へのクリックとして届く
-        if (event.target === ref.current && !busy) onCancel?.();
       }}
     >
       {open && (
