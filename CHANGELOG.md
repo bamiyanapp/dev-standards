@@ -1,3 +1,10 @@
+# [2.165.0](https://github.com/bamiyanapp/dev-standards/compare/v2.164.0...v2.165.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** アプリの描画を包むrenderAppをshared/uiで配布する ([#1562](https://github.com/bamiyanapp/dev-standards/issues/1562)) ([6df0618](https://github.com/bamiyanapp/dev-standards/commit/6df06185f8a2c4dfc1605157b75325f9c9052371)), closes [#1380](https://github.com/bamiyanapp/dev-standards/issues/1380)
+
 # [2.164.0](https://github.com/bamiyanapp/dev-standards/compare/v2.163.0...v2.164.0) (2026-11-20)
 
 
