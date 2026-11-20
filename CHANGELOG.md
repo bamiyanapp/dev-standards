@@ -1,3 +1,10 @@
+# [2.170.0](https://github.com/bamiyanapp/dev-standards/compare/v2.169.0...v2.170.0) (2026-11-20)
+
+
+### Features
+
+* **standards-check:** Renovateの共有プリセットの継承を警告する ([#1569](https://github.com/bamiyanapp/dev-standards/issues/1569)) ([b842a65](https://github.com/bamiyanapp/dev-standards/commit/b842a6554676bb18576c51ade1a3204faf3318e7)), closes [#1370](https://github.com/bamiyanapp/dev-standards/issues/1370)
+
 # [2.169.0](https://github.com/bamiyanapp/dev-standards/compare/v2.168.0...v2.169.0) (2026-11-20)
 
 
