@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "dev-standardsの参照側リポジトリへ共有するRenovate設定のプリセット（dev-standards#1370）。参照側は、renovate.jsonの`extends`へ`github>bamiyanapp/dev-standards`を書いて継承する。プリセットは既定ブランチの最新を読むため、この設定を変えると、継承している全参照側へ、即時に反映される。参照側固有の設定（packageRulesの上限固定等）は、参照側のrenovate.jsonに書く。`extends`の後に書いた設定が優先される。minimumReleaseAge: 公開直後のバージョンはコミュニティ検証が済んでいないため、リリースから3日間はPRを作成させず、異常発覚の猶予期間を作る（issue #647 Phase 2 8-3）。lockFileMaintenance: 間接依存は親パッケージのバージョン範囲内で解決されるため、親の更新PRが来ない限りRenovateは通常関知しない。range内で解決可能な新しいバージョンへ週次でlockfile全体を再生成し、放置を防ぐ（issue #1094）。git-submodules: dev-standardsをsubmoduleとして参照するため、Renovateの既定では無効なマネージャーを有効にする。stylelint: peer依存の片側だけが更新されて壊れる問題への対処（examination#624・#625）",
+  "extends": [
+    "config:recommended"
+  ],
+  "git-submodules": {
+    "enabled": true
+  },
+  "rebaseWhen": "behind-base-branch",
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "every weekend"
+    ]
+  },
+  "packageRules": [
+    {
+      "groupName": "stylelint",
+      "matchPackageNames": [
+        "stylelint",
+        "stylelint-config-standard"
+      ],
+      "separateMajorMinor": false
+    }
+  ]
+}
