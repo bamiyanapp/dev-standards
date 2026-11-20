@@ -50,6 +50,23 @@ flowchart TD
 
 **Renovate対応中PRの重複検知対策（issue #1163）**。フルスキャンはRenovateが既に対応PRを作成済みかどうかを元々見ていなかった。`minimumReleaseAge`待機中・Human Review待ち等のPRが既に存在する脆弱性も「新規検知」として重複して固定issueへ反映してしまう問題があった。パッケージ名をタイトルに含むopenなPRが存在する場合、issue本文の「対応PR」列へその番号を記載するようにした（`findRelatedPullRequest()`）。タイトル文字列の部分一致による簡易な判定のため、誤検出（無関係なPRが偶然同じ文字列を含む等）の可能性は残る。あくまで人間の判断を補助する目安であり、修正PRの自動作成・自動クローズの判断には使わない。
 
+## 推奨するcron頻度と、導入状況（[#1369](https://github.com/bamiyanapp/dev-standards/issues/1369)）
+
+定期スキャンは、再利用ワークフローが`workflow_call`のみのため、`schedule`トリガーを、呼び出し側が用意する。頻度は、検知までの許容ラグで決める。
+
+| スキャン | 推奨の頻度 | 理由 |
+|---|---|---|
+| `reusable-dependency-full-scan.yml` | 毎日 | 新規CVEの公開から、検知までの遅れを、最大1日にする |
+| `reusable-dependency-deprecation-scan.yml` | 週次 | deprecatedは、緊急性が低い。通知の量も抑える |
+| `reusable-secret-full-scan.yml` | 週次 | 過去の履歴に残るシークレットの検知で、変化が遅い |
+| `reusable-runtime-version-scan.yml` | 週次 | Lambdaのランタイムの期限は、数か月単位で変わる |
+
+- **cronの分は、0にしない**: GitHubのscheduleは、毎時0分に集中して遅れる。分をずらす（例: `17 21 * * *`）
+- **UTCで書く**: `cron`は、UTCである。日本時間の朝に結果が届くよう、前日の夜（UTC）に動かす
+- **複数のscheduleは、`github.event.schedule`で分ける**: 1つのworkflowに、頻度の違うcronを書く。各jobの`if:`で、動かすcronを指定する
+
+dev-standards自身は、`periodic-scans.yml`で、3つのスキャンを動かしている。依存フル脆弱性スキャンは毎日、依存deprecatedスキャンとシークレット遡及スキャンは週次である。ランタイムのスキャンは、検査するエンドポイントが無いため、対象外である。
+
 ## dev-standards自身のリリースにおけるRisk判定履歴の生成（issue #746 Phase 2）
 
 dev-standards自体の依存更新を考える。Renovate等によるPRがmainへマージされ、semantic-releaseが新バージョンをリリースする際のRisk判定結果を記録したい。各プロダクトリポジトリ（karuta等）が参照できるよう`docs/generated/dependency-risk-history.json`へ機械可読な形で残す。プロダクト側がこの履歴を読み出して利用する処理は[`dependency-risk-judgment-renovate-logic.md`](dependency-risk-judgment-renovate-logic.md)「プロダクト側（karuta等）での利用」を参照する。

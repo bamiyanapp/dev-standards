@@ -1,0 +1,53 @@
+name: Periodic Scans
+
+# dev-standards#1369: dev-standards自身にも、参照側と同じ定期スキャンを適用する。
+# 再利用ワークフローは、workflow_callのみで、scheduleトリガーは呼び出し側が持つ設計である。
+# 自身のpackage-lock.jsonに対する定期スキャンが、これまで無かった。
+#
+# 頻度（docs/dependency-risk-judgment-periodic-scans.md「推奨するcron頻度」）:
+#   - 依存フル脆弱性スキャン: 毎日。新規CVEの公開から、検知までの遅れを、最大1日にする
+#   - 依存deprecatedスキャン・シークレット遡及スキャン: 週次（月曜）
+# ランタイムのNode.jsバージョン遅延スキャンは、検査するエンドポイント（Lambda）が無いため、対象外である。
+
+on:
+  schedule:
+    - cron: "17 21 * * *"
+    - cron: "47 21 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-full-scan:
+    name: "依存フル脆弱性スキャン"
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 21 * * *'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-dependency-full-scan.yml
+    with:
+      self_ref: ${{ github.sha }}
+      lockfile_path: package-lock.json
+
+  dependency-deprecation-scan:
+    name: "依存deprecatedスキャン"
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '47 21 * * 1'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/reusable-dependency-deprecation-scan.yml
+    with:
+      self_ref: ${{ github.sha }}
+      lockfile_path: package-lock.json
+
+  secret-full-scan:
+    name: "シークレット遡及スキャン"
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '47 21 * * 1'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/reusable-secret-full-scan.yml
+    with:
+      self_ref: ${{ github.sha }}
