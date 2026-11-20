@@ -135,6 +135,9 @@ PRコメントのサマリーは、既定では起動成否・ヘルスチェッ
   - `merge`（`enable_auto_merge: true`（デフォルト）の場合のみ）: PR の場合、テスト成功後に自動マージする。マージ方式は`base_branch` へのSquash mergeで、作業ブランチも削除する。バージョン計算・タグ付け・GitHub Release作成は行わない（`reusable-cd.yml` 側に移動、後述）
   - このジョブは **`merge-queue-<repository>` という固定名の `concurrency` グループで直列化**されている。複数 PR が同時にマージされても順番に処理される（キャンセルはされない）
   - `enable_auto_merge: false` を指定すると `merge` job がスキップされ、CI チェックのみを行う。マージは人手で行う必要がある
+  - 下書き（draft）のPRは、CIが成功しても自動マージしない（[#1532](https://github.com/bamiyanapp/dev-standards/issues/1532)）
+  - 下書きを通常のPRにした時にCIを再実行するには、呼び出し側の`ci.yml`で`on.pull_request.types`へ`ready_for_review`を足す
+  - 足していない参照側では、通常のPRにした後、次のpushまでマージされない
 
 **複数アプリ向けの1 job per appパターンでのマージ（[issue #421](https://github.com/bamiyanapp/dev-standards/issues/421)）**: `reusable-ci.yml`を独立して複数回呼び出す構成を指す。`frontend_dir`はmatrix非対応でスカラー値のみである。E2E対象アプリが複数ある場合、参照側の`ci.yml`が`reusable-ci.yml`を独立した複数のjob（例: `ci`・`e2e-app2`）として呼び出す構成を取ることがある。この場合、各呼び出しがそれぞれ**別々の`merge` job**を持つ。`enable_auto_merge: true`のままだと、片方の呼び出しが自身の完全な成功を確認して先にマージしてしまう。もう片方がまだ失敗中・実行中でもPRがマージされてしまう。この構成を取る場合は、以下のようにする。
 
