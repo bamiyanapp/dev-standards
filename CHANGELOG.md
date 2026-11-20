@@ -1,3 +1,10 @@
+# [2.157.0](https://github.com/bamiyanapp/dev-standards/compare/v2.156.0...v2.157.0) (2026-11-20)
+
+
+### Features
+
+* **scripts:** 再利用ワークフローが呼び出し側へ要求するものを契約ファイルへ記録する ([#1544](https://github.com/bamiyanapp/dev-standards/issues/1544)) ([9cda687](https://github.com/bamiyanapp/dev-standards/commit/9cda6872f49cd308fe93cefdbe10931b3a9ae754)), closes [#1334](https://github.com/bamiyanapp/dev-standards/issues/1334)
+
 # [2.156.0](https://github.com/bamiyanapp/dev-standards/compare/v2.155.0...v2.156.0) (2026-11-20)
 
 
