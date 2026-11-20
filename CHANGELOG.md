@@ -1,3 +1,10 @@
+# [2.153.0](https://github.com/bamiyanapp/dev-standards/compare/v2.152.1...v2.153.0) (2026-11-20)
+
+
+### Features
+
+* **skills:** dev-standards更新の取り込み確認を行うSkillを追加する ([#1526](https://github.com/bamiyanapp/dev-standards/issues/1526)) ([e645a37](https://github.com/bamiyanapp/dev-standards/commit/e645a374a29898e69b419157e4ee587d51370e59)), closes [#1525](https://github.com/bamiyanapp/dev-standards/issues/1525)
+
 ## [2.152.1](https://github.com/bamiyanapp/dev-standards/compare/v2.152.0...v2.152.1) (2026-11-20)
 
 
