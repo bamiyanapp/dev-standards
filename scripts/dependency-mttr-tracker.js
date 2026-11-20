@@ -49,14 +49,17 @@ function updateLedger(ledger, currentFindings, nowIso) {
     }
   }
 
+  // added: この回で初めて台帳に載った検知（dev-standards#1373。新規検知の通知に使う）
+  const added = [];
   for (const f of currentFindings) {
     const key = findingKey(f);
     if (!ledgerByKey.has(key)) {
       nextLedger.push({ key, name: f.name, version: f.version, firstDetectedAt: nowIso });
+      added.push(f);
     }
   }
 
-  return { ledger: nextLedger, resolved };
+  return { ledger: nextLedger, resolved, added };
 }
 
 // history: updateLedgerのresolvedをappendし続けた配列。sinceIso以降に解消された
