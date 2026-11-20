@@ -19,6 +19,14 @@ describe("ShareButton", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("背景（backdrop）をクリックすると閉じる（dev-standards#1541）", () => {
+    const { container } = render(<ShareButton label="共有" getUrl={() => "https://example.com/c"} />);
+    fireEvent.click(screen.getByRole("button", { name: "共有" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.click(container.ownerDocument.querySelector(".modal-backdrop"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("URLをコピーするとクリップボードへ書き込み、表示が変わる", async () => {
     const writeText = vi.fn().mockResolvedValue();
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
