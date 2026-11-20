@@ -1,3 +1,10 @@
+## [2.162.3](https://github.com/bamiyanapp/dev-standards/compare/v2.162.2...v2.162.3) (2026-11-20)
+
+
+### Bug Fixes
+
+* **ui:** ShareButton・NavigationOverlayのjsx-a11y警告を解消する ([#1556](https://github.com/bamiyanapp/dev-standards/issues/1556)) ([aa7865a](https://github.com/bamiyanapp/dev-standards/commit/aa7865afe909758bdc8363e81be0fbd58b5fe8b8)), closes [#1541](https://github.com/bamiyanapp/dev-standards/issues/1541)
+
 ## [2.162.2](https://github.com/bamiyanapp/dev-standards/compare/v2.162.1...v2.162.2) (2026-11-20)
 
 
