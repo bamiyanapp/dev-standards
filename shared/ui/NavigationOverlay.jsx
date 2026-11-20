@@ -28,7 +28,7 @@ export default function NavigationOverlay() {
       className="nav-overlay position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center"
       aria-hidden="true"
     >
-      <span className="spinner-border text-light" style={{ width: "3rem", height: "3rem" }} role="status" />
+      <output className="spinner-border text-light" style={{ width: "3rem", height: "3rem" }} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 // 現在のページ（既定ではwindow.location.href）をQRコードで表示し、URLをワンタップ
@@ -15,6 +15,18 @@ export default function ShareButton({ label = "このページを共有", classN
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
+  const backdropRef = useRef(null);
+
+  // 背景のクリックで閉じる。JSXのonClickを付けると、キーボード操作の無い静的要素への
+  // クリックとして、jsx-a11yの警告になる。ConfirmDialogと同じく、addEventListenerで受ける
+  // （dev-standards#1490・#1541）。閉じる操作は、閉じるボタン（キーボード操作可）でも行える
+  useEffect(() => {
+    const backdrop = backdropRef.current;
+    if (!backdrop) return undefined;
+    const close = () => setOpen(false);
+    backdrop.addEventListener("click", close);
+    return () => backdrop.removeEventListener("click", close);
+  }, [open]);
 
   function openShare() {
     setCopied(false);
@@ -39,6 +51,9 @@ export default function ShareButton({ label = "このページを共有", classN
 
       {open && (
         <>
+          {/* BootstrapのモーダルのCSSに合わせた構造のため、<dialog>要素へは置き換えない
+              （既定のスタイル・フォーカスの扱いが変わる）。role="dialog"は意図した指定 */}
+          {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
           <div className="modal d-block show" tabIndex="-1" role="dialog">
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content">
@@ -63,7 +78,7 @@ export default function ShareButton({ label = "このページを共有", classN
               </div>
             </div>
           </div>
-          <div className="modal-backdrop show" onClick={() => setOpen(false)} />
+          <div ref={backdropRef} className="modal-backdrop show" />
         </>
       )}
     </>
