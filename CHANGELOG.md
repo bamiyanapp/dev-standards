@@ -1,3 +1,10 @@
+# [2.167.0](https://github.com/bamiyanapp/dev-standards/compare/v2.166.0...v2.167.0) (2026-11-20)
+
+
+### Features
+
+* **standards-check:** Lambdaのランタイムのサポート終了を警告する ([#1565](https://github.com/bamiyanapp/dev-standards/issues/1565)) ([05c9f23](https://github.com/bamiyanapp/dev-standards/commit/05c9f23f3d43c5fcc9b043a4331222194b3004b7)), closes [#1371](https://github.com/bamiyanapp/dev-standards/issues/1371)
+
 # [2.166.0](https://github.com/bamiyanapp/dev-standards/compare/v2.165.0...v2.166.0) (2026-11-20)
 
 
