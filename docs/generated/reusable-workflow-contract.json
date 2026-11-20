@@ -1,0 +1,136 @@
+{
+  "reusable-backup-dynamodb.yml": {
+    "permissions": {},
+    "requiredInputs": [
+      "table_names"
+    ],
+    "requiredSecrets": [
+      "AWS_ACCESS_KEY_ID",
+      "AWS_SECRET_ACCESS_KEY"
+    ]
+  },
+  "reusable-canary-status.yml": {
+    "permissions": {
+      "actions": "read",
+      "contents": "write",
+      "pull-requests": "write"
+    },
+    "requiredInputs": [
+      "canary_stack_name",
+      "kvs_arn",
+      "stable_stack_name"
+    ],
+    "requiredSecrets": [
+      "AWS_ACCESS_KEY_ID",
+      "AWS_SECRET_ACCESS_KEY"
+    ]
+  },
+  "reusable-cd.yml": {
+    "permissions": {
+      "contents": "write",
+      "pull-requests": "write"
+    },
+    "requiredInputs": [],
+    "requiredSecrets": []
+  },
+  "reusable-ci.yml": {
+    "permissions": {
+      "contents": "write",
+      "issues": "write",
+      "pull-requests": "write"
+    },
+    "requiredInputs": [],
+    "requiredSecrets": []
+  },
+  "reusable-codeql.yml": {
+    "permissions": {
+      "actions": "read",
+      "contents": "read",
+      "security-events": "write"
+    },
+    "requiredInputs": [],
+    "requiredSecrets": []
+  },
+  "reusable-consumer-check.yml": {
+    "permissions": {
+      "contents": "read"
+    },
+    "requiredInputs": [
+      "commands",
+      "consumer_repo",
+      "dev_standards_sha"
+    ],
+    "requiredSecrets": []
+  },
+  "reusable-dependency-deprecation-scan.yml": {
+    "permissions": {
+      "contents": "read",
+      "issues": "write"
+    },
+    "requiredInputs": [
+      "self_ref"
+    ],
+    "requiredSecrets": []
+  },
+  "reusable-dependency-full-scan.yml": {
+    "permissions": {
+      "contents": "write",
+      "issues": "write",
+      "pull-requests": "write"
+    },
+    "requiredInputs": [
+      "self_ref"
+    ],
+    "requiredSecrets": []
+  },
+  "reusable-promote-canary.yml": {
+    "permissions": {
+      "contents": "write"
+    },
+    "requiredInputs": [
+      "backend_deploy_command_stable",
+      "backend_remove_canary_command",
+      "backend_working_directory",
+      "canary_stack_name",
+      "kvs_arn",
+      "stable_stack_name"
+    ],
+    "requiredSecrets": [
+      "AWS_ACCESS_KEY_ID",
+      "AWS_SECRET_ACCESS_KEY"
+    ]
+  },
+  "reusable-rollback-to-stable.yml": {
+    "permissions": {
+      "contents": "read"
+    },
+    "requiredInputs": [
+      "kvs_arn"
+    ],
+    "requiredSecrets": [
+      "AWS_ACCESS_KEY_ID",
+      "AWS_SECRET_ACCESS_KEY"
+    ]
+  },
+  "reusable-runtime-version-scan.yml": {
+    "permissions": {
+      "contents": "read",
+      "issues": "write"
+    },
+    "requiredInputs": [
+      "endpoints",
+      "self_ref"
+    ],
+    "requiredSecrets": []
+  },
+  "reusable-secret-full-scan.yml": {
+    "permissions": {
+      "contents": "read",
+      "issues": "write"
+    },
+    "requiredInputs": [
+      "self_ref"
+    ],
+    "requiredSecrets": []
+  }
+}
