@@ -1,3 +1,10 @@
+## [2.162.2](https://github.com/bamiyanapp/dev-standards/compare/v2.162.1...v2.162.2) (2026-11-20)
+
+
+### Bug Fixes
+
+* **e2e:** cspWatcher.jsの整形を、参照側のsonarjsルールに通る形にする ([#1555](https://github.com/bamiyanapp/dev-standards/issues/1555)) ([eb8de7e](https://github.com/bamiyanapp/dev-standards/commit/eb8de7e90b21a7b7ad3d06350bda3cea2aad61d4)), closes [#1554](https://github.com/bamiyanapp/dev-standards/issues/1554)
+
 ## [2.162.1](https://github.com/bamiyanapp/dev-standards/compare/v2.162.0...v2.162.1) (2026-11-20)
 
 
