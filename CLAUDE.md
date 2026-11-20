@@ -93,7 +93,7 @@ Claudeは開始時および中断復帰時に以下を把握する。
 - CLAUDE.mdを改善すべき点はないか
 - プロジェクト固有ルールへ反映すべきか
 - 人間による手動確認手順がある場合、スマホのみで実行可能か（「開発環境の制約（スマホオンリー）」参照）
-- PRのマージ・CI成功だけを根拠に完了・Issueクローズと判断していないか。特に複数リポジトリ・pinned tag参照を伴う変更（git-workflow Skill「複合action・pinned tagを伴う変更の展開確認」参照）を考える。実際にmain上で意図した効果が出ているかを再検証したか
+- PRのマージ・CI成功だけを根拠に完了・Issueクローズと判断していないか。実際にmain上で意図した効果が出ているかを再検証したか。ただし、dev-standardsの変更は例外とする。dev-standardsでのマージと、代表の参照側（karuta）での`consumer-check`の成功を、完了とする。全プロダクトへの取り込み・確認は、ゴールにしない。取り込みは、各プロダクトがRenovateと`dev-standards-adoption` Skillで管理する。`consumer-check`で動かせない変更（定期実行・secretsやAWSに依存するjob）は、代表の参照側で1回確認する。自己参照タグの更新フォローアップは、従来どおり必要である（git-workflow Skill「複合action・pinned tagを伴う変更の展開確認」参照）
 - 実在の個人情報を扱うプロダクトの場合を考える。コミット対象・コミットメッセージ・PR/Issue本文に実在の個人情報がハードコードされていないか（[`docs/public-repo-no-pii-pattern.md`](docs/public-repo-no-pii-pattern.md)参照）。リポジトリは公開が前提であり、一度コミットした個人情報は事実上消せないため、コミット前に気づくことが唯一の対策
 - `docs/`配下へ新規ドキュメントを追加した場合、「主要ドキュメント」索引への追記を忘れていないか
 - 更新したドキュメントが肥大化していないか確認する。`textlint`の`max-lines`ルール（実効行数、既定200行）が通っていても、巨大な表セルへ詰め込んだ場合は検知をすり抜ける既知の限界がある（[`docs/documentation-format-conventions.md`](docs/documentation-format-conventions.md)「ドキュメント1本のボリューム上限」参照）。独立した話題として切り出せる内容があれば分割する
