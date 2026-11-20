@@ -41,6 +41,17 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 - [ ] 変更を含むバージョンのリリースノート・該当reusable workflowの`description`に、破壊的変更である旨と対応方法を明記する
 - [ ] 参照側リポジトリで、Renovateによるバージョン更新PRをマージする際は、新規必須入力が追加されていないかをリリースノートで確認する運用を徹底する。マージ後は、CIジョブが実際に1件以上起動していることも確認する（`startup_failure`はジョブ0件・ログに原因が出ないため、チェックを怠ると長期間気づかれないリスクが高い）
 
+### 呼び出し側への要求が増える変更（契約ファイル）
+
+任意の入力（`required: false`、既定`false`）でゲートされたjobでも、`permissions`を増やす変更は、破壊的変更である。GitHub Actionsは、jobの`if:`に関わらず、`permissions`を静的に検査する。許可していない呼び出し元は、`startup_failure`になる。jobが1件も起動しない（[#1334](https://github.com/bamiyanapp/dev-standards/issues/1334)）。
+
+この変更を機械的に見えるようにするため、再利用ワークフローが呼び出し側へ要求するものを、`docs/generated/reusable-workflow-contract.json`へ記録している。記録するのは、`permissions`（ワークフローと全jobの和集合）、必須入力、必須secretである。
+
+- `reusable-*.yml`を変えて、要求が変わると、`npm test`が失敗する。`node scripts/reusable-contract.js --write`で再生成する
+- 再生成した差分に、権限・必須入力・必須secretの**追加**があれば、上記の手順の対象とする
+- 権限を増やさずに済む設計を、先に検討する。
+- 例えば、`issues: write`のjobは、`reusable-cd.yml`へ組み込まない。呼び出し元のjobとして書く（[`notify-cd-failure`](#githubactionsnotify-cd-failure複合action)）
+
 ## `self_ref`入力をRenovateの更新対象へ加える（参照側リポジトリのrenovate.json）
 
 `self_ref`は各`reusable-*.yml`呼び出しの`with:`ブロックに書く、`uses:`行と同じdev-standardsバージョンを渡すプレーンな文字列入力である。Renovateの`github-actions`マネージャーは`uses:`行のみを依存として追跡し、`self_ref:`はテキストとしか認識しない。そのため、Renovateが`uses:`を自動更新するたびに`self_ref:`だけが古いまま取り残される。この事故は構造的に再発する（karuta#1924・#2001・#2040で3回発生、issue #1316）。
