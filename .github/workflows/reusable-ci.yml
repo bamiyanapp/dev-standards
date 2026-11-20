@@ -1711,6 +1711,11 @@ jobs:
         run: |
           git fetch --unshallow --quiet 2>/dev/null || true
           node dev-standards/scripts/check-tmp-workflows.js
+      # issue #1369。定期スキャン系のreusable workflowを、scheduleトリガーで呼ぶworkflowがあるかを警告する
+      # （警告のみ。失敗にしない）。導入しない場合は、.github/periodic-scans-opt-out.jsonに理由を書く
+      - name: 定期スキャンの導入漏れを警告する
+        continue-on-error: true
+        run: node dev-standards/scripts/check-periodic-scans.js
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
       # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
       # 失敗として扱う（人間・Renovateの再実行に委ねる）。BOT_TOKENが設定されて
