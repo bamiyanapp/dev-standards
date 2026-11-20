@@ -30,3 +30,16 @@ karuta#1762で実機検証した。その結果、ローカル（サンドボッ
 ## 検知（`enable_cdn_fonts_check`）
 
 Google FontsのCDNの読み込みが残っていないかは、`reusable-ci.yml`の`enable_cdn_fonts_check`で検知できる。`fonts.googleapis.com`・`fonts.gstatic.com`を参照する行を、警告として出す。導入時は`cdn_fonts_mode: warn`で始める。移行が済んだら、`fail`へ切り替える。同梱であれば、CI・E2E・本番で同じフォントが使われ、スクリーンショットの見た目も、デプロイ後と一致する。
+
+## セキュリティ面の理由と方針（[#1372](https://github.com/bamiyanapp/dev-standards/issues/1372)）
+
+HTMLにCDNのURLを直接書くと、脆弱性の管理の外に置かれる。
+CDN経由のライブラリは、npmで同梱する。禁止が方針である。
+
+- Renovateは、`package.json`を起点にする。HTMLのCDNのURLは、更新PRの対象にならない
+- 依存更新のRisk判定と、定期フルスキャンも、同じである。公開された脆弱性を、検知できない
+- `integrity`属性（SRI）が無いと、CDN側で内容が差し替えられても、ブラウザが検知できない
+- `standards-check`が、HTMLの`<script src>`・`<link href>`が、主なCDNを指していないかを警告する
+- 警告のみで、CIは失敗しない。既存の参照側が、段階的に移行できる
+- どうしてもCDNが要る場合は、その行か直前の行に、`dev-standards-allow-cdn`と、理由を書く
+- Google FontsのCDNは、上の`enable_cdn_fonts_check`が見る

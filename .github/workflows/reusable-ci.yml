@@ -1722,6 +1722,11 @@ jobs:
       - name: Lambdaのランタイムのサポート終了を警告する
         continue-on-error: true
         run: node dev-standards/scripts/lambda-runtime-eol.js
+      # issue #1372。HTMLがCDNからライブラリを読み込んでいないかを警告する（警告のみ。失敗にしない）。
+      # CDNのURLは、Renovate・Risk判定・定期フルスキャンのどれにも掛からない。npmで同梱する方針である
+      - name: HTMLのCDN経由のライブラリ読み込みを警告する
+        continue-on-error: true
+        run: node dev-standards/scripts/check-cdn-libs.js
       # 自動修復されたファイルがある場合、BOT_TOKEN未設定なら push してもCIが
       # 再実行されず修復が宙に浮くだけになるため、pushを試みずreport-onlyの
       # 失敗として扱う（人間・Renovateの再実行に委ねる）。BOT_TOKENが設定されて
