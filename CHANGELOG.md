@@ -1,3 +1,10 @@
+# [2.164.0](https://github.com/bamiyanapp/dev-standards/compare/v2.163.0...v2.164.0) (2026-11-20)
+
+
+### Features
+
+* **audit:** modernization-audit.jsに、CIの実行結果の取得（--run）を追加する ([#1560](https://github.com/bamiyanapp/dev-standards/issues/1560)) ([a2474df](https://github.com/bamiyanapp/dev-standards/commit/a2474df7b316c056c5072cb388b2a59ac857ddbb)), closes [#1503](https://github.com/bamiyanapp/dev-standards/issues/1503)
+
 # [2.163.0](https://github.com/bamiyanapp/dev-standards/compare/v2.162.3...v2.163.0) (2026-11-20)
 
 
