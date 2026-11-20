@@ -79,21 +79,16 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 
 **`self_ref`は任意入力である**（`required: false`、デフォルト`""`。issue #1261）。指定する場合は`uses:`行で指定したタグ・ブランチ・コミットSHAと同じ値を、`with:`ブロックで明示的に渡す。`github.workflow_ref`等の動的解決では代替できない（詳細は[「reusable workflowへ破壊的変更を加える際の手順」](#reusable-workflowへ破壊的変更を加える際の手順)参照）。
 
-**`self_ref`を指定しないと、有効化した機能が実行されずにスキップされる。** 次の機能が対象である。
+**機能を有効化したのに`self_ref`が空の場合は、該当のstep・jobが失敗する**（issue #1460の案A）。以前は、警告付きでスキップされ、ジョブ全体が緑のまま、機能が一度も働かない事故が起きた。次の機能が対象である。
 
 - `coverage_threshold`（ユニットテストのカバレッジ閾値の判定）
 - E2Eカバレッジの表示と、スクリーンショットのベースライン比較
 - `enable_mermaid_render`・`enable_lighthouse_ci`・`enable_dependency_risk_summary`
-- メールアドレスの直書き検知
+- `enable_email_scan`（メールアドレスの直書き検知）
 
-スキップしても、ジョブ全体は成功のままになる。次の2つで気づける（issue #1460）。
+通常のステップ失敗であり、`startup_failure`（0 jobで原因が見えない。#1220・#1231）とは異なる。PRのチェック一覧に、失敗したstepと原因が表示される。Job Summaryにも、警告ボックスが出る。Renovateの更新PRも、「`self_ref`を直す」という明確なシグナルで止まる。
+直し方は、`uses:`のタグと同じ値を、`with:`の`self_ref`へ指定することである。機能を有効化していなければ、`self_ref`が空でも、何も起きない。
 
-- Job Summaryに警告ボックス（`self_refが指定されていないため、…をスキップしました`）が出る。
-- 実際のジョブのステップが`skipped`になる。
-
-「閾値を設定した」だけで「ゲートされている」と判断しない。CIのジョブで、該当ステップが**実行された**（`skipped`でない）ことを確認する。
-
-`self_ref`が空で機能が有効なときに、失敗させるかどうかは検討中である。参照側リポジトリの`self_ref`の指定状況を調べてから決める（issue #1460の案A）。
 
 当初（issue #1220）は`required: true`としていた。しかしRenovate経由のバージョン更新PRは`uses:`行のタグ文字列のみを書き換え、`with:`ブロックへは追従できない。この前提を見落としていた。新規必須入力の追加を跨いでマージされた参照側リポジトリでは、CIが`startup_failure`で無警告・全停止する実害が複数リポジトリで発生した（issue #1231・#1232）。
 
@@ -110,7 +105,7 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 ```yaml
 uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v1.0.0
 with:
-  self_ref: v1.0.0 # uses:のrefと同じ値にする（省略可。省略時は上記オプション機能のみ::warning::付きでスキップ）
+  self_ref: v1.0.0 # uses:のrefと同じ値にする（オプション機能を有効化するなら必須。空だと、該当のstep・jobが失敗する）
   # ...他の入力
 ```
 

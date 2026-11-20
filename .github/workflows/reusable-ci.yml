@@ -571,9 +571,12 @@ on:
           （issue #1231・#1232）。self_refを使う8箇所は全てオプション機能
           （`coverage_threshold`・`enable_e2e_test`・`enable_mermaid_render`・
           `enable_lighthouse_ci`・`enable_dependency_risk_summary`のいずれかで
-          ゲートされるstep・job）に閉じているため、未指定時は該当機能のみを
-          `::warning::`付きでスキップする設計へ変更し、`required: false`とした。
-          省略時も他の機能・ジョブには影響しない。
+          ゲートされるstep・job）に閉じているため、`required: false`とした。
+          省略時も、機能を有効化していない他の機能・ジョブには影響しない。
+          issue #1460: 機能を明示的に有効化したのに`self_ref`が空の場合は、該当のstep・jobを
+          失敗にする（以前は警告付きでスキップしており、ジョブ全体が緑のまま、機能が
+          一度も働かない事故が起きた）。通常のステップ失敗のため、`startup_failure`とは異なり、
+          PRのチェック一覧に原因が表示される。`uses:`のタグと同じ値を指定すれば解消する。
         type: string
         required: false
         default: ""
@@ -884,7 +887,7 @@ jobs:
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
         run: |
-          echo "::warning::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
+          echo "::error::self_refが指定されていないため、frontendのカバレッジ閾値チェックをスキップしました"
           # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
           {
             echo "> [!WARNING]"
@@ -893,6 +896,8 @@ jobs:
             echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+          # 案A（issue #1460）: 有効化した機能が実行されないまま、ジョブが緑になることを避けるため、失敗にする
+          exit 1
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1048,7 +1053,7 @@ jobs:
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: inputs.coverage_threshold > 0 && inputs.self_ref == ''
         run: |
-          echo "::warning::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
+          echo "::error::self_refが指定されていないため、backendのカバレッジ閾値チェックをスキップしました"
           # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
           {
             echo "> [!WARNING]"
@@ -1057,6 +1062,8 @@ jobs:
             echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+          # 案A（issue #1460）: 有効化した機能が実行されないまま、ジョブが緑になることを避けるため、失敗にする
+          exit 1
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1173,7 +1180,7 @@ jobs:
       - name: self_ref未指定によりカバレッジ閾値チェックをスキップすることを警告する
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref == ''
         run: |
-          echo "::warning::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
+          echo "::error::self_refが指定されていないため、${{ matrix.package.dir }}のカバレッジ閾値チェックをスキップしました"
           # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
           {
             echo "> [!WARNING]"
@@ -1182,6 +1189,8 @@ jobs:
             echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+          # 案A（issue #1460）: 有効化した機能が実行されないまま、ジョブが緑になることを避けるため、失敗にする
+          exit 1
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -1299,7 +1308,7 @@ jobs:
       - name: self_ref未指定によりE2Eカバレッジ表示等をスキップすることを警告する
         if: always() && inputs.self_ref == ''
         run: |
-          echo "::warning::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
+          echo "::error::self_refが指定されていないため、E2Eカバレッジ表示・スクリーンショットのベースライン比較をスキップしました"
           # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
           {
             echo "> [!WARNING]"
@@ -1308,6 +1317,8 @@ jobs:
             echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+          # 案A（issue #1460）: 有効化した機能が実行されないまま、ジョブが緑になることを避けるため、失敗にする
+          exit 1
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -2686,7 +2697,7 @@ jobs:
       - name: self_ref未指定によりメールアドレス検知をスキップすることを警告する
         if: inputs.enable_email_scan && inputs.self_ref == ''
         run: |
-          echo "::warning::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
+          echo "::error::self_refが指定されていないため、メールアドレスの直書き検知をスキップしました"
           # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
           {
             echo "> [!WARNING]"
@@ -2695,6 +2706,8 @@ jobs:
             echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+          # 案A（issue #1460）: 有効化した機能が実行されないまま、ジョブが緑になることを避けるため、失敗にする
+          exit 1
       - name: dev-standardsをチェックアウトする（メールアドレス検知用）
         if: inputs.enable_email_scan && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -2790,7 +2803,7 @@ jobs:
         with:
           script: |
             if ('${{ inputs.self_ref }}' === '') {
-              core.warning('self_refが指定されていないため、mermaid図レンダリング・キャッシュバスティングをスキップしました');
+              core.setFailed('self_refが指定されていないため、有効化したmermaid図レンダリング・キャッシュバスティングを実行できません。uses:のタグと同じ値を、with:のself_refへ指定してください（issue #1460）');
               core.setOutput('should_run', 'false');
               return;
             }
@@ -3275,7 +3288,7 @@ jobs:
       - name: self_ref未指定によりLighthouseサマリー整形をスキップすることを警告する
         if: always() && inputs.self_ref == ''
         run: |
-          echo "::warning::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
+          echo "::error::self_refが指定されていないため、Lighthouse CIのカテゴリ別スコア表示をスキップしました（生ログはJob Summaryにそのまま表示されます）"
           # 注釈だけでは、PRのチェック一覧に出ず見落とされる。Job Summaryの先頭付近にも警告を出す（issue #1460）
           {
             echo "> [!WARNING]"
@@ -3284,6 +3297,8 @@ jobs:
             echo '> ジョブ全体が緑でも、該当ステップが`skipped`でないことを確認してください。'
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+          # 案A（issue #1460）: 有効化した機能が実行されないまま、ジョブが緑になることを避けるため、失敗にする
+          exit 1
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
@@ -3419,7 +3434,7 @@ jobs:
         with:
           script: |
             if ('${{ inputs.self_ref }}' === '') {
-              core.warning('self_refが指定されていないため、依存更新Risk Summaryをスキップしました');
+              core.setFailed('self_refが指定されていないため、有効化した依存更新Risk Summaryを実行できません。uses:のタグと同じ値を、with:のself_refへ指定してください（issue #1460）');
               core.setOutput('package_lock_changed', 'false');
               core.setOutput('actions_changed', 'false');
               core.setOutput('action_files', '[]');
