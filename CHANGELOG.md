@@ -1,3 +1,10 @@
+# [2.158.0](https://github.com/bamiyanapp/dev-standards/compare/v2.157.0...v2.158.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** symlink共有コンポーネントをカバレッジから除外するパスを返すヘルパーを追加する ([#1547](https://github.com/bamiyanapp/dev-standards/issues/1547)) ([145af6c](https://github.com/bamiyanapp/dev-standards/commit/145af6c016467579a84c01782d57d6338fcd28c9)), closes [#1375](https://github.com/bamiyanapp/dev-standards/issues/1375)
+
 # [2.157.0](https://github.com/bamiyanapp/dev-standards/compare/v2.156.0...v2.157.0) (2026-11-20)
 
 
