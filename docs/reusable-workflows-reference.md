@@ -593,7 +593,7 @@ notify-failure:
   uses: bamiyanapp/dev-standards/.github/actions/commit-via-pr@v1.0.0
   with:
     paths: docs/generated/report.md
-    commit-subject: "chore: 生成レポートを更新する [skip ci]"
+    commit-subject: "chore: 生成レポートを更新する"
     push-token: ${{ secrets.BOT_TOKEN }}
     github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}
 ```
@@ -608,6 +608,8 @@ notify-failure:
 | `base-branch` | コミット対象のブランチ | 現在のref |
 | `push-token` | 直接pushに使うトークン。未指定の場合は直接pushを試みず常にPRフォールバックを使う | `""` |
 | `github-token` | PR作成・squash merge・ブランチ削除に使うトークン | （必須） |
+
+フォールバックのPRが、必須チェックの完了待ち（405）のまま、マージのリトライ上限に達しても、失敗にしない。警告とJob Summaryを出して終了する。PRは残り、参照側のCIの自動マージが、チェックの通過後にマージする（[#1500](https://github.com/bamiyanapp/dev-standards/issues/1500)）。件名にCIスキップ指定を付けないこと。付けると、必須チェックが付かず、PRがマージできない（[#1512](https://github.com/bamiyanapp/dev-standards/issues/1512)）。
 
 対象ブランチへのpushで後続workflowをトリガーする必要がある場合、`push-token`には`secrets.GITHUB_TOKEN`ではなく`secrets.BOT_TOKEN`等を渡すこと。`GITHUB_TOKEN`によるpushは新たなworkflow実行を作らないためである。
 

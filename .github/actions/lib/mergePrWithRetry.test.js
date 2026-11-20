@@ -101,6 +101,37 @@ test("mergePrWithRetry: expectedHeadSha未指定の409は通常のエラーと�
   assert.equal(calls, 2);
 });
 
+const pendingError = () => Object.assign(new Error("Repository rule violations found\n\n7 of 7 required status checks have not succeeded."), { status: 405 });
+
+test("mergePrWithRetry: 必須チェック待ちの405が続くとき、skip指定なら、例外にせずnullを返す（issue #1500）", async () => {
+  let calls = 0;
+  const github = { rest: { pulls: { merge: async () => { calls++; throw pendingError(); } } } };
+  const sha = await mergePrWithRetry({ github, context, pullNumber: 1, maxAttempts: 3, onRequiredChecksPending: "skip", sleep: async () => {} });
+  assert.equal(sha, null);
+  assert.equal(calls, 3);
+});
+
+test("mergePrWithRetry: 必須チェック待ちの405でも、既定（throw）は、これまでどおり例外を投げる", async () => {
+  const github = { rest: { pulls: { merge: async () => { throw pendingError(); } } } };
+  await assert.rejects(() => mergePrWithRetry({ github, context, pullNumber: 1, maxAttempts: 2, sleep: async () => {} }), (e) => e.status === 405);
+});
+
+test("mergePrWithRetry: skip指定でも、必須チェック待ち以外の失敗（権限不足など）は、例外を投げる", async () => {
+  const forbidden = Object.assign(new Error("Resource not accessible by integration"), { status: 403 });
+  const github = { rest: { pulls: { merge: async () => { throw forbidden; } } } };
+  await assert.rejects(
+    () => mergePrWithRetry({ github, context, pullNumber: 1, maxAttempts: 2, onRequiredChecksPending: "skip", sleep: async () => {} }),
+    (e) => e.status === 403,
+  );
+});
+
+test("mergePrWithRetry: skip指定でも、途中でチェックが通ればマージして、SHAを返す", async () => {
+  let calls = 0;
+  const github = { rest: { pulls: { merge: async () => { if (++calls < 3) throw pendingError(); return { data: { sha: "later-sha" } }; } } } };
+  const sha = await mergePrWithRetry({ github, context, pullNumber: 1, maxAttempts: 5, onRequiredChecksPending: "skip", sleep: async () => {} });
+  assert.equal(sha, "later-sha");
+});
+
 test("deleteBranchIgnoringNotFound: 成功時は例外を投げない", async () => {
   const github = { rest: { git: { deleteRef: async () => {} } } };
   await assert.doesNotReject(() => deleteBranchIgnoringNotFound({ github, context, branchName: "foo" }));
