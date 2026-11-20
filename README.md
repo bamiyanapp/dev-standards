@@ -81,6 +81,7 @@
 - [`dependency-risk-judgment-renovate-logic.md`](docs/dependency-risk-judgment-renovate-logic.md): PR単位の適用リスク・維持リスク判定とmerge gate連携のフロー・詳細
 - [`dependency-risk-judgment-periodic-scans.md`](docs/dependency-risk-judgment-periodic-scans.md): PRの作成を待たない定期スキャン（推移的依存のセーフティネット等）
 - [`e2e-coverage-pattern.md`](docs/e2e-coverage-pattern.md): PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
+- [`symlink-shared-commonjs.md`](docs/symlink-shared-commonjs.md): symlink共有のCommonJSを、`--preserve-symlinks`環境で使うときの注意（#1297）
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
 - [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
 - [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
