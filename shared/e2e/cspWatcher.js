@@ -33,9 +33,20 @@ export async function watchCspViolations(page, { includeReportOnly = true } = {}
   return violations;
 }
 
+// 参照側のsonarjs（入れ子のテンプレート・三項演算の禁止）に通る形にするため、場所の整形を分けている
+function formatLocation(v) {
+  if (!v.source) return '';
+  const position = v.line ? `${v.source}:${v.line}` : v.source;
+  return ` （${position}）`;
+}
+
+function formatViolationLine(v) {
+  return `- ${v.directive}: ${v.blocked || '(inline)'}${formatLocation(v)}`;
+}
+
 /** 違反の一覧を、テストの失敗メッセージ用の文字列にする。違反が無ければ空文字 */
 export function formatCspViolations(violations) {
   if (violations.length === 0) return '';
-  const lines = violations.map((v) => `- ${v.directive}: ${v.blocked || '(inline)'}${v.source ? ` （${v.source}${v.line ? `:${v.line}` : ''}）` : ''}`);
+  const lines = violations.map(formatViolationLine);
   return `CSP違反が${violations.length}件ありました。\n${lines.join('\n')}\nCSPを緩める前に、違反しているスクリプト・通信先が必要かを確認してください（docs/security-headers-pattern.md）。`;
 }
