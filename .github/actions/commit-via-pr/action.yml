@@ -202,7 +202,9 @@ runs:
           // このactionが実際にpushしたコミットのSHAを渡し、マージ時点でブランチが
           // 他から書き換えられていないことを確認する
           const expectedHeadSha = "${{ steps.push-new-branch.outputs.sha }}";
-          const mergeSha = await mergePrWithRetry({ github, context, pullNumber: pr.number, expectedHeadSha });
+          // issue #1500: 必須チェックの完了待ちで、リトライ上限まで405が続いても、失敗にしない（警告を出して終える）。
+          // PRは残り、参照側のCIの自動マージが、チェックの通過後にマージする
+          const mergeSha = await mergePrWithRetry({ github, context, pullNumber: pr.number, expectedHeadSha, onRequiredChecksPending: "skip" });
           if (mergeSha === null) {
             return;
           }
