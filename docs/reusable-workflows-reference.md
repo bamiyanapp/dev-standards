@@ -53,7 +53,7 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
     {
       "customType": "regex",
       "description": "self_refはuses:行と同じdev-standardsバージョンを指すべきだが、Renovateのgithub-actionsマネージャーはプレーンな文字列入力であるself_ref:を検知しない。正規表現で明示的に検知対象へ加える",
-      "managerFilePatterns": ["^\\.github/workflows/.*\\.yml$"],
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.yml$/"],
       "matchStrings": ["self_ref: v(?<currentValue>[\\d.]+)"],
       "depNameTemplate": "bamiyanapp/dev-standards",
       "datasourceTemplate": "github-tags",
@@ -62,6 +62,8 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
   ]
 }
 ```
+
+`managerFilePatterns`の正規表現は、`/`で囲む。囲まない文字列はglobとして扱われ、何にも一致せず、検知されない（issue #1522）。
 
 `uses:`行（`github-actions`マネージャー）と`self_ref:`行（上記customManager）は別々のPRとして提案されうる。同じバージョンへ揃えて1PRでまとめたい場合は、`packageRules`で両方の`depName`（`bamiyanapp/dev-standards`）を`groupName`で束ねる。
 
