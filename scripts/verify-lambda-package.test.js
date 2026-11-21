@@ -140,3 +140,13 @@ test("isEsmHandler: .mjs・type: moduleはESM、.cjsとtype無しはCommonJS", (
   assert.equal(isEsmHandler(path.join(cjs, "h.cjs")), false);
   assert.equal(isEsmHandler(path.join(cjs, "h.mjs")), true);
 });
+
+test("zipが存在しないとき、serverless packageを先に実行するよう案内して、終了コード2で終わる（issue #1573）", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vlp-nozip-"));
+  const yml = path.join(dir, "serverless.yml");
+  fs.writeFileSync(yml, SERVICE);
+  const r = spawnSync("node", [path.join(__dirname, "verify-lambda-package.js"), "--zip", path.join(dir, ".serverless", "missing.zip"), "--service-file", yml]);
+  assert.equal(r.status, 2);
+  assert.match(r.stderr.toString(), /先に.*serverless package.*実行/);
+  assert.doesNotMatch(r.stderr.toString(), /unzip/);
+});

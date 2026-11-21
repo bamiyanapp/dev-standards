@@ -17,6 +17,7 @@
 //      （Lambdaの実行環境を再現する）。--allow-require-esmで、この再現を止められる
 //
 // 使い方: node verify-lambda-package.js --zip <zip> --service-file <serverless.yml> [--forbid <glob>...] [--allow-require-esm]
+// 呼び出し順: 先に`npx serverless package`でzip（.serverless/<サービス名>.zip）を作る。zipが無いと、案内を出して終了する（終了コード2）
 // ハンドラを読み込むと、モジュール内の初期化コードが走る。必要な環境変数は呼び出し側がenvで渡す。
 
 const fs = require("node:fs");
@@ -155,6 +156,12 @@ async function main(argv) {
   const { zip, serviceFile, forbid, allowRequireEsm } = parseArgs(argv);
   if (!zip || !serviceFile) {
     console.error("使い方: node verify-lambda-package.js --zip <zip> --service-file <serverless.yml> [--forbid <glob>...] [--allow-require-esm]");
+    return 2;
+  }
+  // issue #1573: zipは、`serverless package`が作る。先に呼ばずに検証だけを呼ぶと、
+  // unzipの生のエラーになり、原因が分かりにくい。呼び出し順を案内して終了する
+  if (!fs.existsSync(zip)) {
+    console.error(`::error::${zip} が見つかりません。先に、serverless.ymlのあるディレクトリで \`npx serverless package\` を実行して、zipを作ってください。`);
     return 2;
   }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lambda-package-"));

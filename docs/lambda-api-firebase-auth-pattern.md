@@ -84,6 +84,16 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 - AWS Lambdaは定期的に古いランタイム（例: `nodejs18.x`）のサポートを終了する。依存パッケージ側が`engines.node`で新しいNode.jsバージョンを要求するようになった場合（`npm warn EBADENGINE`が出る）も含め、両者を同時に見直すタイミングの合図にする
 - 見直す際は、`ci.yml`の`node_version`と`serverless.yml`の`runtime`を同一PRで一緒に変更する。CIのfrontend-test/backend-testが新バージョンで成功することを確認してからマージする
 
+### 揃える範囲と、ロックファイルを作ったnpmとの関係
+
+揃えるのは、**Lambdaの実行環境と、デプロイのzipを作るステップの間**である。デプロイツール（ルートの`npm ci`等）のNode.jsまで、同じ値へ下げるものではない（[#1573](https://github.com/bamiyanapp/dev-standards/issues/1573)）。
+
+- ルートの`package-lock.json`は、Renovateが作る。Renovateが使うnpm（npm 11。Node.js 26に付属）が、ロックファイルの形式を決める
+- CDのNode.jsを、Lambdaと同じ22へ下げると、npm 10が使われる
+- npm 10の`npm ci`は、npm 11が作ったロックファイルを、同期していないと判定し、失敗することがある。例: `Missing: conventional-commits-filter@6.0.1 from lock file`
+- 下げる前に、`npm ci --dry-run`を、下げた後のNode.jsで実行して、成功することを確かめる
+- 失敗するなら、デプロイツールのNode.jsは、ロックファイルを作るnpmに合わせたままにする。Lambdaの実行環境は、`serverless.yml`の`runtime`で決まるため、これで揃えたことになる
+
 ## Lambdaでは`require(esm)`が既定で無効である（`firebase-admin` 14以降）
 
 `firebase-admin` 14以降は、次の設定が必須である。`serverless.yml`の`provider.environment`へ、`NODE_OPTIONS: --experimental-require-module`を書く（[#1485](https://github.com/bamiyanapp/dev-standards/issues/1485)）。

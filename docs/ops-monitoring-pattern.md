@@ -103,6 +103,7 @@ functions:
 - `deploy-serverless`複合actionは、デプロイ前にリンク切れのsymlinkを検知し、あれば失敗させる（`check-broken-symlinks`、既定で有効）
 - **通知用Secretsを、デプロイステップの`env`へ渡す**。`serverless.yml`の`${env:OPS_ALERT_LINE_CHANNEL_ACCESS_TOKEN}`は、デプロイ時の環境変数から解決される。渡していないと、通知が常にスキップされる
 - 生成したパッケージを展開し、ハンドラを読み込めることを検証する。`deploy-serverless`の`verify-package: true`で、デプロイ前に実行できる（`scripts/verify-lambda-package.js`）。`verify-package-forbid`でテストファイル等の混入も検出できる
+- `deploy-serverless`を使わず、`cd.yml`で`npx serverless deploy`を直接呼ぶ場合は、`verify-lambda-package.js`を自分で呼ぶ。**呼び出し順は、`npx serverless package`、`verify-lambda-package.js`、`npx serverless deploy`である**。zip（`.serverless/<サービス名>.zip`）は、`serverless package`が作る。zipが無いと、スクリプトは、先に`serverless package`を実行するよう案内して、終了コード2で終わる（[#1573](https://github.com/bamiyanapp/dev-standards/issues/1573)）
 - CDの失敗を通知する。CDの最後に、`if: failure()`のjobで`notify-cd-failure`複合actionを呼ぶ。固定タイトルのissueへコメント（無ければ起票）し、LINEのトークンがあればLINEにも送る。スマートフォンのGitHubアプリへ通知が届く
 - デプロイ後に、実際のAPIへ疎通確認する。`deploy-serverless`の`smoke-test-url`で、GETして200以外なら失敗させる。E2EがAPIをモックしている構成では、デプロイされたバックエンドの異常を、これ以外に検知できない
 
