@@ -105,7 +105,9 @@ runs:
         PUSH_TOKEN: ${{ inputs.push-token }}
       run: |
         set -eu
-        git push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ inputs.base-branch }}"
+        # issue #1395: checkoutが残したGITHUB_TOKENの認証ヘッダーは、URLへ埋め込んだ
+        # PUSH_TOKENより優先され、pushの主体がgithub-actions[bot]になる。空の値で上書きして無効にする
+        git -c http.https://github.com/.extraheader= push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ inputs.base-branch }}"
 
     - name: Check if the direct push actually succeeded
       id: check-push
