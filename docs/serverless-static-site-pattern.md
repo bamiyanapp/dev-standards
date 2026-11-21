@@ -160,3 +160,13 @@ S3バケット名・Cognitoドメインprefixは全AWSアカウント間・リ�
 ## 実例
 
 examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-stack/`・`bot-stack/`）が実装例である。Cognito + Lambda@Edgeによるログインフロー・リクエスト単位認証部分を含む（詳細は同リポジトリの`infra/README.md`を参照）。ただし前述の通りexamination#437以降、「サイト閲覧自体を全リクエストでゲートする」手順1は実装していない。そのため、本パターンの完全な実装例としてはexamination#437より前のコミットを参照する必要がある。
+
+## 共有コード（`shared/lambda`）
+
+認証の汎用部分は、`shared/lambda`へ段階的に切り出している（#1378）。振る舞いは変えず、1モジュールずつ移す。
+依存（DynamoDB・JWT検証等）は、npmを直接`require`せず、呼び出し側から注入する。
+
+- `edgeHttp.js`: Cookieの解析・組み立て、リダイレクト・JSONの応答、URIの正規化、JSONボディの解析
+- `redirectPath.js`: ログイン後の戻り先の検証（オープンリダイレクトの防止）
+
+`dailyRateLimit.js`と同じく、Lambda@Edgeからsymlinkで使える。
