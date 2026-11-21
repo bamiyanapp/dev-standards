@@ -1,3 +1,10 @@
+# [2.171.0](https://github.com/bamiyanapp/dev-standards/compare/v2.170.1...v2.171.0) (2026-11-21)
+
+
+### Features
+
+* **deploy-serverless:** OIDC（role-to-assume）で認証できるようにする ([#1580](https://github.com/bamiyanapp/dev-standards/issues/1580)) ([0279ae8](https://github.com/bamiyanapp/dev-standards/commit/0279ae824920102d845220bb2b56867a20e932c4)), closes [#1363](https://github.com/bamiyanapp/dev-standards/issues/1363)
+
 ## [2.170.1](https://github.com/bamiyanapp/dev-standards/compare/v2.170.0...v2.170.1) (2026-11-21)
 
 
