@@ -36,6 +36,15 @@ deploy-backend:
 **jobに`permissions`を書くと、書かなかった権限は、すべて無しになる。** `contents: read`も、あわせて書く。書かないと、`actions/checkout`が失敗する。
 jobの権限を足す変更は、呼び出し側のworkflowを書き換えるPRになる。権限の不足は、`startup_failure`として現れることがある（[#1334](https://github.com/bamiyanapp/dev-standards/issues/1334)）。展開は、1つのjobから始めて、実行結果を確かめる。
 
+## 再利用workflowでの書き方
+
+`deploy-serverless`以外に、AWSを使う再利用workflowがある。対応状況は、次のとおり（[#1582](https://github.com/bamiyanapp/dev-standards/issues/1582)）。
+
+| workflow | OIDC（`role_to_assume`） |
+|---|---|
+| `reusable-backup-dynamodb.yml` | 対応済み。呼び出し側のjobに`id-token: write`を書く |
+| `reusable-canary-status.yml`・`reusable-promote-canary.yml`・`reusable-rollback-to-stable.yml` | 未対応。先頭の`permissions:`で権限を絞っており、`id-token: write`を足すと、許可していない既存の呼び出しが起動失敗になる（破壊的変更） |
+
 ## IAM側の定義（CloudFormation）
 
 OIDCプロバイダと、デプロイ用のロールを作る。人手のコンソール操作は要らない。Serverless Frameworkの`resources:`にも、同じ内容を書ける。
