@@ -1,3 +1,10 @@
+## [2.173.1](https://github.com/bamiyanapp/dev-standards/compare/v2.173.0...v2.173.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **ci:** actionlintの、varsコンテキストの誤検知を取り除く ([#1588](https://github.com/bamiyanapp/dev-standards/issues/1588)) ([bc8b4d9](https://github.com/bamiyanapp/dev-standards/commit/bc8b4d94a950a8e3c36fa37549d5b896de5635c1)), closes [#1581](https://github.com/bamiyanapp/dev-standards/issues/1581)
+
 # [2.173.0](https://github.com/bamiyanapp/dev-standards/compare/v2.172.0...v2.173.0) (2026-11-21)
 
 
