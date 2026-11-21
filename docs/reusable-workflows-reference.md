@@ -49,6 +49,10 @@ issue #1071での`self_ref`必須入力（デフォルト値なし）追加は�
 
 - `reusable-*.yml`を変えて、要求が変わると、`npm test`が失敗する。`node scripts/reusable-contract.js --write`で再生成する
 - 再生成した差分に、権限・必須入力・必須secretの**追加**があれば、上記の手順の対象とする
+- **PRのCIが、追加を検査する**（[#1545](https://github.com/bamiyanapp/dev-standards/issues/1545)）。`reusable-ci.yml`の`commitlint` jobが、baseの契約ファイルと比べる。追加があって、PRタイトルに`!`（例: `feat(ci)!: ...`）が無ければ、失敗にする
+- 印をPRタイトルに限る理由は、squash mergeのコミットの件名が、PRタイトルになるためである。本文の`BREAKING CHANGE:`は、コミット本文へ入るかが、リポジトリ設定に依存する。`!`があれば、semantic-releaseがメジャーバージョンを上げる
+- 参照側は、`enable_dependency_risk_gating: true`を使う。メジャー更新は、`dependency-risk-summary`がHighと判定し、自動マージされない。人が、リリースノートを確認してから、マージする
+- メジャー更新を取り込む前に、呼び出し側のjobへ、新しい権限を足す。足さないと、`startup_failure`になる。権限を足す変更は、再利用workflowが要求する前でも、害は無い
 - 権限を増やさずに済む設計を、先に検討する。
 - 例えば、`issues: write`のjobは、`reusable-cd.yml`へ組み込まない。呼び出し元のjobとして書く（[`notify-cd-failure`](#githubactionsnotify-cd-failure複合action)）
 

@@ -717,6 +717,18 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: echo "$PR_TITLE" | npx commitlint --verbose
+      # issue #1545。再利用ワークフローの契約（docs/generated/reusable-workflow-contract.json）で、
+      # 呼び出し側への要求（permissions・必須入力・必須secret）が増えたPRは、許可していない既存の
+      # 参照側をstartup_failureにする（#1334）。PRタイトルに`!`（破壊的変更の印）が無ければ失敗にする。
+      # 契約ファイルを持つリポジトリ（dev-standards自身）だけで動く。参照側では、ファイルが無く、スキップされる
+      - name: 契約の要求が増えたとき、破壊的変更の印（PRタイトルの!）を必須にする
+        id: contract-breaking
+        if: steps.install.outcome == 'success' && github.event_name == 'pull_request' && hashFiles('docs/generated/reusable-workflow-contract.json') != ''
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/check-contract-breaking.js
       - name: 結果を判定する
         id: result
         shell: bash
@@ -739,7 +751,7 @@ jobs:
             exit 1
           fi
           echo "infra_failure=false" >> "$GITHUB_OUTPUT"
-          if [ "${{ steps.lint-push.outcome }}" = "failure" ] || [ "${{ steps.lint-pr.outcome }}" = "failure" ] || [ "${{ steps.lint-pr-title.outcome }}" = "failure" ]; then
+          if [ "${{ steps.lint-push.outcome }}" = "failure" ] || [ "${{ steps.lint-pr.outcome }}" = "failure" ] || [ "${{ steps.lint-pr-title.outcome }}" = "failure" ] || [ "${{ steps.contract-breaking.outcome }}" = "failure" ]; then
             exit 1
           fi
           exit 0
