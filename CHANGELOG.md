@@ -1,3 +1,10 @@
+# [2.180.0](https://github.com/bamiyanapp/dev-standards/compare/v2.179.0...v2.180.0) (2026-11-21)
+
+
+### Features
+
+* **ui:** アプリ起動時の定型の組み立て（AppShell）をshared/uiへ追加する ([#1598](https://github.com/bamiyanapp/dev-standards/issues/1598)) ([dcc6aa6](https://github.com/bamiyanapp/dev-standards/commit/dcc6aa6a93b35980a90e08f092b427f4acb75a31))
+
 # [2.179.0](https://github.com/bamiyanapp/dev-standards/compare/v2.178.0...v2.179.0) (2026-11-21)
 
 
