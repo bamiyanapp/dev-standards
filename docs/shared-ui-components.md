@@ -24,6 +24,7 @@
 | [`success-2.mp3`](#sharedsfxsuccess-2mp3) | `success.mp3`の別バリエーション |
 | [`ErrorBoundary.jsx`](#shareduierrorboundaryjsx) | 未捕捉例外時のError Boundary・クライアントエラー報告 |
 | [`renderApp.jsx`](#shareduirenderappjsx) | StrictModeとErrorBoundaryで包んでアプリを描画する |
+| [`AppShell.jsx`](#shareduiappshelljsx) | 起動時の定型の部品を、決まった順序で組み立てる |
 | [手動切り替えリンクパターン](#手動切り替えリンクパターンブルーグリーンカナリアデプロイ) | ブルーグリーン/カナリアでのstable切り替え導線（パターンのみ、コンポーネント非提供） |
 | [`useLocalStorageState.js`](#sharedhooksuselocalstoragestatejs) | `localStorage`とReact stateの双方向同期hook |
 | [`useSessionStorageState.js`](#sharedhooksusesessionstoragestatejs) | `sessionStorage`とReact stateの双方向同期hook（JSON対応） |
@@ -245,7 +246,29 @@ renderApp(<><App /><PwaUpdatePrompt /></>, { reportUrl: `${API_BASE_URL}/report-
 - `rootElement`を省略すると、`id="root"`の要素へ描画する。無ければ、分かる文言のエラーにする
 - 戻り値は、`createRoot`が返すrootである
 
-`AppShell`（先読み・キャッシュの温め・更新通知の組み立て）の汎用化は、まだ行っていない。examinationの実装を参照できる状態で、別に進める。
+### `shared/ui/AppShell.jsx`
+
+アプリ起動時の定型の部品を、決まった順序で組み立てる（[#1380](https://github.com/bamiyanapp/dev-standards/issues/1380)）。
+順序は、Service Worker登録・バックエンドの先読み・更新通知・URLの先読み・遷移オーバーレイ・ユーザーメニュー・トップへ戻る・ページである。
+
+```jsx
+import AppShell from "./AppShell.jsx"; // symlink
+<AppShell
+  parts={{ ServiceWorkerRegistration, BackendCacheWarmer, UpdateNotifier, SpeculationRules, NavigationOverlay, UserMenu, BackToTop }}
+  prefetchUrls={["/", "/settings/"]}
+  backendEndpoints={[`${API_BASE_URL}/items`]}
+  getBackendAuthToken={getToken}
+  warmedFlagKey="my-app-backend-cache-warmed"
+  page={<Page />}
+/>
+```
+
+- 部品は、`parts`で注入する。symlink共有では、兄弟のファイルを相対importできないためである
+- 渡さなかった部品は、描画しない。使わない部品は、省けばよい
+- `prefetchUrls`・`backendEndpoints`が空なら、`SpeculationRules`・`BackendCacheWarmer`を描画しない
+- `swUrl`・`warmedFlagKey`を渡さなければ、部品の既定値に任せる
+- `showBackToTop={false}`で、トップページ等の`BackToTop`を省く
+- `UserMenu`は、プロダクト固有の部品として、呼び出し側から渡す。汎用化の可否は、#1380の検討項目として残る
 
 ### `shared/ui/ErrorBoundary.jsx`
 
