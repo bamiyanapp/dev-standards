@@ -85,6 +85,7 @@
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
 - [`code-quality-conventions.md`](docs/code-quality-conventions.md): lintルール規約（複雑度チェック・sonarjs等）
 - [`sandboxed-agent-production-data-pattern.md`](docs/sandboxed-agent-production-data-pattern.md): 実認証情報の無いサンドボックスからの本番データ調査・修正
+- [`aws-oidc-deploy-pattern.md`](docs/aws-oidc-deploy-pattern.md): AWSデプロイのOIDC化（長期キーをなくす。`role-to-assume`・IAM定義例・移行手順）
 - [`renovate-adoption-lessons.md`](docs/renovate-adoption-lessons.md): Renovate導入初期に集中して発生する依存更新PRのCI失敗事例と`renovate.json`側の対処パターン
 - [`hardcoded-credential-detection-pattern.md`](docs/hardcoded-credential-detection-pattern.md): ソースコードにハードコードされたクレデンシャルを検知する仕組み。gitleaksの`generic-api-key`ルールと誤検知対応
 
