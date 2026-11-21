@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { createLinter } = require("actionlint");
 const { checkVersionConsistency } = require("./check-dev-standards-refs.js");
+const { filterKnownFalsePositives } = require("./lint-workflow-results.js");
 
 // 参照側リポジトリ（karuta等）はdev-standardsをsubmodule経由で取り込み、
 // `node dev-standards/scripts/check-workflows.js`として本スクリプトを実行する
@@ -46,7 +47,8 @@ async function main() {
     // 連続してlintすると、ローカルの相対パス参照（`uses: ./...`）を含むワークフローの
     // 組み合わせによってWASM内部状態が壊れ2件目以降がクラッシュする既知の問題があるため。
     const lint = await createLinter();
-    const results = lint(content, relativePath);
+    // issue #1581: `vars`コンテキストの誤検知を、取り除く
+    const results = filterKnownFalsePositives(lint(content, relativePath));
 
     for (const result of results) {
       console.error(`${relativePath}:${result.line}:${result.column}: [${result.kind}] ${result.message}`);
