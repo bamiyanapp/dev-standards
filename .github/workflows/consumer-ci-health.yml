@@ -1,0 +1,43 @@
+name: Consumer CI Health
+
+# dev-standards#1546。全参照側のstartup_failureを、dev-standards側から検知する。
+# startup_failureは、壊れたworkflow自身では検知できない（1件も起動しない）。
+# 対象は、docs/consumer-repositories.mdの表から機械的に読む。
+# これは完了条件ではなく、運用の安全網である（#1527）。
+# 読めないリポジトリは、失敗させず、Summaryとissueへ「読めなかった」と明記する。
+
+on:
+  schedule:
+    - cron: "23 21 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-ci-health:
+    name: "参照側のstartup_failure検知"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+
+      - name: 参照側のstartup_failureを調べる
+        id: health
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/consumer-ci-health.js | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: トラッキングissueを同期する
+        uses: ./.github/actions/tracking-issue-sync
+        with:
+          title: "参照側でstartup_failureが発生している"
+          has-findings: ${{ steps.health.outputs.has_findings }}
+          body: ${{ steps.health.outputs.body }}
+          labels: '["bug","priority: high"]'
+          close-comment: "再スキャンの結果、startup_failureが検知されなくなったため自動クローズします。"
+          github-token: ${{ github.token }}

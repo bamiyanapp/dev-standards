@@ -23,3 +23,16 @@ dev-standardsを参照している既知のリポジトリの一覧。`docs/`配
 ## 一覧の更新
 
 新しい参照側リポジトリでdev-standardsの利用を開始した場合を考える。具体的には`git submodule add`・`reusable-ci.yml`/`reusable-cd.yml`の呼び出しである。この一覧に追記する。既知のリポジトリが参照をやめた場合は削除する（削除の判断がつかない場合は残したまま「参照終了・要確認」等の注記を添える）。
+
+## startup_failureの定期検知
+
+`.github/workflows/consumer-ci-health.yml`が、この一覧の全リポジトリを毎日調べる（#1546）。
+直近7日のrunのうち、`startup_failure`のものを探す。
+壊れたworkflow自身は、1件も起動しないため、自分では検知できない。
+一覧は、この表から機械的に読む。二重管理はしない。
+
+1件でもあれば、dev-standardsのIssueを1つ作る。同じタイトルのopenなIssueがあれば、本文を更新する。
+検知されなくなれば、自動でクローズする。結果は、Job Summaryにも出る。
+
+読めないリポジトリは、失敗させない。「読めなかった」と、表とIssueへ明記する。
+これは、運用の安全網である。dev-standardsのIssueの完了条件にはしない（#1527）。
