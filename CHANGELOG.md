@@ -1,3 +1,10 @@
+# [2.179.0](https://github.com/bamiyanapp/dev-standards/compare/v2.178.0...v2.179.0) (2026-11-21)
+
+
+### Features
+
+* **lambda:** ログインフロー（loginFlow）をshared/lambdaへ切り出す ([#1597](https://github.com/bamiyanapp/dev-standards/issues/1597)) ([1618b56](https://github.com/bamiyanapp/dev-standards/commit/1618b56adfde73d5ad8449d3838407eb79ced81e))
+
 # [2.178.0](https://github.com/bamiyanapp/dev-standards/compare/v2.177.0...v2.178.0) (2026-11-21)
 
 
