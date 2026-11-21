@@ -83,7 +83,9 @@ DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`I
 ### リクエストボディの入力検証
 
 `shared/lambda/validation.js`の小さな検証関数で、ボディの型・必須・文字数上限を確認する。
-- `requireObject`・`requireString`・`optionalString`・`requireBoolean`・`optionalDate`・`requireExactlyOneOf`を提供する
+- 次の関数を提供する。`requireObject`・`requireString`・`optionalString`・`requireNumber`
+- 続きは、`requireBoolean`・`optionalDate`・`requireExactlyOneOf`である
+- ログイン無しの公開書き込みAPIの対策は、[`anonymous-write-api-pattern.md`](anonymous-write-api-pattern.md)を参照する
 - 失敗時は`statusCode: 400`・`code: "VALIDATION"`の例外を投げる。エラー文言に入力値は含めない
 - 上限値の目安は、名前100文字、メモ1000文字である
 
