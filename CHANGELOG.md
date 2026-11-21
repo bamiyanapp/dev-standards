@@ -1,3 +1,10 @@
+# [2.174.0](https://github.com/bamiyanapp/dev-standards/compare/v2.173.1...v2.174.0) (2026-11-21)
+
+
+### Features
+
+* **ci:** 契約の要求が増えたPRに、破壊的変更の印（PRタイトルの!）を必須にする ([#1590](https://github.com/bamiyanapp/dev-standards/issues/1590)) ([ab2b138](https://github.com/bamiyanapp/dev-standards/commit/ab2b138b086af70d6611526a31036746031c5f56)), closes [#1545](https://github.com/bamiyanapp/dev-standards/issues/1545)
+
 ## [2.173.1](https://github.com/bamiyanapp/dev-standards/compare/v2.173.0...v2.173.1) (2026-11-21)
 
 
