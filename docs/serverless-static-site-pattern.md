@@ -170,5 +170,6 @@ examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-sta
 - `redirectPath.js`: ログイン後の戻り先の検証（オープンリダイレクトの防止）
 - `csrfNonce.js`: ログインCSRF対策のnonceの発行と、一度きりの消費（DynamoDBは注入する）
 - `cognitoTokens.js`: 認可コード・refresh tokenの交換、id_tokenの検証、JWKSのキャッシュ（`jose`と設定値は注入する）
+- `loginFlow.js`: Hosted UIへのリダイレクトと、コールバックの検証（上の2つを組み合わせる。検証後の許可判定とCookieの発行は、呼び出し側に残す）
 
 `dailyRateLimit.js`と同じく、Lambda@Edgeからsymlinkで使える。
