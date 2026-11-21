@@ -1762,7 +1762,11 @@ jobs:
           fi
           git add -A
           git commit -m "fix(ci): dev-standardsのsymlink/copyドリフトを自動修復する" -m "reusable-ci.ymlのstandards-checkジョブによる自動コミットです（issue #606）。"
-          git push "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:$HEAD_REF"
+          # issue #1395: actions/checkoutが残したGITHUB_TOKENの認証ヘッダー（http.extraheader）は、
+          # URLへ埋め込んだBOT_TOKENより優先される。そのまま使うと、pushの主体がgithub-actions[bot]
+          # になり、CIの実行者（actor）もbotとなって、承認待ち（action_required）で止まる。
+          # 空の値で上書きして無効にし、BOT_TOKEN（人のアカウント）でpushする（実機で確認）
+          git -c http.https://github.com/.extraheader= push "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:$HEAD_REF"
       # 自動修復が発生した回（変更をpushできた場合・BOT_TOKEN未設定等でpush自体を
       # 試みなかった場合・BOT_TOKENが無効でpushに失敗した場合のいずれも）は、
       # このjob自体を意図的に失敗させる。pushできた場合は、新しいコミットが
