@@ -60,15 +60,57 @@ inputs:
     required: false
     default: ""
   aws-access-key-id:
-    description: "AWSアクセスキーID"
-    required: true
+    description: >-
+      AWSアクセスキーID。`role-to-assume`を指定しない場合に必要（長期キー方式）。
+      `role-to-assume`と両方指定された場合は、OIDCを優先し、警告を出す
+    required: false
+    default: ""
   aws-secret-access-key:
-    description: "AWSシークレットアクセスキー"
-    required: true
+    description: "AWSシークレットアクセスキー。`aws-access-key-id`と対で指定する"
+    required: false
+    default: ""
+  role-to-assume:
+    description: >-
+      OIDCで引き受けるIAMロールのARN（issue #1363）。指定すると、`aws-actions/configure-aws-credentials`で
+      一時クレデンシャルを取得し、長期アクセスキーを使わずにデプロイする。呼び出し側のjobに
+      `permissions: { id-token: write }`が必要（複合アクションからは宣言できない）。
+      未指定なら、従来どおりアクセスキーを使う（`id-token`権限は不要）
+    required: false
+    default: ""
+  aws-region:
+    description: "`role-to-assume`を指定するときに必要なAWSリージョン（例: ap-northeast-1）"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: AWSの認証情報の指定を検証する
+      shell: bash
+      env:
+        ROLE_TO_ASSUME: ${{ inputs.role-to-assume }}
+        AWS_REGION_INPUT: ${{ inputs.aws-region }}
+        ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+      run: |
+        if [ -n "$ROLE_TO_ASSUME" ]; then
+          if [ -z "$AWS_REGION_INPUT" ]; then
+            echo "::error::role-to-assume（OIDC）を指定する場合は、aws-region も指定してください。"
+            exit 1
+          fi
+          if [ -n "$ACCESS_KEY_ID" ] || [ -n "$SECRET_ACCESS_KEY" ]; then
+            echo "::warning::role-to-assume とアクセスキーの両方が指定されています。OIDCを優先し、アクセスキーは使いません。アクセスキーの指定は削除してください。"
+          fi
+        elif [ -z "$ACCESS_KEY_ID" ] || [ -z "$SECRET_ACCESS_KEY" ]; then
+          echo "::error::AWSの認証情報がありません。role-to-assume（OIDC）か、aws-access-key-id と aws-secret-access-key のどちらかを指定してください。"
+          exit 1
+        fi
+    - name: OIDCでAWSの一時クレデンシャルを取得する
+      if: inputs.role-to-assume != ''
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
     - name: Set up Node.js
       uses: actions/setup-node@v7
       with:
@@ -114,8 +156,10 @@ runs:
         fi
         ${{ inputs.deploy-command }}
       env:
-        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        # OIDC（role-to-assume指定）のときは、configure-aws-credentialsがjobの環境変数へ書いた
+        # 一時クレデンシャルを、空のアクセスキーで上書きしないよう、そのまま引き継ぐ
+        AWS_ACCESS_KEY_ID: ${{ inputs.role-to-assume == '' && inputs.aws-access-key-id || env.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.role-to-assume == '' && inputs.aws-secret-access-key || env.AWS_SECRET_ACCESS_KEY }}
     - name: デプロイ後に疎通確認する
       if: inputs.smoke-test-url != ''
       shell: bash
