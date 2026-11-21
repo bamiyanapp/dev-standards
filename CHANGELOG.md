@@ -1,3 +1,10 @@
+# [2.175.0](https://github.com/bamiyanapp/dev-standards/compare/v2.174.0...v2.175.0) (2026-11-21)
+
+
+### Features
+
+* **ci:** 全参照側のstartup_failureを、定期workflowで検知する ([#1591](https://github.com/bamiyanapp/dev-standards/issues/1591)) ([e6a9393](https://github.com/bamiyanapp/dev-standards/commit/e6a939376ab58e945626e6724e7377c8a1ff9f40))
+
 # [2.174.0](https://github.com/bamiyanapp/dev-standards/compare/v2.173.1...v2.174.0) (2026-11-21)
 
 
