@@ -1,3 +1,10 @@
+# [2.172.0](https://github.com/bamiyanapp/dev-standards/compare/v2.171.0...v2.172.0) (2026-11-21)
+
+
+### Features
+
+* **reusable-backup-dynamodb:** OIDC（role_to_assume）で認証できるようにする ([#1585](https://github.com/bamiyanapp/dev-standards/issues/1585)) ([a4b73ea](https://github.com/bamiyanapp/dev-standards/commit/a4b73ea0604abd47e20e21e9472b1297560b0137)), closes [#1363](https://github.com/bamiyanapp/dev-standards/issues/1363) [#1582](https://github.com/bamiyanapp/dev-standards/issues/1582)
+
 # [2.171.0](https://github.com/bamiyanapp/dev-standards/compare/v2.170.1...v2.171.0) (2026-11-21)
 
 
