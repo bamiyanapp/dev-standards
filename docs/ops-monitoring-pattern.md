@@ -155,11 +155,21 @@ module.exports = (serverless) =>
 - LINE公式アカウントを用意できるまでの暫定として、SNSのEmail購読を使える。**確認メールのリンクを開くまで、購読は有効にならない**。デプロイが成功しても、通知が届くことは意味しない
 - 本番の通知先は、運用監視専用のLINE Botである（次の節）
 
-## Lambda@Edgeの監視（未確認）
+## Lambda@Edgeの監視
 
-Lambda@Edgeは、実行リージョンごとに関数のレプリカが作られる。`AWS/Lambda`のメトリクスは、リージョンごとに分かれる。全リージョンにアラームを張るのは現実的でない。
+Lambda@Edgeは、実行リージョンごとに関数のレプリカが作られる。レプリカの名前は`us-east-1.<関数名>`である。`AWS/Lambda`のメトリクスは、リージョンごとに分かれる。全リージョンにアラームを張るのは現実的でない。
 
-第一候補は、`AWS/CloudFront`名前空間のメトリクスである。ディストリビューション単位で、`us-east-1`に集約して出る（`DistributionId`と`Region=Global`）。ただし、**メトリクスの正確な名前と、追加料金の要否は、未確認である**。実装前に、一時workflowで`aws cloudwatch list-metrics`を実行して確認する（[`sandbox-unreachable-investigation`](../.claude/skills/sandbox-unreachable-investigation/SKILL.md)Skill参照）。
+そこで、`AWS/CloudFront`名前空間のメトリクスを使う。ディストリビューション単位で、`us-east-1`に集約して出る。一時workflowで`aws cloudwatch list-metrics`を実行して確認した（確認日: 2026-11-21）。
+
+- 次のメトリクスが存在する。ディメンションは`DistributionId`と`Region`である
+  - `4xxErrorRate`・`5xxErrorRate`・`TotalErrorRate`
+  - `Requests`・`BytesDownloaded`・`BytesUploaded`
+  - `LambdaLimitExceededError`
+- CloudFront Functionsのメトリクスもある。`FunctionInvocations`・`FunctionComputeUtilization`・`KvsReadRequests`である。ディメンションは`DistributionId`・`FunctionName`・`Region`である
+- `LambdaExecutionError`・`LambdaValidationError`は、一覧に無かった。エラーが無い間は、メトリクス自体が出ないと考えられる。存在は未確認である
+- 実行リージョン側の`AWS/Lambda`は、`us-east-1`と`us-west-2`に40系列ずつあった。`eu-west-1`と`ap-northeast-1`には無かった。メトリクス名は`Invocations`・`Errors`・`Duration`・`Throttles`・`ConcurrentExecutions`である。リージョンへの分布は、利用者の所在で変わる
+
+アラームの第一候補は、`AWS/CloudFront`の`5xxErrorRate`である。`LambdaLimitExceededError`も使える。追加料金の要否は、未確認である。
 
 ## 運用監視専用LINE Botについて
 
