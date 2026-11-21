@@ -1,0 +1,54 @@
+name: tmp-probe-aws-iam
+# issue #1363の調査用の一時workflow（調査後に削除する）。読み取り専用。
+# OIDCプロバイダの有無と、現行の認証情報の種別・権限の大きさだけを出す。アカウントIDやARNは出さない
+on:
+  push:
+    branches:
+      - claude/dev-efficiency-improvements-6wlv2c
+    paths:
+      - ".github/workflows/tmp-probe-aws-iam.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-northeast-1
+    steps:
+      - name: IAMの現状を確認する（読み取り専用）
+        run: |
+          {
+            echo "## AWSの現状（読み取り専用）"
+            arn=$(aws sts get-caller-identity --query Arn --output text 2>/dev/null || echo "")
+            case "$arn" in
+              *:user/*) echo "認証情報: IAMユーザー" ;;
+              *:assumed-role/*) echo "認証情報: ロール" ;;
+              "") echo "認証情報: 取得できない" ;;
+              *) echo "認証情報: その他" ;;
+            esac
+            providers=$(aws iam list-open-id-connect-providers --query 'OpenIDConnectProviderList[].Arn' --output text 2>&1 || true)
+            if echo "$providers" | grep -q "AccessDenied"; then
+              echo "OIDCプロバイダ一覧: 権限が無く、取得できない"
+            else
+              echo "OIDCプロバイダの数: $(echo "$providers" | wc -w)"
+              echo "GitHub Actions用のOIDCプロバイダ: $(aws iam list-open-id-connect-providers --query 'OpenIDConnectProviderList[].Arn' --output text 2>/dev/null | grep -c 'token.actions.githubusercontent.com') 件"
+            fi
+            user=$(echo "$arn" | sed -n 's|.*:user/||p')
+            if [ -n "$user" ]; then
+              attached=$(aws iam list-attached-user-policies --user-name "$user" --query 'AttachedPolicies[].PolicyName' --output text 2>&1 || true)
+              if echo "$attached" | grep -q "AccessDenied"; then
+                echo "付与ポリシー: 権限が無く、取得できない"
+              else
+                echo "付与された管理ポリシーの数: $(echo "$attached" | wc -w)"
+                if echo "$attached" | grep -qw "AdministratorAccess"; then echo "AdministratorAccess: 付いている"; else echo "AdministratorAccess: 付いていない"; fi
+              fi
+              inline=$(aws iam list-user-policies --user-name "$user" --query 'PolicyNames' --output text 2>&1 || true)
+              if echo "$inline" | grep -q "AccessDenied"; then echo "インラインポリシー: 権限が無く、取得できない"; else echo "インラインポリシーの数: $(echo "$inline" | wc -w)"; fi
+              groups=$(aws iam list-groups-for-user --user-name "$user" --query 'Groups[].GroupName' --output text 2>&1 || true)
+              if echo "$groups" | grep -q "AccessDenied"; then echo "グループ: 権限が無く、取得できない"; else echo "所属グループの数: $(echo "$groups" | wc -w)"; fi
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
