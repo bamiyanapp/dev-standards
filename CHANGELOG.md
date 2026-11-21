@@ -1,3 +1,10 @@
+# [2.178.0](https://github.com/bamiyanapp/dev-standards/compare/v2.177.0...v2.178.0) (2026-11-21)
+
+
+### Features
+
+* **lambda:** Cognitoのトークン処理（cognitoTokens）をshared/lambdaへ切り出す ([#1596](https://github.com/bamiyanapp/dev-standards/issues/1596)) ([2a5b857](https://github.com/bamiyanapp/dev-standards/commit/2a5b857fad5837ef6fcd686a77831ae1f4c17b62))
+
 # [2.177.0](https://github.com/bamiyanapp/dev-standards/compare/v2.176.0...v2.177.0) (2026-11-21)
 
 
