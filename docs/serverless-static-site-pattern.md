@@ -169,5 +169,6 @@ examination（`bamiyanapp/examination`）の`infra/`（`auth-stack/`・`site-sta
 - `edgeHttp.js`: Cookieの解析・組み立て、リダイレクト・JSONの応答、URIの正規化、JSONボディの解析
 - `redirectPath.js`: ログイン後の戻り先の検証（オープンリダイレクトの防止）
 - `csrfNonce.js`: ログインCSRF対策のnonceの発行と、一度きりの消費（DynamoDBは注入する）
+- `cognitoTokens.js`: 認可コード・refresh tokenの交換、id_tokenの検証、JWKSのキャッシュ（`jose`と設定値は注入する）
 
 `dailyRateLimit.js`と同じく、Lambda@Edgeからsymlinkで使える。
