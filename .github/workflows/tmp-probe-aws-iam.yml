@@ -19,36 +19,28 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ap-northeast-1
     steps:
-      - name: IAMの現状を確認する（読み取り専用）
+      - name: 管理ポリシーの内訳を確認する（読み取り専用）
         run: |
           {
-            echo "## AWSの現状（読み取り専用）"
-            arn=$(aws sts get-caller-identity --query Arn --output text 2>/dev/null || echo "")
-            case "$arn" in
-              *:user/*) echo "認証情報: IAMユーザー" ;;
-              *:assumed-role/*) echo "認証情報: ロール" ;;
-              "") echo "認証情報: 取得できない" ;;
-              *) echo "認証情報: その他" ;;
-            esac
-            providers=$(aws iam list-open-id-connect-providers --query 'OpenIDConnectProviderList[].Arn' --output text 2>&1 || true)
-            if echo "$providers" | grep -q "AccessDenied"; then
-              echo "OIDCプロバイダ一覧: 権限が無く、取得できない"
-            else
-              echo "OIDCプロバイダの数: $(echo "$providers" | wc -w)"
-              echo "GitHub Actions用のOIDCプロバイダ: $(aws iam list-open-id-connect-providers --query 'OpenIDConnectProviderList[].Arn' --output text 2>/dev/null | grep -c 'token.actions.githubusercontent.com') 件"
-            fi
+            echo "## 管理ポリシーの内訳（読み取り専用）"
+            arn=$(aws sts get-caller-identity --query Arn --output text)
             user=$(echo "$arn" | sed -n 's|.*:user/||p')
-            if [ -n "$user" ]; then
-              attached=$(aws iam list-attached-user-policies --user-name "$user" --query 'AttachedPolicies[].PolicyName' --output text 2>&1 || true)
-              if echo "$attached" | grep -q "AccessDenied"; then
-                echo "付与ポリシー: 権限が無く、取得できない"
-              else
-                echo "付与された管理ポリシーの数: $(echo "$attached" | wc -w)"
-                if echo "$attached" | grep -qw "AdministratorAccess"; then echo "AdministratorAccess: 付いている"; else echo "AdministratorAccess: 付いていない"; fi
-              fi
-              inline=$(aws iam list-user-policies --user-name "$user" --query 'PolicyNames' --output text 2>&1 || true)
-              if echo "$inline" | grep -q "AccessDenied"; then echo "インラインポリシー: 権限が無く、取得できない"; else echo "インラインポリシーの数: $(echo "$inline" | wc -w)"; fi
-              groups=$(aws iam list-groups-for-user --user-name "$user" --query 'Groups[].GroupName' --output text 2>&1 || true)
-              if echo "$groups" | grep -q "AccessDenied"; then echo "グループ: 権限が無く、取得できない"; else echo "所属グループの数: $(echo "$groups" | wc -w)"; fi
-            fi
+            # AWS管理ポリシー（arn:aws:iam::aws:policy/...）は名前を出す。顧客管理ポリシーは件数だけ出す
+            report() {
+              label="$1"; shift
+              all=$(printf '%s\n' "$@" | grep -v '^$' || true)
+              aws_managed=$(echo "$all" | grep '^arn:aws:iam::aws:policy/' | sed 's|^arn:aws:iam::aws:policy/||' | sort || true)
+              customer_count=$(echo "$all" | grep -vc '^arn:aws:iam::aws:policy/' || true)
+              echo "### ${label}"
+              echo "AWS管理ポリシー（名前）:"
+              echo "$aws_managed" | sed 's/^/- /'
+              echo "顧客管理ポリシー（件数のみ）: ${customer_count}"
+            }
+            user_arns=$(aws iam list-attached-user-policies --user-name "$user" --query 'AttachedPolicies[].PolicyArn' --output text | tr '\t' '\n')
+            report "ユーザーに直接付いている管理ポリシー" "$user_arns"
+            for g in $(aws iam list-groups-for-user --user-name "$user" --query 'Groups[].GroupName' --output text); do
+              g_arns=$(aws iam list-attached-group-policies --group-name "$g" --query 'AttachedPolicies[].PolicyArn' --output text | tr '\t' '\n')
+              report "グループに付いている管理ポリシー" "$g_arns"
+              echo "グループのインラインポリシーの数: $(aws iam list-group-policies --group-name "$g" --query 'PolicyNames' --output text | wc -w)"
+            done
           } | tee -a "$GITHUB_STEP_SUMMARY"
