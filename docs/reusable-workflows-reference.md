@@ -316,8 +316,9 @@ jobs:
 |---|---|---|
 | `table_names` | バックアップ対象のDynamoDBテーブル名をJSON配列形式で指定する | （必須） |
 | `aws_region` | テーブルが存在するAWSリージョン | `ap-northeast-1` |
+| `role_to_assume` | OIDCで引き受けるIAMロールのARN。指定するとアクセスキーを使わない（[`aws-oidc-deploy-pattern.md`](aws-oidc-deploy-pattern.md)） | （空） |
 
-`secrets.AWS_ACCESS_KEY_ID`・`secrets.AWS_SECRET_ACCESS_KEY`はいずれも必須。結果はテーブルごとの成功/失敗・Backup ARNを表形式でJob Summaryへ出力する。オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。
+認証は、次のどちらかを選ぶ。`role_to_assume`を指定する（OIDC）か、`secrets.AWS_ACCESS_KEY_ID`・`secrets.AWS_SECRET_ACCESS_KEY`を渡す（長期キー）。どちらも無ければ、最初のstepで失敗する。両方あれば、OIDCを優先して警告する。OIDCのときは、呼び出し側のjobに`permissions: { contents: read, id-token: write }`が要る。このworkflowは`permissions`を宣言せず、呼び出し側の権限を引き継ぐため、長期キーの呼び出しは無変更で動く。結果はテーブルごとの成功/失敗・Backup ARNを表形式でJob Summaryへ出力する。オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。
 
 ## `reusable-rollback-to-stable.yml`
 
