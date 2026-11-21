@@ -47,3 +47,18 @@ test("エラー文言に入力値を含めない", () => {
   assert.throws(() => v.requireString("x".repeat(500), "名前", { max: 3 }), (e) => !e.message.includes("xxxx"));
   assert.throws(() => v.optionalDate("secret-value", "日付"), (e) => !e.message.includes("secret"));
 });
+
+test("requireNumber: 有限の数値のみ通し、範囲と整数を検証する", () => {
+  assert.equal(v.requireNumber(12.5, "タイム", { min: 0, max: 100 }), 12.5);
+  assert.equal(v.requireNumber(0, "件数", { min: 0, integer: true }), 0);
+  assert.equal(v.requireNumber(100, "タイム", { max: 100 }), 100);
+  // 型違い・NaN・無限大・数値の文字列は拒否する
+  for (const bad of ["1", null, undefined, NaN, Infinity, -Infinity, {}, [1], true]) rejects400(() => v.requireNumber(bad, "タイム"));
+  rejects400(() => v.requireNumber(-1, "タイム", { min: 0 }));
+  rejects400(() => v.requireNumber(101, "タイム", { max: 100 }));
+  rejects400(() => v.requireNumber(1.5, "件数", { integer: true }));
+});
+
+test("requireNumber: エラー文言に、入力値を含めない", () => {
+  assert.throws(() => v.requireNumber(123456, "タイム", { max: 100 }), (e) => !e.message.includes("123456"));
+});

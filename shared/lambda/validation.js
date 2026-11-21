@@ -41,6 +41,17 @@ function optionalString(value, field, { max } = {}) {
   return requireString(value, field, { max });
 }
 
+// 有限の数値（NaN・Infinity・数値の文字列は拒否）。min・max（含む）の範囲と、integer（整数）を指定できる。
+// ランキングの記録のような、匿名の公開書き込みAPIでは、ドメイン知識から導ける上限・下限を、
+// 第一の防御線にする（docs/anonymous-write-api-pattern.md）
+function requireNumber(value, field, { min, max, integer = false } = {}) {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new ValidationError(`${field}は数値で指定してください`);
+  if (integer && !Number.isInteger(value)) throw new ValidationError(`${field}は整数で指定してください`);
+  if (min !== undefined && value < min) throw new ValidationError(`${field}は${min}以上で指定してください`);
+  if (max !== undefined && value > max) throw new ValidationError(`${field}は${max}以下で指定してください`);
+  return value;
+}
+
 function requireBoolean(value, field) {
   if (typeof value !== "boolean") throw new ValidationError(`${field}は真偽値で指定してください`);
   return value;
@@ -69,4 +80,4 @@ function requireExactlyOneOf(body, fields) {
   return present[0];
 }
 
-module.exports = { ValidationError, requireObject, requireString, optionalString, requireBoolean, optionalDate, requireExactlyOneOf };
+module.exports = { ValidationError, requireObject, requireString, optionalString, requireNumber, requireBoolean, optionalDate, requireExactlyOneOf };

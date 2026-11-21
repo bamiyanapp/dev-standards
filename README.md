@@ -66,6 +66,7 @@
 - [`dynamodb-safe-backfill-pattern.md`](docs/dynamodb-safe-backfill-pattern.md): DynamoDBの安全なバックフィル・移行スクリプトパターン
 - [`shared-api-client.md`](docs/shared-api-client.md): フロントエンド共通のAPIクライアント（`ApiError`・リトライ方針・クエリ組み立て）
 - [`serverless-api-hardening-checklist.md`](docs/serverless-api-hardening-checklist.md): サーバーレスAPIの堅牢化チェックリスト（データ保護・ページネーション・公開APIの防御・監視等）
+- [`anonymous-write-api-pattern.md`](docs/anonymous-write-api-pattern.md): ログイン無しの公開書き込みAPIの不正データ対策（妥当性範囲チェック・回数上限・CORS・署名しない理由）
 - [`security-headers-pattern.md`](docs/security-headers-pattern.md): CloudFront配信のセキュリティヘッダー標準（CSP・HSTS・ResponseHeadersPolicy・展開の順序）
 - [`serverless-api-integrity-checklist.md`](docs/serverless-api-integrity-checklist.md): サーバーレスAPIのデータ整合性・運用チェックリスト（認可・同時更新・親子削除・GSI・IAM等）
 - [`daily-rate-limit-pattern.md`](docs/daily-rate-limit-pattern.md): 日次利用回数の上限カウンタ（`shared/lambda/dailyRateLimit.js`）
