@@ -1,3 +1,10 @@
+# [2.173.0](https://github.com/bamiyanapp/dev-standards/compare/v2.172.0...v2.173.0) (2026-11-21)
+
+
+### Features
+
+* **scan:** Lambdaランタイムのサポート終了の定期スキャンを追加する ([#1587](https://github.com/bamiyanapp/dev-standards/issues/1587)) ([d197d59](https://github.com/bamiyanapp/dev-standards/commit/d197d590979ee0284bf1fcc8100b5436da821061)), closes [#1371](https://github.com/bamiyanapp/dev-standards/issues/1371)
+
 # [2.172.0](https://github.com/bamiyanapp/dev-standards/compare/v2.171.0...v2.172.0) (2026-11-21)
 
 
