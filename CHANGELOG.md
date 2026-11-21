@@ -1,3 +1,10 @@
+# [2.176.0](https://github.com/bamiyanapp/dev-standards/compare/v2.175.0...v2.176.0) (2026-11-21)
+
+
+### Features
+
+* **lambda:** 認証の汎用部分（edgeHttp・redirectPath）をshared/lambdaへ切り出す ([#1594](https://github.com/bamiyanapp/dev-standards/issues/1594)) ([5092665](https://github.com/bamiyanapp/dev-standards/commit/5092665c73e099e83793c993bc3da0e4227954ac))
+
 # [2.175.0](https://github.com/bamiyanapp/dev-standards/compare/v2.174.0...v2.175.0) (2026-11-21)
 
 
