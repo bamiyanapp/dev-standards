@@ -19,6 +19,7 @@ PRに依存しない定期スキャンは、上記の`reusable-dependency-full-s
 | `reusable-dependency-full-scan.yml` | `package-lock.json`全体（直接・間接問わず） | 間接依存が親パッケージのsemver range外の更新を必要とするケース |
 | `reusable-dependency-deprecation-scan.yml` | `package-lock.json`全体（既定で直接依存のみ） | 後継バージョンが存在せず、Renovateが更新PRを作れないケース |
 | `reusable-runtime-version-scan.yml` | 稼働中プロセスが報告するランタイム（Node.js等）のバージョン | マネージドランタイム自体（npmパッケージの管轄外、karuta#1880） |
+| `reusable-lambda-runtime-eol-scan.yml` | `serverless*.yml`に宣言されたLambdaのランタイム | ランタイムのサポート終了（時間が経つだけで近づく。PR時の検査は、PRが出ないと動かない。issue #1371） |
 
 <!-- jscpd:ignore-start -->
 <details>
@@ -60,6 +61,7 @@ flowchart TD
 | `reusable-dependency-deprecation-scan.yml` | 週次 | deprecatedは、緊急性が低い。通知の量も抑える |
 | `reusable-secret-full-scan.yml` | 週次 | 過去の履歴に残るシークレットの検知で、変化が遅い |
 | `reusable-runtime-version-scan.yml` | 週次 | Lambdaのランタイムの期限は、数か月単位で変わる |
+| `reusable-lambda-runtime-eol-scan.yml` | 週次 | サポート終了までの日数は、数か月単位で変わる。警告は、90日前から出す |
 
 - **cronの分は、0にしない**: GitHubのscheduleは、毎時0分に集中して遅れる。分をずらす（例: `17 21 * * *`）
 - **UTCで書く**: `cron`は、UTCである。日本時間の朝に結果が届くよう、前日の夜（UTC）に動かす

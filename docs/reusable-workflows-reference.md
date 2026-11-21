@@ -494,6 +494,21 @@ backend/frontendのバージョンが不一致の場合（デプロイの部分�
 
 検知件数が0件になった場合、既存のトラッキングissueがあれば自動クローズする。
 
+## `reusable-lambda-runtime-eol-scan.yml`
+
+`serverless*.yml`に宣言されたLambdaのランタイムが、サポート終了に近いか、過ぎていないかを、定期的に確認する（issue #1371）。PR時の検査（`standards-check`の`lambda-runtime-eol.js`）は、PRが出ないリポジトリでは動かない。ランタイムの期限は、時間が経つだけで近づくため、定期実行で補う。`schedule`トリガーは、呼び出し側が用意する。
+
+**`self_ref`は必須入力である**（他の定期スキャンと同じ）。`uses:`行のrefと同じ値を、`with:`で渡す。呼び出し側のjobに、`permissions: { issues: write }`が要る。
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `self_ref` | `uses:`行のrefと同じ値（必須） | （必須） |
+| `warn_days` | サポート終了まで何日以内で検知とするか | `90` |
+| `tracking_issue_title` | 検知結果を反映するissueのタイトル | `[自動] Lambdaランタイムのサポート終了検知` |
+| `tracking_issue_labels` | issue新規作成時のラベル（JSON配列文字列） | `["bug", "priority: medium"]` |
+
+期限は、[endoflife.date](https://endoflife.date/aws-lambda)から取得する。**取得に失敗したときは、issueを作成も更新もクローズもしない。** 「期限切れが無い」と「確認できなかった」を、区別するためである。検知が0件になれば、既存のトラッキングissueを自動でクローズする。
+
 ## `reusable-secret-full-scan.yml`
 
 `reusable-ci.yml`の`secret-scan` jobは、PRのbase_branchとの差分のみを対象にスキャンする（既存履歴に残る過去の誤検知で詰まるリスクを避けるため）。このため、過去に誤ってコミットされ既にmainへマージ済みのシークレットは、PR差分スキャンの対象に一度も入らず検知できないギャップが生まれる（issue #1307）。

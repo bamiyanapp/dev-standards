@@ -80,6 +80,16 @@
     ],
     "requiredSecrets": []
   },
+  "reusable-lambda-runtime-eol-scan.yml": {
+    "permissions": {
+      "contents": "read",
+      "issues": "write"
+    },
+    "requiredInputs": [
+      "self_ref"
+    ],
+    "requiredSecrets": []
+  },
   "reusable-promote-canary.yml": {
     "permissions": {
       "contents": "write"

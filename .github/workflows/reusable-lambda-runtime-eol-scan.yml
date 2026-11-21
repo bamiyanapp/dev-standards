@@ -1,0 +1,134 @@
+name: Reusable Lambda Runtime EOL Scan
+
+# issue #1371。serverless*.yml に宣言されたLambdaのランタイムが、サポート終了に近いか、
+# 過ぎていないかを、定期的に確認し、検知結果を固定タイトルの単一issueへ反映する。
+# PR時の検査（reusable-ci.ymlのstandards-check、scripts/lambda-runtime-eol.js）は、PRが
+# 出ないリポジトリでは動かない。ランタイムのサポート終了は、時間が経つだけで近づくため、
+# 定期実行で補う。
+#
+# 期限の取得（endoflife.date）に失敗したときは、issueを作成も更新もクローズもしない
+# （「期限切れが無い」と「確認できなかった」を区別する）。
+# scheduleトリガー自体は呼び出し元リポジトリのworkflowが持つ（reusable workflow自身は
+# workflow_callのみ）。他の定期スキャンと同じ設計である
+
+on:
+  workflow_call:
+    inputs:
+      warn_days:
+        description: "サポート終了まで何日以内になったら、検知とするか。"
+        type: number
+        default: 90
+      tracking_issue_title:
+        description: "検知結果を反映するissueのタイトル。同名のopen issueが既にあれば本文を更新し、無ければ新規作成する。"
+        type: string
+        default: "[自動] Lambdaランタイムのサポート終了検知"
+      tracking_issue_labels:
+        description: "トラッキングissue作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い、型・重要度ラベルを呼び出し元で指定すること。"
+        type: string
+        default: '["bug", "priority: medium"]'
+      self_ref:
+        description: >-
+          呼び出し元が本workflowを`uses: bamiyanapp/dev-standards/.github/workflows/reusable-lambda-runtime-eol-scan.yml@<ref>`
+          で参照した際の`<ref>`と同じ値（タグ・ブランチ・コミットSHA）を指定する必須入力。
+          本workflow内でdev-standards自身のスクリプト（scripts/lambda-runtime-eol.js）を
+          ローカルチェックアウトする際に使う（dev-standards#1144と同じ方式）
+        type: string
+        required: true
+    outputs:
+      has_findings:
+        description: "サポート終了が近い・過ぎたランタイムが1件以上検知されたか。"
+        value: ${{ jobs.scan.outputs.has_findings }}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: "Lambdaランタイムのサポート終了スキャン"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    outputs:
+      has_findings: ${{ steps.scan.outputs.has_findings }}
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+
+      - name: Node.jsをセットアップする
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+
+      - name: Lambdaのランタイムのサポート終了をスキャンする
+        id: scan
+        env:
+          LAMBDA_EOL_WARN_DAYS: ${{ inputs.warn_days }}
+        run: |
+          set -eu
+          node .dev-standards-actions/scripts/lambda-runtime-eol.js --json > /tmp/lambda-eol.json
+          {
+            echo "has_findings=$(jq -r 'if (.findings | length) > 0 then "true" else "false" end' /tmp/lambda-eol.json)"
+            echo "fetch_failed=$(jq -r '.fetchFailed' /tmp/lambda-eol.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Issue本文を組み立てる
+        id: body
+        if: steps.scan.outputs.has_findings == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const { findings } = JSON.parse(fs.readFileSync("/tmp/lambda-eol.json", "utf-8"));
+            const rows = findings
+              .map((f) => `| ${f.file}:${f.line} | ${f.runtime} | ${f.message} |`)
+              .join("\n");
+            const body = [
+              "serverless*.ymlに宣言されたLambdaのランタイムで、サポート終了が近い、または過ぎているものが見つかりました。",
+              "サポートが切れると、セキュリティパッチが止まり、やがて関数の更新もできなくなります。",
+              "",
+              "| 宣言の位置 | ランタイム | 内容 |",
+              "|---|---|---|",
+              rows,
+              "",
+              "対応候補: 新しいランタイムへ移す。依存パッケージ・ビルドの対象（`engines`・workflowのNode.js）も、あわせて確認する。",
+              "期限の情報源は、[endoflife.date](https://endoflife.date/aws-lambda)である。",
+              "",
+              `_このissueは自動更新されます（最終更新: ${new Date().toISOString()}）_`,
+            ].join("\n");
+            core.setOutput("body", body);
+
+      # 期限を取得できなかったとき（fetch_failed）は、issueを触らない。
+      # 「検知なし」として、既存のissueを誤ってクローズしないため
+      - name: トラッキングissueを同期する
+        if: steps.scan.outputs.fetch_failed != 'true'
+        uses: ./.dev-standards-actions/.github/actions/tracking-issue-sync
+        with:
+          title: ${{ inputs.tracking_issue_title }}
+          has-findings: ${{ steps.scan.outputs.has_findings }}
+          body: ${{ steps.body.outputs.body }}
+          labels: ${{ inputs.tracking_issue_labels }}
+          close-comment: "再スキャンの結果、サポート終了が近い・過ぎたLambdaのランタイムが検知されなくなったため自動クローズします。"
+          github-token: ${{ github.token }}
+
+      - name: 概要を出力する
+        if: always()
+        run: |
+          set -eu
+          {
+            echo "## Lambdaランタイムのサポート終了スキャン"
+            if [ ! -f /tmp/lambda-eol.json ]; then
+              echo "スキャンが実行されませんでした。"
+            elif [ "$(jq -r '.fetchFailed' /tmp/lambda-eol.json)" = "true" ]; then
+              echo "期限を取得できませんでした（$(jq -r '.error' /tmp/lambda-eol.json)）。issueは変更していません。"
+            else
+              echo "確認したランタイムの宣言: $(jq -r '.checked' /tmp/lambda-eol.json)件、検知: $(jq -r '.findings | length' /tmp/lambda-eol.json)件"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"

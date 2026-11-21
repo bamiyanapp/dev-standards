@@ -71,3 +71,35 @@ test("fetchEntries: 配列を返す。HTTPエラー・形が違う応答は、�
   await assert.rejects(fetchEntries(async () => ({ ok: false, status: 503, json: async () => ({}) })), /HTTP 503/);
   await assert.rejects(fetchEntries(async () => ({ ok: true, status: 200, json: async () => ({ result: {} }) })), /配列ではありません/);
 });
+
+test("scan: 宣言が無ければ、期限を取得しない", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "eol-"));
+  let called = false;
+  const result = await require("./lambda-runtime-eol.js").scan({ cwd: dir, fetchEntriesImpl: async () => { called = true; return []; } });
+  assert.deepEqual(result, { declarations: [], findings: [], fetchFailed: false, error: "" });
+  assert.equal(called, false);
+});
+
+test("scan: 期限を取得できたとき、期限切れを返し、取得に失敗したときは、検知なしと区別する", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const { scan } = require("./lambda-runtime-eol.js");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "eol-"));
+  fs.writeFileSync(path.join(dir, "serverless.yml"), "provider:\n  runtime: nodejs18.x\n");
+  const ok = await scan({
+    cwd: dir,
+    now: new Date("2026-11-21T00:00:00Z"),
+    fetchEntriesImpl: async () => [{ cycle: "nodejs18.x", support: "2025-09-01", eol: "2026-01-01" }],
+  });
+  assert.equal(ok.fetchFailed, false);
+  assert.equal(ok.findings.length, 1);
+  assert.equal(ok.findings[0].level, "blocked");
+  const failed = await scan({ cwd: dir, fetchEntriesImpl: async () => { throw new Error("HTTP 503"); } });
+  assert.equal(failed.fetchFailed, true);
+  assert.equal(failed.error, "HTTP 503");
+  assert.deepEqual(failed.findings, []);
+});
