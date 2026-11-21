@@ -1,3 +1,10 @@
+## [2.170.1](https://github.com/bamiyanapp/dev-standards/compare/v2.170.0...v2.170.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **ci:** BOT_TOKENでpushするとき、checkoutの認証ヘッダーを無効にする ([#1579](https://github.com/bamiyanapp/dev-standards/issues/1579)) ([26c38fa](https://github.com/bamiyanapp/dev-standards/commit/26c38fa4a2c3ac089750c1616c8d496acace1f47)), closes [#1395](https://github.com/bamiyanapp/dev-standards/issues/1395)
+
 # [2.170.0](https://github.com/bamiyanapp/dev-standards/compare/v2.169.0...v2.170.0) (2026-11-20)
 
 
