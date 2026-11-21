@@ -14,7 +14,7 @@
 // - Lambdaのランタイムだけを対象にする。.nvmrc・package.jsonのengines・workflowのnode-versionは、
 //   CIの設定で、Lambdaのランタイムではないため、対象外である
 //
-// 使い方: node lambda-runtime-eol.js   （リポジトリのルートで実行）
+// 使い方: node lambda-runtime-eol.js [--json]   （リポジトリのルートで実行）
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -86,29 +86,47 @@ async function fetchEntries(fetchImpl = fetch) {
   return body;
 }
 
-async function main() {
-  const files = listServerlessFiles(process.cwd());
-  const declarations = files.flatMap((file) =>
-    extractRuntimes(fs.readFileSync(file, "utf8")).map((d) => ({ file: path.relative(process.cwd(), file), ...d }))
+function collectDeclarations(cwd) {
+  return listServerlessFiles(cwd).flatMap((file) =>
+    extractRuntimes(fs.readFileSync(file, "utf8")).map((d) => ({ file: path.relative(cwd, file), ...d }))
   );
-  if (declarations.length === 0) {
+}
+
+// 宣言を集め、期限を取得して判定する。取得に失敗したときは、fetchFailed: true にする（検知なしとは区別する）。
+// 戻り値: { declarations, findings, fetchFailed, error }
+async function scan({ cwd = process.cwd(), now = new Date(), warnDays = 90, fetchEntriesImpl = fetchEntries } = {}) {
+  const declarations = collectDeclarations(cwd);
+  if (declarations.length === 0) return { declarations, findings: [], fetchFailed: false, error: "" };
+  let entries;
+  try {
+    entries = await fetchEntriesImpl();
+  } catch (error) {
+    return { declarations, findings: [], fetchFailed: true, error: error.message };
+  }
+  return { declarations, findings: evaluate(declarations, entries, now, warnDays), fetchFailed: false, error: "" };
+}
+
+async function main() {
+  const warnDays = Number(process.env.LAMBDA_EOL_WARN_DAYS || "90");
+  const result = await scan({ warnDays });
+  // --json: 定期スキャン（reusable-lambda-runtime-eol-scan.yml）用。結果を構造化して出す
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify({ checked: result.declarations.length, findings: result.findings, fetchFailed: result.fetchFailed, error: result.error }));
+    return;
+  }
+  if (result.declarations.length === 0) {
     console.log("Lambdaのランタイムの宣言（serverless*.yml）は、見つかりませんでした。");
     return;
   }
-  const warnDays = Number(process.env.LAMBDA_EOL_WARN_DAYS || "90");
-  let entries;
-  try {
-    entries = await fetchEntries();
-  } catch (error) {
-    console.log(`::warning::Lambdaのランタイムの期限を確認できませんでした（${error.message}）。検査をスキップします`);
+  if (result.fetchFailed) {
+    console.log(`::warning::Lambdaのランタイムの期限を確認できませんでした（${result.error}）。検査をスキップします`);
     return;
   }
-  const findings = evaluate(declarations, entries, new Date(), warnDays);
-  if (findings.length === 0) {
-    console.log(`Lambdaのランタイム${declarations.length}件は、サポート終了まで${warnDays}日以上あります。`);
+  if (result.findings.length === 0) {
+    console.log(`Lambdaのランタイム${result.declarations.length}件は、サポート終了まで${warnDays}日以上あります。`);
     return;
   }
-  for (const f of findings) console.log(`::warning file=${f.file},line=${f.line}::${f.message}`);
+  for (const f of result.findings) console.log(`::warning file=${f.file},line=${f.line}::${f.message}`);
 }
 
 if (require.main === module) {
@@ -117,4 +135,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { extractRuntimes, judge, evaluate, fetchEntries, API_URL };
+module.exports = { extractRuntimes, judge, evaluate, fetchEntries, collectDeclarations, scan, API_URL };

@@ -49,3 +49,14 @@ test("ローカル参照（./.github/workflows/...）の呼び出しも、導入
   const local = "on:\n  schedule:\n    - cron: '0 0 * * 1'\njobs:\n  s:\n    uses: ./.github/workflows/reusable-secret-full-scan.yml\n";
   assert.equal(evaluate([{ file: "a.yml", text: local }], {}).some((f) => f.name === "secret-full-scan"), false);
 });
+
+test("Lambdaのランタイムを宣言しているときだけ、Lambdaランタイムのサポート終了スキャンを求める", () => {
+  const caller = [{ file: "a.yml", text: scheduledCaller(["dependency-full-scan", "dependency-deprecation-scan", "runtime-version-scan", "secret-full-scan"]) }];
+  assert.deepEqual(evaluate(caller, {}, { hasLambda: false }), []);
+  const withLambda = evaluate(caller, {}, { hasLambda: true });
+  assert.deepEqual(withLambda.map((f) => f.name), ["lambda-runtime-eol-scan"]);
+  // 呼んでいれば、警告しない。理由つきのopt-outでも、警告しない
+  const called = [{ file: "a.yml", text: scheduledCaller(all) }];
+  assert.deepEqual(evaluate(called, {}, { hasLambda: true }), []);
+  assert.deepEqual(evaluate(caller, { "lambda-runtime-eol-scan": "ランタイムは、別の仕組みで管理している" }, { hasLambda: true }), []);
+});

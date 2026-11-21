@@ -16,12 +16,15 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { collectDeclarations } = require("./lambda-runtime-eol.js");
 
 const SCANS = [
   { name: "dependency-full-scan", label: "依存フル脆弱性スキャン" },
   { name: "dependency-deprecation-scan", label: "依存deprecatedスキャン" },
   { name: "runtime-version-scan", label: "ランタイムのバージョン遅延スキャン" },
   { name: "secret-full-scan", label: "シークレット遡及スキャン" },
+  // Lambdaのランタイムを宣言している（serverless*.ymlにruntime:がある）リポジトリだけが対象（issue #1371）
+  { name: "lambda-runtime-eol-scan", label: "Lambdaランタイムのサポート終了スキャン", requires: "lambda" },
 ];
 const OPT_OUT_FILE = ".github/periodic-scans-opt-out.json";
 
@@ -29,14 +32,15 @@ function stripComments(text) {
   return text.split("\n").map((line) => line.replace(/(^|\s)#.*$/, "")).join("\n");
 }
 
-// workflows: [{ file, text }]。optOut: { [scanName]: 理由 }。
+// workflows: [{ file, text }]。optOut: { [scanName]: 理由 }。facts: { hasLambda }（requiresを持つスキャンの対象判定）。
 // 戻り値: [{ name, label, reason }]（警告にするもの）
-function evaluate(workflows, optOut) {
+function evaluate(workflows, optOut, facts = {}) {
   const findings = [];
   const scheduled = workflows
     .map(({ file, text }) => ({ file, body: stripComments(text) }))
     .filter(({ body }) => /^\s*schedule:\s*$/m.test(body));
   for (const scan of SCANS) {
+    if (scan.requires === "lambda" && !facts.hasLambda) continue;
     const reason = optOut[scan.name];
     if (typeof reason === "string" && reason.trim() !== "") continue;
     const called = scheduled.some(({ body }) => new RegExp(`uses:\\s*\\S*reusable-${scan.name}\\.yml`).test(body));
@@ -67,7 +71,8 @@ function main() {
     .readdirSync(dir)
     .filter((f) => /\.ya?ml$/.test(f))
     .map((f) => ({ file: path.posix.join(dir, f), text: fs.readFileSync(path.join(dir, f), "utf8") }));
-  const findings = evaluate(workflows, readOptOut());
+  const hasLambda = collectDeclarations(process.cwd()).length > 0;
+  const findings = evaluate(workflows, readOptOut(), { hasLambda });
   if (findings.length === 0) {
     console.log("定期スキャンは、導入済みか、理由つきで導入しないと明示されています。");
     return;
