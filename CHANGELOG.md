@@ -1,3 +1,10 @@
+## [2.180.1](https://github.com/bamiyanapp/dev-standards/compare/v2.180.0...v2.180.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **lambda:** sanitizeRedirectPathが、バックスラッシュと制御文字を含む戻り先を拒否する ([#1599](https://github.com/bamiyanapp/dev-standards/issues/1599)) ([de60818](https://github.com/bamiyanapp/dev-standards/commit/de60818567e3c6291abc48bd15ea7bd57707cf65))
+
 # [2.180.0](https://github.com/bamiyanapp/dev-standards/compare/v2.179.0...v2.180.0) (2026-11-21)
 
 
