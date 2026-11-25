@@ -2471,5 +2471,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.180.2",
+    "date": "2026-11-25T23:34:38.471Z",
+    "riskLevel": "medium",
+    "riskReasons": [
+      "メンテナ（公開者）が変化したパッケージがありますが、新旧メールドメインの一致、またはnpm Trusted Publishing（OIDC検証済み）への移行が確認できたため緩和しています: colord, kuromojin, textlint-rule-helper, textlint-rule-ja-no-abusage, textlint-rule-ja-no-redundant-expression, textlint-rule-ja-no-successive-word, textlint-rule-ja-no-weak-phrase, textlint-rule-max-ten, textlint-rule-no-double-negative-ja, textlint-rule-no-doubled-conjunctive-particle-ga, textlint-rule-no-dropping-the-ra, textlint-rule-no-zero-width-spaces, textlint-rule-preset-ja-technical-writing, textlint-rule-preset-jtf-style, textlint-util-to-string"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]

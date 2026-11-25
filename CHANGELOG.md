@@ -1,3 +1,10 @@
+## [2.180.2](https://github.com/bamiyanapp/dev-standards/compare/v2.180.1...v2.180.2) (2026-11-25)
+
+
+### Bug Fixes
+
+* **ci:** Node.js 26対応の第一段として、既定値・期限スキャン・文書の例を更新する ([#1624](https://github.com/bamiyanapp/dev-standards/issues/1624)) ([98fb851](https://github.com/bamiyanapp/dev-standards/commit/98fb851dba35fd5a17ab367fa029cb8f544e9670))
+
 ## [2.180.1](https://github.com/bamiyanapp/dev-standards/compare/v2.180.0...v2.180.1) (2026-11-22)
 
 
