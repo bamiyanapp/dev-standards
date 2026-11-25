@@ -107,7 +107,7 @@ jobs:
 ## OSLS採用に伴う罠
 
 - **npm workspaces環境でのpeerDependency競合**: `serverless-offline`はローカル開発用プラグインである。その`peerDependencies`は`serverless: ^4.0.0`を要求する。OSLS（v3系）と共存させると、npmが`serverless-offline`のpeerDependencyを満たそうとする。そのため実体の`serverless@4`パッケージを自動インストールしてしまう（`node_modules/serverless`が実在する状態になる）。これは`node_modules/.bin/serverless`等のbin解決には影響しない（実際に使われるのは`osls`側のbinで、`serverless@4`は未使用のまま残る）ため実害は無い。ただし`npm install`実行時に無関係な`serverless@4`のpostinstallスクリプト（バイナリ取得のネットワークアクセスを伴う）が走る点は許容する必要がある。root `package.json`の`overrides`でこれを完全に排除しようとすると、npm workspaces全体のlockfile再解決が必要になる。他のworkspace（frontend側）の依存解決へ意図しない副作用が及ぶリスクがある。そのため、この程度の無害な混入は許容し、無理に排除しないという判断で構わない（Electric-Chair-Arena#201）
-- **Lambdaランタイムのバージョン**: OSLSの設定バリデータおよび`serverless-offline`は`nodejs18.x`等の古いランタイムを非サポートとして拒否することがある。`serverless.yml`の`provider.runtime`は現行のLTS（`nodejs22.x`等）を指定する
+- **Lambdaランタイムのバージョン**: OSLSの設定バリデータおよび`serverless-offline`は`nodejs18.x`等の古いランタイムを非サポートとして拒否することがある。`serverless.yml`の`provider.runtime`はサポート中の版（`nodejs24.x`等）を指定する
 
 ## 必要なGitHub Secrets / Variablesの例
 

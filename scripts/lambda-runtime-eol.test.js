@@ -103,3 +103,16 @@ test("scan: 期限を取得できたとき、期限切れを返し、取得に�
   assert.equal(failed.error, "HTTP 503");
   assert.deepEqual(failed.findings, []);
 });
+
+// dev-standards#1621。AWSが公開した直後の新しいランタイムは、endoflife.dateへの反映が遅れる
+test("judge・evaluate: 載っている最新（24）より新しいnodejs26.xは、期限の掲載待ちとして、問題なしにする", () => {
+  assert.equal(judge("nodejs26.x", undefined, NOW, 90, ENTRIES).level, "ok");
+  assert.deepEqual(evaluate([{ file: "a/serverless.yml", runtime: "nodejs26.x", line: 3 }], ENTRIES, NOW, 90), []);
+});
+
+test("judge・evaluate: 載っている版の間の、載っていないランタイム（例: nodejs20.x）や、Node.js以外は、従来どおり警告する", () => {
+  assert.equal(judge("nodejs20.x", undefined, NOW, 90, ENTRIES).level, "unknown");
+  assert.equal(judge("python3.14", undefined, NOW, 90, ENTRIES).level, "unknown");
+  assert.equal(judge("nodejs26.x", undefined, NOW, 90, []).level, "unknown");
+  assert.equal(judge("nodejs26.x", undefined, NOW, 90).level, "unknown");
+});

@@ -26,10 +26,10 @@ jobs:
       # チェックアウトの対象も「このジョブが検証しているコミット自身」
       # （github.sha）になる
       self_ref: ${{ github.sha }}
-      # semantic-release本体・一部プラグインがNode 22以上を要求するため、
-      # reusable-ci.ymlのnode_version既定値（20）ではpackage-lock.jsonの
-      # 整合性検証（npm ci）でnpmのバージョン差異により失敗する。
-      packages: '[{"dir":".","node_version":"22"}]'
+      # semantic-release本体・一部プラグインがNode 22以上を要求する。
+      # reusable-ci.ymlのnode_version既定値は24（#1621。以前は、サポートが終わった20だった）。
+      # 明示して、既定値の変更に、dev-standards自身のCIが、左右されないようにする。
+      packages: '[{"dir":".","node_version":"24"}]'
       # issue bamiyanapp/karuta#824: dev-standards自身のArchitecture図もdogfoodingする
       # issue #580: 過去のmermaid化作業で登録漏れしていた各ドキュメントを追加
       enable_mermaid_render: true

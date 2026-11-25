@@ -135,7 +135,7 @@ with:
 | `frontend_dir` | frontendパッケージのディレクトリ名（`packages`指定時は無視される） | `frontend` |
 | `backend_dir` | backendパッケージのディレクトリ名（`packages`指定時は無視される） | `backend` |
 | `packages` | frontend/backendの固定2パッケージ構成の代わりに、matrix構成でlint/test/buildするパッケージ一覧をJSON配列で指定する | `""`（既存の固定ジョブを使う） |
-| `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン | `20` |
+| `node_version` | frontend/backendのビルド・テストに使うNode.jsのバージョン。既定値は、サポート中の版へ追従する（#1621で、20から24へ変更。参照側は、明示することを推奨する） | `24` |
 | `workspaces` | npm workspaces構成（ルート直下に単一のpackage-lock.jsonのみ）かどうか | `false` |
 | `enable_e2e_test` | frontendのE2Eテスト（Playwright）ジョブを実行するかどうか | `false` |
 
