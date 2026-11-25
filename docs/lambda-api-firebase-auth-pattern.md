@@ -107,6 +107,10 @@ Serverless Framework（`serverless`パッケージ）はv4.0以降ライセン�
 | nodejs22.x | なし | `ERR_REQUIRE_ESM`で起動失敗 |
 | nodejs24.x | なし | `ERR_REQUIRE_ESM`で起動失敗 |
 | nodejs22.x | `NODE_OPTIONS=--experimental-require-module` | 正常に動作 |
+| nodejs26.x | なし | `ERR_REQUIRE_ESM`で起動失敗（2026-11-25、v26.13.1。#1621） |
+| nodejs26.x | `NODE_OPTIONS=--experimental-require-module` | 正常に動作（同上） |
+
+`nodejs26.x`でも、同じ設定が必須である。新しいランタイムへ移すときも、`NODE_OPTIONS`を外してはならない。`nodejs24.x`＋環境変数は、未検証である（24でも、同じ結果になる見込み）。
 
 CIでは見つからない。CIのNode.js（22.12以上）は、`require(esm)`が有効で、テストが通る。`serverless package`も成功する。「CIのNode.jsとLambdaランタイムのバージョンを揃える」指針でも防げない。バージョンが同じでも、`require(esm)`の既定値が違うためである。
 
