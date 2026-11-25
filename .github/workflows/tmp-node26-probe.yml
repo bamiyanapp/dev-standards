@@ -1,0 +1,37 @@
+# 一時調査（dev-standards#1621）。Node.js 26での共有コードのテストと、endoflife.dateのaws-lambdaの内容を確認する。
+# 調査の完了後に削除する（check-tmp-workflows.js）。
+name: tmp-node26-probe
+
+on:
+  push:
+    branches: [claude/dev-efficiency-improvements-6wlv2c]
+    paths: [".github/workflows/tmp-node26-probe.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - name: Node.jsのバージョン
+        run: node -v | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: endoflife.dateのaws-lambda（nodejsのみ）
+        run: |
+          curl -fsS https://endoflife.date/api/aws-lambda.json \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{for(const e of JSON.parse(s)){if(/^nodejs/.test(e.cycle))console.log(JSON.stringify({cycle:e.cycle,support:e.support,eol:e.eol}))}})' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: 依存をインストールする
+        run: npm ci --no-audit --no-fund
+      - name: node --test（scripts・shared）
+        run: node --test scripts/*.test.js shared/*/*.test.js .github/actions/*/*.test.js 2>&1 | tail -25 | tee -a "$GITHUB_STEP_SUMMARY"
+        continue-on-error: true
+      - name: vitest（shared/ui・shared/pwa等）
+        run: npx vitest run 2>&1 | tail -25 | tee -a "$GITHUB_STEP_SUMMARY"
+        continue-on-error: true
