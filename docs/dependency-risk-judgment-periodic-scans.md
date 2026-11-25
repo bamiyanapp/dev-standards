@@ -63,6 +63,8 @@ flowchart TD
 | `reusable-runtime-version-scan.yml` | 週次 | Lambdaのランタイムの期限は、数か月単位で変わる |
 | `reusable-lambda-runtime-eol-scan.yml` | 週次 | サポート終了までの日数は、数か月単位で変わる。警告は、90日前から出す |
 
+ランタイムの期限は、endoflife.dateのaws-lambdaから取る。載っている最新のNode.jsより新しいランタイム（例: AWSが公開した直後の`nodejs26.x`）は、期限の掲載待ちとして、問題なしにする（#1621）。載っている版の間にある、載っていないランタイムは、従来どおり、期限を確認できない警告にする。
+
 - **cronの分は、0にしない**: GitHubのscheduleは、毎時0分に集中して遅れる。分をずらす（例: `17 21 * * *`）
 - **UTCで書く**: `cron`は、UTCである。日本時間の朝に結果が届くよう、前日の夜（UTC）に動かす
 - **複数のscheduleは、`github.event.schedule`で分ける**: 1つのworkflowに、頻度の違うcronを書く。各jobの`if:`で、動かすcronを指定する

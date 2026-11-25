@@ -39,7 +39,24 @@ function utcDate(value) {
 }
 
 // entry: { cycle, support, eol }。戻り値: { level: "ok"|"soon"|"deprecated"|"blocked"|"unknown", ... }
-function judge(runtime, entry, now, warnDays) {
+// ランタイム名から、Node.jsのメジャー版を取り出す（"nodejs26.x" → 26）。Node.js以外は、nullを返す
+function nodeMajor(runtime) {
+  const m = /^nodejs(\d+)\.x$/.exec(runtime);
+  return m ? Number(m[1]) : null;
+}
+
+// endoflife.dateに載っていない、最新のNode.jsより新しいランタイムは、AWSが公開した直後で、期限の掲載待ちである。
+// 「確認できない」警告にすると、新しいランタイムへ移したプロダクトに、誤警報のIssueが立つ（dev-standards#1621）。
+// 載っている最新より新しい場合だけ、問題なしとして扱う。古い版や、Node.js以外が載っていない場合は、従来どおり警告する
+function isNewerThanKnown(runtime, entries) {
+  const major = nodeMajor(runtime);
+  if (major === null) return false;
+  const known = (entries || []).map((e) => nodeMajor(e.cycle)).filter((n) => n !== null);
+  return known.length > 0 && major > Math.max(...known);
+}
+
+function judge(runtime, entry, now, warnDays, entries) {
+  if (!entry && isNewerThanKnown(runtime, entries)) return { level: "ok", message: "" };
   if (!entry) return { level: "unknown", message: `${runtime}は、endoflife.dateのaws-lambdaに載っていません。期限を確認できません` };
   const support = utcDate(entry.support);
   const eol = utcDate(entry.eol);
@@ -62,7 +79,7 @@ function judge(runtime, entry, now, warnDays) {
 function evaluate(declarations, entries, now, warnDays) {
   const byCycle = new Map((entries || []).map((e) => [e.cycle, e]));
   return declarations
-    .map((d) => ({ ...d, ...judge(d.runtime, byCycle.get(d.runtime), now, warnDays) }))
+    .map((d) => ({ ...d, ...judge(d.runtime, byCycle.get(d.runtime), now, warnDays, entries) }))
     .filter((r) => r.level !== "ok");
 }
 

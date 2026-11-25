@@ -19,7 +19,7 @@ npm workspaces構成のモノレポで、`frontend`（SPA）と`backend`（Serve
 
 - ルート直下の`package-lock.json`1本で両ワークスペースの依存を一括管理する（CI/CDの`workspaces: true`系入力と対応する。後述）
 - `.npmrc`に`install-strategy=nested`を指定する。Lambda関数を`package.individually: true`で個別zip化する構成（後述）と組み合わせるため、hoisted構成より確実にワークスペース単位で依存が解決される
-- `.nvmrc`でNode.jsバージョンをLambdaランタイム（例: `nodejs22.x`）と統一しておく。frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する
+- `.nvmrc`でNode.jsバージョンをLambdaランタイム（例: `nodejs24.x`。サポート中の版を選ぶ。期限は、[`dependency-risk-judgment-periodic-scans.md`](dependency-risk-judgment-periodic-scans.md)のランタイムスキャンで確認する）と統一しておく。frontend・backend・CI・CDの4箇所すべてで同じバージョンを指定する
 
 `dev-standards`は`git submodule add -b main`でルートに取り込む。`sync-manifest.local.json`経由で横断的UIコンポーネント（[`shared-ui-components.md`](shared-ui-components.md)）等をsymlink共有する。手順は[`standard-tech-stack.md`](standard-tech-stack.md)の立ち上げ手順を参照。
 
@@ -56,7 +56,7 @@ package:
   individually: true
 provider:
   name: aws
-  runtime: nodejs22.x
+  runtime: nodejs24.x
   region: ap-northeast-1
 custom:
   esbuild:

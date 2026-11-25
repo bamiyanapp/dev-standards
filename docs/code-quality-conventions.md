@@ -76,7 +76,7 @@ shock-labのoxlintからの移行（約3,000行、エラー9件）で当たっ�
 - すると、実際は使える`fetch`・`crypto.randomUUID`等が、「未サポート」と判定される
 - 例: `The 'crypto' is still an experimental feature and is not supported until Node.js 23.0.0`
 - `eslint-plugin-n`（または同種の互換性チェック）を入れるときは、実行環境に合わせて`engines.node`を書く
-- Lambdaなら、`serverless.yml`の`runtime`と同じ版にする。例: `runtime: nodejs22.x`なら`"node": ">=22"`
+- Lambdaなら、`serverless.yml`の`runtime`と同じ版にする。例: `runtime: nodejs24.x`なら`"node": ">=24"`
 
 **sonarjs `recommended`で既存コードに出やすい指摘**
 
