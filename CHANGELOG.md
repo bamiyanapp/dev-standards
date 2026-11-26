@@ -1,3 +1,10 @@
+## [2.184.2](https://github.com/bamiyanapp/dev-standards/compare/v2.184.1...v2.184.2) (2026-11-26)
+
+
+### Bug Fixes
+
+* **scan:** ignore known test-string findings in an abandoned branch (gitleaksignore) ([#1642](https://github.com/bamiyanapp/dev-standards/issues/1642)) ([4acc1c9](https://github.com/bamiyanapp/dev-standards/commit/4acc1c98c9145d902f78228d922c208996b3c6f2)), closes [#1609](https://github.com/bamiyanapp/dev-standards/issues/1609)
+
 ## [2.184.1](https://github.com/bamiyanapp/dev-standards/compare/v2.184.0...v2.184.1) (2026-11-26)
 
 
