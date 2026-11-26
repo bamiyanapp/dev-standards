@@ -1728,6 +1728,11 @@ jobs:
       - name: 定期スキャンの導入漏れを警告する
         continue-on-error: true
         run: node dev-standards/scripts/check-periodic-scans.js
+      # issue #1612。セキュリティ検査のenable_*が有効かを警告する（警告のみ。失敗にしない）。
+      # 有効にしない場合は、.github/security-checks-opt-out.jsonに理由を書く
+      - name: セキュリティ検査の未有効を警告する
+        continue-on-error: true
+        run: node dev-standards/scripts/check-security-checks.js
       # issue #1371。serverless*.ymlに宣言されたLambdaのランタイムが、サポート終了に近いか、過ぎていないかを
       # 警告する（警告のみ。失敗にしない）。期限は、endoflife.dateのaws-lambda APIから取得する。
       # 取得に失敗したときは、警告にとどめ、検査をスキップする
