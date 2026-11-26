@@ -20,6 +20,7 @@ const { collectDeclarations } = require("./lambda-runtime-eol.js");
 const CHECKS = [
   { name: "enable_secret_scan", label: "シークレット検知" },
   { name: "enable_email_scan", label: "メールアドレス検知", requires: "secret" },
+  { name: "enable_workflow_security_check", label: "workflowの脆弱性検査" },
   { name: "enable_eslint_rules_check", label: "ESLintルールの検査" },
   // serverless*.ymlがあるリポジトリだけが対象
   { name: "enable_security_headers_check", label: "セキュリティヘッダーの検査", requires: "serverless" },

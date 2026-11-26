@@ -308,6 +308,14 @@ on:
           （issue #1337、詳細はdocs/hardcoded-credential-detection-pattern.md参照）。
         type: boolean
         default: false
+      enable_workflow_security_check:
+        description: >-
+          GitHub Actionsのworkflow・composite actionの脆弱性（コマンド注入・過剰な権限・
+          pull_request_target等）を、zizmorで検査する`workflow-security-check` jobを
+          実行するかどうか（bamiyanapp/dev-standards#1613）。警告のみで、失敗にしない。
+          SHA固定の指摘（unpinned-uses）は、Renovateとの相性があるため対象外にする。
+        type: boolean
+        default: false
       enable_dynamodb_protection_check:
         description: >-
           serverless.yml・SAMテンプレートのDynamoDBテーブルに、データ保護の設定
@@ -2524,6 +2532,48 @@ jobs:
           cat /tmp/dynamodb-protection.txt
           { echo "## DynamoDB保護設定の検査"; echo; sed '/^::warning/d' /tmp/dynamodb-protection.txt; } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
+
+  workflow-security-check:
+    name: "workflowの脆弱性検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_workflow_security_check &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    # 警告のみ。失敗にしない（導入時は既存の指摘が多いため）
+    continue-on-error: true
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: zizmorでworkflowを検査する
+        run: |
+          set -u
+          python3 -m pip install --quiet "zizmor==1.33.1"
+          # unpinned-uses（SHA固定）は、Renovateとの相性があるため別に判断する（#1613）
+          printf 'rules:\n  unpinned-uses:\n    disable: true\n' > /tmp/zizmor.yml
+          zizmor --offline --no-progress --config /tmp/zizmor.yml --format json .github > /tmp/zizmor.json || true
+          python3 - <<'PY'
+          import collections, json, os
+          d = json.load(open("/tmp/zizmor.json"))
+          c = collections.Counter((x["ident"], x["determinations"]["severity"]) for x in d)
+          lines = ["## workflowの脆弱性検査（zizmor）", ""]
+          if not c:
+              lines.append("指摘はありません。")
+          else:
+              lines += ["| 検査 | 重大度 | 件数 |", "| --- | --- | --- |"]
+              lines += [f"| {k[0]} | {k[1]} | {v} |" for k, v in sorted(c.items())]
+              for x in d:
+                  if x["determinations"]["severity"] == "High":
+                      loc = x["locations"][0]
+                      k = loc["symbolic"]["key"].get("Local", {})
+                      path = os.path.relpath(k.get("verbatim_path") or k.get("given_path") or ".")
+                      print(f"::warning file={path}::{x['ident']}: {x['desc']}")
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(lines) + "\n")
+          PY
 
   iam-actions-check:
     name: "IAM Actionの不足の検査"

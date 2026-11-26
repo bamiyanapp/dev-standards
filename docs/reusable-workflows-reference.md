@@ -196,6 +196,7 @@ with:
 | `enable_dead_link_check` | Markdown間の相対リンク切れを検証する（`dead-link-check` job） | `false` |
 | `dead_link_check_paths` | 検証対象Markdownのglobパターン | `""` |
 | `enable_secret_scan` | PR差分に誤ってコミットされた認証情報を検知する（`secret-scan` job） | `false` |
+| `enable_workflow_security_check` | workflow・composite actionの脆弱性をzizmorで検査する（`workflow-security-check` job。警告のみ。SHA固定の指摘は対象外） | `false` |
 | `enable_dynamodb_protection_check` | DynamoDBテーブルのデータ保護設定を検査する（`dynamodb-protection-check` job。`self_ref`も必要） | `false` |
 | `dynamodb_protection_files` | 上記の検査対象ファイル（カンマ区切り。SAMなら`infra/template.yaml`等） | `serverless.yml` |
 | `dynamodb_protection_mode` | `warn`は警告のみ、`fail`は違反で失敗にする | `warn` |
