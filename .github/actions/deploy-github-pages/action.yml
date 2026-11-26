@@ -29,7 +29,7 @@ inputs:
 outputs:
   page-url:
     description: "デプロイされたGitHub PagesのURL"
-    value: ${{ steps.deployment.outputs.page_url }}
+    value: ${{ steps.deployment.outputs.page_url || steps.deployment-retry.outputs.page_url }}
 
 runs:
   using: "composite"
@@ -58,8 +58,26 @@ runs:
       with:
         name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
         path: ${{ inputs.artifact-path }}
+    # issue #1604: upload直後に、deploy-pagesが「No artifacts named ... were found」で、
+    # 散発的に失敗する（アップロード直後の取得の競合。結果整合と見られる）。
+    # アーティファクトの一覧を待つAPIは、呼び出し側へactions: read権限を要求するため使わない。
+    # 代わりに、失敗しても、そのjobを止めず、数秒待って1回だけ再試行する。
+    # 1回目が成功した場合、待ちも再試行も入らない（遅延を足さない）
     - name: Deploy to GitHub Pages
       id: deployment
+      continue-on-error: true
+      uses: actions/deploy-pages@v5
+      with:
+        artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+    - name: Wait before retrying the deployment
+      if: steps.deployment.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "::warning::deploy-pagesが失敗したため、15秒待って1回だけ再試行します（dev-standards#1604）"
+        sleep 15
+    - name: Deploy to GitHub Pages (retry)
+      id: deployment-retry
+      if: steps.deployment.outcome == 'failure'
       uses: actions/deploy-pages@v5
       with:
         artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
