@@ -484,6 +484,9 @@ backend/frontendのバージョンが不一致の場合（デプロイの部分�
 | `tracking_issue_title` | 検知結果を反映するissueのタイトル。同名のopen issueがあれば本文を更新し、無ければ新規作成する | `[自動] 依存パッケージの既知脆弱性検知（定期スキャン）` |
 | `tracking_issue_labels` | トラッキングissue新規作成時に付与するラベル（JSON配列文字列）。issue駆動の原則（CLAUDE.md）に従い型・重要度ラベルを指定すること | `["bug", "priority: medium"]` |
 
+`secrets.BOT_TOKEN`（任意）は、MTTR台帳のコミットの、PR作成・マージに使う。無ければ`github.token`を使う。
+`GITHUB_TOKEN`によるPR作成が禁止された設定では、`github.token`が権限のエラーで失敗する（#1647）。その場合は渡す。
+
 **呼び出し元のジョブには、`contents: write`・`issues: write`・`pull-requests: write`を渡す**。MTTR台帳のコミット（`commit-via-pr`）が、新しいブランチのpushとPRの作成・マージを行うためである。`contents: read`のままだと、`403`で毎日失敗する（#1497）。
 
 検知した脆弱性の「検知〜解消までの対応時間（MTTR）」を自動で計測する（issue #1308）。実行ごとに台帳・履歴の2ファイルを更新する。台帳（`docs/generated/dependency-vulnerability-mttr-ledger.json`）はname+version単位の初回検知日時を保持する。履歴（`docs/generated/dependency-vulnerability-mttr-history.json`）は解消済みエントリを蓄積する。いずれも`commit-via-pr`でコミットする。トラッキングissue・Job Summaryの両方に、直近30日間に解消された件数・平均対応日数を表示する。「解消」の判定はスキャン結果からそのname+versionが消えたタイミングを使う。そのため、実際の修正コミット日時ではなくスキャン間隔（通常は日次）分の誤差を含む。
