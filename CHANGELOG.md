@@ -1,3 +1,10 @@
+# [2.186.0](https://github.com/bamiyanapp/dev-standards/compare/v2.185.1...v2.186.0) (2026-11-26)
+
+
+### Features
+
+* **ci:** 参照側のdev-standardsの版遅れとRenovate未導入を、consumer-ci-healthで検知する ([#1649](https://github.com/bamiyanapp/dev-standards/issues/1649)) ([dd9cf15](https://github.com/bamiyanapp/dev-standards/commit/dd9cf15bc3e08bfc717d408f66a8bf0d848783c9)), closes [#1600](https://github.com/bamiyanapp/dev-standards/issues/1600)
+
 ## [2.185.1](https://github.com/bamiyanapp/dev-standards/compare/v2.185.0...v2.185.1) (2026-11-26)
 
 
