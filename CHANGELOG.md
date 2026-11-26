@@ -1,3 +1,10 @@
+# [2.185.0](https://github.com/bamiyanapp/dev-standards/compare/v2.184.3...v2.185.0) (2026-11-26)
+
+
+### Features
+
+* **cd:** semantic_release_node_versionの既定値を、22から26へ上げる ([#1644](https://github.com/bamiyanapp/dev-standards/issues/1644)) ([5205f22](https://github.com/bamiyanapp/dev-standards/commit/5205f2235a80725abe24b73704b8aea528cf8cb7)), closes [#1626](https://github.com/bamiyanapp/dev-standards/issues/1626)
+
 ## [2.184.3](https://github.com/bamiyanapp/dev-standards/compare/v2.184.2...v2.184.3) (2026-11-26)
 
 
