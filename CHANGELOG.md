@@ -1,3 +1,10 @@
+# [2.183.0](https://github.com/bamiyanapp/dev-standards/compare/v2.182.0...v2.183.0) (2026-11-26)
+
+
+### Features
+
+* **ci:** serverless.ymlのIaC静的検査（checkov）を追加する（警告から開始） ([#1630](https://github.com/bamiyanapp/dev-standards/issues/1630)) ([59bb051](https://github.com/bamiyanapp/dev-standards/commit/59bb0512afaae3d87972437ec38260ec94adf4e4)), closes [#1612](https://github.com/bamiyanapp/dev-standards/issues/1612) [#1614](https://github.com/bamiyanapp/dev-standards/issues/1614) [#1619](https://github.com/bamiyanapp/dev-standards/issues/1619)
+
 # [2.182.0](https://github.com/bamiyanapp/dev-standards/compare/v2.181.0...v2.182.0) (2026-11-26)
 
 
