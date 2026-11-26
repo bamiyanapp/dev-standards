@@ -1,3 +1,10 @@
+# [2.182.0](https://github.com/bamiyanapp/dev-standards/compare/v2.181.0...v2.182.0) (2026-11-26)
+
+
+### Features
+
+* **ci:** add zizmor workflow security check (warning only) ([#1628](https://github.com/bamiyanapp/dev-standards/issues/1628)) ([e0aa528](https://github.com/bamiyanapp/dev-standards/commit/e0aa5283bf5ab00a2cb0ca8ca8143ac02fe6901a)), closes [#1613](https://github.com/bamiyanapp/dev-standards/issues/1613) [#1619](https://github.com/bamiyanapp/dev-standards/issues/1619)
+
 # [2.181.0](https://github.com/bamiyanapp/dev-standards/compare/v2.180.2...v2.181.0) (2026-11-26)
 
 
