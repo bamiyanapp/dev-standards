@@ -1,0 +1,7 @@
+# 2026-11-26 issue #1609。docs/hardcoded-credential-detection-pattern.mdを作る途中のコミットに、
+# 検知の再現用に生成した、ランダムな文字列があった。実在のクレデンシャルではない。
+# このコミットは、mainには入っておらず、取り下げたブランチ（docs/hardcoded-credential-detection-pattern）にだけある。
+# 履歴を遡る定期スキャンが、毎回、同じ3件を検知するため、指紋で除外する。
+f8505a506a5b60bb9dc080d242576edf84288b35:docs/hardcoded-credential-detection-pattern.md:github-pat:27
+f8505a506a5b60bb9dc080d242576edf84288b35:docs/hardcoded-credential-detection-pattern.md:generic-api-key:25
+f8505a506a5b60bb9dc080d242576edf84288b35:docs/hardcoded-credential-detection-pattern.md:generic-api-key:26
