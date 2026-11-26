@@ -34,6 +34,20 @@
 
 ## 新規プロジェクト
 
-新規プロジェクトの`ci.yml`は、上の検査を最初から`true`にして始める。
-導入手順は、[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照する。
+新規プロジェクトの`ci.yml`は、次の入力を最初から`true`にして始める。
+`serverless*.yml`が無ければ、IAM・DynamoDB・ヘッダーの3つは不要である。
+
+```yaml
+    with:
+      self_ref: v2.x.y # uses:と同じバージョン
+      enable_secret_scan: true
+      enable_email_scan: true
+      enable_workflow_security_check: true
+      enable_eslint_rules_check: true
+      enable_security_headers_check: true
+      enable_iam_actions_check: true
+      enable_dynamodb_protection_check: true
+```
+
+導入手順は、[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。
 今後追加するセキュリティ検査も、`CHECKS`へ登録して同じ仕組みに載せる。
