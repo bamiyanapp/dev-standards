@@ -36,7 +36,7 @@
 ## 新規プロジェクト
 
 新規プロジェクトの`ci.yml`は、次の入力を最初から`true`にして始める。
-`serverless*.yml`が無ければ、IAM・DynamoDB・ヘッダーの3つは不要である。
+`serverless*.yml`が無ければ、IaC・IAM・DynamoDB・ヘッダーの4つは不要である。
 
 ```yaml
     with:
