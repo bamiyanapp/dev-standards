@@ -1,3 +1,10 @@
+## [2.184.3](https://github.com/bamiyanapp/dev-standards/compare/v2.184.2...v2.184.3) (2026-11-26)
+
+
+### Bug Fixes
+
+* **actions:** pass free-text inputs and branch names to run via env (zizmor template-injection) ([#1643](https://github.com/bamiyanapp/dev-standards/issues/1643)) ([34efb7a](https://github.com/bamiyanapp/dev-standards/commit/34efb7a7116d18a8316444e0893f9a554fae8f9f)), closes [#1635](https://github.com/bamiyanapp/dev-standards/issues/1635) [#1613](https://github.com/bamiyanapp/dev-standards/issues/1613)
+
 ## [2.184.2](https://github.com/bamiyanapp/dev-standards/compare/v2.184.1...v2.184.2) (2026-11-26)
 
 
