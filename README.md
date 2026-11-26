@@ -82,6 +82,7 @@
 - [`dependency-risk-judgment-renovate-logic.md`](docs/dependency-risk-judgment-renovate-logic.md): PR単位の適用リスク・維持リスク判定とmerge gate連携のフロー・詳細
 - [`dependency-risk-judgment-periodic-scans.md`](docs/dependency-risk-judgment-periodic-scans.md): PRの作成を待たない定期スキャン（推移的依存のセーフティネット等）
 - [`security-checks-default-on.md`](docs/security-checks-default-on.md): セキュリティ検査を既定で有効にし、外すなら理由つきopt-outとする方針と警告の仕組み
+- [`authorization-test-pattern.md`](docs/authorization-test-pattern.md): 他人のデータを読めないこと（認可の漏れ）を確かめるテストの型とレビューの観点（#1616）
 - [`e2e-coverage-pattern.md`](docs/e2e-coverage-pattern.md): PlaywrightのE2Eテストのカバレッジ収集パターン（`monocart-reporter`）
 - [`symlink-shared-commonjs.md`](docs/symlink-shared-commonjs.md): symlink共有のCommonJSを、`--preserve-symlinks`環境で使うときの注意（#1297）
 - [`consumer-repositories.md`](docs/consumer-repositories.md): 参照側リポジトリの登録簿
