@@ -41,6 +41,12 @@ on:
           呼び出し元に明示的な入力として渡してもらう
         type: string
         required: true
+    # 任意。MTTR台帳のコミット（commit-via-pr）のPRの作成・マージに使う。無い場合は、github.tokenを使う。
+    # リポジトリ・Organizationの設定で、GITHUB_TOKENによるPRの作成が許可されていないと、github.tokenでは
+    # 「GitHub Actions is not permitted to create or approve pull requests」で失敗する（#1647。#1497・#1514の再発）
+    secrets:
+      BOT_TOKEN:
+        required: false
     outputs:
       has_vulnerabilities:
         description: "既知の脆弱性が1件以上検知されたか。"
@@ -250,7 +256,8 @@ jobs:
           paths: docs/generated/dependency-vulnerability-mttr-ledger.json docs/generated/dependency-vulnerability-mttr-history.json
           commit-subject: "chore(security): 依存パッケージ脆弱性のMTTR台帳を更新する [skip ci]"
           branch-prefix: chore/dependency-mttr
-          github-token: ${{ github.token }}
+          push-token: ${{ secrets.BOT_TOKEN }}
+          github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || github.token }}
 
       # dev-standards#1149: 検知結果の詳細（パッケージ名・バージョン・直接/間接・
       # 脆弱性ID・Severity）は従来トラッキングissueの本文にのみ書き込んでおり、

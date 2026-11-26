@@ -30,6 +30,8 @@ jobs:
     with:
       self_ref: ${{ github.sha }}
       lockfile_path: package-lock.json
+    secrets:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
 
   dependency-deprecation-scan:
     name: "依存deprecatedスキャン"
