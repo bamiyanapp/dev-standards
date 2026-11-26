@@ -1,3 +1,10 @@
+# [2.184.0](https://github.com/bamiyanapp/dev-standards/compare/v2.183.0...v2.184.0) (2026-11-26)
+
+
+### Features
+
+* **ci:** デプロイ後に本番のセキュリティヘッダーを実測するactionを追加する（警告から開始） ([#1631](https://github.com/bamiyanapp/dev-standards/issues/1631)) ([daa5044](https://github.com/bamiyanapp/dev-standards/commit/daa50440af926d5130e9c9e1f415f9ca9b458165)), closes [#1615](https://github.com/bamiyanapp/dev-standards/issues/1615) [#1619](https://github.com/bamiyanapp/dev-standards/issues/1619)
+
 # [2.183.0](https://github.com/bamiyanapp/dev-standards/compare/v2.182.0...v2.183.0) (2026-11-26)
 
 
