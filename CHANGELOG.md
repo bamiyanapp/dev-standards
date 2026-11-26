@@ -1,3 +1,10 @@
+# [2.181.0](https://github.com/bamiyanapp/dev-standards/compare/v2.180.2...v2.181.0) (2026-11-26)
+
+
+### Features
+
+* **ci:** warn when security checks are not enabled (opt-out with reason) ([#1627](https://github.com/bamiyanapp/dev-standards/issues/1627)) ([8247703](https://github.com/bamiyanapp/dev-standards/commit/82477035c816cf05b475a92e438a388217ba251d)), closes [#1612](https://github.com/bamiyanapp/dev-standards/issues/1612) [#1619](https://github.com/bamiyanapp/dev-standards/issues/1619)
+
 ## [2.180.2](https://github.com/bamiyanapp/dev-standards/compare/v2.180.1...v2.180.2) (2026-11-25)
 
 
