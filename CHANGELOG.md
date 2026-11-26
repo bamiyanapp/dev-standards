@@ -1,3 +1,10 @@
+## [2.186.2](https://github.com/bamiyanapp/dev-standards/compare/v2.186.1...v2.186.2) (2026-11-26)
+
+
+### Bug Fixes
+
+* **deploy-github-pages:** retry deploy-pages once when artifact lookup races ([#1652](https://github.com/bamiyanapp/dev-standards/issues/1652)) ([a73ce11](https://github.com/bamiyanapp/dev-standards/commit/a73ce11c23f483f404df6e1379a6c4d85b00b08d)), closes [#1604](https://github.com/bamiyanapp/dev-standards/issues/1604)
+
 ## [2.186.1](https://github.com/bamiyanapp/dev-standards/compare/v2.186.0...v2.186.1) (2026-11-26)
 
 
