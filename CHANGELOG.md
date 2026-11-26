@@ -1,3 +1,10 @@
+## [2.185.1](https://github.com/bamiyanapp/dev-standards/compare/v2.185.0...v2.185.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **scan:** 検知パターンの説明ドキュメントを、シークレットスキャンの対象外にする ([#1646](https://github.com/bamiyanapp/dev-standards/issues/1646)) ([166f677](https://github.com/bamiyanapp/dev-standards/commit/166f6771ef3ef4e72ce57478161b223481facb6f)), closes [#1609](https://github.com/bamiyanapp/dev-standards/issues/1609)
+
 # [2.185.0](https://github.com/bamiyanapp/dev-standards/compare/v2.184.3...v2.185.0) (2026-11-26)
 
 
