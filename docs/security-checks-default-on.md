@@ -13,6 +13,7 @@
 | `enable_workflow_security_check` | workflowの脆弱性検査（zizmor） | 常に |
 | `enable_eslint_rules_check` | ESLintルールの検査 | 常に |
 | `enable_security_headers_check` | セキュリティヘッダー | `serverless*.yml`があるとき |
+| `enable_iac_check` | IaCの静的検査（checkov） | `serverless*.yml`があるとき |
 | `enable_iam_actions_check` | IAM権限 | `serverless*.yml`があるとき |
 | `enable_dynamodb_protection_check` | DynamoDB保護設定 | `serverless*.yml`があるとき |
 
@@ -45,6 +46,7 @@
       enable_workflow_security_check: true
       enable_eslint_rules_check: true
       enable_security_headers_check: true
+      enable_iac_check: true
       enable_iam_actions_check: true
       enable_dynamodb_protection_check: true
 ```

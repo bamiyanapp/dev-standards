@@ -24,6 +24,7 @@ const CHECKS = [
   { name: "enable_eslint_rules_check", label: "ESLintルールの検査" },
   // serverless*.ymlがあるリポジトリだけが対象
   { name: "enable_security_headers_check", label: "セキュリティヘッダーの検査", requires: "serverless" },
+  { name: "enable_iac_check", label: "IaCの静的検査", requires: "serverless" },
   { name: "enable_iam_actions_check", label: "IAM権限の検査", requires: "serverless" },
   { name: "enable_dynamodb_protection_check", label: "DynamoDB保護設定の検査", requires: "serverless" },
 ];
