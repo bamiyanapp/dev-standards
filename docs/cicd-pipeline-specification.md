@@ -218,7 +218,7 @@ run-name: >-
 
 入力パラメータとして`enable_release` / `semantic_release_node_version` / `enable_shared_release_config`がある。加えて`enable_changelog_json` / `changelog_source_path` / `changelog_json_output_path`もある。詳細は docs/reusable-workflows-reference.md を参照。
 
-semantic-release本体および一部プラグイン（`@semantic-release/npm`、`semantic-release`本体など）が要求するNode.jsのバージョンに注意する。frontend/backendのビルド・テストに使うNode.jsのバージョン（多くの場合プロダクトのランタイムに合わせて20系などを指定）よりも新しいNode.jsを要求することがある。そのため`release` job内のsemantic-release実行専用に`semantic_release_node_version`（デフォルト`lts/*`）を別途用意している。
+semantic-release本体および一部プラグイン（`@semantic-release/npm`、`semantic-release`本体など）が要求するNode.jsのバージョンに注意する。frontend/backendのビルド・テストに使うNode.jsのバージョン（多くの場合プロダクトのランタイムに合わせて20系などを指定）よりも新しいNode.jsを要求することがある。そのため`release` job内のsemantic-release実行専用に`semantic_release_node_version`（デフォルト`"26"`）を別途用意している。
 
 ## 3. CodeQL ワークフロー (`reusable-codeql.yml`)
 - **トリガー**: 参照側 `codeql.yml` の `on` 設定に従う（`push`・`pull_request`に加え、`schedule`での定期実行を推奨）
