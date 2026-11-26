@@ -36,3 +36,19 @@ dev-standardsを参照している既知のリポジトリの一覧。`docs/`配
 
 読めないリポジトリは、失敗させない。「読めなかった」と、表とIssueへ明記する。
 これは、運用の安全網である。dev-standardsのIssueの完了条件にはしない（#1527）。
+
+## 取り込み状況の定期検知
+
+同じworkflow（`consumer-ci-health.yml`）の`consumer-adoption-health` jobが、毎日、調べる（#1600）。
+対象は、この一覧の全リポジトリである（dev-standards自身を除く）。
+見る項目は、2つである。
+
+- Renovateの設定ファイルの有無と、共有プリセット（`github>bamiyanapp/dev-standards`）の継承
+- `.github/workflows/`の、dev-standardsへの参照（`uses:`の`@タグ`と`self_ref`）の版と、最新との差
+
+Renovateの設定が無い、または、最新から30版（マイナーバージョン）以上遅れていれば、dev-standardsのIssueを1つ作る（重要度`low`）。
+検知されなくなれば、自動でクローズする。結果は、Job Summaryにも出る。
+
+これは、気づくための情報である。取り込みは、各プロダクトの管理で、dev-standardsのIssueの完了条件にしない（#1527）。
+submoduleの参照は、タグでなくコミットで固定されるため、見ない。
+非公開のリポジトリは、このworkflowの権限では読めない。「読めなかった」と、表へ明記する。

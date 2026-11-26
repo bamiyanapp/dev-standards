@@ -41,3 +41,33 @@ jobs:
           labels: '["bug","priority: high"]'
           close-comment: "再スキャンの結果、startup_failureが検知されなくなったため自動クローズします。"
           github-token: ${{ github.token }}
+
+  # issue #1600。参照側の、dev-standardsの版遅れと、Renovate未導入を、情報として出す。
+  # startup_failureの検知（上のjob）とは分け、このjobが失敗しても、上のjobの結果へ影響しない。
+  # 失敗させない運用の安全網で、完了条件にしない（#1527）。非公開のリポジトリは、このworkflowの権限では読めず、「読めなかった」と明記する。
+  consumer-adoption-health:
+    name: "参照側の取り込み状況（版遅れ・Renovate）"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+
+      - name: 参照側の取り込み状況を調べる
+        id: adoption
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/consumer-adoption-health.js | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: トラッキングissueを同期する
+        uses: ./.github/actions/tracking-issue-sync
+        with:
+          title: "参照側のdev-standardsの取り込みが遅れている・Renovateが無い（情報）"
+          has-findings: ${{ steps.adoption.outputs.has_findings }}
+          body: ${{ steps.adoption.outputs.body }}
+          labels: '["enhancement","priority: low"]'
+          close-comment: "再スキャンの結果、取り残されている参照側が無くなったため自動クローズします。"
+          github-token: ${{ github.token }}
