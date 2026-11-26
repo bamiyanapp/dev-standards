@@ -1,0 +1,13 @@
+# gitleaksの設定（リポジトリ全体の履歴スキャン・PR差分スキャンの、どちらも、このファイルを使う）。
+# 標準のルールを使いつつ、検知パターンの説明ドキュメントだけを、対象外にする（issue #1609）。
+
+title = "dev-standards gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "検知パターンの説明ドキュメントは、検知の再現用に、シークレットに見える文字列を含みうる（実在のクレデンシャルではない）。このドキュメントだけ、対象外にする。"
+paths = [
+  '''docs/hardcoded-credential-detection-pattern\.md$''',
+]
