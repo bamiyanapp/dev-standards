@@ -1,0 +1,39 @@
+name: "Verify security headers"
+description: >-
+  デプロイ後に、本番のURLへリクエストし、レスポンスのセキュリティヘッダー
+  （CSP・HSTS・nosniff・Referrer-Policy・X-Frame-Options/frame-ancestors）を実測する複合action
+  （dev-standards#1615）。結果はJob Summaryへ表で出す。既定は警告のみで、失敗にしない。
+  静的な検査（enable_security_headers_check）では見えない、付け漏れ・デプロイ失敗を検知する
+
+inputs:
+  urls:
+    description: "検査するURL。改行区切りで複数指定できる（トップ・静的アセット・動的エンドポイントの代表）。"
+    required: true
+  mode:
+    description: "`warn`は不足があっても失敗にせず警告のみ。`fail`は不足があれば失敗にする。"
+    required: false
+    default: "warn"
+  self_ref:
+    description: "dev-standardsのref（タグ）。スクリプトの取得に使う。"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: dev-standardsのスクリプトを取得する
+      uses: actions/checkout@v7
+      with:
+        repository: bamiyanapp/dev-standards
+        ref: ${{ inputs.self_ref }}
+        path: .dev-standards-actions
+        sparse-checkout: scripts/verify-security-headers.js
+        persist-credentials: false
+    - name: ヘッダーを実測する
+      shell: bash
+      env:
+        URLS: ${{ inputs.urls }}
+        MODE: ${{ inputs.mode }}
+      run: |
+        set -eu
+        mapfile -t url_list < <(printf '%s\n' "$URLS" | sed '/^[[:space:]]*$/d')
+        node .dev-standards-actions/scripts/verify-security-headers.js "$MODE" "${url_list[@]}"

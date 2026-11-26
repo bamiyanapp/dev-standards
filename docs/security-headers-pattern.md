@@ -80,6 +80,27 @@ Resources:
 
 先にインフラを変えると、stableが、CSPに違反して壊れる。
 
+## デプロイ後に、本番のヘッダーを実測する
+
+静的な検査（`enable_security_headers_check`）は、IaCの関連付けを見る。
+動的エンドポイントの別ビヘイビアの付け漏れや、デプロイの失敗は、レスポンスを見ないと分からない。
+composite action `verify-security-headers`を、デプロイ後のステップで呼ぶ。
+
+```yaml
+      - uses: bamiyanapp/dev-standards/.github/actions/verify-security-headers@v2.x.y
+        with:
+          self_ref: v2.x.y
+          urls: |
+            https://example.com/
+            https://example.com/assets/app.js
+            https://example.com/api/health
+```
+
+- 検査するヘッダーは、CSP・HSTS（max-ageが180日以上）・`nosniff`・Referrer-Policy・X-Frame-OptionsまたはCSPの`frame-ancestors`である
+- 結果は、Job Summaryへ表で出る。スマホから確認できる
+- 既定は`mode: warn`で、失敗にしない。デプロイ後の失敗は、ロールバックの判断を要するためである
+- `reusable-cd.yml`は、リリースだけを担う。デプロイは参照側のworkflowが行うため、入力ではなくactionとして提供する
+
 ## previewサーバーにも同じCSPを付ける
 
 E2Eが、本番と同じ制約で動くようにするため、`vite preview`にも同じCSPを付ける。CSPの文字列は、インフラ（`ResponseHeadersPolicy`）とpreviewサーバーで、1か所に定義して共有する。例えば、`csp.js`に文字列を置き、`serverless.yml`（`${file(./csp.js)}`）と`vite.config.js`の`preview.headers`が、同じ値を読む。
