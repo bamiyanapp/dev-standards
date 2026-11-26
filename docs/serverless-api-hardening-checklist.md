@@ -23,6 +23,8 @@ TTLで自動失効する一時データ（セッション、ワンタイムコ�
 
 新規テーブルの漏れは、CIで検知できる。`enable_dynamodb_protection_check`を使う。入力と除外の方法は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。
 
+IAMの過剰な権限・S3の公開・HTTPSの未強制は、`enable_iac_check`で検知できる。入力は[`reusable-workflows-reference.md`](reusable-workflows-reference.md)を参照する。
+
 ## 2. 全件取得（Query・Scanのページネーション）
 
 DynamoDBは1回の応答を1MBで打ち切る。`LastEvaluatedKey`を見ずに`Items`だけを使うと、データが増えた時点で結果が黙って欠ける。

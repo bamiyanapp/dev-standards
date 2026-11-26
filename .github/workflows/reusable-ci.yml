@@ -316,6 +316,25 @@ on:
           SHA固定の指摘（unpinned-uses）は、Renovateとの相性があるため対象外にする。
         type: boolean
         default: false
+      enable_iac_check:
+        description: >-
+          serverless.ymlのIaC（resources・provider.iam.role.statements）を、checkovで静的に検査する
+          `iac-check` jobを実行するかどうか（bamiyanapp/dev-standards#1614）。`self_ref`の指定も必要である。
+          IAMの過剰な権限・S3の公開・HTTPSの未強制等に絞った規則だけを検査する。
+          `serverless package`はAWS認証が要るため使わず、YAMLから直接テンプレートを取り出す。
+        type: boolean
+        default: false
+      iac_check_files:
+        description: >-
+          `enable_iac_check`の検査対象のserverless.yml。カンマまたは改行区切りで複数指定できる。
+        type: string
+        default: "serverless.yml"
+      iac_check_mode:
+        description: >-
+          `warn`は指摘があっても失敗にせず警告だけを出す。`fail`は指摘があれば失敗にする。
+          導入時は既存の指摘が出るため、`warn`で始め、是正後に`fail`へ切り替える。
+        type: string
+        default: "warn"
       enable_dynamodb_protection_check:
         description: >-
           serverless.yml・SAMテンプレートのDynamoDBテーブルに、データ保護の設定
@@ -2574,6 +2593,57 @@ jobs:
                       print(f"::warning file={path}::{x['ident']}: {x['desc']}")
           open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(lines) + "\n")
           PY
+
+  iac-check:
+    name: "IaCの静的検査"
+    needs: commitlint
+    if: |
+      always() &&
+      inputs.enable_iac_check &&
+      inputs.self_ref != '' &&
+      github.event_name == 'pull_request' &&
+      (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウトする
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: dev-standardsをチェックアウトする
+        uses: actions/checkout@v7
+        with:
+          repository: bamiyanapp/dev-standards
+          ref: ${{ inputs.self_ref }}
+          path: .dev-standards-actions
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - name: js-yamlをインストールする
+        run: npm install --no-save --prefix /tmp/yaml-tools js-yaml@4
+      - name: IaCを検査する
+        env:
+          NODE_PATH: /tmp/yaml-tools/node_modules
+          # Prisma Cloudへの接続（ガイドライン取得）を省く。検査結果には影響しない
+          BC_SKIP_MAPPING: "TRUE"
+          FILES: ${{ inputs.iac_check_files }}
+          MODE: ${{ inputs.iac_check_mode }}
+        run: |
+          set -eu
+          files=$(printf '%s' "$FILES" | tr ',' ' ')
+          node .dev-standards-actions/scripts/extract-cfn-from-serverless.js /tmp/iac-template.json $files
+          python3 -m pip install --quiet "checkov==3.4.11"
+          # IAMの過剰な権限・S3の公開・HTTPSの未強制に絞る。ログ・WAF・バージョニング・CMKは対象外
+          checks="CKV_AWS_49,CKV_AWS_107,CKV_AWS_108,CKV_AWS_109,CKV_AWS_110,CKV_AWS_111,CKV_AWS_355,CKV_AWS_356,CKV_AWS_20,CKV_AWS_53,CKV_AWS_54,CKV_AWS_55,CKV_AWS_56,CKV_AWS_57,CKV_AWS_34,CKV_AWS_174"
+          status=0
+          checkov -f /tmp/iac-template.json --framework cloudformation --check "$checks" --compact --quiet > /tmp/iac-check.txt || status=$?
+          cat /tmp/iac-check.txt
+          { echo "## IaCの静的検査（checkov）"; echo; echo '```'; cat /tmp/iac-check.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::IaCの静的検査で指摘があります。詳細はJob Summaryを確認してください"
+            [ "$MODE" = "fail" ] && exit 1
+          fi
+          exit 0
 
   iam-actions-check:
     name: "IAM Actionの不足の検査"
