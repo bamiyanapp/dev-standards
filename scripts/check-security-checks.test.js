@@ -19,19 +19,19 @@ test("無効なものを、警告する", () => {
 });
 
 test("serverlessが無ければ、IAM・DynamoDB・ヘッダー検査は対象外", () => {
-  const f = run(["enable_secret_scan", "enable_email_scan", "enable_eslint_rules_check"], {}, { hasServerless: false });
+  const f = run(["enable_secret_scan", "enable_email_scan", "enable_workflow_security_check", "enable_eslint_rules_check"], {}, { hasServerless: false });
   assert.deepEqual(f, []);
 });
 
 test("secret_scanが無効なら、email_scanは対象外（secret_scan側を警告する）", () => {
   const f = run([], {}, { hasServerless: false });
-  assert.deepEqual(f.map((x) => x.name), ["enable_secret_scan", "enable_eslint_rules_check"]);
+  assert.deepEqual(f.map((x) => x.name), ["enable_secret_scan", "enable_workflow_security_check", "enable_eslint_rules_check"]);
 });
 
 test("コメントアウトや false は、有効と見なさない", () => {
   const text = "with:\n  # enable_secret_scan: true\n  enable_eslint_rules_check: false\n";
   const f = evaluate([{ file: "a.yml", text }], {}, { hasServerless: false });
-  assert.deepEqual(f.map((x) => x.name), ["enable_secret_scan", "enable_eslint_rules_check"]);
+  assert.deepEqual(f.map((x) => x.name), ["enable_secret_scan", "enable_workflow_security_check", "enable_eslint_rules_check"]);
 });
 
 test("理由つきopt-outは警告しない。理由が空なら理由を求める", () => {

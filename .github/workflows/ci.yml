@@ -55,6 +55,8 @@ jobs:
       doc_reachability_paths: "docs/**/*.md"
       # issue #892: dev-standards自身の秘密情報検知もdogfoodingする
       enable_secret_scan: true
+      # issue #1613: workflow自身の脆弱性検査（zizmor）もdogfoodingする。警告のみ
+      enable_workflow_security_check: true
       # issue #645「OSS依存更新の自動安全判定・エスカレーション基盤」Phase 1（issue #646）:
       # dev-standards自身の依存更新PR（Renovate等）でもRisk Summaryコメントをdogfoodingする
       enable_dependency_risk_summary: true

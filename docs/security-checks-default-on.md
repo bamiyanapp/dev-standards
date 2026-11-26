@@ -10,6 +10,7 @@
 | --- | --- | --- |
 | `enable_secret_scan` | シークレット検知 | 常に |
 | `enable_email_scan` | メールアドレス検知 | `enable_secret_scan`が有効なとき |
+| `enable_workflow_security_check` | workflowの脆弱性検査（zizmor） | 常に |
 | `enable_eslint_rules_check` | ESLintルールの検査 | 常に |
 | `enable_security_headers_check` | セキュリティヘッダー | `serverless*.yml`があるとき |
 | `enable_iam_actions_check` | IAM権限 | `serverless*.yml`があるとき |
