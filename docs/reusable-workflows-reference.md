@@ -27,6 +27,7 @@ git submodule add -b main https://github.com/bamiyanapp/dev-standards.git dev-st
     - 区間外（前後）にはプロジェクト固有のignoreエントリを自由に追記できる。乖離検知の対象外のため、ルート直下の `.gitignore` に直接追記してよい
     - 管理区間内の差分（本リポジトリ側の`.gitignore`更新への追従）は、`bootstrap.js`（`--check` 無し）を再実行すると区間外の追記を保持したまま自動的に再同期される
   - `sync-manifest.json`（本リポジトリのルート）は、全参照側リポジトリで共通に成立するパス（`.clinerules/` 等）のみを収録する前提になっている。プロダクトごとにディレクトリ構成が異なる同期対象がある。例えば `shared/pwa/` 配下のPWAキャッシュ更新パターンである（詳細は [`service-worker-update-pattern.md`](service-worker-update-pattern.md) 参照）。これらは、参照側リポジトリ自身のルートに置く任意の `sync-manifest.local.json` に書く。同じ形式（`symlinks` / `symlinkAllInDir` / `copies`）で記述する。すると`bootstrap.js` が本リポジトリ側の `sync-manifest.json` とマージして同期する。このファイルが存在しないリポジトリの動作には影響しない。
+- リポジトリのセキュリティ設定: 新規プロジェクトは、`SECURITY.md`を置き、設定の基準を確かめる。詳細は[`repository-security-settings.md`](repository-security-settings.md)を参照する。
 - セキュリティ検査: 新規プロジェクトは、`ci.yml`で検査を最初から有効にする。有効にしない検査は、理由つきopt-outで明示する。入力の一覧と例は[`security-checks-default-on.md`](security-checks-default-on.md)を参照する。
 - [`cicd-pipeline-specification.md`](cicd-pipeline-specification.md): Claude Codeの `@import` 構文で解決可能なMarkdownである。そのためシンボリックリンクではなく参照側リポジトリの同名ドキュメントから相対リンクで参照する。参照側には共通ドキュメントに書かれていないプロダクト固有の内容（デプロイジョブ・固有の環境変数など）のみを記載する。
 
