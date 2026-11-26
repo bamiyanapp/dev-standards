@@ -30,5 +30,5 @@
   - `--run`なしの動作と出力は変わらない
 - `scripts/verify-lambda-package.js`: `serverless package`で作ったzipを展開し、全ハンドラを読み込めるかを検証する（issue #1452）。禁止ファイル（テスト等）の混入も検出する。`deploy-serverless`複合actionの`verify-package: true`で使う。`package.individually: true`の構成は対象外である。
 - `.github/actions/resolve-serverless-backend-url/`: backendのAPI Gateway URLを解決する複合action（issue #1173）。Serverless Frameworkの`osls info`を使う。ブルーグリーン（stable/canary）パターンでは、スタックの削除・再作成のたびにURLが変わる。このため毎回都度解決する必要がある。`stage`・`working-directory`を入力に取り、`backend-url`を出力する。依存パッケージのインストールは呼び出し元の責務である。
-- `.github/actions/verify-security-headers/`: デプロイ後に、本番のセキュリティヘッダーを実測する（[`docs/security-headers-pattern.md`](security-headers-pattern.md)、#1615）
+- `.github/actions/verify-security-headers/`: 本番のヘッダーを実測する（[`docs/security-headers-pattern.md`](security-headers-pattern.md)、#1615）
 - `.github/actions/generate-dev-standards-version-doc/`: 採用中バージョンをREADME等へ表示する複合action（issue #1197）。`.github/workflows/*.yml`内の`uses:`参照を走査する。対象Markdownファイル内のマーカー（`<!-- dev-standards-version:start -->`〜`<!-- dev-standards-version:end -->`）間へ書き込む。`markdown-path`（既定`README.md`）・`workflows-dir`（既定`.github/workflows`）を入力に取る。バージョンが複数混在する場合は不一致の旨を明示する。karuta issue #1898/#1899の実装を一般化したものである。
