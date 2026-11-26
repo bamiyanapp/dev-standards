@@ -252,8 +252,8 @@ jobs:
             echo "version=" >> "$GITHUB_OUTPUT"
           fi
 
-          git fetch origin "${{ github.ref_name }}"
-          REMOTE_SHA=$(git rev-parse "origin/${{ github.ref_name }}")
+          git fetch origin "$GITHUB_REF_NAME"
+          REMOTE_SHA=$(git rev-parse "origin/${GITHUB_REF_NAME}")
           if [ "$AFTER_SHA" = "$REMOTE_SHA" ] && [ "${{ steps.pre-release.outputs.sha }}" != "$AFTER_SHA" ]; then
             # ローカルのコミットは既にorigin側へ反映済み（直接pushが実際には
             # 成功している）。この場合、semantic-releaseコア本体はコミット→
@@ -418,7 +418,7 @@ jobs:
         run: |
           # squash mergeで作られたコミットはこの時点でローカルに存在しないため、
           # base_branchを取得してオブジェクトを取り込んでからタグを打ち直す
-          git fetch origin "${{ github.ref_name }}"
+          git fetch origin "$GITHUB_REF_NAME"
           git tag -f "$TAG" "$MERGE_SHA"
           git push origin "refs/tags/$TAG" --force
 

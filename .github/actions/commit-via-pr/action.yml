@@ -77,9 +77,14 @@ runs:
     - name: Check for changes to commit
       id: check-changes
       shell: bash
+      env:
+        # issue #1635: 入力は、runへ直接展開せず、環境変数で渡す（コマンド注入を避ける）
+        PATHS: ${{ inputs.paths }}
       run: |
         set -eu
-        if git status --porcelain -- ${{ inputs.paths }} | grep -q .; then
+        # pathsは、空白区切りの複数のpathspecである。意図して、引用符で囲まずに展開する
+        # shellcheck disable=SC2086
+        if git status --porcelain -- $PATHS | grep -q .; then
           echo "changed=true" >> "$GITHUB_OUTPUT"
         else
           echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -88,12 +93,17 @@ runs:
     - name: Commit the changes
       if: steps.check-changes.outputs.changed == 'true'
       shell: bash
+      env:
+        PATHS: ${{ inputs.paths }}
+        COMMIT_SUBJECT: ${{ inputs.commit-subject }}
+        COMMIT_BODY: ${{ inputs.commit-body }}
       run: |
         set -eu
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add -- ${{ inputs.paths }}
-        git commit -m "${{ inputs.commit-subject }}" -m "${{ inputs.commit-body }}"
+        # shellcheck disable=SC2086
+        git add -- $PATHS
+        git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY"
 
     # push-tokenが無い場合は直接pushを試みず、常にPRフォールバックへ進む
     - name: Attempt a direct push to the base branch
@@ -103,25 +113,30 @@ runs:
       shell: bash
       env:
         PUSH_TOKEN: ${{ inputs.push-token }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+        REPOSITORY: ${{ github.repository }}
       run: |
         set -eu
         # issue #1395: checkoutが残したGITHUB_TOKENの認証ヘッダーは、URLへ埋め込んだ
         # PUSH_TOKENより優先され、pushの主体がgithub-actions[bot]になる。空の値で上書きして無効にする
-        git -c http.https://github.com/.extraheader= push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ inputs.base-branch }}"
+        git -c http.https://github.com/.extraheader= push "https://x-access-token:${PUSH_TOKEN}@github.com/${REPOSITORY}.git" "HEAD:${BASE_BRANCH}"
 
     - name: Check if the direct push actually succeeded
       id: check-push
       if: steps.check-changes.outputs.changed == 'true'
       shell: bash
+      env:
+        PUSH_TOKEN: ${{ inputs.push-token }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
       run: |
         set -eu
-        if [ "${{ inputs.push-token }}" = "" ]; then
+        if [ "$PUSH_TOKEN" = "" ]; then
           echo "needs_pr=true" >> "$GITHUB_OUTPUT"
           exit 0
         fi
-        git fetch origin "${{ inputs.base-branch }}"
+        git fetch origin "$BASE_BRANCH"
         LOCAL_SHA=$(git rev-parse HEAD)
-        REMOTE_SHA=$(git rev-parse "origin/${{ inputs.base-branch }}")
+        REMOTE_SHA=$(git rev-parse "origin/${BASE_BRANCH}")
         if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
           echo "needs_pr=false" >> "$GITHUB_OUTPUT"
         else
@@ -131,10 +146,12 @@ runs:
     - name: Rebase the commit onto the latest base branch
       if: steps.check-changes.outputs.changed == 'true' && steps.check-push.outputs.needs_pr == 'true'
       shell: bash
+      env:
+        BASE_BRANCH: ${{ inputs.base-branch }}
       run: |
         set -eu
-        git fetch origin "${{ inputs.base-branch }}"
-        git rebase -X ours "origin/${{ inputs.base-branch }}"
+        git fetch origin "$BASE_BRANCH"
+        git rebase -X ours "origin/${BASE_BRANCH}"
 
     # force pushにしているのは、過去の失敗試行で同名ブランチが残骸として残っていると、
     # 通常のpushがnon-fast-forwardで拒否され以後の実行が恒久的に失敗し続けるため
@@ -142,9 +159,12 @@ runs:
       id: push-new-branch
       if: steps.check-changes.outputs.changed == 'true' && steps.check-push.outputs.needs_pr == 'true'
       shell: bash
+      env:
+        BRANCH_PREFIX: ${{ inputs.branch-prefix }}
+        RUN_ID: ${{ github.run_id }}
       run: |
         set -eu
-        BRANCH="${{ inputs.branch-prefix }}-${{ github.run_id }}"
+        BRANCH="${BRANCH_PREFIX}-${RUN_ID}"
         git checkout -b "$BRANCH"
         git push --force origin "$BRANCH"
         echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
@@ -154,6 +174,14 @@ runs:
       id: create-and-merge-pr
       if: steps.check-changes.outputs.changed == 'true' && steps.check-push.outputs.needs_pr == 'true'
       uses: actions/github-script@v9
+      env:
+        PR_BRANCH: ${{ steps.push-new-branch.outputs.branch }}
+        PR_HEAD_SHA: ${{ steps.push-new-branch.outputs.sha }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+        PR_TITLE: ${{ inputs.pr-title }}
+        PR_BODY: ${{ inputs.pr-body }}
+        COMMIT_SUBJECT: ${{ inputs.commit-subject }}
+        COMMIT_BODY: ${{ inputs.commit-body }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -161,10 +189,10 @@ runs:
             "${{ github.action_path }}/../lib/mergePrWithRetry.js"
           );
 
-          const branch = "${{ steps.push-new-branch.outputs.branch }}";
-          const baseBranch = "${{ inputs.base-branch }}";
-          const title = "${{ inputs.pr-title }}" || "${{ inputs.commit-subject }}";
-          const body = "${{ inputs.pr-body }}" || "${{ inputs.commit-body }}";
+          const branch = process.env.PR_BRANCH;
+          const baseBranch = process.env.BASE_BRANCH;
+          const title = process.env.PR_TITLE || process.env.COMMIT_SUBJECT;
+          const body = process.env.PR_BODY || process.env.COMMIT_BODY;
 
           // 過去の試行でこのブランチへのPRマージ自体が失敗し、PRがオープンのまま
           // 残っている場合、createは「A pull request already exists」で422を返す。
@@ -203,7 +231,7 @@ runs:
           // ことがあるため、短い間隔でリトライする。issue #1256。expectedHeadShaに
           // このactionが実際にpushしたコミットのSHAを渡し、マージ時点でブランチが
           // 他から書き換えられていないことを確認する
-          const expectedHeadSha = "${{ steps.push-new-branch.outputs.sha }}";
+          const expectedHeadSha = process.env.PR_HEAD_SHA;
           // issue #1500: 必須チェックの完了待ちで、リトライ上限まで405が続いても、失敗にしない（警告を出して終える）。
           // PRは残り、参照側のCIの自動マージが、チェックの通過後にマージする
           const mergeSha = await mergePrWithRetry({ github, context, pullNumber: pr.number, expectedHeadSha, onRequiredChecksPending: "skip" });
