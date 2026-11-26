@@ -1,3 +1,10 @@
+## [2.184.1](https://github.com/bamiyanapp/dev-standards/compare/v2.184.0...v2.184.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **skills:** use absolute URL for authz doc link in code-review skill ([#1640](https://github.com/bamiyanapp/dev-standards/issues/1640)) ([63c3333](https://github.com/bamiyanapp/dev-standards/commit/63c3333fc6f0784c662523921d390f7968d01bce))
+
 # [2.184.0](https://github.com/bamiyanapp/dev-standards/compare/v2.183.0...v2.184.0) (2026-11-26)
 
 
