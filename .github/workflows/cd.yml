@@ -18,9 +18,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# issue #1636: workflow全体の権限は最小（読み取りのみ）にし、書き込みが要るjobだけが、
+# 自分のjobで宣言する（zizmor excessive-permissions）
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   # 自リポジトリのreusable-cd.ymlをdogfoodingする。相対パス参照のため、このPRで
@@ -28,6 +29,10 @@ jobs:
   release:
     name: "リリース"
     uses: ./.github/workflows/reusable-cd.yml
+    # リリース（タグ・GitHub Release・CHANGELOGのコミット・リリースPR）に必要な権限
+    permissions:
+      contents: write
+      pull-requests: write
     with:
       enable_shared_release_config: false
     secrets:
@@ -45,6 +50,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page-url }}
     permissions:
+      contents: read
       pages: write
       id-token: write
     steps:
