@@ -1,0 +1,4 @@
+{
+  "enable_email_scan": "dev-standardsは個人情報を扱うプロダクトではなく、ドキュメントにメールアドレス形式の例を含むため",
+  "enable_eslint_rules_check": "dev-standardsはESLintを使うアプリコードを持たないため"
+}
