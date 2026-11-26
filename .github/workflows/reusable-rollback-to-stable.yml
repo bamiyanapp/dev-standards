@@ -59,23 +59,28 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - name: "${{ inputs.kvs_key }}を${{ inputs.value }}に設定する"
+        env:
+          # issue #1635: 入力は、runへ直接展開せず、環境変数で渡す
+          KVS_ARN: ${{ inputs.kvs_arn }}
+          KVS_KEY: ${{ inputs.kvs_key }}
+          VALUE: ${{ inputs.value }}
         run: |
           set -eu
-          KVS_ARN="${{ inputs.kvs_arn }}"
-          KVS_KEY="${{ inputs.kvs_key }}"
-          VALUE="${{ inputs.value }}"
           ETAG=$(aws cloudfront-keyvaluestore describe-key-value-store --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --query ETag --output text)
           aws cloudfront-keyvaluestore put-key --region "${{ inputs.kvs_region }}" --kvs-arn "$KVS_ARN" --if-match "$ETAG" --key "$KVS_KEY" --value "$VALUE" >/dev/null
           echo "${KVS_KEY} を ${VALUE} に設定した"
 
       - name: 概要を出力する
         if: always()
+        env:
+          KVS_KEY: ${{ inputs.kvs_key }}
+          VALUE: ${{ inputs.value }}
         run: |
           set -eu
           {
             echo "## 管理者ロールバック/復帰 実行結果"
             echo ""
-            echo "${{ inputs.kvs_key }}: ${{ inputs.value }} に設定した"
+            echo "${KVS_KEY}: ${VALUE} に設定した"
             echo ""
             echo "KVS更新のCloudFrontエッジ拠点への伝播は非同期のため、実際の反映確認は呼び出し元リポジトリ側で行うこと。"
           } >> "$GITHUB_STEP_SUMMARY"
