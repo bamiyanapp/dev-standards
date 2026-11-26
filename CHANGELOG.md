@@ -1,3 +1,11 @@
+## [2.186.1](https://github.com/bamiyanapp/dev-standards/compare/v2.186.0...v2.186.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **cd:** narrow workflow-level permissions to read, grant writes per job ([#1651](https://github.com/bamiyanapp/dev-standards/issues/1651)) ([445275e](https://github.com/bamiyanapp/dev-standards/commit/445275ec82c443f0c01a8b1361a144ec081a1d9d)), closes [#1636](https://github.com/bamiyanapp/dev-standards/issues/1636) [#1613](https://github.com/bamiyanapp/dev-standards/issues/1613)
+* **ci:** 依存フル脆弱性スキャンのMTTR台帳のコミットで、BOT_TOKENを使えるようにする ([#1650](https://github.com/bamiyanapp/dev-standards/issues/1650)) ([0ed6c27](https://github.com/bamiyanapp/dev-standards/commit/0ed6c2777119429d6956b66a9f269dae1c84c407)), closes [#1647](https://github.com/bamiyanapp/dev-standards/issues/1647)
+
 # [2.186.0](https://github.com/bamiyanapp/dev-standards/compare/v2.185.1...v2.186.0) (2026-11-26)
 
 
