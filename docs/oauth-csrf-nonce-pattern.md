@@ -112,7 +112,7 @@ if (!(await consumeCsrfNonce(decoded.nonce))) {
 }
 ```
 
-実例: examination `infra/site-stack/functions/checkAuth.js`の`issueCsrfNonce`/`consumeCsrfNonce`である。テーブル名は`examination-csrf-nonces`である。
+共有コード: [`shared/lambda/csrfNonce.js`](../shared/lambda/csrfNonce.js)の`createCsrfNonce`が、上記と同じ動作の`issueCsrfNonce`/`consumeCsrfNonce`を返す。DynamoDBクライアントと`PutItemCommand`・`DeleteItemCommand`は、呼び出し側から渡す。実例: examination `infra/site-stack/functions/checkAuth.js`が、これを使う。テーブル名は`examination-csrf-nonces`である。上のコードは、仕組みの説明用であり、新規に書き写さない。
 
 ## 前提となるDynamoDBテーブル定義
 
@@ -139,4 +139,4 @@ MyAppCsrfNoncesTable:
 
 - nonceのTTLは短命（examinationでは300秒）でよい。ログインリダイレクトからコールバックまでは通常数秒〜数十秒で完結するため
 - `DeleteItem`に`ConditionExpression`を付けることが要。単純な`GetItem`→検証→`DeleteItem`の2ステップにすると、その間に同じnonceで2回目のコールバックが飛んできた場合（多重タブでの二重コールバック等）にリプレイを許してしまう。`DeleteItem`自体に条件を持たせ、単一リクエストで検証・失効を同時に行う
-- 本パターンはコードの共有ではなく設計判断・教訓の共有が主目的。プロダクトごとにコールバックの実装（Lambda@Edge/API Gatewayなど実行環境が異なる）は個別に実装してよい。しかし「CSRF nonceをCookieに保存して検証する」設計を選ばないことが最も重要な教訓
+- nonceの発行・消費は`shared/lambda/csrfNonce.js`で共有する。コールバックの実装（Lambda@Edge/API Gatewayなど実行環境が異なる）は、プロダクトごとに書いてよい。「CSRF nonceをCookieに保存して検証する」設計を選ばないことが、最も重要な教訓である
