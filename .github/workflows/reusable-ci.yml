@@ -676,6 +676,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: 0
           submodules: true
       # setup-nodeはNode.jsバージョンマニフェストの取得をGitHub側から行うため、
@@ -834,6 +835,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -941,6 +943,7 @@ jobs:
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -978,6 +981,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -1107,6 +1111,7 @@ jobs:
         if: inputs.coverage_threshold > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -1173,6 +1178,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -1234,6 +1240,7 @@ jobs:
         if: (matrix.package.coverage_threshold || inputs.coverage_threshold) > 0 && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -1848,6 +1855,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -1964,6 +1972,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -2041,6 +2050,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: true
       - name: jscpdを実行する（ワークフロー重複チェック）
         run: |
@@ -2101,6 +2111,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -2168,6 +2179,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: true
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -2218,6 +2230,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: true
       - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
@@ -2286,6 +2299,8 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
         continue-on-error: true
@@ -2526,9 +2541,12 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: dev-standardsをチェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -2668,11 +2686,13 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           # dev-standardsへのsymlink（共有コード）が壊れず、共有コードが使うコマンドも検査できるようにする（#1493）
           submodules: true
       - name: dev-standardsをチェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -2709,9 +2729,12 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: dev-standardsをチェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -2747,9 +2770,12 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: dev-standardsをチェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -2782,9 +2808,12 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: dev-standardsをチェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -3283,6 +3312,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.enable_standards_check }}
 
       - name: Node.jsをセットアップする
@@ -3384,6 +3414,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.enable_standards_check }}
 
       - name: Node.jsをセットアップする
@@ -3474,6 +3505,7 @@ jobs:
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions

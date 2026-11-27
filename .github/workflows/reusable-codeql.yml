@@ -41,6 +41,8 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # JavaScript/TypeScriptはインタプリタ言語のため、コンパイル言語向けの
       # autobuildステップは不要（init→analyzeのみで解析できる）

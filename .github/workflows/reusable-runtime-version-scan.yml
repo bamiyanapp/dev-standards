@@ -64,6 +64,8 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Node.jsをセットアップする
         uses: actions/setup-node@v7
@@ -75,6 +77,7 @@ jobs:
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions

@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 参照側のstartup_failureを調べる
         id: health
@@ -55,6 +57,8 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 参照側の取り込み状況を調べる
         id: adoption
