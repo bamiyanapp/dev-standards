@@ -1,3 +1,10 @@
+# [2.191.0](https://github.com/bamiyanapp/dev-standards/compare/v2.190.0...v2.191.0) (2026-11-27)
+
+
+### Features
+
+* **ui:** AppShellの型定義を足し、UserMenuを汎用化しない理由を記録する ([#1671](https://github.com/bamiyanapp/dev-standards/issues/1671)) ([5f1cf5d](https://github.com/bamiyanapp/dev-standards/commit/5f1cf5d494a4fad41a0849f8c43cc863803f2afa)), closes [#1666](https://github.com/bamiyanapp/dev-standards/issues/1666)
+
 # [2.190.0](https://github.com/bamiyanapp/dev-standards/compare/v2.189.0...v2.190.0) (2026-11-27)
 
 
