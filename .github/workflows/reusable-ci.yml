@@ -3927,18 +3927,18 @@ jobs:
       # 結果を参照するようになったため、このステップはそれより前に実行する必要がある
       - name: ブラスト半径判定用にNode.jsをセットアップする（1回目/2回）
         id: setup-node-blast-radius-1
-        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
+        if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
       - name: ブラスト半径判定用Node.jsセットアップの再試行前に待機する
-        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
         shell: bash
         run: sleep 10
       - name: ブラスト半径判定用にNode.jsをセットアップする（2回目/2回、一時的な失敗後の再試行）
         id: setup-node-blast-radius-2
-        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true' && steps.setup-node-blast-radius-1.outcome == 'failure'
+        if: steps.dependency-info.outcome == 'success' && steps.setup-node-blast-radius-1.outcome == 'failure'
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
@@ -3949,7 +3949,18 @@ jobs:
           steps.dependency-info.outcome == 'success' &&
           (steps.setup-node-blast-radius-1.outcome == 'success' || steps.setup-node-blast-radius-2.outcome == 'success')
         continue-on-error: true
+        env:
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
         run: |
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            # issue #1381: 複数のlockfileを持つ構成では、直接依存が更新されたlockfileのディレクトリだけ
+            # 依存をインストールする（9アプリ分を入れると遅いため）。1つ失敗しても、残りは続ける
+            node .dev-standards-actions/scripts/dependency-blast-radius-dirs.js /tmp/dependency-update-info.json > /tmp/blast-radius-targets.json
+            for dir in $(jq -r '.[].dir' /tmp/blast-radius-targets.json); do
+              [ -f "$dir/package-lock.json" ] && { npm ci --prefix "$dir" || echo "::warning::$dir の依存インストールに失敗しました。ブラスト半径は、そのディレクトリを除いて判定します"; }
+            done
+            exit 0
+          fi
           if [ "${{ inputs.workspaces }}" = "true" ]; then
             npm ci
           else
@@ -3958,9 +3969,23 @@ jobs:
           fi
       - name: ブラスト半径判定用にdependency-cruiserを実行する
         id: blast-radius-cruise
-        if: steps.dependency-info.outcome == 'success' && steps.gate.outputs.multi_lockfile != 'true'
+        if: steps.dependency-info.outcome == 'success'
         continue-on-error: true
+        env:
+          MULTI_LOCKFILE: ${{ steps.gate.outputs.multi_lockfile }}
         run: |
+          if [ "$MULTI_LOCKFILE" = "true" ]; then
+            # issue #1381: ディレクトリごとにdependency-cruiserを実行し、modulesを連結する。
+            # ファイルパスには、アプリのディレクトリが付く（「どのアプリの、どのファイルから」が分かる）。
+            # 同じパッケージが複数のアプリで使われても、パッケージ名ごとのimport元へ、全アプリのファイルが並ぶ
+            echo '{"modules":[]}' > /tmp/depcruise-output.json
+            for target in $(jq -r '.[].target' /tmp/blast-radius-targets.json); do
+              npx --yes -p typescript@5 -p dependency-cruiser@16 depcruise --config dependency-cruiser.config.cjs --output-type json "$target" > /tmp/depcruise-one.json || { echo "::warning::$target のdependency-cruiserの実行に失敗しました"; continue; }
+              jq -s '{modules: (.[0].modules + .[1].modules)}' /tmp/depcruise-output.json /tmp/depcruise-one.json > /tmp/depcruise-merged.json
+              mv /tmp/depcruise-merged.json /tmp/depcruise-output.json
+            done
+            exit 0
+          fi
           targets=()
           [ -d "${{ inputs.frontend_dir }}" ] && targets+=("${{ inputs.frontend_dir }}")
           [ -d "${{ inputs.backend_dir }}" ] && targets+=("${{ inputs.backend_dir }}")
@@ -4213,7 +4238,7 @@ jobs:
               for (const c of changes) {
                 body += `| ${c.name} | ${c.oldVersion ?? '-'} | ${c.newVersion ?? '-'} | ${updateTypeLabel[c.updateType]} | ${c.direct ? '直接' : '間接'} |${multiLock ? ` ${(c.lockfiles || []).join('<br>')} |` : ''}\n`;
               }
-              if (multiLock) body += '\n複数のlockfileを変更したPRのため、ブラスト半径とSBOMの判定は、スキップしました。\n';
+              if (multiLock) body += '\n複数のlockfileを変更したPRのため、SBOMの判定は、スキップしました。ブラスト半径は、直接依存が更新されたディレクトリだけで判定しました。\n';
               body += '\n</details>\n\n';
             }
 

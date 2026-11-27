@@ -69,7 +69,11 @@ examinationのように、npm workspacesを使わず、`app/*/`・`infra/*/`・�
 - 同じパッケージの同じ更新が複数のlockfileに現れる（vite更新が9アプリ同時）。`name@旧→新`で重複排除し、「影響するlockfile」の列に、パスを並べる。重複排除しないと、コメントが9倍になる
 - `direct`・`production`は、いずれかのlockfileで真なら真とする。1箇所でも本番到達経路があれば対象にする、という既存の考え方をlockfile間に広げている
 - リスク分類は、重複排除後の集合に対して、1回だけ行う
-- **ブラスト半径とSBOMの判定は、複数のlockfileを変更したPRではスキップする**。`dependency-cruiser`の判定は`frontend_dir`・`backend_dir`を前提にするためである。スキップした旨を、コメントへ出す。別のissueで扱う
+- **SBOMの判定は、複数のlockfileを変更したPRではスキップする**。スキップした旨を、コメントへ出す。
+- **ブラスト半径は、複数のlockfileを変更したPRでも判定する**（#1381）。`scripts/dependency-blast-radius-dirs.js`が、直接依存が更新されたlockfileのディレクトリを選ぶ。そのディレクトリだけ、`npm ci`と`dependency-cruiser`を実行する。9アプリ分の依存インストールを避けるためである
+- 対象は、`<dir>/src`があればそれ、無ければ`<dir>`である。ルートのlockfileは、`src`があるときだけ対象にする。ルート全体を渡すと、他のアプリの配下まで解析するためである
+- 結果は、ディレクトリごとの`modules`を連結して、1つにする。import元のファイルパスにアプリのディレクトリが付くため、「どのアプリの、どのファイルから使われているか」が分かる。同じパッケージが複数のアプリで使われたときは、全アプリのファイルが並ぶ
+- 同じパッケージが、あるアプリでは直接依存、別のアプリでは間接依存のとき、両方を対象にする（`direct`が、いずれかで真なら真のため。安全側）
 - このPRで新しく追加されたlockfileは、base側に無いため、空のlockfileと比べる
 
 定期スキャンの複数指定は、[`dependency-risk-judgment-periodic-scans.md`](dependency-risk-judgment-periodic-scans.md)の「複数lockfileの指定」を参照する。
