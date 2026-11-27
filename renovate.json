@@ -15,6 +15,24 @@
       ],
       "enabled": false,
       "description": "semantic-release v26はNode v26.13.0以上が必須だが、AWSがLambda実行環境としてNode 26をまだ提供しておらず、参照側のNodeは22系で統一している。Renovateもロックファイルを再生成できずCIが失敗するため、v26以降は保留する。解除条件: LambdaがNode 26を提供し、参照側のNodeを上げた後に、このルールを削除する（dev-standards#1506）"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "pinDigests": true,
+      "description": "issue #1639: 第三者のGitHub Actionsを、コミットSHAで固定する（タグは後から付け替えられるため、サプライチェーン攻撃の経路になる）。actions/*とbamiyanapp/*は、下のルールで除外する"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchPackageNames": [
+        "/^actions\\//",
+        "/^bamiyanapp\\//"
+      ],
+      "pinDigests": false,
+      "description": "issue #1639: GitHub公式（actions/*）と同一組織（bamiyanapp/*）は、タグ参照のままにする。dev-standards自身の参照は、バージョンの整合検査（check-dev-standards-refs.js）がタグを前提にするため"
     }
   ],
   "customManagers": [
