@@ -141,6 +141,19 @@ graph TD
 
 ![バックエンドAPIの構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-4.png?36644953fa1931a2d3f654ed5a1ee03c49f01be6)
 
+### 検討済み: APIをCloudFront配下の同一オリジンで提供する構成は、標準にしない
+
+`/api/*`のビヘイビアでAPIをCloudFront配下に置く案を検討し、標準には採らないと決めた（#1404、2026-11）。
+同じ検討を繰り返さないため、理由を残す。
+
+- 利点は、URLの埋め込み・CORS・プリフライトが要らなくなることである。
+- 一方で、`/api/*`のキャッシュ設定を誤ると、他人の応答が返る事故になる。動的エンドポイントのキャッシュで、ログイン不能になった実例がある。
+- 認証がCookieになるとCSRF対策が要り、短命Bearerトークンのパターンとの整理も要る。
+- blue-green（stable/canary）では、フロントエンドとAPIの版の対応を、別に保つ仕組みが要る。
+- WebSocketは対象外のままで、構成が二本立てになる。
+- 現状の別オリジン構成は、CORSの許可オリジン制限と短命Bearerトークンで、支障なく運用できている。
+- 参照側が個別に同一オリジンを選ぶのは妨げない。その場合の注意は、上の難所に従う。
+
 ## 4. ホスティング（全プロジェクトで採用）
 
 S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共通。詳細は[`static-hosting-pattern.md`](static-hosting-pattern.md)を参照。
