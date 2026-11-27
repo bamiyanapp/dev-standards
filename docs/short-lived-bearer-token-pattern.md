@@ -106,7 +106,7 @@ async function verifyBearerEmail(event) {
 }
 ```
 
-実例: examination`infra/site-stack/functions/checkAuth.js`の`handleVoiceTokenApi`が発行側である。examination`infra/bot-stack/functions/apiAuth.js`の`verifyBearerEmail`が検証側である。
+実例: examination`infra/site-stack/functions/checkAuth.js`の`handleVoiceTokenApi`が発行側である。examination`infra/bot-stack/functions/apiAuth.js`の`verifyBearerEmail`が検証側である。検証側でトークンを取り出す部分は、[`shared/lambda/bearerToken.js`](../shared/lambda/bearerToken.js)の`extractBearerToken`で共有する。ヘッダー名の大文字小文字の揺れと、Bearer以外のスキームを扱う。トークンの発行と、DBでの検証は、プロダクトごとに異なるため共有しない。
 
 ## 前提となるDynamoDBテーブル定義
 
