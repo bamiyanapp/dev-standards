@@ -34,7 +34,27 @@ graph TD
 
 </details>
 
-![技術要素の採用パターン (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack.png?beb71737bdbeb49528789ad5abe978120c826f13)
+![技術要素の採用パターン (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-1.png?beb71737bdbeb49528789ad5abe978120c826f13)
+
+<details>
+<summary>標準構成を全て採用した場合の全体構成（mermaid図）</summary>
+
+```mermaid
+graph TD
+    User[ブラウザ]
+    User -->|静的ファイルを取得| CF[CloudFront]
+    CF --> S3[S3<br/>React SPA]
+    User -->|"API呼び出し<br/>（トークン付き）"| APIGW[API Gateway<br/>REST / WebSocket]
+    APIGW --> Lambda[Lambda<br/>OSLSでデプロイ]
+    Lambda --> DDB[(DynamoDB)]
+    User -.->|ログイン| IdP[IdP<br/>Firebase または Google]
+    GHA[GitHub Actions<br/>reusable-ci / cd] -.->|デプロイ| CF
+    GHA -.->|デプロイ| Lambda
+```
+
+</details>
+
+![標準構成を全て採用した場合の全体構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-2.png?beb71737bdbeb49528789ad5abe978120c826f13)
 
 ## 個人情報の扱い（全プロジェクト共通）
 
@@ -59,6 +79,33 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 
 サイトの閲覧自体（トップページ含め）を非公開にしたい場合は標準構成の対象外。[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)（Cognito + Lambda@Edgeによる全リクエスト認証ゲート）を個別に検討する。
 
+<details>
+<summary>ログインの選択肢ごとの流れ（mermaid図）</summary>
+
+```mermaid
+graph TD
+    subgraph C["C. 標準外: サイト全体を非公開にする"]
+        direction TB
+        C1[ブラウザ] --> C2[CloudFront]
+        C2 --> C3["Lambda@Edge<br/>Cognitoで全リクエストを認証"]
+        C3 --> C4[S3]
+    end
+    subgraph B["B. Google IDトークンの直接検証（標準）"]
+        direction TB
+        B1[ブラウザ<br/>Googleでログイン] -->|"初回のみ: IDトークン"| B2[Lambda<br/>検証し、セッショントークンを発行]
+        B2 --> B3[(DynamoDB)]
+    end
+    subgraph A["A. Firebase Authentication（標準）"]
+        direction TB
+        A1[ブラウザ<br/>Firebase SDKでログイン] -->|"毎回: ID Token"| A2[API Gateway + Lambda<br/>firebase-adminで検証]
+        A2 --> A3[(DynamoDB)]
+    end
+```
+
+</details>
+
+![ログインの選択肢ごとの流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-3.png?beb71737bdbeb49528789ad5abe978120c826f13)
+
 ## 3. バックエンドAPI: 必要な場合のみ採用
 
 バックエンドAPIが不要なプロダクトは本節を採用せず、フロントエンドのみで完結させる。標準構成はOSLS + Lambda + API Gateway + DynamoDBの1つ（ログインの有無・方式とは独立に使える。「2. ログイン」の各構成はどちらもこの基盤と組み合わせられる）。ホスティング（S3 + CloudFront、「4. ホスティング」）とは別スタックとしてデプロイする。
@@ -75,6 +122,25 @@ React 19 + Vite + TypeScript + Bootstrap 5.3の単一パッケージ構成。詳
 - 実認証情報の無いサンドボックスからの本番データ調査・修正: [`sandboxed-agent-production-data-pattern.md`](sandboxed-agent-production-data-pattern.md)
 - 日次利用回数の上限: [`daily-rate-limit-pattern.md`](daily-rate-limit-pattern.md)
 
+<details>
+<summary>バックエンドAPIの構成（RESTのみ・WebSocketを足す場合）（mermaid図）</summary>
+
+```mermaid
+graph TD
+    subgraph OSLS[同じOSLSサービス]
+        REST[API Gateway<br/>REST API] --> L1[Lambda<br/>業務ロジック]
+        WS[API Gateway<br/>WebSocket API<br/>任意] --> L2[Lambda<br/>$connect・$disconnect・業務ルート]
+    end
+    Browser[ブラウザ] -->|HTTP| REST
+    Browser <-->|"リアルタイム双方向<br/>（必要な場合のみ）"| WS
+    L1 --> DDB[(DynamoDB)]
+    L2 --> DDB
+```
+
+</details>
+
+![バックエンドAPIの構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-4.png?beb71737bdbeb49528789ad5abe978120c826f13)
+
 ## 4. ホスティング（全プロジェクトで採用）
 
 S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共通。詳細は[`static-hosting-pattern.md`](static-hosting-pattern.md)を参照。
@@ -86,6 +152,21 @@ S3 + CloudFront。ログイン・バックエンドAPIの有無によらず共�
 ## 6. CI/CD（全プロジェクトで採用）
 
 reusable-ci.yml（lint/test/build/自動マージ）+ reusable-cd.yml（semantic-release）。詳細な入力・仕様は[`cicd-pipeline-specification.md`](cicd-pipeline-specification.md)を参照。
+
+<details>
+<summary>CI/CDの流れ（mermaid図）</summary>
+
+```mermaid
+graph TD
+    PR[PRを作成] --> CI[reusable-ci.yml<br/>lint・test・build]
+    CI --> Merge[人間がマージ]
+    Merge --> CD[reusable-cd.yml<br/>semantic-releaseでバージョンを決める]
+    CD --> Deploy[S3 / CloudFront・Lambdaへ<br/>デプロイ]
+```
+
+</details>
+
+![CI/CDの流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-5.png?beb71737bdbeb49528789ad5abe978120c826f13)
 
 ## 7. コミット規約・開発フロー（全プロジェクトで採用）
 
