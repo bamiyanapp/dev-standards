@@ -56,6 +56,8 @@ jobs:
     steps:
       - name: チェックアウトする
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: GitHub Pagesへデプロイする
         id: deploy
         uses: ./.github/actions/deploy-github-pages
