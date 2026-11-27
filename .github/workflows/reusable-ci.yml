@@ -3801,6 +3801,19 @@ jobs:
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
 
+      # dependency-risk-security-summary.jsがrequireするae-cvss-calculatorは、
+      # dev-standardsのdevDependencyで参照側には入っていない（issue #1672）。
+      # 全devDependencyを入れると遅いため、この1つだけを別ディレクトリへ入れ、
+      # NODE_PATHで解決させる
+      - name: スクリプトの依存（ae-cvss-calculator）をインストールする
+        if: steps.gate.outputs.should_run == 'true'
+        continue-on-error: true
+        run: |
+          VERSION=$(node -p "require('./.dev-standards-actions/package.json').devDependencies['ae-cvss-calculator']")
+          mkdir -p /tmp/script-deps
+          npm install --prefix /tmp/script-deps --no-save --ignore-scripts --no-audit --no-fund "ae-cvss-calculator@${VERSION}"
+          echo "NODE_PATH=/tmp/script-deps/node_modules" >> "$GITHUB_ENV"
+
       - name: 依存パッケージ更新情報を生成する
         id: dependency-info
         if: steps.fetch-base.outcome == 'success'
