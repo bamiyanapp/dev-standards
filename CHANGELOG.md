@@ -1,3 +1,10 @@
+# [2.189.0](https://github.com/bamiyanapp/dev-standards/compare/v2.188.0...v2.189.0) (2026-11-27)
+
+
+### Features
+
+* **ci:** 複数回呼ぶ構成で、コミットメッセージ検証・標準化チェックの重複実行を省けるようにする ([#1669](https://github.com/bamiyanapp/dev-standards/issues/1669)) ([0fc958f](https://github.com/bamiyanapp/dev-standards/commit/0fc958fb5d134c76ac389bd119d72b15c19e9ae3)), closes [#1664](https://github.com/bamiyanapp/dev-standards/issues/1664)
+
 # [2.188.0](https://github.com/bamiyanapp/dev-standards/compare/v2.187.1...v2.188.0) (2026-11-27)
 
 
