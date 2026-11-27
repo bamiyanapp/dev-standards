@@ -2572,8 +2572,17 @@ jobs:
         run: |
           set -u
           python3 -m pip install --quiet "zizmor==1.33.1"
-          # unpinned-uses（SHA固定）は、Renovateとの相性があるため別に判断する（#1613）
-          printf 'rules:\n  unpinned-uses:\n    disable: true\n' > /tmp/zizmor.yml
+          # unpinned-uses（SHA固定）は、第三者のアクションだけを、コミットSHAでの固定の対象にする（#1639）。
+          # actions/*（GitHub公式）と、bamiyanapp/*（同一組織）は、タグ参照を許容する
+          cat > /tmp/zizmor.yml <<'ZCONF'
+          rules:
+            unpinned-uses:
+              config:
+                policies:
+                  "actions/*": ref-pin
+                  "bamiyanapp/*": ref-pin
+                  "*": hash-pin
+          ZCONF
           zizmor --offline --no-progress --config /tmp/zizmor.yml --format json .github > /tmp/zizmor.json || true
           python3 - <<'PY'
           import collections, json, os
