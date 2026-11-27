@@ -1,3 +1,10 @@
+## [2.191.1](https://github.com/bamiyanapp/dev-standards/compare/v2.191.0...v2.191.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* Risk SummaryのSecurityセクションでae-cvss-calculatorを解決できない問題を修正する ([#1673](https://github.com/bamiyanapp/dev-standards/issues/1673)) ([84844ce](https://github.com/bamiyanapp/dev-standards/commit/84844ce8a42592ce4e51efd25e626b5783824f3c)), closes [#1672](https://github.com/bamiyanapp/dev-standards/issues/1672)
+
 # [2.191.0](https://github.com/bamiyanapp/dev-standards/compare/v2.190.0...v2.191.0) (2026-11-27)
 
 
