@@ -268,7 +268,15 @@ import AppShell from "./AppShell.jsx"; // symlink
 - `prefetchUrls`・`backendEndpoints`が空なら、`SpeculationRules`・`BackendCacheWarmer`を描画しない
 - `swUrl`・`warmedFlagKey`を渡さなければ、部品の既定値に任せる
 - `showBackToTop={false}`で、トップページ等の`BackToTop`を省く
-- `UserMenu`は、プロダクト固有の部品として、呼び出し側から渡す。汎用化の可否は、#1380の検討項目として残る
+- `UserMenu`は、プロダクト固有の部品として、呼び出し側から渡す。汎用化はしない（理由は、下の「`UserMenu`を汎用化しない理由」）
+- TypeScriptから使うときは、型定義（`AppShell.d.ts`）を、`AppShell.jsx`と同じ名前でsymlinkする。symlinkの名前が`SharedAppShell.jsx`なら、`SharedAppShell.d.ts`にする。TypeScriptは、importした名前に対応する`.d.ts`を探すためである。型定義があれば、使わないprops（`swUrl`等）は、渡さなくてよい
+
+#### `UserMenu`を汎用化しない理由（#1666）
+
+- ログイン・ログアウトのリンク先（`/_login`・`/_logout`等）は、認証基盤に依存する。examinationは、Cognito + Lambda@Edge（[`serverless-static-site-pattern.md`](serverless-static-site-pattern.md)）である。Firebase Authenticationを使うuchi-stockは、認証の仕組みが違う
+- 参照側のうち、同じ認証基盤で、同種のユーザーメニューを持つのは、examinationだけである。karutaは、ログインを持たず、ユーザーメニューが無い
+- iOS Safariのフォーカス挙動への対応を含み、実機での確認が要る。利用者が1つの段階で、共有の部品にすると、変更のたびに、他の参照側へ影響の確認が要る
+- 同じ認証基盤の参照側が、2つ目に現れたら、そのときに汎用化を再検討する。認証の汎用部分は、すでに`shared/lambda`にある（#1378）。画面側の部品を足すのは、その後でよい
 
 ### `shared/ui/ErrorBoundary.jsx`
 
