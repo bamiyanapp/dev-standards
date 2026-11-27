@@ -31,6 +31,15 @@ on:
         description: "dev-standards submoduleのsync-manifest.jsonに基づき、symlink欠落・リンク切れ・.gitignoreの内容乖離を`scripts/bootstrap.js --check`で検知するジョブを実行するかどうか。"
         type: boolean
         default: false
+      run_shared_checks:
+        description: >-
+          PR・リポジトリ全体に対する共通の検査（コミットメッセージ検証・標準化チェック）を実行するかどうか（既定true）。
+          同じリポジトリでreusable-ci.ymlを複数回呼ぶ構成（アプリごとにE2Eを分ける等）では、2回目以降の呼び出しでfalseにすると、
+          同じ検査の重複実行を省ける。falseでもコミットメッセージ検証ジョブ自体は成功扱いで通る
+          （後続のジョブがneedsするため）。標準化チェックは、スキップになる。
+          enable_standards_checkのsubmoduleチェックアウト（E2E等のジョブ）には影響しない。
+        type: boolean
+        default: true
       packages:
         description: >-
           frontend_dir/backend_dirによる固定2パッケージ構成の代わりに、matrix構成でlint/test/buildする
@@ -674,7 +683,9 @@ jobs:
     outputs:
       infra_failure: ${{ steps.result.outputs.infra_failure }}
     steps:
+      # run_shared_checks: falseのときは、検査のstepを全て省き、最後のstepで成功扱いにする（#1664）
       - uses: actions/checkout@v7
+        if: inputs.run_shared_checks
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -690,6 +701,7 @@ jobs:
       # インラインで実装する）
       - name: Node.jsをセットアップする（1回目/2回）
         id: setup-node-1
+        if: inputs.run_shared_checks
         continue-on-error: true
         uses: actions/setup-node@v7
         with:
@@ -761,6 +773,12 @@ jobs:
         id: result
         shell: bash
         run: |
+          if [ "${{ inputs.run_shared_checks }}" != "true" ]; then
+            # run_shared_checks: false（複数回呼ぶ構成の2回目以降）。検査は、最初の呼び出しで行う
+            echo "infra_failure=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::run_shared_checksがfalseのため、コミットメッセージの検証を省きました"
+            exit 0
+          fi
           if [ "${{ steps.setup-node-1.outcome }}" != "success" ] && [ "${{ steps.setup-node-2.outcome }}" != "success" ]; then
             # Node.jsセットアップ自体が2回とも失敗した場合のみ、GitHub側の一時的な
             # 問題とみなしinfra_failureとして扱う（後続のテストジョブをブロックしない）
@@ -1672,6 +1690,7 @@ jobs:
     if: |
       always() &&
       inputs.enable_standards_check &&
+      inputs.run_shared_checks &&
       !(inputs.skip_verification_on_push && github.event_name == 'push') &&
       (needs.commitlint.result == 'success' || needs.commitlint.outputs.infra_failure == 'true')
     runs-on: ubuntu-latest

@@ -170,6 +170,7 @@ with:
 | 入力 | 説明 | デフォルト |
 |---|---|---|
 | `enable_standards_check` | `scripts/bootstrap.js --check`によるsymlink欠落・リンク切れ・`.gitignore`内容乖離の検知（`standards-check` job） | `false` |
+| `run_shared_checks` | コミットメッセージ検証・標準化チェックを実行するか。複数回呼ぶ構成の2回目以降を`false`にして、重複実行を省く（#1664） | `true` |
 | `enable_duplication_check` | `jscpd`によるコード重複検知（`duplication-check` job） | `false` |
 | `duplication_threshold` | コード重複率のしきい値（%） | `0` |
 | `enable_doc_duplication_check` | `jscpd`によるMarkdownドキュメント重複検知（`doc-duplication-check` job） | `false` |
