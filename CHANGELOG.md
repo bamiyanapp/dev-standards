@@ -1,3 +1,10 @@
+## [2.187.1](https://github.com/bamiyanapp/dev-standards/compare/v2.187.0...v2.187.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* **ci:** drop persisted credentials on non-pushing checkouts (zizmor artipacked) ([#1655](https://github.com/bamiyanapp/dev-standards/issues/1655)) ([c23f71f](https://github.com/bamiyanapp/dev-standards/commit/c23f71ffe742168a4a6a48b9a23c6a47bc39c5c3)), closes [#1638](https://github.com/bamiyanapp/dev-standards/issues/1638)
+
 # [2.187.0](https://github.com/bamiyanapp/dev-standards/compare/v2.186.2...v2.187.0) (2026-11-27)
 
 
