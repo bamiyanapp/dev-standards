@@ -801,7 +801,7 @@ jobs:
       - name: 変更されたパスを検出する
         id: filter
         continue-on-error: true
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
         with:
           filters: |
             frontend:
@@ -1445,7 +1445,7 @@ jobs:
         id: publish-screenshots
         if: always() && steps.screenshots.outputs.found == 'true'
         continue-on-error: true
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
           github_token: ${{ github.token }}
           publish_dir: ${{ inputs.frontend_dir }}/e2e-screenshots
@@ -1464,7 +1464,7 @@ jobs:
       - name: E2Eスクリーンショットを最新ベースラインとして公開する
         if: always() && steps.screenshots.outputs.found == 'true' && github.event_name == 'push'
         continue-on-error: true
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
           github_token: ${{ github.token }}
           publish_dir: ${{ inputs.frontend_dir }}/e2e-screenshots
@@ -3045,7 +3045,7 @@ jobs:
         id: publish-diagrams
         if: steps.diagrams.outputs.found == 'true'
         continue-on-error: true
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
           github_token: ${{ github.token }}
           publish_dir: mermaid-diagrams
@@ -3063,7 +3063,7 @@ jobs:
         id: publish-latest
         if: steps.diagrams.outputs.found == 'true' && github.event_name == 'push'
         continue-on-error: true
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4
         with:
           github_token: ${{ github.token }}
           publish_dir: mermaid-diagrams
