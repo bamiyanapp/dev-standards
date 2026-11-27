@@ -1,3 +1,10 @@
+# [2.190.0](https://github.com/bamiyanapp/dev-standards/compare/v2.189.0...v2.190.0) (2026-11-27)
+
+
+### Features
+
+* **ci:** 複数アプリのE2Eを、1回の呼び出しで実行できるようにする（e2e_packages） ([#1670](https://github.com/bamiyanapp/dev-standards/issues/1670)) ([55b7151](https://github.com/bamiyanapp/dev-standards/commit/55b715162a1262b6a47e9bfb969d3f341b54a8d6)), closes [#1665](https://github.com/bamiyanapp/dev-standards/issues/1665)
+
 # [2.189.0](https://github.com/bamiyanapp/dev-standards/compare/v2.188.0...v2.189.0) (2026-11-27)
 
 
