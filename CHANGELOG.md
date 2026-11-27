@@ -1,3 +1,10 @@
+# [2.188.0](https://github.com/bamiyanapp/dev-standards/compare/v2.187.1...v2.188.0) (2026-11-27)
+
+
+### Features
+
+* **ci:** 複数lockfile構成で、依存更新Risk Summaryのブラスト半径判定を動かす ([#1663](https://github.com/bamiyanapp/dev-standards/issues/1663)) ([f18fc4e](https://github.com/bamiyanapp/dev-standards/commit/f18fc4e8495767d4169e81ff5b3a1f4ee961cada)), closes [#1381](https://github.com/bamiyanapp/dev-standards/issues/1381)
+
 ## [2.187.1](https://github.com/bamiyanapp/dev-standards/compare/v2.187.0...v2.187.1) (2026-11-27)
 
 

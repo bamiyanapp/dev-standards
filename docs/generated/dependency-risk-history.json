@@ -2651,5 +2651,17 @@
     "staleRiskReasons": [
       "現行バージョンに既知の脆弱性は見つかりませんでした"
     ]
+  },
+  {
+    "version": "2.188.0",
+    "date": "2026-11-27T12:59:02.245Z",
+    "riskLevel": "low",
+    "riskReasons": [
+      "major update、またはバージョン比較不能な更新（ダウングレード等）が含まれていますが、全てdevDependency（本番コードに含まれない）のため自動マージを止めていません"
+    ],
+    "staleRiskLevel": "low",
+    "staleRiskReasons": [
+      "現行バージョンに既知の脆弱性は見つかりませんでした"
+    ]
   }
 ]
