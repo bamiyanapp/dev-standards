@@ -1,3 +1,10 @@
+# [2.187.0](https://github.com/bamiyanapp/dev-standards/compare/v2.186.2...v2.187.0) (2026-11-27)
+
+
+### Features
+
+* **ci:** pin third-party GitHub Actions by digest (renovate pinning, zizmor policy) ([#1653](https://github.com/bamiyanapp/dev-standards/issues/1653)) ([94abc10](https://github.com/bamiyanapp/dev-standards/commit/94abc10b7e385d5c59c3553547591c7507925c01)), closes [#1639](https://github.com/bamiyanapp/dev-standards/issues/1639)
+
 ## [2.186.2](https://github.com/bamiyanapp/dev-standards/compare/v2.186.1...v2.186.2) (2026-11-26)
 
 
