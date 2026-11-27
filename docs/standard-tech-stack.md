@@ -54,7 +54,7 @@ graph TD
 
 </details>
 
-![標準構成を全て採用した場合の全体構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-2.png?beb71737bdbeb49528789ad5abe978120c826f13)
+![標準構成を全て採用した場合の全体構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-2.png?36644953fa1931a2d3f654ed5a1ee03c49f01be6)
 
 ## 個人情報の扱い（全プロジェクト共通）
 
@@ -104,7 +104,7 @@ graph TD
 
 </details>
 
-![ログインの選択肢ごとの流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-3.png?beb71737bdbeb49528789ad5abe978120c826f13)
+![ログインの選択肢ごとの流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-3.png?36644953fa1931a2d3f654ed5a1ee03c49f01be6)
 
 ## 3. バックエンドAPI: 必要な場合のみ採用
 
@@ -139,7 +139,7 @@ graph TD
 
 </details>
 
-![バックエンドAPIの構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-4.png?beb71737bdbeb49528789ad5abe978120c826f13)
+![バックエンドAPIの構成 (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-4.png?36644953fa1931a2d3f654ed5a1ee03c49f01be6)
 
 ## 4. ホスティング（全プロジェクトで採用）
 
@@ -166,7 +166,7 @@ graph TD
 
 </details>
 
-![CI/CDの流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-5.png?beb71737bdbeb49528789ad5abe978120c826f13)
+![CI/CDの流れ (rendered)](https://raw.githubusercontent.com/bamiyanapp/dev-standards/docs-diagrams/latest/standard-tech-stack-5.png?36644953fa1931a2d3f654ed5a1ee03c49f01be6)
 
 ## 7. コミット規約・開発フロー（全プロジェクトで採用）
 
