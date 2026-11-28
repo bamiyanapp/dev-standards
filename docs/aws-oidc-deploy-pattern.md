@@ -43,7 +43,15 @@ jobの権限を足す変更は、呼び出し側のworkflowを書き換えるPR�
 | workflow | OIDC（`role_to_assume`） |
 |---|---|
 | `reusable-backup-dynamodb.yml` | 対応済み。呼び出し側のjobに`id-token: write`を書く |
-| `reusable-canary-status.yml`・`reusable-promote-canary.yml`・`reusable-rollback-to-stable.yml` | 未対応。先頭の`permissions:`で権限を絞っており、`id-token: write`を足すと、許可していない既存の呼び出しが起動失敗になる（破壊的変更） |
+| `reusable-canary-status.yml`・`reusable-promote-canary.yml`・`reusable-rollback-to-stable.yml` | 対応済み。先頭の`permissions:`を外し、呼び出し側のjobが与えた権限を引き継ぐ。呼び出し側は、`id-token: write`と、各workflowが必要とする権限（下記）を、あわせて書く |
+
+呼び出し側のjobが、`role_to_assume`とあわせて与える権限は、次のとおり。
+
+- `reusable-canary-status.yml`: `contents: write`・`pull-requests: write`・`actions: read`・`id-token: write`
+- `reusable-promote-canary.yml`: `contents: write`・`id-token: write`
+- `reusable-rollback-to-stable.yml`: `contents: read`・`id-token: write`
+
+アクセスキーのまま使う既存の呼び出しは、変更しなくてよい。権限の宣言を外しただけで、要求は増えない。
 
 ## IAM側の定義（CloudFormation）
 

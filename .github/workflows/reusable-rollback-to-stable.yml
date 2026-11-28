@@ -41,14 +41,21 @@ on:
         description: "KVSが存在するAWSリージョン（CloudFront関連のKVS操作APIはus-east-1固定であることが多い）。"
         type: string
         default: "us-east-1"
+      role_to_assume:
+        description: >-
+          OIDCで引き受けるIAMロールのARN（issue #1582）。指定すると、アクセスキーを使わず、一時クレデンシャルで認証する。
+          呼び出し側のjobに`permissions: id-token: write`が必要。このworkflowは`permissions`を宣言せず、
+          呼び出し側の権限を引き継ぐため、呼び出し側は、次の権限も、あわせて与えること: contents: read
+        type: string
+        default: ""
     secrets:
       AWS_ACCESS_KEY_ID:
-        required: true
+        required: false
       AWS_SECRET_ACCESS_KEY:
-        required: true
+        required: false
 
-permissions:
-  contents: read
+# permissionsは宣言しない（issue #1582）。OIDC（id-token: write）を使う呼び出し側の妨げにならないよう、
+# 呼び出し側のjobが与えた権限を引き継ぐ。必要な権限は、role_to_assumeのdescriptionを参照
 
 jobs:
   rollback:
@@ -58,6 +65,26 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
+      - name: AWSの認証情報の指定を検証する
+        env:
+          ROLE_TO_ASSUME: ${{ inputs.role_to_assume }}
+        run: |
+          if [ -n "$ROLE_TO_ASSUME" ]; then
+            if [ -n "$AWS_ACCESS_KEY_ID" ] || [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+              echo "::warning::role_to_assume とアクセスキーの両方が指定されています。OIDCを優先し、アクセスキーは使いません。アクセスキーの指定は削除してください。"
+            fi
+          elif [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::AWSの認証情報がありません。role_to_assume（OIDC）か、secretsのAWS_ACCESS_KEY_IDとAWS_SECRET_ACCESS_KEYのどちらかを指定してください。"
+            exit 1
+          fi
+      # configure-aws-credentialsが書く一時クレデンシャルは、GITHUB_ENV経由で、jobのenvの（空の）
+      # アクセスキーを上書きする（reusable-backup-dynamodb.ymlで実機確認済み）
+      - name: OIDCでAWSの一時クレデンシャルを取得する
+        if: inputs.role_to_assume != ''
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ inputs.role_to_assume }}
+          aws-region: ${{ inputs.kvs_region }}
       - name: "${{ inputs.kvs_key }}を${{ inputs.value }}に設定する"
         env:
           # issue #1635: 入力は、runへ直接展開せず、環境変数で渡す

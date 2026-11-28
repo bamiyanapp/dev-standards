@@ -110,16 +110,21 @@ on:
         description: "直近の実行結果を表示する対象のpromote-canary系workflowファイル名。"
         type: string
         default: "promote-canary.yml"
+      role_to_assume:
+        description: >-
+          OIDCで引き受けるIAMロールのARN（issue #1582）。指定すると、アクセスキーを使わず、一時クレデンシャルで認証する。
+          呼び出し側のjobに`permissions: id-token: write`が必要。このworkflowは`permissions`を宣言せず、
+          呼び出し側の権限を引き継ぐため、呼び出し側は、次の権限も、あわせて与えること: contents: write・pull-requests: write・actions: read（docs_output_path指定時のコミット・workflow実行履歴の取得に必要）
+        type: string
+        default: ""
     secrets:
       AWS_ACCESS_KEY_ID:
-        required: true
+        required: false
       AWS_SECRET_ACCESS_KEY:
-        required: true
+        required: false
 
-permissions:
-  contents: write # issue #1202: docs_output_path指定時、commit-via-pr経由でコミットするために必要
-  pull-requests: write # 同上。commit-via-prのPRフォールバック作成用
-  actions: read # issue #1202: 直近のpromote-canary実行取得（gh run list）・force_stable放置検知（workflow run履歴取得）に必要
+# permissionsは宣言しない（issue #1582）。OIDC（id-token: write）を使う呼び出し側の妨げにならないよう、
+# 呼び出し側のjobが与えた権限を引き継ぐ。必要な権限は、role_to_assumeのdescriptionを参照
 
 jobs:
   status:
@@ -130,6 +135,26 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ inputs.aws_region }}
     steps:
+      - name: AWSの認証情報の指定を検証する
+        env:
+          ROLE_TO_ASSUME: ${{ inputs.role_to_assume }}
+        run: |
+          if [ -n "$ROLE_TO_ASSUME" ]; then
+            if [ -n "$AWS_ACCESS_KEY_ID" ] || [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+              echo "::warning::role_to_assume とアクセスキーの両方が指定されています。OIDCを優先し、アクセスキーは使いません。アクセスキーの指定は削除してください。"
+            fi
+          elif [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::AWSの認証情報がありません。role_to_assume（OIDC）か、secretsのAWS_ACCESS_KEY_IDとAWS_SECRET_ACCESS_KEYのどちらかを指定してください。"
+            exit 1
+          fi
+      # configure-aws-credentialsが書く一時クレデンシャルは、GITHUB_ENV経由で、jobのenvの（空の）
+      # アクセスキーを上書きする（reusable-backup-dynamodb.ymlで実機確認済み）
+      - name: OIDCでAWSの一時クレデンシャルを取得する
+        if: inputs.role_to_assume != ''
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ inputs.role_to_assume }}
+          aws-region: ${{ inputs.aws_region }}
       # issue #1201。「キューイング中の変更」「canaryに反映済み・stable昇格待ちの
       # 変更」のPR一覧算出にgit logのrangeを使うため、全履歴が必要
       - name: チェックアウトする
