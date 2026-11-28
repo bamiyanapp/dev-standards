@@ -1,3 +1,10 @@
+# [2.193.0](https://github.com/bamiyanapp/dev-standards/compare/v2.192.0...v2.193.0) (2026-11-28)
+
+
+### Features
+
+* **ci:** 不要なブランチを一覧にして削除する再利用workflowを追加する ([#1683](https://github.com/bamiyanapp/dev-standards/issues/1683)) ([ada61d3](https://github.com/bamiyanapp/dev-standards/commit/ada61d387b64e50a60f633d7ebc4a4ed849e3542)), closes [#1682](https://github.com/bamiyanapp/dev-standards/issues/1682)
+
 # [2.192.0](https://github.com/bamiyanapp/dev-standards/compare/v2.191.1...v2.192.0) (2026-11-28)
 
 
