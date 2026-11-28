@@ -29,6 +29,7 @@
 - [`ai-driven-app-inventory-phase.md`](docs/ai-driven-app-inventory-phase.md): カリキュラムのフェーズ5（品質課題の棚卸し）の手順・プロンプト例・失敗パターン
 - [`standard-tech-stack.md`](docs/standard-tech-stack.md): 標準技術スタックの索引・新規プロジェクトの立ち上げ手順
 - [`reusable-workflows-reference.md`](docs/reusable-workflows-reference.md): dev-standards導入手順・reusable workflow全入力リファレンス
+- [`cleanup-branches-pattern.md`](docs/cleanup-branches-pattern.md): 不要なブランチを一覧にして、まとめて削除する再利用workflowの使い方
 - [`repository-contents.md`](docs/repository-contents.md): このリポジトリに含まれるファイル・ディレクトリの一覧
 - [`documentation-format-conventions.md`](docs/documentation-format-conventions.md): ドキュメントの表現形式（文章・表・mermaid図）の選び方
 - [`product-readme-structure-guideline.md`](docs/product-readme-structure-guideline.md): 参照側リポジトリ（アプリ本体）のトップレベルREADME.mdが備えるべき記載観点（必須項目・該当時のみ記載する項目）
