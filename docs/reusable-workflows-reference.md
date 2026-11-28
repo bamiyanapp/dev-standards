@@ -332,10 +332,6 @@ jobs:
 
 認証は、次のどちらかを選ぶ。`role_to_assume`を指定する（OIDC）か、`secrets.AWS_ACCESS_KEY_ID`・`secrets.AWS_SECRET_ACCESS_KEY`を渡す（長期キー）。どちらも無ければ、最初のstepで失敗する。両方あれば、OIDCを優先して警告する。OIDCのときは、呼び出し側のjobに`permissions: { contents: read, id-token: write }`が要る。このworkflowは`permissions`を宣言せず、呼び出し側の権限を引き継ぐため、長期キーの呼び出しは無変更で動く。結果はテーブルごとの成功/失敗・Backup ARNを表形式でJob Summaryへ出力する。オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。
 
-## `reusable-cleanup-branches.yml`
-
-不要なブランチを一覧にして、まとめて削除する手動workflow向けの再利用workflow。使い方・入力・削除の条件は、[`cleanup-branches-pattern.md`](cleanup-branches-pattern.md)を参照する。
-
 ## `reusable-rollback-to-stable.yml`
 
 ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）を`value`（既定`"true"`）へ設定する。`value: "false"`を指定すれば、通常運用（`canary_weight`による分散ルーティング）への復帰にも使える（karuta#1662）。呼び出し元は「ロールバック用」「復帰用」の2つの`workflow_dispatch`を用意するとよい。それぞれ固定の`value`を指定する別々のworkflowにする（誤って逆の値を指定する事故を避けるため）。
