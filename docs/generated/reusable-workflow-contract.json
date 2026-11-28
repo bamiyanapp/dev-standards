@@ -7,20 +7,13 @@
     "requiredSecrets": []
   },
   "reusable-canary-status.yml": {
-    "permissions": {
-      "actions": "read",
-      "contents": "write",
-      "pull-requests": "write"
-    },
+    "permissions": {},
     "requiredInputs": [
       "canary_stack_name",
       "kvs_arn",
       "stable_stack_name"
     ],
-    "requiredSecrets": [
-      "AWS_ACCESS_KEY_ID",
-      "AWS_SECRET_ACCESS_KEY"
-    ]
+    "requiredSecrets": []
   },
   "reusable-cd.yml": {
     "permissions": {
@@ -91,9 +84,7 @@
     "requiredSecrets": []
   },
   "reusable-promote-canary.yml": {
-    "permissions": {
-      "contents": "write"
-    },
+    "permissions": {},
     "requiredInputs": [
       "backend_deploy_command_stable",
       "backend_remove_canary_command",
@@ -102,22 +93,14 @@
       "kvs_arn",
       "stable_stack_name"
     ],
-    "requiredSecrets": [
-      "AWS_ACCESS_KEY_ID",
-      "AWS_SECRET_ACCESS_KEY"
-    ]
+    "requiredSecrets": []
   },
   "reusable-rollback-to-stable.yml": {
-    "permissions": {
-      "contents": "read"
-    },
+    "permissions": {},
     "requiredInputs": [
       "kvs_arn"
     ],
-    "requiredSecrets": [
-      "AWS_ACCESS_KEY_ID",
-      "AWS_SECRET_ACCESS_KEY"
-    ]
+    "requiredSecrets": []
   },
   "reusable-runtime-version-scan.yml": {
     "permissions": {
