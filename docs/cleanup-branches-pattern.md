@@ -24,7 +24,7 @@ jobs:
 | 入力 | 説明 | デフォルト |
 |---|---|---|
 | `dry_run` | `true`なら、削除せず、候補を一覧にするだけ | `true` |
-| `keep_regex` | 削除しないブランチ名の正規表現 | Claudeの作業用ブランチ・`e2e-screenshots`・`docs-diagrams*`・`gh-pages` |
+| `keep_regex` | 削除しないブランチ名の正規表現 | Claudeの作業用ブランチ・`e2e-screenshots`・`docs-diagrams*`・`gh-pages`・`release`・`chore/release-*` |
 
 削除するのは、閉じたPRのheadだったブランチと、既定ブランチへ完全にマージ済みのブランチである。開いているPRのhead・既定ブランチ・保護ブランチ・`keep_regex`に一致するものは、残す。上の条件に当たらない未マージのブランチは、「要確認」として一覧に出すだけで、削除しない。結果は、Job Summaryとジョブログの表で見る。このworkflowは`permissions`を宣言しない。呼び出し側のjobに、`contents: write`と`pull-requests: read`を与えること。
 
