@@ -133,7 +133,7 @@ jobs:
       # issue #1201。「キューイング中の変更」「canaryに反映済み・stable昇格待ちの
       # 変更」のPR一覧算出にgit logのrangeを使うため、全履歴が必要
       - name: チェックアウトする
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           fetch-depth: 0
 
@@ -332,7 +332,7 @@ jobs:
       # ローカル参照するために必要（dev-standards#1071と同じ理由）
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: inputs.docs_output_path != '' || (inputs.rollback_set_true_workflow != '' && inputs.rollback_set_false_workflow != '')
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
