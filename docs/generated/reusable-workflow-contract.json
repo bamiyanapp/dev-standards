@@ -32,6 +32,11 @@
     "requiredInputs": [],
     "requiredSecrets": []
   },
+  "reusable-cleanup-branches.yml": {
+    "permissions": {},
+    "requiredInputs": [],
+    "requiredSecrets": []
+  },
   "reusable-codeql.yml": {
     "permissions": {
       "actions": "read",

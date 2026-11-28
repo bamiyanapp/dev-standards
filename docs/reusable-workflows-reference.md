@@ -332,6 +332,36 @@ jobs:
 
 認証は、次のどちらかを選ぶ。`role_to_assume`を指定する（OIDC）か、`secrets.AWS_ACCESS_KEY_ID`・`secrets.AWS_SECRET_ACCESS_KEY`を渡す（長期キー）。どちらも無ければ、最初のstepで失敗する。両方あれば、OIDCを優先して警告する。OIDCのときは、呼び出し側のjobに`permissions: { contents: read, id-token: write }`が要る。このworkflowは`permissions`を宣言せず、呼び出し側の権限を引き継ぐため、長期キーの呼び出しは無変更で動く。結果はテーブルごとの成功/失敗・Backup ARNを表形式でJob Summaryへ出力する。オンデマンドバックアップはPITRと異なり自動削除されないため、不要になったら手動で削除すること。
 
+## `reusable-cleanup-branches.yml`
+
+マージ・クローズ済みのPRのブランチを、一覧にして、まとめて削除する（[#1682](https://github.com/bamiyanapp/dev-standards/issues/1682)）。スマホのGitHub画面では1本ずつしか消せないため、手動実行の薄いworkflowから呼ぶ。
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-cleanup-branches.yml@v1.0.0
+    with:
+      dry_run: ${{ inputs.dry_run }}
+```
+
+| 入力 | 説明 | デフォルト |
+|---|---|---|
+| `dry_run` | `true`なら、削除せず、候補を一覧にするだけ | `true` |
+| `keep_regex` | 削除しないブランチ名の正規表現 | Claudeの作業用ブランチ・`e2e-screenshots`・`docs-diagrams*`・`gh-pages` |
+
+削除するのは、閉じたPRのheadだったブランチと、既定ブランチへ完全にマージ済みのブランチである。開いているPRのhead・既定ブランチ・保護ブランチ・`keep_regex`に一致するものは、残す。上の条件に当たらない未マージのブランチは、「要確認」として一覧に出すだけで、削除しない。結果は、Job Summaryとジョブログの表で見る。このworkflowは`permissions`を宣言しない。呼び出し側のjobに、`contents: write`と`pull-requests: read`を与えること。
+
 ## `reusable-rollback-to-stable.yml`
 
 ブルーグリーン（stable/canary）デプロイパターン（[`blue-green-stage-pattern.md`](blue-green-stage-pattern.md)参照）で、管理者が問題を検知した際に再デプロイ無しで即座に全トラフィックをstableへ戻す。CloudFront FunctionsのKVSキー（既定`force_stable`）を`value`（既定`"true"`）へ設定する。`value: "false"`を指定すれば、通常運用（`canary_weight`による分散ルーティング）への復帰にも使える（karuta#1662）。呼び出し元は「ロールバック用」「復帰用」の2つの`workflow_dispatch`を用意するとよい。それぞれ固定の`value`を指定する別々のworkflowにする（誤って逆の値を指定する事故を避けるため）。

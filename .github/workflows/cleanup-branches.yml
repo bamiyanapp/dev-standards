@@ -1,0 +1,22 @@
+name: Cleanup Branches (manual)
+run-name: Cleanup Branches (manual, dry_run=${{ inputs.dry_run }})
+
+# issue #1682。不要なブランチを一覧にして、まとめて削除する（手動実行）。
+# 既定はdry_run。Job Summaryの表を確認してから、dry_run: false で再実行する
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true: 削除せず、候補を一覧にするだけ（安全）。false: 候補を削除する"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    uses: ./.github/workflows/reusable-cleanup-branches.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
