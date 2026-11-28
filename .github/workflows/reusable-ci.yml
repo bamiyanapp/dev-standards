@@ -1317,6 +1317,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.enable_standards_check }}
       # setup-nodeのバージョンマニフェスト取得がGitHub側の一時的な障害で失敗することが
       # あるため、1回だけ自動リトライする
@@ -1416,6 +1417,7 @@ jobs:
         if: always() && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -1535,6 +1537,7 @@ jobs:
         continue-on-error: true
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           ref: e2e-screenshots
           path: e2e-screenshots-baseline
           # non-cone modeのsparse-checkoutパターンは.gitignore同様の書式で、先頭の
@@ -1731,7 +1734,7 @@ jobs:
       HAS_BOT_TOKEN: ${{ secrets.BOT_TOKEN != '' }}
     steps:
       - name: チェックアウトする
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           submodules: true
           # ref未指定だと、pull_requestイベントではactions/checkoutの既定動作により
@@ -2904,6 +2907,7 @@ jobs:
       - name: チェックアウトする
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: 0
       # issue #1268: gitleaks/gitleaks-actionはv3から商用ライセンスが必要になった
       # （個人アカウントは不要だが、Organizationのリポジトリでは
@@ -2960,6 +2964,7 @@ jobs:
         if: inputs.enable_email_scan && inputs.self_ref != ''
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
           path: .dev-standards-actions
@@ -3031,7 +3036,7 @@ jobs:
       # そのブランチをチェックアウトする。pushイベントではgithub.refが元々
       # ブランチを指すため従来どおり
       - name: チェックアウトする
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
           fetch-depth: 0
@@ -3087,7 +3092,7 @@ jobs:
       # そのスクリプトを含むタグへ更新した
       - name: dev-standardsをチェックアウトする（ローカルcomposite action用）
         if: steps.gate.outputs.should_run == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
@@ -3277,7 +3282,7 @@ jobs:
       # 渡すinputs.self_refを使う方式へ変更し、手動更新を不要にした
       - name: dev-standardsをチェックアウトする（commit-via-pr用）
         if: steps.cache-bust.outputs.changed == 'true' && github.event_name == 'push'
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}
@@ -3664,7 +3669,7 @@ jobs:
       # の実行にはdependency-cruiser.config.cjs（dev-standards submodule配下からの
       # symlink、architecture-checkと同じ）が必要
       - name: チェックアウトする
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           submodules: true
 
@@ -3795,7 +3800,7 @@ jobs:
       # deprecationInfo引数追加）を含むタグへ更新した
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
         if: steps.gate.outputs.should_run == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}

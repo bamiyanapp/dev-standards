@@ -70,7 +70,7 @@ jobs:
       has_vulnerabilities: ${{ steps.scan.outputs.has_vulnerabilities }}
     steps:
       - name: チェックアウトする
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
 
       - name: Node.jsをセットアップする
         uses: actions/setup-node@v7
@@ -85,7 +85,7 @@ jobs:
       # 旧実装では、呼び出し元がバージョンを上げても本チェックアウトだけ古いまま
       # 固定され、スクリプトの修正（issue #1111等）が反映されない事故が発生した
       - name: dev-standardsをチェックアウトする（ローカルスクリプト用）
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           repository: bamiyanapp/dev-standards
           ref: ${{ inputs.self_ref }}

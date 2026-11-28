@@ -161,7 +161,7 @@ jobs:
       queue_processed: ${{ steps.queue.outputs.process }}
     steps:
       - name: チェックアウトする
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # zizmor: ignore[artipacked] 後続のgit操作（push・fetch等）で、認証情報が要る
         with:
           submodules: true
 
