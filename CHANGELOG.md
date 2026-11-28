@@ -1,3 +1,10 @@
+## [2.193.1](https://github.com/bamiyanapp/dev-standards/compare/v2.193.0...v2.193.1) (2026-11-28)
+
+
+### Bug Fixes
+
+* **ci:** keep release branches by default in reusable-cleanup-branches ([#1684](https://github.com/bamiyanapp/dev-standards/issues/1684)) ([8997dde](https://github.com/bamiyanapp/dev-standards/commit/8997ddef58e58a3d29a90bdd56323499e77d691c)), closes [#1682](https://github.com/bamiyanapp/dev-standards/issues/1682)
+
 # [2.193.0](https://github.com/bamiyanapp/dev-standards/compare/v2.192.0...v2.193.0) (2026-11-28)
 
 
