@@ -1,3 +1,10 @@
+# [2.192.0](https://github.com/bamiyanapp/dev-standards/compare/v2.191.1...v2.192.0) (2026-11-28)
+
+
+### Features
+
+* **ci:** support OIDC role_to_assume in canary-status, promote-canary and rollback-to-stable ([#1681](https://github.com/bamiyanapp/dev-standards/issues/1681)) ([c7d2a0c](https://github.com/bamiyanapp/dev-standards/commit/c7d2a0c59e2208fe96ca31c05597e0174ea89029)), closes [#1582](https://github.com/bamiyanapp/dev-standards/issues/1582)
+
 ## [2.191.1](https://github.com/bamiyanapp/dev-standards/compare/v2.191.0...v2.191.1) (2026-11-27)
 
 
